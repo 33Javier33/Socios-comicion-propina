@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -721,12 +720,13 @@
         .export-btn:hover {
             background-color: #f39c12;
         }
-        /* NUEVOS ESTILOS PARA EL BOTÓN DE REINICIO */
-        .reset-btn {
-            background-color: #e74c3c;
+        
+        /* NUEVO ESTILO PARA EL BOTÓN DE BORRADO */
+        .delete-all-btn {
+            background-color: #e74c3c; /* Rojo */
         }
-        .reset-btn:hover {
-            background-color: #c0392b;
+        .delete-all-btn:hover {
+            background-color: #c0392b; /* Rojo oscuro */
         }
 
         #balanceReport {
@@ -764,121 +764,13 @@
         .balance-saldo span.positive {
             color: #2ecc71;
         }
-
-        /* ESTILOS PARA EL INFORME PDF */
-        #reportePDFModal .modal-content {
-            max-width: 800px;
-        }
-
-        #reportePDFModal .report-header {
-            text-align: center;
-            border-bottom: 2px solid #ccc;
-            padding-bottom: 10px;
+        
+        /* NUEVO ESTILO PARA EL BUSCADOR */
+        .search-container {
             margin-bottom: 20px;
         }
-        #reportePDFModal .report-header h3 {
-            margin: 0;
-            color: #2c3e50;
-        }
-        #reportePDFModal .report-header p {
-            margin: 5px 0 0;
-            font-size: 0.9em;
-            color: #777;
-        }
-        #reportePDFModal .report-summary {
-            display: flex;
-            justify-content: space-around;
-            text-align: center;
-            background-color: #f0f7ff;
-            border: 1px solid #cce7ff;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        #reportePDFModal .report-summary-item {
-            flex: 1;
-        }
-        #reportePDFModal .report-summary-item h4 {
-            margin: 0 0 5px;
-            color: #3498db;
-            font-size: 1.1em;
-        }
-        #reportePDFModal .report-summary-item p {
-            margin: 0;
-            font-weight: 700;
-            font-size: 1.3em;
-        }
-        #reportePDFModal .report-section h4 {
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 5px;
-            margin-top: 30px;
-            margin-bottom: 15px;
-            color: #2c3e50;
-        }
-        #reportePDFModal .report-table {
+        .search-container input {
             width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9em;
-        }
-        #reportePDFModal .report-table th,
-        #reportePDFModal .report-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        #reportePDFModal .report-table th {
-            background-color: #f2f2f2;
-            font-weight: 600;
-        }
-        #reportePDFModal .report-table tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        #reportePDFModal .report-table .total-row {
-            font-weight: bold;
-            background-color: #e8f5e9;
-        }
-        #reportePDFModal .report-table .negative {
-            color: #e74c3c;
-        }
-
-        .report-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .report-buttons button {
-            flex: 1;
-        }
-        .print-btn {
-            background-color: #3498db;
-        }
-        .print-btn:hover {
-            background-color: #2980b9;
-        }
-        .download-btn {
-            background-color: #f1c40f;
-        }
-        .download-btn:hover {
-            background-color: #f39c12;
-        }
-
-        /* ESTILOS PARA EL INFORME DETALLADO */
-        .informe-propina-asignada {
-            color: #2ecc71;
-            font-weight: bold;
-        }
-        .informe-anticipos {
-            color: #e74c3c;
-            font-weight: bold;
-        }
-        .informe-saldo {
-            font-weight: bold;
-        }
-        .informe-saldo.positive {
-            color: #28a745;
-        }
-        .informe-saldo.negative {
-            color: #e74c3c;
         }
     </style>
 </head>
@@ -1051,7 +943,6 @@
                 <div class="distribucion-part-time-container" id="distribucionPartTimeContainer">
                     <h3>Socios Part-Time</h3>
                 </div>
-                <button type="button" id="generarInformeBtn" class="export-btn" data-modal-target="reportePDFModal">Generar Informe Detallado</button>
             </div>
         </div>
         
@@ -1060,12 +951,12 @@
                 <h2>Gestión de Datos</h2>
             </div>
             <div class="collapsible-content" id="dataManagementContent">
-                <p>Aquí puedes exportar tus datos para crear una copia de seguridad o importar una copia previamente guardada.</p>
+                <p>Aquí puedes exportar tus datos para crear una copia de seguridad, importar una copia o borrar los datos del período actual.</p>
                 <div class="import-export-container">
                     <button id="exportDataBtn" class="export-btn">Exportar Datos (JSON)</button>
+                    <button id="deleteAllDataBtn" class="delete-all-btn">Borrar Montos y Anticipos</button>
                     <label for="importFileInput" class="import-label">Importar Datos (JSON)</label>
                     <input type="file" id="importFileInput" accept=".json">
-                    <button id="resetMontosBtn" class="reset-btn">Reiniciar Montos</button>
                 </div>
             </div>
         </div>
@@ -1215,57 +1106,9 @@
         </div>
     </div>
 
-    <div id="reportePDFModal" class="modal">
-        <div class="modal-content">
-            <span class="close-button" data-modal-close="reportePDFModal">&times;</span>
-            <div class="report-header">
-                <h3>Informe Detallado de Propina</h3>
-                <p>Fecha de Emisión: <span id="reporteFechaEmision"></span></p>
-            </div>
-
-            <div class="report-summary">
-                <div class="report-summary-item">
-                    <h4>Propina Bruta</h4>
-                    <p id="informePropinaBruta">$0</p>
-                </div>
-                <div class="report-summary-item">
-                    <h4>Total Anticipos</h4>
-                    <p id="informeAnticipos">$0</p>
-                </div>
-                <div class="report-summary-item">
-                    <h4>Saldo Disponible</h4>
-                    <p id="informeSaldo">$0</p>
-                </div>
-            </div>
-
-            <div class="report-section">
-                <h4>Detalle por Socio</h4>
-                <table class="report-table">
-                    <thead>
-                        <tr>
-                            <th>Socio</th>
-                            <th>Propina Asignada</th>
-                            <th>Anticipos Tomados</th>
-                            <th>Saldo Final</th>
-                        </tr>
-                    </thead>
-                    <tbody id="informeDetalleSocio">
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="report-buttons">
-                <button class="print-btn" onclick="imprimirReporte()">Imprimir Informe</button>
-                <button class="download-btn" onclick="descargarReporte()">Descargar como PDF</button>
-            </div>
-        </div>
-    </div>
-
 
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const registroSocioForm = document.getElementById('registroSocioForm');
@@ -1364,9 +1207,10 @@
             const modalSocioSaldo = document.getElementById('modalSocioSaldo');
             const modalSocioAnticiposList = document.getElementById('modalSocioAnticiposList');
 
-            // Nuevos elementos para importar/exportar
+            // Nuevos elementos para importar/exportar y borrar
             const exportDataBtn = document.getElementById('exportDataBtn');
             const importFileInput = document.getElementById('importFileInput');
+            const deleteAllDataBtn = document.getElementById('deleteAllDataBtn');
             
             // Inputs numéricos a los que se les aplicará el formato de miles
             const montoCantidadInput = document.getElementById('montoCantidad');
@@ -1378,17 +1222,6 @@
             // NUEVOS ELEMENTOS PARA EL BUSCADOR
             const socioSearchInput = document.getElementById('socioSearchInput');
 
-            // NUEVO BOTÓN REINICIAR MONTOS
-            const resetMontosBtn = document.getElementById('resetMontosBtn');
-
-            // NUEVOS ELEMENTOS PARA EL INFORME DETALLADO
-            const generarInformeBtn = document.getElementById('generarInformeBtn');
-            const reportePDFModal = document.getElementById('reportePDFModal');
-            const reporteFechaEmision = document.getElementById('reporteFechaEmision');
-            const informePropinaBruta = document.getElementById('informePropinaBruta');
-            const informeAnticipos = document.getElementById('informeAnticipos');
-            const informeSaldo = document.getElementById('informeSaldo');
-            const informeDetalleSocio = document.getElementById('informeDetalleSocio');
 
             // Instancia de Flatpickr (se inicializa una vez y se actualiza)
             let flatpickrInstance;
@@ -1510,6 +1343,7 @@
                         socio.puntosPropina = puntosCalc.puntosConTope;
                         delete socio.diasTrabajados;
                         delete socio.montoAsignablePartTime;
+                        delete socio.puntosAntiguedadBase;
                         delete socio.puntosPropinaPartTime;
                     } else if (socio.tipoContrato === 'Part-Time') {
                         if (!socio.diasTrabajados || !Array.isArray(socio.diasTrabajados)) {
@@ -2071,8 +1905,6 @@
                     cerrarModal(partTimePointsModal);
                 } else if (event.target === socioAnticiposHistoryModal) {
                     cerrarModal(socioAnticiposHistoryModal);
-                } else if (event.target === reportePDFModal) {
-                    cerrarModal(reportePDFModal);
                 }
             });
 
@@ -2245,11 +2077,11 @@
                     return;
                 }
 
-                let totalAnticiposAnteriores = (socio.anticipos || []).reduce((sum, ant) => sum + ant.cantidad, 0);
-                const saldoDisponible = (socio.propinaAsignada || 0) - totalAnticiposAnteriores;
+                const currentSaldoDisponibleText = infoSaldoDisponible.textContent.replace('$', ''); 
+                const currentSaldoDisponible = parseNumber(currentSaldoDisponibleText);
                 
-                if (rawAnticipoCantidad > saldoDisponible) {
-                    alert(`El monto del anticipo ($${formatNumber(rawAnticipoCantidad)}) excede el saldo disponible ($${formatNumber(saldoDisponible)}).`);
+                if (rawAnticipoCantidad > currentSaldoDisponible) {
+                    alert(`El monto del anticipo ($${formatNumber(rawAnticipoCantidad)}) excede el saldo disponible ($${formatNumber(currentSaldoDisponible)}).`);
                     return;
                 }
 
@@ -2606,7 +2438,7 @@
 
                 socioCards.forEach(card => {
                     const nombre = card.querySelector('h3').textContent.toLowerCase();
-                    const area = card.querySelector('p:nth-of-type(1) strong').nextSibling.textContent.toLowerCase();
+                    const area = card.querySelector('p strong').nextSibling.textContent.toLowerCase();
 
                     if (nombre.includes(searchTerm) || area.includes(searchTerm)) {
                         card.style.display = 'block';
@@ -2616,128 +2448,40 @@
                 });
             });
 
-            // NUEVA FUNCIONALIDAD: Lógica del botón de reinicio
-            resetMontosBtn.addEventListener('click', () => {
-                const today = new Date();
-                const day = today.getDate();
+            // NUEVA FUNCIONALIDAD: Borrar todos los datos transaccionales
+            deleteAllDataBtn.addEventListener('click', () => {
+                const confirm1 = confirm("ADVERTENCIA: ¿Estás seguro de que quieres borrar TODOS los montos y anticipos? Esta acción no se puede deshacer.");
                 
-                // Condición para borrar datos solo del 15 al 14 de cada mes
-                if (day >= 15 || day <= 14) {
-                    const confirmReset = confirm("¿Estás seguro de que deseas reiniciar los montos? Esto borrará todos los montos de propina, el punto-planta y la propina asignada a los socios. Los anticipos no serán eliminados.");
-                    
-                    if (confirmReset) {
+                if (confirm1) {
+                    const confirm2 = prompt("Para confirmar, escribe 'BORRAR' en mayúsculas:");
+                    if (confirm2 === "BORRAR") {
+                        // 1. Borrar todos los montos registrados
                         localStorage.removeItem('montos');
+
+                        // 2. Borrar todos los anticipos de cada socio
+                        let socios = JSON.parse(localStorage.getItem('socios')) || [];
+                        socios.forEach(socio => {
+                            socio.anticipos = []; // Reinicia el array de anticipos
+                            socio.propinaAsignada = 0; // Opcional: reinicia la propina calculada
+                        });
+                        localStorage.setItem('socios', JSON.stringify(socios)); // Guarda los socios con los anticipos ya limpios
+
+                        // 3. Borrar el último valor de Punto-Planta guardado
                         localStorage.removeItem('lastPuntoPlantaValue');
 
-                        const socios = JSON.parse(localStorage.getItem('socios')) || [];
-                        socios.forEach(socio => {
-                            socio.propinaAsignada = 0;
-                            if (socio.tipoContrato === 'Part-Time') {
-                                 socio.diasTrabajados = [];
-                                 socio.montoAsignablePartTime = 0;
-                                 socio.puntosPropinaPartTime = 0;
-                            }
-                        });
-                        guardarSocios(socios);
+                        alert("¡Hecho! Todos los montos y anticipos han sido eliminados. Los socios se han conservado.");
                         
-                        alert('Montos y punto-planta reiniciados correctamente.');
+                        // 4. Recargar la página para que la interfaz se actualice completamente
                         window.location.reload();
+
+                    } else {
+                        alert("Acción cancelada. No se ha borrado nada.");
                     }
                 } else {
-                    alert("El borrado de datos solo puede realizarse entre el día 15 y el día 14 de cada mes.");
+                    alert("Acción cancelada.");
                 }
             });
 
-
-            // --- NUEVA FUNCIONALIDAD DE INFORME DETALLADO EN PDF ---
-            generarInformeBtn.addEventListener('click', () => {
-                const montos = JSON.parse(localStorage.getItem('montos')) || [];
-                const socios = JSON.parse(localStorage.getItem('socios')) || [];
-                
-                const totalPropinaBruta = montos.reduce((sum, monto) => sum + monto.cantidad, 0);
-                const totalAnticipos = socios.reduce((sum, socio) => {
-                    return sum + (socio.anticipos || []).reduce((subSum, ant) => subSum + ant.cantidad, 0);
-                }, 0);
-                const saldoDisponible = totalPropinaBruta - totalAnticipos;
-
-                reporteFechaEmision.textContent = new Date().toLocaleDateString('es-CL');
-                informePropinaBruta.textContent = `$${formatNumber(totalPropinaBruta)}`;
-                informeAnticipos.textContent = `$${formatNumber(totalAnticipos)}`;
-                informeSaldo.textContent = `$${formatNumber(saldoDisponible)}`;
-                
-                informeDetalleSocio.innerHTML = '';
-                socios.forEach(socio => {
-                    const totalAnticiposSocio = (socio.anticipos || []).reduce((sum, ant) => sum + ant.cantidad, 0);
-                    const saldoSocio = (socio.propinaAsignada || 0) - totalAnticiposSocio;
-                    
-                    const tr = document.createElement('tr');
-                    let saldoClass = saldoSocio < 0 ? 'negative' : 'positive';
-                    tr.innerHTML = `
-                        <td>${socio.nombre} ${socio.apellido}</td>
-                        <td class="informe-propina-asignada">$${formatNumber(socio.propinaAsignada || 0)}</td>
-                        <td class="informe-anticipos">$${formatNumber(totalAnticiposSocio)}</td>
-                        <td class="informe-saldo ${saldoClass}">$${formatNumber(saldoSocio)}</td>
-                    `;
-                    informeDetalleSocio.appendChild(tr);
-                });
-                
-                // Agregar fila de totales
-                const totalRow = document.createElement('tr');
-                totalRow.classList.add('total-row');
-                totalRow.innerHTML = `
-                    <td><strong>TOTALES</strong></td>
-                    <td><strong>$${formatNumber(socios.reduce((sum, s) => sum + (s.propinaAsignada || 0), 0))}</strong></td>
-                    <td><strong>$${formatNumber(totalAnticipos)}</strong></td>
-                    <td class="informe-saldo ${saldoDisponible < 0 ? 'negative' : 'positive'}"><strong>$${formatNumber(saldoDisponible)}</strong></td>
-                `;
-                informeDetalleSocio.appendChild(totalRow);
-                
-                reportePDFModal.style.display = 'flex';
-            });
-            
-            window.imprimirReporte = () => {
-                const printContent = document.getElementById('reportePDFModal').querySelector('.modal-content').innerHTML;
-                const originalBody = document.body.innerHTML;
-                
-                document.body.innerHTML = `
-                    <style>
-                        body { font-family: sans-serif; }
-                        h3 { text-align: center; color: #2c3e50; }
-                        p { margin: 5px 0; }
-                        .report-summary { display: flex; justify-content: space-around; text-align: center; margin-bottom: 20px; }
-                        .report-summary-item { flex: 1; border: 1px solid #ccc; padding: 10px; margin: 0 5px; }
-                        .report-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
-                        .report-table th, .report-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-                        .report-table th { background-color: #f2f2f2; }
-                        .report-table tr:nth-child(even) { background-color: #f9f9f9; }
-                        .report-table .total-row { font-weight: bold; background-color: #e8f5e9; }
-                        .negative { color: #e74c3c; }
-                    </style>
-                    <div class="print-container">${printContent}</div>
-                `;
-                
-                window.print();
-                document.body.innerHTML = originalBody;
-                window.location.reload(); 
-            };
-            
-            window.descargarReporte = () => {
-                const reportContent = document.getElementById('reportePDFModal').querySelector('.modal-content');
-                const { jsPDF } = window.jspdf;
-
-                html2canvas(reportContent, {
-                    scale: 2,
-                    useCORS: true
-                }).then(canvas => {
-                    const imgData = canvas.toDataURL('image/png');
-                    const pdf = new jsPDF('p', 'mm', 'a4');
-                    const imgProps= pdf.getImageProperties(imgData);
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                    pdf.save(`informe_propina_${new Date().toISOString().slice(0, 10)}.pdf`);
-                });
-            };
 
             // --- Carga inicial al cargar la página ---
             cargarSocios();
