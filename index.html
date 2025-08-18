@@ -1,1153 +1,2493 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Días de Supervisor</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --main: #1976d2;
-      --main-dark: #115293;
-      --accent: #43a047; /* Verde para trabajado/torneo */
-      --support: #2196f3; /* Azul para apoyo */
-      --bg: #f7fafd;
-      --white: #fff;
-      --shadow: 0 2px 8px rgba(25, 118, 210, 0.07);
-      --radius: 14px;
-      --error: #e53935;
-      --gray: #e3e7ee;
-    }
-    html,body {
-      height: 100%;
-      margin: 0;
-      font-family: 'Montserrat', Arial, sans-serif;
-      background: var(--bg);
-      color: #222;
-    }
-    .container {
-      max-width: 800px;
-      margin: 38px auto 18px auto;
-      background: var(--white);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 28px 26px 30px 26px;
-    }
-    .user-info-bar {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 18px;
-      align-items: center;
-      flex-wrap: wrap;
-      background: #e3e7ee;
-      padding: 10px 18px;
-      border-radius: 9px;
-      font-size: 1.01rem;
-    }
-    .user-info-bar .user {
-      font-weight: 700;
-      color: var(--main-dark);
-    }
-    .user-info-bar button.logout {
-      background: var(--error);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      padding: 7px 17px;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: background 0.18s;
-    }
-    .user-info-bar button.logout:hover {
-      background: #c0392b;
-    }
-    .top-bar {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 18px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .top-bar button {
-      padding: 8px 19px;
-      border: none;
-      border-radius: 6px;
-      background: var(--main);
-      color: #fff;
-      font-weight: bold;
-      font-size: 1.01rem;
-      cursor: pointer;
-      transition: background 0.2s;
-      box-shadow: 0 2px 6px #0001;
-    }
-    .top-bar button#clearAllBtn {
-      background: var(--error);
-    }
-    .top-bar button:hover {
-      filter: brightness(0.93);
-    }
-    .top-bar input[type="file"] {
-      display: none;
-    }
-    #feedbackMsg {
-      min-width: 120px;
-      font-weight: bold;
-      font-size: .99rem;
-      margin-left: 10px;
-      padding: 2px 10px;
-      border-radius: 6px;
-      transition: background .2s;
-    }
-    .calendar-container {
-      background: var(--gray);
-      border-radius: var(--radius);
-      padding: 22px 14px 18px 14px;
-      margin-bottom: 26px;
-      box-shadow: 0 1px 6px 0 rgba(60,70,90,0.05);
-    }
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-    .header button {
-      padding: 4px 12px;
-      background: #e7effb;
-      border: none;
-      border-radius: 6px;
-      font-size: 1.25rem;
-      font-weight: bold;
-      cursor: pointer;
-      color: var(--main);
-      transition: background 0.2s;
-    }
-    .header button:hover {
-      background: #d3e1f7;
-    }
-    #monthYear {
-      font-size: 1.20rem;
-      font-weight: 700;
-      color: var(--main-dark);
-      letter-spacing: .5px;
-    }
-    .weekdays {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 3px;
-      margin-bottom: 6px;
-    }
-    .weekdays span {
-      font-weight: 700;
-      color: #555;
-      text-align: center;
-      font-size: 1.01rem;
-      padding-bottom: 3px;
-      letter-spacing: .01em;
-    }
-    .day-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 6px;
-    }
-    .day {
-      aspect-ratio: 1/1;
-      background: var(--white);
-      border-radius: 8px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      font-size: 1.09rem;
-      box-shadow: 0 1px 2px #0001;
-      border: 2px solid transparent;
-      transition: background .18s, border .18s;
-      position: relative;
-      font-family: inherit;
-      font-weight: 500;
-      user-select: none;
-    }
-    .day.other-month {
-      background: #f1f3f6;
-      color: #bfc5d1;
-      cursor: default;
-    }
-    .day.today {
-      border: 2px solid var(--main);
-      box-shadow: 0 0 0 2px #1976d230;
-    }
-    /* Clases para los tipos de día */
-    .day.work-general { /* Mantener por si hay datos viejos, pero no se podrá marcar */
-      background: #eaf7ed;
-      border: 2px solid var(--accent);
-      color: #1a4a7e;
-      font-weight: 700;
-      box-shadow: 0 0 0 2px #43a04725;
-    }
-    .day.work-apoyo {
-      background: #e0f2f7; /* Fondo más claro para apoyo */
-      border: 2px solid var(--support);
-      color: #1a4a7e;
-      font-weight: 700;
-      box-shadow: 0 0 0 2px #2196f325;
-    }
-    .day.work-torneo {
-      background: #fdf1e0; /* Fondo más claro para torneo */
-      border: 2px solid #ff9800; /* Naranja para torneo */
-      color: #1a4a7e;
-      font-weight: 700;
-      box-shadow: 0 0 0 2px #ff980025;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Propina</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
 
-    .day .dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      position: absolute;
-      bottom: 7px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: none;
-    }
-    .day.work-general .dot { background: var(--accent); display: inline-block; }
-    .day.work-apoyo .dot { background: var(--support); display: inline-block; }
-    .day.work-torneo .dot { background: #ff9800; display: inline-block; }
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
-    .day:hover:not(.other-month) {
-      background: #e3f0fd;
-    }
-    .history-container {
-      margin-bottom: 32px;
-      border-radius: var(--radius);
-      box-shadow: 0 1px 6px 0 rgba(60,70,90,0.04);
-      background: var(--gray);
-    }
-    .history-header {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      background: #e0e7f6;
-      padding: 8px 16px;
-      border-radius: var(--radius) var(--radius) 0 0;
-      user-select: none;
-      transition: background 0.15s;
-    }
-    .history-header:hover {
-      background: #d3e1f7;
-    }
-    .history-header h3 {
-      margin: 0;
-      flex: 1;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--main-dark);
-      letter-spacing: .2px;
-    }
-    .toggle-icon {
-      font-size: 1.2rem;
-      color: var(--main);
-      margin-left: 7px;
-      font-weight: bold;
-      transition: transform 0.2s;
-    }
-    .history-content {
-      background: #f8fafd;
-      border-radius: 0 0 var(--radius) var(--radius);
-      padding: 12px 18px;
-      display: none;
-      min-height: 30px;
-    }
-    .history-list {
-      margin: 0;
-      padding-left: 16px;
-      list-style: none;
-    }
-    .history-list li {
-      font-size: 0.99rem;
-      margin-bottom: 5px;
-      color: #234;
-      letter-spacing: .02em;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .history-list .mark { color: var(--accent); font-size: 1.05em; }
-    .history-list .unmark { color: var(--error); font-size: 1.05em; }
-    .show-all-btn {
-      margin: 8px 0 0 0;
-      padding: 5px 13px;
-      border: none;
-      background: #e0e7f6;
-      color: var(--main-dark);
-      border-radius: 6px;
-      font-size: .98rem;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background .15s;
-      display: inline-block;
-    }
-    .show-all-btn:hover {
-      background: #d3e1f7;
-    }
-    .report-section {
-      background: var(--gray);
-      border-radius: var(--radius);
-      padding: 20px 20px 14px 20px;
-      box-shadow: 0 1px 6px 0 rgba(60,70,90,0.04);
-    }
-    .report-section h3 {
-      margin-top: 0;
-      margin-bottom: 8px;
-      color: var(--main-dark);
-      font-weight: 700;
-      letter-spacing: .1px;
-    }
-    .report-controls {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-    }
-    .control-group {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-    .report-controls label {
-      font-size: 1rem;
-      color: #333;
-    }
-    #reportMonth, #reportYear {
-      padding: 2px 7px;
-      font-size: 1rem;
-      border-radius: 5px;
-      border: 1px solid #bbb;
-      background: #fff;
-    }
-    #generateReportBtn {
-      margin-top: 8px;
-      padding: 7px 16px;
-      background: var(--main);
-      border: none;
-      border-radius: 5px;
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: background 0.2s;
-    }
-    #generateReportBtn:hover {
-      background: var(--main-dark);
-    }
-    .report-output {
-      background: #fff;
-      border-radius: 7px;
-      margin-top: 14px;
-      padding: 12px 10px;
-      min-height: 42px;
-      font-size: 1.07rem;
-      color: #222;
-      word-break: break-all;
-      letter-spacing: .06em;
-      box-shadow: 0 1.5px 6px #0002;
-    }
-    .copy-message {
-      font-size: .98rem;
-      color: var(--accent);
-      margin-top: 7px;
-      display: none;
-      font-weight: 600;
-    }
-    .modal-bg {
-      position: fixed;
-      z-index: 1000;
-      left: 0; top: 0; right: 0; bottom: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(30,40,60,.18);
-      display: none;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-bg.active { display: flex; }
-    .modal-login {
-      background: #fff;
-      border-radius: 18px;
-      box-shadow: 0 8px 36px 0 #0003, 0 1.5px 8px #1976d233;
-      padding: 38px 35px 24px 35px;
-      max-width: 97vw;
-      width: 350px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      animation: fadein .3s;
-      position: relative;
-    }
-    @keyframes fadein { from{transform:scale(.93); opacity:0;} to{transform:scale(1); opacity:1;} }
-    .modal-login h2 {
-      margin-top: 0;
-      color: var(--main);
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 12px;
-      letter-spacing: .04em;
-    }
-    .modal-login .login-hint {
-      margin-bottom: 12px;
-      color: #444;
-      font-size: 1.01rem;
-      text-align: center;
-    }
-    .modal-login input {
-      width: 90%;
-      margin-bottom: 14px;
-      padding: 8px 13px;
-      font-size: 1rem;
-      border: 1.5px solid #b0b7c3;
-      border-radius: 6px;
-      font-family: inherit;
-    }
-    .modal-login button {
-      width: 100%;
-      padding: 10px 0;
-      background: var(--main);
-      color: #fff;
-      font-weight: bold;
-      font-size: 1.01rem;
-      border: none;
-      border-radius: 7px;
-      cursor: pointer;
-      margin-top: 5px;
-      transition: background .18s;
-    }
-    .modal-login button:hover { background: var(--main-dark); }
-    .modal-login .login-msg {
-      min-height: 22px;
-      color: var(--error);
-      font-size: .99rem;
-      font-weight: 600;
-      margin-bottom: 7px;
-      margin-top: -7px;
-      text-align: center;
-    }
-    .modal-login .forgot-link {
-      color: var(--main);
-      font-size: .99rem;
-      margin-bottom: 10px;
-      cursor: pointer;
-      text-decoration: underline;
-      margin-top: -8px;
-      align-self: flex-end;
-      transition: color .18s;
-    }
-    .modal-login .forgot-link:hover {
-      color: var(--main-dark);
-    }
-    .modal-login .back-link {
-      color: var(--main-dark);
-      font-size: .99rem;
-      margin-top: 8px;
-      cursor: pointer;
-      text-decoration: underline;
-      align-self: flex-end;
-      transition: color .18s;
-    }
-    .modal-login .back-link:hover {
-      color: var(--main);
-    }
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 15px;
+            background-color: #eef2f6;
+            color: #333;
+            line-height: 1.6;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .container {
+            max-width: 960px;
+            margin: 10px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 700;
+            font-size: 1.8em;
+        }
+        h2 {
+            color: white;
+            margin: 0;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        .collapsible-header {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+        .collapsible-header:hover {
+            background-color: #2980b9;
+        }
+        .collapsible-content {
+            display: none;
+            padding: 15px;
+            border: 1px solid #e0e6ed;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            margin-bottom: 20px;
+            background-color: #fcfdff;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .collapsible-content.active {
+            display: block;
+        }
+        .collapsible-header::after {
+            content: '▼';
+            transition: transform 0.3s ease;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        .collapsible-header.active::after {
+            content: '▲';
+            transform: rotate(180deg);
+        }
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.95em;
+        }
+        input[type="text"],
+        input[type="date"],
+        input[type="number"],
+        select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 18px;
+            border: 1px solid #dcdcdc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.95em;
+            transition: border-color 0.3s ease;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        button {
+            background-color: #2ecc71;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            width: 100%;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            margin-top: 8px;
+        }
+        button:hover {
+            background-color: #27ae60;
+            transform: translateY(-1px);
+        }
+        button.delete-btn {
+            background-color: #e74c3c;
+            margin-top: 12px;
+        }
+        button.delete-btn:hover {
+            background-color: #c0392b;
+            transform: translateY(-1px);
+        }
 
-    /* Nuevo estilo para el menú flotante */
-    .day-options-menu {
-      position: absolute;
-      background: var(--white);
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 100;
-      display: none; /* Oculto por defecto */
-      flex-direction: column;
-      padding: 8px 0;
-      top: 50%; /* Posicionamiento inicial */
-      left: 50%;
-      transform: translate(-50%, -50%); /* Centrar */
-      min-width: 160px;
-    }
-    .day-options-menu button {
-      background: none;
-      border: none;
-      padding: 10px 15px;
-      text-align: left;
-      cursor: pointer;
-      font-size: 0.95rem;
-      color: #333;
-      transition: background-color 0.2s;
-      width: 100%;
-      box-shadow: none; /* Anular sombra de botones */
-      font-weight: 500;
-      border-radius: 0;
-    }
-    .day-options-menu button:hover {
-      background-color: #f0f0f0;
-    }
-    .day-options-menu button:active {
-      background-color: #e0e0e0;
-    }
-    .day-options-menu button.delete {
-      color: var(--error);
-    }
+        .socio-card-container, .monto-card-container, .retiro-card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
+            margin-top: 20px;
+        }
+        /* Contenedores específicos para socios de planta y part-time */
+        .socio-planta-container, .socio-part-time-container, .distribucion-planta-container, .distribucion-part-time-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e6ed;
+        }
+        .socio-planta-container h3, .socio-part-time-container h3, .distribucion-planta-container h3, .distribucion-part-time-container h3 {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #3498db;
+            margin-bottom: 10px;
+            font-size: 1.4em;
+            font-weight: 700;
+        }
 
-    @media (max-width: 700px) {
-      .container { padding: 10px 4vw; }
-      .calendar-container, .report-section { padding: 10px 2vw; }
-      .history-content { padding: 8px 2vw; }
-      .modal-login { padding: 24px 6vw 18px 6vw; width: 95vw; }
-    }
-    @media (max-width: 480px) {
-      .container { padding: 4px; }
-      .calendar-container, .report-section { padding: 4px; }
-      .control-group { flex-direction: column; align-items: flex-start; }
-      .weekdays, .day-grid { font-size: 0.95rem; }
-    }
-  </style>
+
+        .socio-card, .monto-card, .retiro-card, .socio-distribucion-card {
+            background-color: #f7f9fc;
+            border: 1px solid #dbe9f5;
+            border-radius: 10px;
+            padding: 18px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+            word-wrap: break-word;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+        }
+        .socio-card:hover, .monto-card:hover, .retiro-card:hover, .socio-distribucion-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.09);
+        }
+        .socio-card h3, .monto-card h3, .retiro-card h3, .socio-distribucion-card h3 {
+            color: #3498db;
+            margin-top: 0;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 1.25em;
+            font-weight: 700;
+        }
+        .socio-card p, .monto-card p, .retiro-card p, .socio-distribucion-card p {
+            margin: 6px 0;
+            font-size: 0.9em;
+            color: #444;
+        }
+        .socio-card strong, .monto-card strong, .retiro-card strong, .socio-distribucion-card strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        .socio-card .delete-button-wrapper, .monto-card .delete-button-wrapper, .retiro-card .delete-button-wrapper, .socio-distribucion-card .delete-button-wrapper {
+            text-align: center;
+            margin-top: 12px;
+        }
+        .socio-card .delete-button-wrapper button, .monto-card .delete-button-wrapper button, .retiro-card .delete-button-wrapper button, .socio-distribucion-card .delete-button-wrapper button {
+            width: auto;
+            padding: 7px 12px;
+            font-size: 0.85em;
+        }
+
+        .monto-card .monto-entry-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed #e0e6ed;
+            padding: 5px 0;
+            cursor: pointer;
+        }
+        .monto-card .monto-entry-item:last-child {
+            border-bottom: none;
+        }
+        .monto-card .monto-entry-item span {
+            flex-grow: 1;
+        }
+        .monto-card .monto-entry-item .delete-btn {
+            width: auto;
+            padding: 3px 8px;
+            margin-left: 10px;
+            font-size: 0.75em;
+            background-color: #e74c3c;
+            border-radius: 4px;
+        }
+        .monto-card .monto-entry-item .delete-btn:hover {
+            background-color: #c0392b;
+        }
+        .monto-card .date-total {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #dbe9f5;
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #2c3e50;
+            text-align: right;
+        }
+
+        .general-total {
+            background-color: #2ecc71;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+        }
+        .general-total-retiros {
+            background-color: #e74c3c;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+        }
+
+        .punto-planta-display-general {
+            background-color: #9b59b6;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(155, 89, 182, 0.3);
+        }
+
+
+        .show-daily-totals-btn {
+            background-color: #3498db;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            width: 100%;
+            margin-bottom: 15px;
+            display: block;
+            text-align: center;
+            transition: background-color 0.3s ease;
+        }
+        .show-daily-totals-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .show-punto-planta-btn {
+            background-color: #9b59b6;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            display: block;
+            text-align: center;
+            transition: background-color 0.3s ease;
+        }
+        .show-punto-planta-btn:hover {
+            background-color: #8e44ad;
+        }
+
+        .socio-card .part-time-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+            border-top: 1px solid #dbe9f5;
+            padding-top: 10px;
+        }
+        .socio-card .part-time-actions button {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 0.9em;
+            border-radius: 5px;
+        }
+        .socio-card .part-time-actions .calendar-btn {
+            background-color: #f39c12;
+        }
+        .socio-card .part-time-actions .calendar-btn:hover {
+            background-color: #e67e22;
+        }
+        .socio-card .part-time-actions .calculate-part-time-points-btn {
+            background-color: #1abc9c;
+        }
+        .socio-card .part-time-actions .calculate-part-time-points-btn:hover {
+            background-color: #16a085;
+        }
+
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            padding: 25px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 18px;
+            font-size: 1.4em;
+        }
+        .modal-content .close-button {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+        }
+
+        .daily-totals-list p, .punto-planta-details p, .part-time-points-details p, .socio-anticipos-list p {
+            margin: 8px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #eee;
+            font-size: 1em;
+            display: flex;
+            justify-content: space-between;
+        }
+        .daily-totals-list p:last-child, .punto-planta-details p:last-child, .part-time-points-details p:last-child, .socio-anticipos-list p:last-child {
+            border-bottom: none;
+        }
+        .daily-totals-list strong, .punto-planta-details strong, .part-time-points-details strong, .socio-anticipos-list strong {
+            color: #34495e;
+        }
+
+        .punto-planta-result-card {
+            background-color: #e6ffee;
+            border: 1px solid #2ecc71;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #28a745;
+            box-shadow: 0 4px 10px rgba(46, 204, 113, 0.2);
+        }
+
+        .part-time-points-result-card {
+            background-color: #e0f8f5;
+            border: 1px solid #1abc9c;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #1abc9c;
+            box-shadow: 0 4px 10px rgba(26, 188, 156, 0.2);
+        }
+
+
+        .edit-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .edit-modal-content {
+            background-color: #fefefe;
+            padding: 25px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: #000;
+            text-decoration: none;
+        }
+
+        .edit-modal-content h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 18px;
+            font-size: 1.4em;
+        }
+        .edit-modal-content button {
+            margin-top: 15px;
+        }
+        .edit-modal-content button.cancel-btn {
+            background-color: #95a5a6;
+        }
+        .edit-modal-content button.cancel-btn:hover {
+            background-color: #7f8c8d;
+        }
+
+        .socio-distribucion-card {
+            border: 1px solid #cce7ff;
+            background-color: #e0f2ff;
+            cursor: pointer;
+        }
+        .socio-distribucion-card.part-time {
+            background-color: #fffde0;
+            border-color: #ffeb3b;
+        }
+        .socio-distribucion-card p.puntos {
+            font-size: 1.0em;
+            font-weight: 700;
+            color: #007bff;
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 0;
+        }
+        .socio-distribucion-card p.puntos-calculados-pt {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #1abc9c;
+            text-align: center;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+        .socio-distribucion-card p.propina-asignada,
+        .socio-distribucion-card p.saldo-disponible {
+            font-size: 1.1em;
+            font-weight: 700;
+            text-align: center;
+            margin-top: 5px;
+        }
+        .socio-distribucion-card p.propina-asignada {
+            color: #28a745;
+        }
+        .socio-distribucion-card p.saldo-disponible {
+            color: #3498db;
+        }
+        .socio-distribucion-card p.saldo-disponible.negative {
+            color: #e74c3c;
+        }
+
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            padding: 25px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        #calendarModal .modal-content {
+            max-width: 320px;
+            padding: 20px;
+        }
+        #calendarModal h3 {
+            margin-bottom: 10px;
+        }
+        #flatpickrInput {
+            width: 100%;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .anticipo-socio-info {
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .anticipo-socio-info h3 {
+            color: #1890ff;
+            margin-top: 0;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 1.3em;
+        }
+
+        .anticipo-socio-info p {
+            font-size: 1em;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .anticipo-socio-info p strong {
+            color: #333;
+        }
+
+        .anticipo-socio-info .saldo-disponible {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #28a745;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #dbe9f5;
+            text-align: right;
+        }
+        .anticipo-socio-info .saldo-disponible.negative {
+            color: #e74c3c;
+        }
+
+        .anticipo-history {
+            margin-top: 20px;
+            border-top: 1px solid #e0e6ed;
+            padding-top: 15px;
+        }
+
+        .anticipo-history h4 {
+            color: #555;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        .anticipo-history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed #eee;
+            font-size: 0.9em;
+        }
+
+        .anticipo-history-item:last-child {
+            border-bottom: none;
+        }
+
+        .anticipo-history-item .delete-btn {
+            background-color: #e74c3c;
+            padding: 4px 8px;
+            font-size: 0.75em;
+            border-radius: 4px;
+            width: auto;
+            margin-left: 10px;
+        }
+        .anticipo-history-item .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        #socioAnticiposHistoryModal .modal-content {
+            max-width: 450px;
+        }
+        #socioAnticiposHistoryModal .socio-summary {
+            background-color: #f0f7ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #cce7ff;
+        }
+        #socioAnticiposHistoryModal .socio-summary p {
+            margin: 5px 0;
+            font-size: 1em;
+        }
+        #socioAnticiposHistoryModal .socio-summary .saldo-disponible {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #28a745;
+            text-align: right;
+            border-top: 1px solid #dbe9f5;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+        #socioAnticiposHistoryModal .socio-summary .saldo-disponible.negative {
+            color: #e74c3c;
+        }
+        #socioAnticiposHistoryModal .socio-anticipos-list {
+            max-height: 250px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        #socioAnticiposHistoryModal .socio-anticipos-list h4 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 1.1em;
+        }
+        .import-export-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+        .import-export-container button, .import-export-container input[type="file"] {
+            width: 100%;
+            max-width: 300px;
+            box-sizing: border-box;
+        }
+        .import-export-container input[type="file"] {
+            display: none;
+        }
+        .import-export-container .import-label {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            width: 100%;
+            max-width: 300px;
+            text-align: center;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .import-export-container .import-label:hover {
+            background-color: #2980b9;
+            transform: translateY(-1px);
+        }
+        .export-btn {
+            background-color: #f1c40f;
+        }
+        .export-btn:hover {
+            background-color: #f39c12;
+        }
+        
+        /* NUEVO ESTILO PARA EL BOTÓN DE BORRADO */
+        .delete-all-btn {
+            background-color: #e74c3c; /* Rojo */
+        }
+        .delete-all-btn:hover {
+            background-color: #c0392b; /* Rojo oscuro */
+        }
+
+        #balanceReport {
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #ecf0f1;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+        }
+        #balanceReport p {
+            margin: 0;
+            padding: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 1em;
+            color: #555;
+        }
+        #balanceReport p strong {
+            color: #2c3e50;
+        }
+        #balanceReport p:first-child {
+            border-bottom: 1px dashed #dcdcdc;
+        }
+        #balanceReport .balance-saldo {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #2c3e50;
+            text-align: right;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #dbe9f5;
+        }
+        .balance-saldo span.negative {
+            color: #e74c3c;
+        }
+        .balance-saldo span.positive {
+            color: #2ecc71;
+        }
+        
+        /* NUEVO ESTILO PARA EL BUSCADOR */
+        .search-container {
+            margin-bottom: 20px;
+        }
+        .search-container input {
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
-<div class="modal-bg" id="loginModal">
-  <form class="modal-login" id="loginForm" autocomplete="off" style="display:block;">
-    <h2>Bienvenido/a</h2>
-    <div class="login-hint" id="newUserNotification">
-      Si no eres usuario, regístrate completando los campos y elige tu clave.<br>
-      <b>Recuerda:</b> tu número de celular será requerido para recuperar la clave.
-    </div>
-    <div class="login-hint" id="existingUserNotification" style="display:none;">
-      ¡Hola de nuevo! Ingresa tu clave para continuar.
-    </div>
-    <input type="text" id="modalUser" placeholder="Usuario" maxlength="20" autocomplete="username">
-    <input type="password" id="modalPass" placeholder="Clave" maxlength="20" autocomplete="current-password">
-    <input type="text" id="modalPhone" placeholder="Número de celular" maxlength="20" autocomplete="tel" style="display:none;">
-    <div class="login-msg" id="modalLoginMsg"></div>
-    <button type="submit" id="modalLoginBtn">Entrar</button>
-    <span class="forgot-link" id="forgotPassLink">¿Olvidaste tu clave?</span>
-  </form>
-  <form class="modal-login" id="recoverForm" autocomplete="off" style="display:none;">
-    <h2>Recupera tu clave</h2>
-    <div class="login-hint">
-      Ingresa tu usuario y el número de celular con el que te registraste.
-    </div>
-    <input type="text" id="recoverUser" placeholder="Usuario" maxlength="20" autocomplete="username">
-    <input type="text" id="recoverPhone" placeholder="Número de celular" maxlength="20" autocomplete="tel">
-    <input type="password" id="recoverNewPass" placeholder="Nueva clave" maxlength="20" style="display:none;">
-    <div class="login-msg" id="modalRecoverMsg"></div>
-    <button type="submit" id="recoverBtn">Recuperar clave</button>
-    <span class="back-link" id="backToLogin">Volver</span>
-  </form>
-</div>
-<div class="container">
-  <div class="user-info-bar" id="userInfoBar" style="display:none;">
-    <span>Usuario: <span class="user" id="currentUserName"></span></span>
-    <button class="logout" id="logoutBtn">Cerrar sesión</button>
-  </div>
-  <div class="top-bar">
-    <button id="exportBtn">Exportar Datos</button>
-    <button id="importBtn">Importar Datos</button>
-    <input type="file" id="importFile" accept="application/json">
-    <button id="clearAllBtn">Borrar Todo</button>
-    <span id="feedbackMsg"></span>
-  </div>
-  <div class="calendar-container">
-    <div class="header">
-      <button id="prevMonth">&lt;</button>
-      <h2 id="monthYear"></h2>
-      <button id="nextMonth">&gt;</button>
-    </div>
-    <div class="weekdays">
-      <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
-    </div>
-    <div id="calendarGrid" class="day-grid"></div>
+    <div class="container">
+        <h1>Gestión de Propina</h1>
 
-    <div class="day-options-menu" id="dayOptionsMenu">
-      <button data-type="apoyo">Supervisor de apoyo</button>
-      <button data-type="torneo">Supervisor de Torneo</button>
-      <button data-type="unmark" class="delete">Desmarcar día</button>
-    </div>
-  </div>
-  <div class="history-container">
-    <div class="history-header" id="historyHeader">
-      <h3>Historial de Cambios</h3>
-      <span class="toggle-icon" id="toggleIcon">+</span>
-    </div>
-    <div class="history-content" id="historyContent">
-      <ul class="history-list" id="historyList"></ul>
-      <button class="show-all-btn" id="showAllBtn" style="display:none;"></button>
-    </div>
-  </div>
-  <div class="report-section">
-    <h3>Generar Informe de Supervisor</h3>
-    <div class="report-controls">
-      <div class="control-group">
-        <label>Informe del <b>15</b> de:</label>
-        <select id="reportMonth"></select>
-        <input type="number" id="reportYear" min="2000" max="2100">
-      </div>
-      <div class="control-group">
-        <label>al <b>15</b> del mes siguiente</label>
-      </div>
-    </div>
-    <button id="generateReportBtn">Generar Informe</button>
-    <div class="report-output" id="reportOutput">
-      Selecciona el mes y año de inicio, luego haz clic en "Generar Informe".
-    </div>
-    <div class="copy-message" id="copyMessage">Texto copiado al portapapeles. ¡Listo para WhatsApp!</div>
-  </div>
-</div>
-<script>
-(function() {
-  // UTILIDAD
-  function showFeedback(msg, ok = true) {
-    const el = document.getElementById('feedbackMsg');
-    el.textContent = msg;
-    el.style.background = ok ? "#eafaf1" : "#fbeeea";
-    el.style.color = ok ? "#2e7d32" : "#c0392b";
-    setTimeout(() => { el.textContent = ""; el.style.background=""; }, 2500);
-  }
-  function showModalLoginMsg(msg, ok=false) {
-    const el = document.getElementById('modalLoginMsg');
-    el.textContent = msg;
-    el.style.color = ok ? "#2e7d32" : "#c0392b";
-    setTimeout(()=>{ el.textContent=""; }, 2500);
-  }
-  function showModalRecoverMsg(msg, ok=false) {
-    const el = document.getElementById('modalRecoverMsg');
-    el.textContent = msg;
-    el.style.color = ok ? "#2e7d32" : "#c0392b";
-    setTimeout(()=>{ el.textContent=""; }, 2500);
-  }
-  // LOCAL STORAGE
-  function saveData(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
-  function loadData(key, def = null) {
-    try {
-      const d = localStorage.getItem(key);
-      return d ? JSON.parse(d) : def;
-    } catch { return def; }
-  }
-  // USUARIOS
-  let users = loadData('users', {});
-  let currentUser = loadData('currentUser', null);
-
-  function showLoginModal(show) {
-    const modal = document.getElementById('loginModal');
-    modal.classList.toggle('active', !!show);
-    if (show) {
-      showLoginForm(); // Asegura que el formulario de login se muestre con el estado inicial
-      setTimeout(()=>{ document.getElementById('modalUser').focus(); }, 120);
-    }
-    disableApp(!show ? false : true);
-  }
-  function updateUserBar() {
-    const bar = document.getElementById('userInfoBar');
-    const nameEl = document.getElementById('currentUserName');
-    if (currentUser) {
-      bar.style.display = "";
-      nameEl.textContent = currentUser;
-    } else {
-      bar.style.display = "none";
-      nameEl.textContent = "";
-    }
-  }
-  function disableApp(disable) {
-    document.querySelectorAll(
-      '.calendar-container button, #calendarGrid .day, .top-bar button, .report-section button, .history-header'
-    ).forEach(el => el.disabled = !!disable);
-    document.querySelectorAll(
-      '#calendarGrid .day'
-    ).forEach(el => el.style.pointerEvents = disable ? 'none' : '');
-    document.getElementById('reportMonth').disabled = !!disable;
-    document.getElementById('reportYear').disabled = !!disable;
-  }
-  // MODAL LOGIN + RECUPERACIÓN
-  function showLoginForm() {
-    document.getElementById('loginForm').style.display = "block";
-    document.getElementById('recoverForm').style.display = "none";
-    // Restablecer el estado inicial del formulario de login
-    document.getElementById('modalUser').value = ''; // Limpiar el campo de usuario
-    document.getElementById('modalPass').value = ''; // Limpiar el campo de clave
-    document.getElementById('modalPhone').style.display = "none"; // Ocultar celular por defecto
-    document.getElementById('newUserNotification').style.display = "block"; // Mostrar mensaje de nuevo usuario por defecto
-    document.getElementById('existingUserNotification').style.display = "none"; // Ocultar mensaje de usuario existente
-    document.getElementById('modalPass').placeholder = "Clave"; // Asegura el placeholder inicial
-    document.getElementById('forgotPassLink').style.display = "block"; // Asegura que el link esté visible por defecto
-
-    setTimeout(()=>{ document.getElementById('modalUser').focus(); }, 120);
-  }
-  function showRecoverForm() {
-    document.getElementById('loginForm').style.display = "none";
-    document.getElementById('recoverForm').style.display = "block";
-    setTimeout(()=>{ document.getElementById('recoverUser').focus(); }, 120);
-  }
-  // Cambia visibilidad del campo de celular y mensaje de bienvenida
-  document.getElementById('modalUser').addEventListener('input', function() {
-    let user = this.value.trim();
-    let phoneInput = document.getElementById('modalPhone');
-    const newUserNotification = document.getElementById('newUserNotification');
-    const existingUserNotification = document.getElementById('existingUserNotification');
-    const modalPassInput = document.getElementById('modalPass');
-    const forgotPassLink = document.getElementById('forgotPassLink');
-
-    if (!user) {
-      // Si el campo de usuario está vacío, resetear al estado inicial (como si fuera un usuario nuevo)
-      phoneInput.style.display = "none";
-      newUserNotification.style.display = "block";
-      existingUserNotification.style.display = "none";
-      modalPassInput.placeholder = "Clave";
-      forgotPassLink.style.display = "block";
-      return;
-    }
-
-    if (!users[user]) {
-      // Usuario no existe, pedir registro y mostrar campo de celular
-      phoneInput.style.display = "block";
-      newUserNotification.style.display = "block";
-      existingUserNotification.style.display = "none";
-      modalPassInput.placeholder = "Elige una clave";
-      forgotPassLink.style.display = "none"; // Un nuevo usuario no tiene clave que olvidar
-    } else {
-      // Usuario existe, solo pedir clave y ocultar campo de celular
-      phoneInput.style.display = "none";
-      newUserNotification.style.display = "none";
-      existingUserNotification.style.display = "block";
-      modalPassInput.placeholder = "Clave";
-      forgotPassLink.style.display = "block"; // Un usuario existente sí puede olvidar su clave
-    }
-  });
-
-  document.getElementById('loginForm').onsubmit = function(e){
-    e.preventDefault();
-    let user = document.getElementById('modalUser').value.trim();
-    let pass = document.getElementById('modalPass').value.trim();
-    let phone = document.getElementById('modalPhone').value.trim();
-    if(!user || !pass) { showModalLoginMsg("Ingresa usuario y clave"); return; }
-
-    // Validación de longitud de clave para registro
-    if (!users[user] && pass.length < 4) { // Puedes ajustar esta longitud mínima
-        showModalLoginMsg("La clave debe tener al menos 4 caracteres.");
-        return;
-    }
-
-    if(!users[user]) {
-      // Es un nuevo usuario, requiere teléfono
-      if(!phone) { showModalLoginMsg("Ingresa tu número de celular"); return; }
-      users[user] = { pass: pass, phone: phone };
-      saveData('users', users);
-      currentUser = user;
-      saveData('currentUser', currentUser);
-      showModalLoginMsg("Usuario registrado", true);
-      setTimeout(()=>{
-        showLoginModal(false);
-        updateUserBar();
-        showFeedback("¡Bienvenido/a "+user+"!", true);
-      }, 700);
-      return;
-    } else {
-      // Usuario existente, solo verificar clave
-      if(users[user].pass !== pass) {
-        showModalLoginMsg("Clave incorrecta"); return;
-      } else {
-        currentUser = user;
-        saveData('currentUser', currentUser);
-        showModalLoginMsg("¡Bienvenido/a "+user+"!", true);
-        setTimeout(()=>{
-          showLoginModal(false);
-          updateUserBar();
-          showFeedback("¡Bienvenido/a "+user+"!", true);
-        }, 700);
-        return;
-      }
-    }
-  };
-  document.getElementById('forgotPassLink').onclick = function() {
-    showRecoverForm();
-  };
-  document.getElementById('backToLogin').onclick = function() {
-    showLoginForm();
-  };
-  // Recuperación de clave
-  document.getElementById('recoverForm').onsubmit = function(e){
-    e.preventDefault();
-    let user = document.getElementById('recoverUser').value.trim();
-    let phone = document.getElementById('recoverPhone').value.trim();
-    let newPassInput = document.getElementById('recoverNewPass');
-    let recoverBtn = document.getElementById('recoverBtn');
-    if(newPassInput.style.display === "none") {
-      if(!user || !phone) { showModalRecoverMsg("Completa usuario y celular"); return; }
-      if(!users[user]) { showModalRecoverMsg("Usuario no encontrado"); return; }
-      if(users[user].phone !== phone) { showModalRecoverMsg("Celular no coincide"); return; }
-      showModalRecoverMsg("Correcto. Ingresa la nueva clave.", true);
-      newPassInput.style.display = "block";
-      recoverBtn.textContent = "Guardar nueva clave";
-      newPassInput.focus();
-    } else {
-      let newPass = newPassInput.value.trim();
-      if(!newPass) { showModalRecoverMsg("Ingresa tu nueva clave"); return; }
-      if(newPass.length < 4) { // Puedes ajustar esta longitud mínima para recuperación
-        showModalRecoverMsg("La nueva clave debe tener al menos 4 caracteres.");
-        return;
-      }
-      let user = document.getElementById('recoverUser').value.trim(); // Asegurarse de usar el usuario actual
-      users[user].pass = newPass;
-      saveData('users', users);
-      showModalRecoverMsg("¡Clave actualizada! Ahora puedes iniciar sesión.", true);
-      setTimeout(()=>{
-        newPassInput.value = "";
-        newPassInput.style.display = "none";
-        recoverBtn.textContent = "Recuperar clave";
-        showLoginForm();
-      }, 1000);
-    }
-  };
-  document.getElementById('logoutBtn').onclick = function() {
-    // Añadir confirmación antes de cerrar sesión
-    if (confirm("¿Estás seguro de que quieres cerrar la sesión?")) {
-      currentUser = null;
-      saveData('currentUser', null);
-      updateUserBar();
-      showLoginModal(true);
-      showFeedback("Sesión cerrada.", true);
-    }
-  };
-  if (!currentUser) showLoginModal(true);
-  updateUserBar();
-
-  // CALENDARIO
-  const calendarGrid = document.getElementById('calendarGrid');
-  const monthYear = document.getElementById('monthYear');
-  const dayOptionsMenu = document.getElementById('dayOptionsMenu');
-  let viewDate = new Date();
-  // workDays ahora guarda el tipo de día ('apoyo', 'torneo') o undefined
-  let workDays = loadData('workDays', {});
-  let changeHistory = loadData('changeHistory', []);
-  
-  let currentClickedDayKey = null; // Para guardar la clave del día que se hizo clic
-
-  function renderCalendar() {
-    let y = viewDate.getFullYear(), m = viewDate.getMonth();
-    monthYear.textContent = viewDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' }).replace(/\b\w/g, l => l.toUpperCase());
-    calendarGrid.innerHTML = '';
-    dayOptionsMenu.style.display = 'none'; // Ocultar menú al renderizar
-
-    let firstDayOfMonth = new Date(y, m, 1);
-    let startingDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7; // Lunes es 0
-
-    // Días del mes anterior
-    let daysInPrevMonth = new Date(y, m, 0).getDate();
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      let day = daysInPrevMonth - startingDayOfWeek + i + 1;
-      let cell = document.createElement('div');
-      cell.className = 'day other-month';
-      cell.textContent = day;
-      calendarGrid.appendChild(cell);
-    }
-
-    // Días del mes actual
-    let daysInCurrentMonth = new Date(y, m + 1, 0).getDate();
-    for (let d = 1; d <= daysInCurrentMonth; d++) {
-      let cell = document.createElement('div');
-      cell.className = 'day';
-      cell.textContent = d;
-      let key = `${y}-${(m + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
-      
-      const dayType = workDays[key];
-      if (dayType) {
-        if (dayType === 'apoyo') {
-          cell.classList.add('work-apoyo');
-        } else if (dayType === 'torneo') {
-          cell.classList.add('work-torneo');
-        } else { // Si existe algún 'trabajado' antiguo, lo sigue mostrando
-          cell.classList.add('work-general');
-        }
-      }
-
-      let now = new Date();
-      if (d === now.getDate() && m === now.getMonth() && y === now.getFullYear()) cell.classList.add('today');
-
-      let dot = document.createElement('span');
-      dot.className = 'dot';
-      cell.appendChild(dot);
-
-      cell.addEventListener('click', function (event) {
-        if (cell.classList.contains('other-month') || !currentUser) {
-          if (!currentUser) showFeedback("Inicia sesión para marcar días", false);
-          return;
-        }
+        <div class="collapsible">
+            <div class="collapsible-header" id="balanceHeader">
+                <h2>Balance General</h2>
+            </div>
+            <div class="collapsible-content" id="balanceContent">
+                <div id="balanceReport">
+                    <p><strong>Total Propina Bruta:</strong> <span id="balancePropinaBruta">$0</span></p>
+                    <p><strong>Total Anticipos:</strong> <span id="balanceAnticipos">$0</span></p>
+                    <hr>
+                    <p class="balance-saldo"><strong>Saldo Disponible:</strong> <span id="balanceSaldo">$0</span></p>
+                </div>
+            </div>
+        </div>
         
-        currentClickedDayKey = key; // Guardar la clave del día clicado
+        <div class="collapsible">
+            <div class="collapsible-header" id="registroHeader">
+                <h2>Registrar Socio</h2>
+            </div>
+            <div class="collapsible-content" id="registroContent">
+                <form id="registroSocioForm">
+                    <label for="nombre">Nombre:</label>
+                    <input type="text" id="nombre" required>
+
+                    <label for="apellido">Apellido:</label>
+                    <input type="text" id="apellido" required>
+
+                    <label for="fechaIngreso">Fecha de Ingreso:</label>
+                    <input type="date" id="fechaIngreso" required>
+
+                    <label for="area">Área:</label>
+                    <select id="area" required>
+                        <option value="">Seleccione un área</option>
+                        <option value="Mesas">Mesas</option>
+                        <option value="Maquinas">Máquinas</option>
+                        <option value="Boveda">Bóveda</option>
+                    </select>
+
+                    <label for="tipoContrato">Tipo de Contrato:</label>
+                    <select id="tipoContrato" required>
+                        <option value="">Seleccione tipo de contrato</option>
+                        <option value="Planta">Planta</option>
+                        <option value="Part-Time">Part-Time</option>
+                    </select>
+
+                    <button type="submit">Registrar Socio</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header" id="sociosHeader">
+                <h2>Socios Comisión</h2>
+            </div>
+            <div class="collapsible-content" id="sociosContent">
+                <div class="socio-planta-container" id="sociosPlantaContainer">
+                    <h3>Socios Planta</h3>
+                </div>
+                <div class="socio-part-time-container" id="sociosPartTimeContainer">
+                    <h3>Socios Part-Time</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header" id="registroMontosHeader">
+                <h2>Registrar Monto Noche</h2>
+            </div>
+            <div class="collapsible-content" id="registroMontosContent">
+                <div class="general-total" id="totalGeneralMontosRegistro">
+                    Total General de Propina: $0
+                </div>
+                <button type="button" class="show-daily-totals-btn" data-modal-target="dailyTotalsModal">Ver Totales Diarios de Propina</button>
+                <form id="registroMontoForm">
+                    <label for="montoFecha">Fecha:</label>
+                    <input type="date" id="montoFecha" required>
+
+                    <label for="montoArea">Área:</label>
+                    <select id="montoArea" required>
+                        <option value="">Seleccione un área</option>
+                        <option value="Mesas">Mesas</option>
+                        <option value="Maquinas">Máquinas</option>
+                        <option value="Boveda">Bóveda</option>
+                    </select>
+
+                    <label for="montoCantidad">Monto:</label>
+                    <input type="text" id="montoCantidad" inputmode="numeric" pattern="[0-9.]*" required>
+
+                    <button type="submit">Registrar Monto</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header" id="montosHeader">
+                <h2>Montos Registrados</h2>
+            </div>
+            <div class="collapsible-content" id="montosContent">
+                <div class="general-total" id="totalGeneralMontosDisplay">
+                    Total General de Propina: $0
+                </div>
+                <button type="button" class="show-daily-totals-btn" data-modal-target="dailyTotalsModal">Ver Totales Diarios de Propina</button>
+                <div id="montosRegistradosContainer" class="monto-card-container">
+                    </div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header" id="anticiposHeader">
+                <h2>Anticipos de Socios</h2>
+            </div>
+            <div class="collapsible-content" id="anticiposContent">
+                <div class="general-total-retiros" id="totalGeneralAnticipos">
+                    Total General de Anticipos: $0
+                </div>
+                <form id="registroAnticipoForm">
+                    <label for="anticipoSocio">Seleccionar Socio:</label>
+                    <input list="sociosAnticipoList" id="anticipoSocioInput" type="text" placeholder="Buscar socio..." required>
+                    <datalist id="sociosAnticipoList"></datalist>
+                    <input type="hidden" id="anticipoSocioId"> <div id="anticipoSocioInfoContainer" class="anticipo-socio-info" style="display: none;">
+                        <h3>Información del Socio</h3>
+                        <p><strong>Propina Asignada:</strong> <span id="infoPropinaAsignada">$0</span></p>
+                        <p><strong>Total Anticipos Anteriores:</strong> <span id="infoAnticiposAnteriores">$0</span></p>
+                        <p class="saldo-disponible"><strong>Saldo Disponible:</strong> <span id="infoSaldoDisponible">$0</span></p>
+                        
+                        <div class="anticipo-history" id="anticipoHistoryDisplay">
+                            <h4>Historial de Anticipos</h4>
+                            <p style="text-align: center;">No hay anticipos previos.</p>
+                        </div>
+                    </div>
+
+                    <label for="anticipoFecha">Fecha de Anticipo:</label>
+                    <input type="date" id="anticipoFecha" required>
+
+                    <label for="anticipoCantidad">Monto del Anticipo:</label>
+                    <input type="text" id="anticipoCantidad" inputmode="numeric" pattern="[0-9.]*" required>
+
+                    <button type="submit">Registrar Anticipo</button>
+                </form>
+                <div id="anticiposRegistradosContainer" class="retiro-card-container" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header" id="distribucionHeader">
+                <h2>Distribución de Propina</h2>
+            </div>
+            <div class="collapsible-content" id="distribucionContent">
+                <div class="general-total" id="totalGeneralPropinaBrutaDistribucion">
+                    Total General de Propina (Bruta): $0
+                </div>
+                <div class="punto-planta-display-general" id="puntoPlantaDisplay">
+                    Último Punto-Planta: $0
+                </div>
+                <button type="button" class="show-punto-planta-btn" data-modal-target="puntoPlantaModal">Calcular Punto-Planta</button>
+                
+                <div class="search-container">
+                    <input type="text" id="socioSearchInput" placeholder="Buscar socio...">
+                </div>
+
+                <div class="distribucion-planta-container" id="distribucionPlantaContainer">
+                    <h3>Socios Planta</h3>
+                </div>
+                <div class="distribucion-part-time-container" id="distribucionPartTimeContainer">
+                    <h3>Socios Part-Time</h3>
+                </div>
+            </div>
+        </div>
         
-        // Posicionar el menú flotante
-        const rect = cell.getBoundingClientRect();
-        const calendarRect = calendarGrid.getBoundingClientRect();
+        <div class="collapsible">
+            <div class="collapsible-header" id="dataManagementHeader">
+                <h2>Gestión de Datos</h2>
+            </div>
+            <div class="collapsible-content" id="dataManagementContent">
+                <p>Aquí puedes exportar tus datos para crear una copia de seguridad, importar una copia o borrar los datos del período actual.</p>
+                <div class="import-export-container">
+                    <button id="exportDataBtn" class="export-btn">Exportar Datos (JSON)</button>
+                    <button id="deleteAllDataBtn" class="delete-all-btn">Borrar Montos y Anticipos</button>
+                    <label for="importFileInput" class="import-label">Importar Datos (JSON)</label>
+                    <input type="file" id="importFileInput" accept=".json">
+                </div>
+            </div>
+        </div>
 
-        // Calcular la posición relativa al contenedor del calendario
-        dayOptionsMenu.style.left = `${rect.left - calendarRect.left + rect.width / 2}px`;
-        dayOptionsMenu.style.top = `${rect.top - calendarRect.top + rect.height / 2}px`;
-        dayOptionsMenu.style.transform = 'translate(-50%, -50%)'; // Centrar sobre el clic
-        dayOptionsMenu.style.display = 'flex';
-        
-        event.stopPropagation(); // Evitar que el clic se propague al documento
-      });
-      calendarGrid.appendChild(cell);
-    }
+    </div>
 
-    // Días del mes siguiente
-    let totalCells = startingDayOfWeek + daysInCurrentMonth;
-    let remainingCells = (7 - (totalCells % 7)) % 7;
-    for (let i = 1; i <= remainingCells; i++) {
-      let cell = document.createElement('div');
-      cell.className = 'day other-month';
-      cell.textContent = i;
-      calendarGrid.appendChild(cell);
-    }
-    disableApp(!currentUser);
-  }
+    <div id="dailyTotalsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal-close="dailyTotalsModal">&times;</span>
+            <h3>Totales Diarios de Montos</h3>
+            <div class="daily-totals-list">
+                <p>Cargando totales...</p>
+            </div>
+        </div>
+    </div>
 
-  // Manejar clics en el menú flotante
-  dayOptionsMenu.querySelectorAll('button').forEach(button => {
-    button.addEventListener('click', function() {
-      if (!currentClickedDayKey) return; // No hay día seleccionado
+    <div id="puntoPlantaModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal-close="puntoPlantaModal">&times;</span>
+            <h3>Cálculo de Punto-Planta</h3>
+            <div class="punto-planta-details">
+                <p><strong>Total de Propina Bruta:</strong> <span id="propinaBrutaModal">$0</span></p>
+                <p><strong>Total de Anticipos:</strong> <span id="retirosModal">$0</span></p>
+                <p><strong>Total de Propina Neta (Disponible para Punto-Planta):</strong> <span id="propinaNetaModal">$0</span></p>
+                <p><strong>Total de Puntos de Socios:</strong> <span id="totalPuntosSociosModal">0</span></p>
 
-      const type = this.dataset.type; // 'apoyo', 'torneo', 'unmark'
-      let actionText = '';
+                <hr style="margin: 15px 0;">
 
-      if (type === 'unmark') {
-        if (workDays[currentClickedDayKey]) { // Solo desmarcar si ya estaba marcado
-          delete workDays[currentClickedDayKey];
-          actionText = 'Desmarcado como día trabajado';
-        }
-      } else {
-        workDays[currentClickedDayKey] = type;
-        if (type === 'apoyo') actionText = 'Marcado como Supervisor de apoyo';
-        else if (type === 'torneo') actionText = 'Marcado como Supervisor de Torneo';
-      }
-      
-      if (actionText) { // Solo si hubo un cambio real
-        addHistory(currentClickedDayKey, actionText, currentUser);
-        saveData('workDays', workDays);
-        renderCalendar(); // Volver a renderizar para actualizar clases
-        renderHistory();
-      }
-      dayOptionsMenu.style.display = 'none'; // Ocultar menú
-      currentClickedDayKey = null; // Limpiar la clave del día
-    });
-  });
+                <label for="divisorPuntoPlanta">Divisor para Punto-Planta:</label>
+                <input type="text" id="divisorPuntoPlanta" inputmode="numeric" pattern="[0-9.]*" required style="width: calc(100% - 20px);">
+                <button type="button" id="calcularPuntoPlantaInternoBtn">Calcular Punto-Planta</button>
 
-  // Ocultar el menú si se hace clic fuera de él
-  document.addEventListener('click', function(event) {
-    if (dayOptionsMenu.style.display === 'flex' && !dayOptionsMenu.contains(event.target) && !event.target.classList.contains('day')) {
-      dayOptionsMenu.style.display = 'none';
-      currentClickedDayKey = null;
-    }
-  });
+                <div class="punto-planta-result-card" id="puntoPlantaValor">
+                    Punto-Planta: $0
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="calendarModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal-close="calendarModal">&times;</span>
+            <h3 id="calendarModalTitle">Días Trabajados de [Socio]</h3>
+            <input type="text" id="flatpickrInput" placeholder="Selecciona días">
+            <p style="text-align: center; margin-top: 15px;">Días seleccionados: <span id="selectedDaysCount">0</span></p>
+        </div>
+    </div>
+
+    <div id="partTimePointsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal-close="partTimePointsModal">&times;</span>
+            <h3 id="partTimePointsModalTitle">Calcular Puntos de [Socio Part-Time]</h3>
+            <div class="part-time-points-details">
+                <p><strong>Puntos de Antigüedad Base:</strong> <span id="partTimeModalBasePoints">0</span></p>
+                <p><strong>Monto Propina Asignable (del total bruto):</strong> <span id="partTimeModalAssignableAmount">$0</span></p>
+                
+                <hr style="margin: 15px 0;">
+
+                <label for="partTimeMultiplicador">Multiplicador de Puntos:</label>
+                <input type="text" id="partTimeMultiplicador" inputmode="numeric" pattern="[0-9.]*" required style="width: calc(100% - 20px);">
+                <button type="button" id="calcularPartTimePointsInternoBtn">Calcular Puntos</button>
+
+                <div class="part-time-points-result-card" id="partTimePointsValue">
+                    Puntos: 0
+                </div>
+            </div>
+        </div>
+    </div>
 
 
-  document.getElementById('prevMonth').onclick = () => { viewDate.setMonth(viewDate.getMonth() - 1); renderCalendar(); };
-  document.getElementById('nextMonth').onclick = () => { viewDate.setMonth(viewDate.getMonth() + 1); renderCalendar(); };
+    <div id="editModal" class="edit-modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal-close="editModal">&times;</span>
+            <h3 id="editModalTitle">Editar</h3>
+            <form id="editFormUniversal">
+                <input type="hidden" id="editItemType">
+                <input type="hidden" id="editItemIndex">
+                
+                <div id="editFieldsSocio">
+                    <label for="editNombre">Nombre:</label>
+                    <input type="text" id="editNombre">
 
-  // HISTORIAL
-  const MAX_SHORT_HISTORY = 10;
-  let showAllHistory = false;
-  function addHistory(dateStr, action, user) {
-    let entry = { date: dateStr, action: action, user: user || currentUser || "", timestamp: Date.now() };
-    changeHistory.unshift(entry);
-    if (changeHistory.length > 80) changeHistory.length = 80; // Limitar el historial a 80 entradas
-    saveData('changeHistory', changeHistory);
-  }
-  function renderHistory() {
-    const list = document.getElementById('historyList');
-    const btn = document.getElementById('showAllBtn');
-    list.innerHTML = "";
-    let entries = showAllHistory ? changeHistory : changeHistory.slice(0, MAX_SHORT_HISTORY);
-    if (!changeHistory.length) {
-      list.innerHTML = "<li>No hay cambios recientes.</li>";
-      btn.style.display = "none";
-      return;
-    }
-    for (let entry of entries) {
-      let dateObj = new Date(entry.timestamp);
-      let dayName = dateObj.toLocaleDateString('es-ES', { weekday: 'short' });
-      let dateStr = dateObj.toLocaleDateString('es-ES');
-      let timeStr = dateObj.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
-      let icon = '';
-      let iconClass = '';
+                    <label for="editApellido">Apellido:</label>
+                    <input type="text" id="editApellido">
 
-      if (entry.action.includes('Marcado como Supervisor de apoyo')) {
-        icon = '🔵'; iconClass = 'mark'; // Azul
-      } else if (entry.action.includes('Marcado como Supervisor de Torneo')) {
-        icon = '🟠'; iconClass = 'mark'; // Naranja
-      } else if (entry.action.includes('Marcado como día trabajado')) { // Para datos antiguos o 'trabajado'
-        icon = '✅'; iconClass = 'mark'; // Verde
-      } else if (entry.action.includes('Desmarcado')) {
-        icon = '❌'; iconClass = 'unmark'; // Rojo
-      }
+                    <label for="editFechaIngreso">Fecha de Ingreso:</label>
+                    <input type="date" id="editFechaIngreso">
 
-      let usuario = entry.user ? `<b>${entry.user}</b>` : "";
-      let li = document.createElement('li');
-      li.innerHTML = `<span class="${iconClass}">${icon}</span> [${dayName} ${dateStr} ${timeStr}] ${usuario} ${entry.action}`;
-      list.appendChild(li);
-    }
-    if (changeHistory.length > MAX_SHORT_HISTORY) {
-      btn.style.display = "inline-block";
-      btn.textContent = showAllHistory ? "Ver menos" : "Ver todo";
-    } else {
-      btn.style.display = "none";
-    }
-  }
-  document.getElementById('showAllBtn').onclick = function() {
-    showAllHistory = !showAllHistory;
-    renderHistory();
-  };
-  const historyContent = document.getElementById('historyContent');
-  const toggleIcon = document.getElementById('toggleIcon');
-  let isOpen = false;
-  document.getElementById('historyHeader').onclick = function() {
-    isOpen = !isOpen;
-    historyContent.style.display = isOpen ? 'block' : 'none';
-    toggleIcon.textContent = isOpen ? '−' : '+';
-  };
+                    <label for="editArea">Área:</label>
+                    <select id="editArea">
+                        <option value="Mesas">Mesas</option>
+                        <option value="Maquinas">Máquinas</option>
+                        <option value="Boveda">Bóveda</option>
+                    </select>
 
-  // REPORTES
-  const months = [
-    'Enero','Febrero','Marzo','Abril','Mayo','Junio',
-    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
-  ];
-  const reportMonth = document.getElementById('reportMonth');
-  months.forEach((m,i) => {
-    let opt = document.createElement('option');
-    opt.value = i;
-    opt.text = m;
-    reportMonth.appendChild(opt);
-  });
-  const now = new Date();
-  reportMonth.value = now.getMonth();
-  document.getElementById('reportYear').value = now.getFullYear();
-  document.getElementById('generateReportBtn').onclick = function() {
-    let m = parseInt(reportMonth.value);
-    let y = parseInt(document.getElementById('reportYear').value);
-    if (isNaN(m) || isNaN(y)) {
-      showFeedback("Completa mes y año para el informe", false); return;
-    }
-    let start = new Date(y, m, 15);
-    let end = new Date(y, m + 1, 15); // Sumamos 1 al mes para el "mes siguiente"
-    if (end.getDate() !== 15) { // Ajuste para meses con diferentes días
-        end.setDate(0); // Último día del mes anterior
-        end.setDate(15); // Día 15 del mes siguiente
-    }
+                    <label for="editTipoContrato">Tipo de Contrato:</label>
+                    <select id="editTipoContrato">
+                        <option value="Planta">Planta</option>
+                        <option value="Part-Time">Part-Time</option>
+                    </select>
+                </div>
 
-    let daysApoyo = [];
-    let daysTorneo = [];
-    let daysGeneral = []; // Mantener por si hay datos viejos
-    let d = new Date(start);
-    
-    while (d.getTime() < end.getTime()) {
-      let key = d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2,'0') + '-' + d.getDate().toString().padStart(2,'0');
-      const dayType = workDays[key];
-      if (dayType) {
-        const formattedDate = key.split('-').reverse().join('/');
-        if (dayType === 'apoyo') {
-          daysApoyo.push(formattedDate);
-        } else if (dayType === 'torneo') {
-          daysTorneo.push(formattedDate);
-        } else { // 'trabajado' si existe en datos antiguos
-          daysGeneral.push(formattedDate);
-        }
-      }
-      d.setDate(d.getDate()+1);
-    }
+                <div id="editFieldsMonto" style="display: none;">
+                    <label for="editMontoFecha">Fecha:</label>
+                    <input type="date" id="editMontoFecha">
 
-    let res = `Informe de Días de Supervisor del ${start.getDate()}/${start.getMonth()+1}/${start.getFullYear()} al ${end.getDate()}/${end.getMonth()+1}/${end.getFullYear()}:\n\n`;
-    
-    res += `Días de Supervisor de apoyo (${daysApoyo.length}):\n`;
-    res += daysApoyo.length ? daysApoyo.join(', ') : "Ninguno.";
-    res += `\n\nDías de Supervisor de Torneo (${daysTorneo.length}):\n`;
-    res += daysTorneo.length ? daysTorneo.join(', ') : "Ninguno.";
+                    <label for="editMontoArea">Área:</label>
+                    <select id="editMontoArea">
+                        <option value="Mesas">Mesas</option>
+                        <option value="Maquinas">Máquinas</option>
+                        <option value="Boveda">Bóveda</option>
+                    </select>
 
-    // Solo añadir esta sección si hay días generales, para no confundir
-    if (daysGeneral.length > 0) {
-        res += `\n\nDías trabajados (general - datos anteriores) (${daysGeneral.length}):\n`;
-        res += daysGeneral.length ? daysGeneral.join(', ') : "Ninguno.";
-    }
+                    <label for="editMontoCantidad">Monto:</label>
+                    <input type="text" id="editMontoCantidad" inputmode="numeric" pattern="[0-9.]*">
+                </div>
 
-    res += `\n\nTotal de días de Supervisor: ${daysApoyo.length + daysTorneo.length + daysGeneral.length}`;
-    
-    document.getElementById('reportOutput').textContent = res;
-    copyToClipboard(res);
-    document.getElementById('copyMessage').style.display = "block";
-    setTimeout(()=>document.getElementById('copyMessage').style.display="none", 1700);
-  };
-  function copyToClipboard(text) {
-    if (navigator.clipboard) navigator.clipboard.writeText(text);
-    else {
-      let ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-    }
-  }
-  // EXPORTAR / IMPORTAR / BORRAR
-  document.getElementById('exportBtn').onclick = function() {
-    let data = { workDays: workDays, changeHistory: changeHistory, users: users };
-    let blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
-    let url = URL.createObjectURL(blob);
-    let a = document.createElement('a');
-    a.href = url;
-    a.download = `supervisor_backup_${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showFeedback("Datos exportados correctamente.");
-  };
-  document.getElementById('importBtn').onclick = function() {
-    document.getElementById('importFile').click();
-  };
-  document.getElementById('importFile').onchange = function(e) {
-    let file = e.target.files[0];
-    if (!file) return;
-    let reader = new FileReader();
-    reader.onload = function(ev) {
-      try {
-        let imported = JSON.parse(ev.target.result);
-        // Validar que los datos importados tienen las estructuras esperadas
-        if (!imported.workDays || !imported.changeHistory || !imported.users) {
-          showFeedback("Archivo de respaldo inválido. Faltan datos esenciales.", false);
-          return;
-        }
-        if (!confirm("¿Estás seguro de que quieres importar estos datos? Se reemplazarán todos tus datos actuales.")) return;
-        workDays = imported.workDays;
-        changeHistory = imported.changeHistory;
-        users = imported.users;
-        saveData('workDays', workDays);
-        saveData('changeHistory', changeHistory);
-        saveData('users', users);
-        saveData('currentUser', null); // Forzar re-login después de la importación
-        showFeedback("¡Datos importados con éxito! Recargando la aplicación...");
-        setTimeout(()=>location.reload(), 1200);
-      } catch (err) {
-        showFeedback("Error al importar el archivo: " + err.message, false);
-      }
-    };
-    reader.onerror = function() {
-        showFeedback("No se pudo leer el archivo.", false);
-    };
-    reader.readAsText(file);
-  };
-  document.getElementById('clearAllBtn').onclick = function() {
-    if (!confirm("¿Estás seguro de que quieres eliminar TODOS los datos almacenados? Esta acción es irreversible.")) return;
-    localStorage.clear();
-    showFeedback("Todos los datos han sido borrados. Recargando la aplicación...");
-    setTimeout(()=>location.reload(), 1200);
-  };
-  renderCalendar();
-  renderHistory();
-})();
-</script>
+                <div id="editFieldsAnticipo" style="display: none;">
+                    <label for="editAnticipoFecha">Fecha de Anticipo:</label>
+                    <input type="date" id="editAnticipoFecha">
+
+                    <label for="editAnticipoCantidad">Monto Anticipado:</label>
+                    <input type="text" id="editAnticipoCantidad" inputmode="numeric" pattern="[0-9.]*">
+                </div>
+
+                <button type="submit">Guardar Cambios</button>
+                <button type="button" class="cancel-btn">Cancelar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="socioAnticiposHistoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal-close="socioAnticiposHistoryModal">&times;</span>
+            <h3 id="socioAnticiposHistoryModalTitle">Historial de Anticipos de [Socio]</h3>
+            
+            <div class="socio-summary">
+                <p><strong>Propina Asignada:</strong> <span id="modalSocioPropinaAsignada">$0</span></p>
+                <p><strong>Total de Anticipos:</strong> <span id="modalSocioTotalAnticipos">$0</span></p>
+                <p class="saldo-disponible"><strong>Saldo Disponible:</strong> <span id="modalSocioSaldo">$0</span></p>
+            </div>
+
+            <div class="socio-anticipos-list" id="modalSocioAnticiposList">
+                <h4>Detalle de Anticipos</h4>
+                <p style="text-align: center;">No hay anticipos registrados para este socio.</p>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const registroSocioForm = document.getElementById('registroSocioForm');
+            const sociosPlantaContainer = document.getElementById('sociosPlantaContainer');
+            const sociosPartTimeContainer = document.getElementById('sociosPartTimeContainer');
+
+            const registroMontoForm = document.getElementById('registroMontoForm');
+            const montosRegistradosContainer = document.getElementById('montosRegistradosContainer');
+            
+            const registroAnticipoForm = document.getElementById('registroAnticipoForm');
+            const totalGeneralAnticipos = document.getElementById('totalGeneralAnticipos');
+
+            const sociosAnticipoList = document.getElementById('sociosAnticipoList');
+            const anticipoSocioInput = document.getElementById('anticipoSocioInput');
+            const anticipoSocioId = document.getElementById('anticipoSocioId');
+            const anticipoSocioInfoContainer = document.getElementById('anticipoSocioInfoContainer');
+            const infoPropinaAsignada = document.getElementById('infoPropinaAsignada');
+            const infoAnticiposAnteriores = document.getElementById('infoAnticiposAnteriores');
+            const infoSaldoDisponible = document.getElementById('infoSaldoDisponible');
+            const anticipoHistoryDisplay = document.getElementById('anticipoHistoryDisplay');
+
+            const totalGeneralMontosRegistro = document.getElementById('totalGeneralMontosRegistro');
+            const totalGeneralMontosDisplay = document.getElementById('totalGeneralMontosDisplay');
+            const totalGeneralPropinaBrutaDistribucion = document.getElementById('totalGeneralPropinaBrutaDistribucion'); 
+            const puntoPlantaDisplay = document.getElementById('puntoPlantaDisplay'); 
+            
+            // CONTENEDORES SEPARADOS DE DISTRIBUCIÓN
+            const distribucionPlantaContainer = document.getElementById('distribucionPlantaContainer');
+            const distribucionPartTimeContainer = document.getElementById('distribucionPartTimeContainer');
+
+            // Elementos del Balance General
+            const balancePropinaBruta = document.getElementById('balancePropinaBruta');
+            const balanceAnticipos = document.getElementById('balanceAnticipos');
+            const balanceSaldo = document.getElementById('balanceSaldo');
+
+            // Elementos del modal de totales diarios
+            const dailyTotalsModal = document.getElementById('dailyTotalsModal');
+            const dailyTotalsList = dailyTotalsModal.querySelector('.daily-totals-list');
+
+            // Elementos del modal Punto-Planta
+            const puntoPlantaModal = document.getElementById('puntoPlantaModal');
+            const propinaBrutaModal = document.getElementById('propinaBrutaModal');
+            const retirosModal = document.getElementById('retirosModal');
+            const propinaNetaModal = document.getElementById('propinaNetaModal');
+            const totalPuntosSociosModal = document.getElementById('totalPuntosSociosModal');
+            const divisorPuntoPlantaInput = document.getElementById('divisorPuntoPlanta');
+            const calcularPuntoPlantaInternoBtn = document.getElementById('calcularPuntoPlantaInternoBtn');
+            const puntoPlantaValor = document.getElementById('puntoPlantaValor');
+
+            // Modal universal de edición
+            const editModal = document.getElementById('editModal');
+            const closeEditModalButton = editModal.querySelector('.close-button');
+            const editModalTitle = document.getElementById('editModalTitle');
+            const editFormUniversal = document.getElementById('editFormUniversal');
+            const cancelEditButton = editModal.querySelector('.cancel-btn');
+            const editItemType = document.getElementById('editItemType');
+            const editItemIndex = document.getElementById('editItemIndex');
+            const editFieldsSocio = document.getElementById('editFieldsSocio');
+            const editFieldsMonto = document.getElementById('editFieldsMonto');
+            const editFieldsAnticipo = document.getElementById('editFieldsAnticipo');
+
+            // Campos del formulario de edición
+            const editNombre = document.getElementById('editNombre');
+            const editApellido = document.getElementById('editApellido');
+            const editFechaIngreso = document.getElementById('editFechaIngreso');
+            const editArea = document.getElementById('editArea');
+            const editTipoContrato = document.getElementById('editTipoContrato');
+            const editMontoFecha = document.getElementById('editMontoFecha');
+            const editMontoArea = document.getElementById('editMontoArea');
+            const editMontoCantidad = document.getElementById('editMontoCantidad');
+            const editAnticipoFecha = document.getElementById('editAnticipoFecha');
+            const editAnticipoCantidad = document.getElementById('editAnticipoCantidad');
+
+            // Nuevos elementos para el modal de calendario (Part-Time)
+            const calendarModal = document.getElementById('calendarModal');
+            const calendarModalTitle = document.getElementById('calendarModalTitle');
+            const flatpickrInput = document.getElementById('flatpickrInput');
+            const selectedDaysCountSpan = document.getElementById('selectedDaysCount');
+            let currentSocioIndexCalendar = -1;
+
+            // Nuevos elementos para el modal de cálculo de puntos Part-Time
+            const partTimePointsModal = document.getElementById('partTimePointsModal');
+            const partTimePointsModalTitle = document.getElementById('partTimePointsModalTitle');
+            const partTimeModalBasePoints = document.getElementById('partTimeModalBasePoints');
+            const partTimeModalAssignableAmount = document.getElementById('partTimeModalAssignableAmount');
+            const partTimeMultiplicadorInput = document.getElementById('partTimeMultiplicador');
+            const calcularPartTimePointsInternoBtn = document.getElementById('calcularPartTimePointsInternoBtn');
+            const partTimePointsValue = document.getElementById('partTimePointsValue');
+            let currentSocioIndexPartTimePoints = -1;
+
+            // Nuevos elementos para el modal de historial de anticipos del socio (Distribución)
+            const socioAnticiposHistoryModal = document.getElementById('socioAnticiposHistoryModal');
+            const socioAnticiposHistoryModalTitle = document.getElementById('socioAnticiposHistoryModalTitle');
+            const modalSocioPropinaAsignada = document.getElementById('modalSocioPropinaAsignada');
+            const modalSocioTotalAnticipos = document.getElementById('modalSocioTotalAnticipos');
+            const modalSocioSaldo = document.getElementById('modalSocioSaldo');
+            const modalSocioAnticiposList = document.getElementById('modalSocioAnticiposList');
+
+            // Nuevos elementos para importar/exportar y borrar
+            const exportDataBtn = document.getElementById('exportDataBtn');
+            const importFileInput = document.getElementById('importFileInput');
+            const deleteAllDataBtn = document.getElementById('deleteAllDataBtn');
+            
+            // Inputs numéricos a los que se les aplicará el formato de miles
+            const montoCantidadInput = document.getElementById('montoCantidad');
+            const anticipoCantidadInput = document.getElementById('anticipoCantidad');
+            const editMontoCantidadInput = document.getElementById('editMontoCantidad');
+            const editAnticipoCantidadInput = document.getElementById('editAnticipoCantidad');
+            const divisorPuntoPlantaInputEdit = document.getElementById('divisorPuntoPlanta');
+
+            // NUEVOS ELEMENTOS PARA EL BUSCADOR
+            const socioSearchInput = document.getElementById('socioSearchInput');
+
+
+            // Instancia de Flatpickr (se inicializa una vez y se actualiza)
+            let flatpickrInstance;
+
+            // --- Funciones de formato (Nuevas) ---
+            const formatNumber = (num) => {
+                if (typeof num !== 'number') {
+                    return num;
+                }
+                const formatter = new Intl.NumberFormat('es-CL', {
+                    style: 'decimal',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                });
+                return formatter.format(num);
+            };
+
+            const parseNumber = (formattedNum) => {
+                if (typeof formattedNum !== 'string' && typeof formattedNum !== 'number') {
+                    return formattedNum;
+                }
+                if (typeof formattedNum === 'number') {
+                    return formattedNum;
+                }
+                const cleanedValue = formattedNum.replace(/\./g, '').replace(',', '.');
+                return parseFloat(cleanedValue);
+            };
+            
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+                return dateStr;
+            };
+
+            // --- Funcionalidad de Colapsado ---
+            document.querySelectorAll('.collapsible-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    header.classList.toggle('active');
+                    content.classList.toggle('active');
+                });
+            });
+            document.getElementById('balanceHeader').click();
+
+            // --- Lógica de Puntos de Propina (para Planta y como base para Part-Time) ---
+            const calcularPuntosPropinaBase = (fechaIngresoStr, area, tipoContrato) => {
+                const fechaIngreso = new Date(fechaIngresoStr + 'T00:00:00');
+                const fechaActual = new Date();
+
+                let puntosBase = 4;
+                let topePuntos = 0; 
+
+                if (area === 'Mesas') {
+                    topePuntos = 20;
+                } else if (area === 'Maquinas' || area === 'Boveda') {
+                    topePuntos = 12;
+                }
+
+                let puntosCalculados = puntosBase;
+                let anosTranscurridos = 0;
+
+                if (fechaActual.getFullYear() > fechaIngreso.getFullYear()) {
+                    anosTranscurridos = fechaActual.getFullYear() - fechaIngreso.getFullYear();
+                    const mesIngreso = fechaIngreso.getMonth();
+                    const diaIngreso = fechaIngreso.getDate();
+                    const mesActual = fechaActual.getMonth();
+                    const diaActual = fechaActual.getDate();
+
+                    if (mesActual < mesIngreso || (mesActual === mesIngreso && diaActual < diaIngreso)) {
+                        anosTranscurridos--;
+                    }
+                }
+                
+                puntosCalculados += anosTranscurridos * 2;
+                
+                if (tipoContrato === 'Planta') {
+                    return {
+                        puntosConTope: Math.min(puntosCalculados, topePuntos),
+                        puntosSinTope: puntosCalculados
+                    };
+                } else {
+                    return {
+                        puntosConTope: puntosCalculados,
+                        puntosSinTope: puntosCalculados
+                    };
+                }
+            };
+
+            const calcularMontoAsignablePartTime = (diasTrabajados) => {
+                const montos = JSON.parse(localStorage.getItem('montos')) || [];
+                let montoAsignable = 0;
+                
+                diasTrabajados.forEach(diaTrabajado => {
+                    const montosDelDia = montos.filter(m => m.fecha === diaTrabajado);
+                    montosDelDia.forEach(monto => {
+                        montoAsignable += monto.cantidad;
+                    });
+                });
+                return montoAsignable;
+            };
+
+            // --- Funciones de LocalStorage y Renderizado para Socios ---
+            const cargarSocios = () => {
+                const socios = JSON.parse(localStorage.getItem('socios')) || [];
+                sociosPlantaContainer.innerHTML = '<h3>Socios Planta</h3>';
+                sociosPartTimeContainer.innerHTML = '<h3>Socios Part-Time</h3>';
+                
+                // Limpiar contenedores de distribución antes de volver a renderizar
+                distribucionPlantaContainer.innerHTML = '<h3>Socios Planta</h3>';
+                distribucionPartTimeContainer.innerHTML = '<h3>Socios Part-Time</h3>';
+
+                socios.forEach((socio, index) => {
+                    const puntosCalc = calcularPuntosPropinaBase(socio.fechaIngreso, socio.area, socio.tipoContrato);
+
+                    if (socio.tipoContrato === 'Planta') {
+                        socio.puntosPropina = puntosCalc.puntosConTope;
+                        delete socio.diasTrabajados;
+                        delete socio.montoAsignablePartTime;
+                        delete socio.puntosAntiguedadBase;
+                        delete socio.puntosPropinaPartTime;
+                    } else if (socio.tipoContrato === 'Part-Time') {
+                        if (!socio.diasTrabajados || !Array.isArray(socio.diasTrabajados)) {
+                            socio.diasTrabajados = [];
+                        }
+                        socio.puntosAntiguedadBase = puntosCalc.puntosSinTope;
+                        socio.montoAsignablePartTime = calcularMontoAsignablePartTime(socio.diasTrabajados);
+                        if (typeof socio.puntosPropinaPartTime === 'undefined') {
+                            socio.puntosPropinaPartTime = 0;
+                        }
+                        delete socio.puntosPropina;
+                    }
+                    if (!socio.anticipos || !Array.isArray(socio.anticipos)) {
+                        socio.anticipos = [];
+                    }
+                    agregarSocioCard(socio, index);
+                    // Llama a la nueva función que agrega las tarjetas a los contenedores de distribución correspondientes
+                    agregarSocioDistribucionCard(socio, index);
+                });
+                guardarSocios(socios);
+                updateGeneralTotals();
+                updatePropinaAsignadaCards();
+                updateAnticipoSocioSelector();
+            };
+
+            const guardarSocios = (socios) => {
+                localStorage.setItem('socios', JSON.stringify(socios));
+            };
+
+            const agregarSocioCard = (socio, index) => {
+                const socioCard = document.createElement('div');
+                socioCard.classList.add('socio-card');
+                socioCard.dataset.index = index;
+                socioCard.dataset.type = 'socio';
+
+                let htmlContent = `
+                    <h3>${socio.nombre} ${socio.apellido}</h3>
+                    <p><strong>Ingreso:</strong> ${formatDate(socio.fechaIngreso)}</p>
+                    <p><strong>Área:</strong> ${socio.area}</p>
+                    <p><strong>Contrato:</strong> ${socio.tipoContrato}</p>
+                `;
+
+                if (socio.tipoContrato === 'Planta') {
+                    htmlContent += `<p><strong>Puntos:</strong> ${socio.puntosPropina}</p>`;
+                } else if (socio.tipoContrato === 'Part-Time') {
+                    const puntosBaseDisplay = typeof socio.puntosAntiguedadBase !== 'undefined' ? socio.puntosAntiguedadBase.toFixed(2) : '0.00';
+                    const puntosPartTimeDisplay = typeof socio.puntosPropinaPartTime !== 'undefined' ? socio.puntosPropinaPartTime.toFixed(2) : '0.00';
+                    htmlContent += `
+                        <p><strong>Puntos Antigüedad Base:</strong> ${puntosBaseDisplay}</p>
+                        <p><strong>Días Trabajados:</strong> <span class="dias-trabajados-display">${socio.diasTrabajados ? socio.diasTrabajados.length : 0}</span></p>
+                        <p><strong>Monto Asignable:</strong> <span class="monto-asignable-display">$${formatNumber(socio.montoAsignablePartTime || 0)}</span></p>
+                        <p><strong>Puntos Part-Time Asignados:</strong> <span class="puntos-part-time-display">${puntosPartTimeDisplay}</span></p>
+                        <div class="part-time-actions">
+                            <button class="calendar-btn" data-index="${index}">Registrar Días Trabajados</button>
+                            <button class="calculate-part-time-points-btn" data-index="${index}">Calcular Puntos Part-Time</button>
+                        </div>
+                    `;
+                }
+
+                htmlContent += `
+                    <div class="delete-button-wrapper">
+                        <button class="delete-btn" data-index="${index}" data-type="socio">Borrar</button>
+                    </div>
+                `;
+                socioCard.innerHTML = htmlContent;
+                
+                if (socio.tipoContrato === 'Planta') {
+                    sociosPlantaContainer.appendChild(socioCard);
+                } else if (socio.tipoContrato === 'Part-Time') {
+                    sociosPartTimeContainer.appendChild(socioCard);
+                }
+
+                socioCard.querySelector('.delete-btn').addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    const confirmDelete = confirm(`¿Borrar a ${socio.nombre} ${socio.apellido}?`);
+                    if (confirmDelete) {
+                        eliminarItem('socio', index);
+                    }
+                });
+
+                socioCard.addEventListener('click', (event) => {
+                    if (event.target.closest('.part-time-actions button') || event.target.classList.contains('delete-btn')) {
+                        return;
+                    }
+                    abrirModalEdicion('socio', index);
+                });
+
+                if (socio.tipoContrato === 'Part-Time') {
+                    socioCard.querySelector('.calendar-btn').addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        abrirCalendarModal(index);
+                    });
+                    socioCard.querySelector('.calculate-part-time-points-btn').addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        abrirPartTimePointsModal(index);
+                    });
+                }
+            };
+
+            // MODIFICACIÓN: La función ahora agrega las tarjetas a los contenedores correctos (Planta o Part-Time)
+            const agregarSocioDistribucionCard = (socio, index) => {
+                const socioCard = document.createElement('div');
+                socioCard.classList.add('socio-distribucion-card');
+                if (socio.tipoContrato === 'Part-Time') {
+                    socioCard.classList.add('part-time');
+                }
+                socioCard.dataset.index = index;
+                socioCard.dataset.type = 'socio'; 
+
+                let puntosAntiguedadDisplay = 0;
+                let puntosCalculadosPartTimeDisplay = '';
+                
+                if (socio.tipoContrato === 'Planta') {
+                    puntosAntiguedadDisplay = socio.puntosPropina;
+                } else if (socio.tipoContrato === 'Part-Time') {
+                    puntosAntiguedadDisplay = parseFloat(socio.puntosAntiguedadBase || 0).toFixed(2);
+                    puntosCalculadosPartTimeDisplay = `<p class="puntos-calculados-pt"><strong>Puntos Calculados:</strong> ${parseFloat(socio.puntosPropinaPartTime || 0).toFixed(2)}</p>`;
+                }
+
+                const propinaAsignada = parseFloat(socio.propinaAsignada || 0);
+                const totalAnticiposSocio = (socio.anticipos || []).reduce((sum, ant) => sum + ant.cantidad, 0);
+                const saldoDisponible = propinaAsignada - totalAnticiposSocio;
+
+                let saldoClass = '';
+                if (saldoDisponible < 0) {
+                    saldoClass = 'negative';
+                }
+
+                socioCard.innerHTML = `
+                    <h3>${socio.nombre} ${socio.apellido}</h3>
+                    <p><strong>Área:</strong> ${socio.area}</p>
+                    <p><strong>Contrato:</strong> ${socio.tipoContrato}</p>
+                    <p class="puntos"><strong>Puntos:</strong> ${puntosAntiguedadDisplay}</p>
+                    ${puntosCalculadosPartTimeDisplay}
+                    <p class="propina-asignada">Propina Asignada: $${formatNumber(propinaAsignada)}</p>
+                    <p class="saldo-disponible ${saldoClass}">Saldo Disponible: $${formatNumber(saldoDisponible)}</p>
+                `;
+                
+                // NUEVA LÓGICA: Agregar al contenedor correcto
+                if (socio.tipoContrato === 'Planta') {
+                    distribucionPlantaContainer.appendChild(socioCard);
+                } else {
+                    distribucionPartTimeContainer.appendChild(socioCard);
+                }
+                
+
+                socioCard.addEventListener('click', () => {
+                    displaySocioAnticiposHistoryModal(index);
+                });
+            };
+
+            // --- Funciones de LocalStorage y Renderizado para Montos ---
+            const groupMontosByDate = (montos) => {
+                const grouped = new Map();
+                montos.forEach((monto, originalIndex) => {
+                    const date = monto.fecha;
+                    if (!grouped.has(date)) {
+                        grouped.set(date, {
+                            date: date,
+                            total: 0,
+                            entries: []
+                        });
+                    }
+                    const group = grouped.get(date);
+                    group.entries.push({ ...monto, originalIndex: originalIndex }); 
+                    group.total += monto.cantidad;
+                });
+                const sortedGroups = Array.from(grouped.values()).sort((a, b) => new Date(b.date) - new Date(a.date));
+                return sortedGroups;
+            };
+
+            const updateTotalGeneralPropinaBruta = (montos) => {
+                let total = 0;
+                montos.forEach(monto => {
+                    total += monto.cantidad;
+                });
+                const formattedTotal = `$${formatNumber(total)}`;
+                
+                if (totalGeneralMontosRegistro) {
+                    totalGeneralMontosRegistro.textContent = `Total General de Propina: ${formattedTotal}`;
+                }
+                if (totalGeneralMontosDisplay) {
+                    totalGeneralMontosDisplay.textContent = `Total General de Propina: ${formattedTotal}`;
+                }
+                if (totalGeneralPropinaBrutaDistribucion) {
+                    totalGeneralPropinaBrutaDistribucion.textContent = `Total General de Propina (Bruta): ${formattedTotal}`;
+                }
+                return total; 
+            };
+
+            const updateDailyTotalsModalContent = (groupedMontos) => {
+                dailyTotalsList.innerHTML = ''; 
+                if (groupedMontos.length === 0) {
+                    dailyTotalsList.innerHTML = '<p style="text-align: center;">No hay montos diarios registrados.</p>';
+                    return;
+                }
+                groupedMontos.forEach(group => {
+                    const p = document.createElement('p');
+                    p.innerHTML = `<strong>${formatDate(group.date)}:</strong> <span>$${formatNumber(group.total)}</span>`;
+                    dailyTotalsList.appendChild(p);
+                });
+            };
+
+            const cargarMontos = () => {
+                const montos = JSON.parse(localStorage.getItem('montos')) || [];
+                const groupedMontos = groupMontosByDate(montos);
+                
+                montosRegistradosContainer.innerHTML = '';
+                groupedMontos.forEach(group => {
+                    agregarMontoCard(group);
+                });
+
+                updateTotalGeneralPropinaBruta(montos); 
+                updateDailyTotalsModalContent(groupedMontos); 
+                guardarMontos(montos);
+                updateGeneralTotals(); 
+            };
+
+            const guardarMontos = (montos) => {
+                localStorage.setItem('montos', JSON.stringify(montos));
+            };
+
+            const agregarMontoCard = (groupedMonto) => {
+                const montoCard = document.createElement('div');
+                montoCard.classList.add('monto-card');
+
+                let entriesHtml = '';
+                groupedMonto.entries.forEach(entry => {
+                    entriesHtml += `
+                        <div class="monto-entry-item" data-original-index="${entry.originalIndex}">
+                            <span>${entry.area}: $${formatNumber(entry.cantidad)}</span>
+                            <button class="delete-btn" data-index="${entry.originalIndex}" data-type="monto">Borrar</button>
+                        </div>
+                    `;
+                });
+
+                montoCard.innerHTML = `
+                    <h3>Monto del ${formatDate(groupedMonto.date)}</h3>
+                    ${entriesHtml}
+                    <p class="date-total">Total Diario: $${formatNumber(groupedMonto.total)}</p>
+                `;
+                montosRegistradosContainer.appendChild(montoCard);
+
+                montoCard.querySelectorAll('.monto-entry-item .delete-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        const indexToDelete = parseInt(button.dataset.index);
+                        const montos = JSON.parse(localStorage.getItem('montos'));
+                        const montoToDelete = montos[indexToDelete];
+                        const confirmDelete = confirm(`¿Borrar la entrada de ${montoToDelete.area}: $${formatNumber(montoToDelete.cantidad)} del ${formatDate(montoToDelete.fecha)}?`);
+                        if (confirmDelete) {
+                            eliminarItem('monto', indexToDelete);
+                        }
+                    });
+                });
+
+                montoCard.querySelectorAll('.monto-entry-item').forEach(itemDiv => {
+                    itemDiv.addEventListener('click', () => {
+                        const originalIndex = parseInt(itemDiv.dataset.originalIndex);
+                        abrirModalEdicion('monto', originalIndex);
+                    });
+                });
+            };
+            
+            // --- Funcionalidad de Formato de inputs numéricos (NUEVO) ---
+            const setupNumberInputFormatting = (input) => {
+                input.addEventListener('input', (e) => {
+                    const rawValue = e.target.value.replace(/\./g, '');
+                    const numberValue = parseInt(rawValue);
+
+                    if (!isNaN(numberValue)) {
+                        e.target.value = formatNumber(numberValue);
+                    }
+                });
+                input.addEventListener('focus', (e) => {
+                    const rawValue = e.target.value.replace(/\./g, '');
+                    e.target.value = rawValue;
+                });
+                input.addEventListener('blur', (e) => {
+                    const rawValue = e.target.value.replace(/\./g, '');
+                    const numberValue = parseInt(rawValue);
+                    if (!isNaN(numberValue)) {
+                        e.target.value = formatNumber(numberValue);
+                    }
+                });
+            };
+
+            setupNumberInputFormatting(montoCantidadInput);
+            setupNumberInputFormatting(anticipoCantidadInput);
+            setupNumberInputFormatting(editMontoCantidadInput);
+            setupNumberInputFormatting(editAnticipoCantidadInput);
+            setupNumberInputFormatting(divisorPuntoPlantaInputEdit);
+
+            // --- Funciones de LocalStorage y Renderizado para Anticipos (antes Retiros) ---
+            const calcularTotalAnticiposGlobal = () => {
+                const socios = JSON.parse(localStorage.getItem('socios')) || [];
+                let total = 0;
+                socios.forEach(socio => {
+                    if (socio.anticipos && Array.isArray(socio.anticipos)) {
+                        total += socio.anticipos.reduce((sum, anticipo) => sum + anticipo.cantidad, 0);
+                    }
+                });
+                totalGeneralAnticipos.textContent = `Total General de Anticipos: $${formatNumber(total)}`;
+                return total;
+            };
+
+            const updateAnticipoSocioSelector = () => {
+                const socios = JSON.parse(localStorage.getItem('socios')) || [];
+                sociosAnticipoList.innerHTML = '';
+                socios.forEach((socio, index) => {
+                    const option = document.createElement('option');
+                    option.value = `${socio.nombre} ${socio.apellido}`;
+                    option.dataset.index = index;
+                    sociosAnticipoList.appendChild(option);
+                });
+            };
+
+            anticipoSocioInput.addEventListener('input', () => {
+                const selectedOption = Array.from(sociosAnticipoList.options).find(option => option.value === anticipoSocioInput.value);
+                
+                if (selectedOption) {
+                    const socioIndex = parseInt(selectedOption.dataset.index);
+                    anticipoSocioId.value = socioIndex;
+                    displayAnticipoSocioInfo(socioIndex);
+                } else {
+                    anticipoSocioId.value = '';
+                    anticipoSocioInfoContainer.style.display = 'none';
+                }
+            });
+
+            const displayAnticipoSocioInfo = (socioIndex) => {
+                const socios = JSON.parse(localStorage.getItem('socios')) || [];
+                const socio = socios[socioIndex];
+
+                if (!socio) {
+                    anticipoSocioInfoContainer.style.display = 'none';
+                    return;
+                }
+
+                let propinaAsignada = socio.propinaAsignada || 0; 
+                
+                infoPropinaAsignada.textContent = `$${formatNumber(propinaAsignada)}`;
+
+                const totalAnticiposSocio = (socio.anticipos || []).reduce((sum, anticipo) => sum + anticipo.cantidad, 0);
+                infoAnticiposAnteriores.textContent = `$${formatNumber(totalAnticiposSocio)}`;
+
+                const saldoDisponible = propinaAsignada - totalAnticiposSocio;
+                infoSaldoDisponible.textContent = `$${formatNumber(saldoDisponible)}`;
+                
+                if (saldoDisponible < 0) {
+                    infoSaldoDisponible.classList.add('negative');
+                } else {
+                    infoSaldoDisponible.classList.remove('negative');
+                }
+
+                anticipoHistoryDisplay.innerHTML = '<h4>Historial de Anticipos</h4>';
+                if (socio.anticipos && socio.anticipos.length > 0) {
+                    const sortedAnticipos = [...socio.anticipos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+                    sortedAnticipos.forEach((anticipo, idx) => {
+                        const originalIndex = socio.anticipos.findIndex(a => a.fecha === anticipo.fecha && a.cantidad === anticipo.cantidad);
+
+                        const historyItem = document.createElement('div');
+                        historyItem.classList.add('anticipo-history-item');
+                        historyItem.innerHTML = `
+                            <span>${formatDate(anticipo.fecha)}: $${formatNumber(anticipo.cantidad)}</span>
+                            <button class="delete-btn" data-socio-index="${socioIndex}" data-anticipo-index="${originalIndex}" data-type="anticipo">Borrar</button>
+                        `;
+                        historyItem.addEventListener('click', (event) => {
+                            if (!event.target.classList.contains('delete-btn')) {
+                                abrirModalEdicion('anticipo', originalIndex, socioIndex);
+                            }
+                        });
+                        anticipoHistoryDisplay.appendChild(historyItem);
+                    });
+                } else {
+                    anticipoHistoryDisplay.innerHTML += '<p style="text-align: center;">No hay anticipos previos.</p>';
+                }
+
+                anticipoSocioInfoContainer.style.display = 'block';
+            };
+
+
+            // --- Función para actualizar todos los totales en la UI ---
+            const updateGeneralTotals = () => {
+                const montos = JSON.parse(localStorage.getItem('montos')) || [];
+                updateTotalGeneralPropinaBruta(montos); 
+                calcularTotalAnticiposGlobal();
+                cargarPuntoPlantaDisplay(); 
+                recalcularMontosAsignablesPartTime();
+                updateBalanceReport();
+            };
+
+            // --- Nueva función para el Balance General ---
+            const updateBalanceReport = () => {
+                const montos = JSON.parse(localStorage.getItem('montos')) || [];
+                const socios = JSON.parse(localStorage.getItem('socios')) || [];
+
+                const totalPropinaBruta = montos.reduce((sum, monto) => sum + monto.cantidad, 0);
+                const totalAnticipos = socios.reduce((sum, socio) => {
+                    return sum + (socio.anticipos || []).reduce((subSum, ant) => subSum + ant.cantidad, 0);
+                }, 0);
+
+                const saldoDisponible = totalPropinaBruta - totalAnticipos;
+
+                balancePropinaBruta.textContent = `$${formatNumber(totalPropinaBruta)}`;
+                balanceAnticipos.textContent = `$${formatNumber(totalAnticipos)}`;
+                balanceSaldo.textContent = `$${formatNumber(saldoDisponible)}`;
+                
+                balanceSaldo.classList.remove('negative', 'positive');
+                if (saldoDisponible < 0) {
+                    balanceSaldo.classList.add('negative');
+                } else if (saldoDisponible > 0) {
+                    balanceSaldo.classList.add('positive');
+                }
+            };
+
+
+            // --- Funcionalidad Universal de Eliminar (para socios, montos y anticipos) ---
+            const eliminarItem = (type, index, socioIndex = -1, modalToClose = null) => {
+                let items;
+                let storageKey;
+                let reloadFunction;
+
+                if (type === 'socio') {
+                    items = JSON.parse(localStorage.getItem('socios'));
+                    storageKey = 'socios';
+                    reloadFunction = cargarSocios;
+                    if (items && items.length > index) {
+                        const confirmDelete = confirm(`¿Borrar a ${items[index].nombre} ${items[index].apellido}? Esta acción eliminará también sus anticipos.`);
+                        if (!confirmDelete) return;
+                        items.splice(index, 1);
+                        localStorage.setItem(storageKey, JSON.stringify(items));
+                        reloadFunction();
+                    }
+                } else if (type === 'monto') {
+                    items = JSON.parse(localStorage.getItem('montos'));
+                    storageKey = 'montos';
+                    reloadFunction = cargarMontos;
+                    if (items && items.length > index) {
+                        const montoToDelete = items[index];
+                        const confirmDelete = confirm(`¿Borrar la entrada de ${montoToDelete.area}: $${formatNumber(montoToDelete.cantidad)} del ${formatDate(montoToDelete.fecha)}?`);
+                        if (!confirmDelete) return;
+                        items.splice(index, 1);
+                        localStorage.setItem(storageKey, JSON.stringify(items));
+                        reloadFunction();
+                    }
+                } else if (type === 'anticipo') {
+                    items = JSON.parse(localStorage.getItem('socios'));
+                    storageKey = 'socios';
+                    reloadFunction = () => { 
+                        cargarSocios();
+                        if (socioIndex !== -1 && items[socioIndex]) {
+                            displayAnticipoSocioInfo(socioIndex); 
+                        } else {
+                            anticipoSocioInput.value = '';
+                            anticipoSocioId.value = '';
+                            anticipoSocioInfoContainer.style.display = 'none';
+                        }
+                        updateAnticipoSocioSelector();
+                        updatePropinaAsignadaCards();
+                        if (modalToClose) {
+                            cerrarModal(modalToClose);
+                        }
+                    };
+                    
+                    if (items && items[socioIndex] && items[socioIndex].anticipos && items[socioIndex].anticipos.length > index) {
+                        const anticipoToDelete = items[socioIndex].anticipos[index];
+                        const confirmDelete = confirm(`¿Borrar el anticipo de $${formatNumber(anticipoToDelete.cantidad)} del ${formatDate(anticipoToDelete.fecha)} para ${items[socioIndex].nombre}?`);
+                        if (!confirmDelete) return;
+
+                        items[socioIndex].anticipos.splice(index, 1);
+                        localStorage.setItem(storageKey, JSON.stringify(items));
+                        reloadFunction();
+                    }
+                } else {
+                    return;
+                }
+            };
+
+            // --- Funcionalidad Universal de Edición (Modal) ---
+            const abrirModalEdicion = (type, index, parentIndex = -1) => {
+                editItemType.value = type;
+                editItemIndex.value = index;
+
+                editFieldsSocio.style.display = 'none';
+                editFieldsMonto.style.display = 'none';
+                editFieldsAnticipo.style.display = 'none';
+
+                Array.from(editFieldsSocio.querySelectorAll('input, select')).forEach(input => input.required = false);
+                Array.from(editFieldsMonto.querySelectorAll('input, select')).forEach(input => input.required = false);
+                Array.from(editFieldsAnticipo.querySelectorAll('input, select')).forEach(input => input.required = false);
+
+                if (type === 'socio') {
+                    editModalTitle.textContent = 'Editar Socio';
+                    editFieldsSocio.style.display = 'block';
+                    const socios = JSON.parse(localStorage.getItem('socios'));
+                    const socioAEditar = socios[index];
+                    if (socioAEditar) {
+                        editNombre.value = socioAEditar.nombre;
+                        editApellido.value = socioAEditar.apellido;
+                        editFechaIngreso.value = socioAEditar.fechaIngreso;
+                        editArea.value = socioAEditar.area;
+                        editTipoContrato.value = socioAEditar.tipoContrato;
+                        Array.from(editFieldsSocio.querySelectorAll('input, select')).forEach(input => input.required = true);
+                    }
+                } else if (type === 'monto') {
+                    editModalTitle.textContent = 'Editar Monto';
+                    editFieldsMonto.style.display = 'block';
+                    const montos = JSON.parse(localStorage.getItem('montos'));
+                    const montoAEditar = montos[index];
+                    if (montoAEditar) {
+                        editMontoFecha.value = montoAEditar.fecha;
+                        editMontoArea.value = montoAEditar.area;
+                        editMontoCantidad.value = formatNumber(montoAEditar.cantidad);
+                        Array.from(editFieldsMonto.querySelectorAll('input, select')).forEach(input => input.required = true);
+                    }
+                } else if (type === 'anticipo') {
+                    editModalTitle.textContent = 'Editar Anticipo';
+                    editFieldsAnticipo.style.display = 'block';
+                    const socios = JSON.parse(localStorage.getItem('socios'));
+                    const socio = socios[parentIndex];
+                    if (socio && socio.anticipos && socio.anticipos[index]) {
+                        const anticipoAEditar = socio.anticipos[index];
+                        editAnticipoFecha.value = anticipoAEditar.fecha;
+                        editAnticipoCantidad.value = formatNumber(anticipoAEditar.cantidad);
+                        editItemIndex.dataset.parentIndex = parentIndex; 
+                        Array.from(editFieldsAnticipo.querySelectorAll('input, select')).forEach(input => input.required = true);
+                    } else {
+                        console.error('Anticipo no encontrado para editar.');
+                        return;
+                    }
+                }
+                
+                editModal.style.display = 'flex';
+            };
+
+            const cerrarModal = (modalElement) => {
+                modalElement.style.display = 'none';
+            };
+
+            document.querySelectorAll('.close-button').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const modalId = event.target.dataset.modalClose || event.target.closest('.modal').id;
+                    cerrarModal(document.getElementById(modalId));
+                });
+            });
+
+            window.addEventListener('click', (event) => {
+                if (event.target === editModal) {
+                    cerrarModal(editModal);
+                } else if (event.target === dailyTotalsModal) {
+                    cerrarModal(dailyTotalsModal);
+                } else if (event.target === puntoPlantaModal) {
+                    cerrarModal(puntoPlantaModal);
+                } else if (event.target === calendarModal) {
+                    cerrarModal(calendarModal);
+                } else if (event.target === partTimePointsModal) {
+                    cerrarModal(partTimePointsModal);
+                } else if (event.target === socioAnticiposHistoryModal) {
+                    cerrarModal(socioAnticiposHistoryModal);
+                }
+            });
+
+            editFormUniversal.addEventListener('submit', (event) => {
+                event.preventDefault();
+
+                const type = editItemType.value;
+                const index = parseInt(editItemIndex.value);
+                let items;
+                let storageKey;
+                let reloadFunction;
+                let itemActualizado;
+
+                if (type === 'socio') {
+                    items = JSON.parse(localStorage.getItem('socios'));
+                    storageKey = 'socios';
+                    reloadFunction = cargarSocios;
+                    
+                    itemActualizado = {
+                        ...items[index],
+                        nombre: editNombre.value,
+                        apellido: editApellido.value,
+                        fechaIngreso: editFechaIngreso.value,
+                        area: editArea.value,
+                        tipoContrato: editTipoContrato.value
+                    };
+                    
+                    const puntosCalc = calcularPuntosPropinaBase(itemActualizado.fechaIngreso, itemActualizado.area, itemActualizado.tipoContrato);
+                    
+                    if (itemActualizado.tipoContrato === 'Planta') {
+                        itemActualizado.puntosPropina = puntosCalc.puntosConTope;
+                        delete itemActualizado.diasTrabajados;
+                        delete itemActualizado.montoAsignablePartTime;
+                        delete itemActualizado.puntosPropinaPartTime;
+                        delete itemActualizado.puntosAntiguedadBase;
+                    } else {
+                        if (!itemActualizado.diasTrabajados) itemActualizado.diasTrabajados = [];
+                        
+                        itemActualizado.puntosAntiguedadBase = puntosCalc.puntosSinTope;
+                        itemActualizado.montoAsignablePartTime = calcularMontoAsignablePartTime(itemActualizado.diasTrabajados);
+                        if (typeof itemActualizado.puntosPropinaPartTime === 'undefined') {
+                            itemActualizado.puntosPropinaPartTime = 0;
+                        }
+                        delete itemActualizado.puntosPropina;
+                    }
+
+                    alert('Socio actualizado!');
+                } else if (type === 'monto') {
+                    items = JSON.parse(localStorage.getItem('montos'));
+                    storageKey = 'montos';
+                    reloadFunction = cargarMontos;
+                    
+                    const rawMontoCantidad = parseNumber(editMontoCantidad.value);
+                    itemActualizado = {
+                        fecha: editMontoFecha.value,
+                        area: editMontoArea.value,
+                        cantidad: rawMontoCantidad
+                    };
+                    alert('Monto actualizado!');
+                } else if (type === 'anticipo') {
+                    items = JSON.parse(localStorage.getItem('socios'));
+                    storageKey = 'socios';
+                    const socioIndex = parseInt(editItemIndex.dataset.parentIndex);
+                    reloadFunction = () => {
+                        cargarSocios();
+                        displayAnticipoSocioInfo(socioIndex);
+                        displaySocioAnticiposHistoryModal(socioIndex);
+                    };
+                    
+                    const rawAnticipoCantidad = parseNumber(editAnticipoCantidad.value);
+                    itemActualizado = {
+                        fecha: editAnticipoFecha.value,
+                        cantidad: rawAnticipoCantidad
+                    };
+                    
+                    if (items[socioIndex] && items[socioIndex].anticipos && items[socioIndex].anticipos.length > index) {
+                        items[socioIndex].anticipos[index] = itemActualizado;
+                        alert('Anticipo actualizado!');
+                    } else {
+                        console.error('Error: Anticipo no encontrado para actualizar.');
+                        return;
+                    }
+                } else {
+                    return;
+                }
+
+                if (items && (items.length > index || type === 'anticipo')) {
+                    if (type === 'socio') {
+                        items[index] = itemActualizado;
+                    } else if (type === 'monto') {
+                        items[index] = itemActualizado;
+                    }
+                    localStorage.setItem(storageKey, JSON.stringify(items));
+                    reloadFunction();
+                    cerrarModal(editModal);
+                }
+            });
+
+            // --- Manejo del Formulario de Registro de Socios ---
+            registroSocioForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+
+                const nombre = document.getElementById('nombre').value;
+                const apellido = document.getElementById('apellido').value;
+                const fechaIngreso = document.getElementById('fechaIngreso').value;
+                const area = document.getElementById('area').value;
+                const tipoContrato = document.getElementById('tipoContrato').value;
+                
+                let nuevoSocio = { nombre, apellido, fechaIngreso, area, tipoContrato };
+
+                const puntosCalc = calcularPuntosPropinaBase(fechaIngreso, area, tipoContrato);
+
+                if (tipoContrato === 'Planta') {
+                    nuevoSocio.puntosPropina = puntosCalc.puntosConTope;
+                } else if (tipoContrato === 'Part-Time') {
+                    nuevoSocio.diasTrabajados = [];
+                    nuevoSocio.montoAsignablePartTime = 0;
+                    nuevoSocio.puntosAntiguedadBase = puntosCalc.puntosSinTope;
+                    nuevoSocio.puntosPropinaPartTime = 0;
+                }
+                nuevoSocio.anticipos = [];
+
+                const socios = JSON.parse(localStorage.getItem('socios')) || [];
+                socios.push(nuevoSocio);
+                guardarSocios(socios);
+                cargarSocios();
+                registroSocioForm.reset();
+                alert('Socio registrado!');
+            });
+
+            // --- Manejo del Formulario de Registro de Montos ---
+            registroMontoForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+
+                const fecha = document.getElementById('montoFecha').value;
+                const area = document.getElementById('montoArea').value;
+                
+                const rawMontoCantidad = parseNumber(montoCantidadInput.value);
+                
+                const nuevoMonto = { fecha, area, cantidad: rawMontoCantidad };
+
+                const montos = JSON.parse(localStorage.getItem('montos')) || [];
+                montos.push(nuevoMonto);
+                guardarMontos(montos);
+                cargarMontos(); 
+                recalcularMontosAsignablesPartTime();
+                registroMontoForm.reset();
+                alert('Monto registrado!');
+            });
+
+            // --- Manejo del Formulario de Registro de Anticipos (antes Retiros) ---
+            registroAnticipoForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+
+                const socioIndex = parseInt(anticipoSocioId.value);
+                const fecha = document.getElementById('anticipoFecha').value;
+
+                const rawAnticipoCantidad = parseNumber(anticipoCantidadInput.value);
+
+                if (isNaN(socioIndex) || socioIndex < 0) {
+                    alert('Por favor, seleccione un socio válido.');
+                    return;
+                }
+
+                const socios = JSON.parse(localStorage.getItem('socios'));
+                const socio = socios[socioIndex];
+
+                if (!socio) {
+                    alert('Socio no encontrado.');
+                    return;
+                }
+
+                const currentSaldoDisponibleText = infoSaldoDisponible.textContent.replace('$', ''); 
+                const currentSaldoDisponible = parseNumber(currentSaldoDisponibleText);
+                
+                if (rawAnticipoCantidad > currentSaldoDisponible) {
+                    alert(`El monto del anticipo ($${formatNumber(rawAnticipoCantidad)}) excede el saldo disponible ($${formatNumber(currentSaldoDisponible)}).`);
+                    return;
+                }
+
+                const nuevoAnticipo = { fecha, cantidad: rawAnticipoCantidad };
+
+                if (!socio.anticipos) {
+                    socio.anticipos = [];
+                }
+                socio.anticipos.push(nuevoAnticipo);
+                
+                guardarSocios(socios);
+                
+                displayAnticipoSocioInfo(socioIndex);
+                calcularTotalAnticiposGlobal();
+                updatePropinaAsignadaCards();
+                updateBalanceReport();
+
+                registroAnticipoForm.reset();
+                anticipoSocioInput.value = '';
+                anticipoSocioInfoContainer.style.display = 'none';
+
+                alert('Anticipo registrado!');
+            });
+
+            // --- Funcionalidad del Modal de Totales Diarios ---
+            document.querySelectorAll('.show-daily-totals-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    dailyTotalsModal.style.display = 'flex';
+                });
+            });
+
+            // --- Funcionalidad del Modal Punto-Planta ---
+            document.querySelectorAll('.show-punto-planta-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const montos = JSON.parse(localStorage.getItem('montos')) || [];
+                    const totalPropinaBruta = montos.reduce((sum, monto) => sum + monto.cantidad, 0);
+                    
+                    const totalAnticipos = calcularTotalAnticiposGlobal();
+
+                    const propinaNeta = totalPropinaBruta - totalAnticipos;
+
+                    let totalPuntos = 0;
+                    const socios = JSON.parse(localStorage.getItem('socios')) || [];
+                    socios.forEach(socio => {
+                        if (socio.tipoContrato === 'Planta') {
+                            totalPuntos += socio.puntosPropina;
+                        }
+                    });
+
+                    propinaBrutaModal.textContent = `$${formatNumber(totalPropinaBruta)}`;
+                    retirosModal.textContent = `$${formatNumber(totalAnticipos)}`;
+                    propinaNetaModal.textContent = `$${formatNumber(propinaNeta)}`;
+                    totalPuntosSociosModal.textContent = totalPuntos.toFixed(2);
+
+                    const lastPuntoPlanta = parseFloat(localStorage.getItem('lastPuntoPlantaValue')) || 0;
+                    divisorPuntoPlantaInput.value = '1';
+                    
+                    puntoPlantaValor.textContent = `Punto-Planta: $${lastPuntoPlanta.toLocaleString('es-CL', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                    
+                    puntoPlantaModal.style.display = 'flex';
+                });
+            });
+
+            calcularPuntoPlantaInternoBtn.addEventListener('click', () => {
+                const montos = JSON.parse(localStorage.getItem('montos')) || [];
+                const totalPropinaBruta = montos.reduce((sum, monto) => sum + monto.cantidad, 0);
+                
+                const divisor = parseNumber(divisorPuntoPlantaInput.value);
+
+                if (isNaN(divisor) || divisor <= 0) {
+                    alert("Por favor, ingrese un divisor válido (un número mayor que cero).");
+                    return;
+                }
+
+                const puntoPlanta = totalPropinaBruta / divisor;
+
+                puntoPlantaValor.textContent = `Punto-Planta: $${parseFloat(puntoPlanta).toLocaleString('es-CL', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                
+                localStorage.setItem('lastPuntoPlantaValue', puntoPlanta.toFixed(2));
+                cargarPuntoPlantaDisplay(); 
+                updatePropinaAsignadaCards();
+                const currentSocioAnticipoIndex = parseInt(anticipoSocioId.value);
+                if (!isNaN(currentSocioAnticipoIndex) && currentSocioAnticipoIndex >= 0) {
+                    displayAnticipoSocioInfo(currentSocioAnticipoIndex);
+                }
+            });
+
+            const updatePropinaAsignadaCards = () => {
+                const puntoPlanta = parseFloat(localStorage.getItem('lastPuntoPlantaValue')) || 0;
+                const socios = JSON.parse(localStorage.getItem('socios')) || [];
+                
+                const sociosDistribucionCards = document.querySelectorAll('.socio-distribucion-card');
+                
+                sociosDistribucionCards.forEach(card => {
+                    const index = parseInt(card.dataset.index);
+                    const socio = socios[index];
+                    if (socio) {
+                        let propinaAsignada = 0;
+                        if (socio.tipoContrato === 'Planta') {
+                            propinaAsignada = socio.puntosPropina * puntoPlanta;
+                        } else if (socio.tipoContrato === 'Part-Time') {
+                            propinaAsignada = (socio.puntosAntiguedadBase || 0) * (socio.puntosPropinaPartTime || 0);
+                        }
+                        socio.propinaAsignada = propinaAsignada;
+                        
+                        const totalAnticiposSocio = (socio.anticipos || []).reduce((sum, ant) => sum + ant.cantidad, 0);
+                        const saldoDisponible = propinaAsignada - totalAnticiposSocio;
+
+                        const propinaAsignadaElement = card.querySelector('.propina-asignada');
+                        if (propinaAsignadaElement) {
+                            propinaAsignadaElement.textContent = `Propina Asignada: $${formatNumber(propinaAsignada)}`;
+                        }
+
+                        const saldoDisponibleElement = card.querySelector('.saldo-disponible');
+                        if (saldoDisponibleElement) {
+                            saldoDisponibleElement.textContent = `Saldo Disponible: $${formatNumber(saldoDisponible)}`;
+                            if (saldoDisponible < 0) {
+                                saldoDisponibleElement.classList.add('negative');
+                            } else {
+                                saldoDisponibleElement.classList.remove('negative');
+                            }
+                        }
+                    }
+                });
+                guardarSocios(socios);
+            };
+
+            const cargarPuntoPlantaDisplay = () => {
+                const lastPuntoPlanta = parseFloat(localStorage.getItem('lastPuntoPlantaValue')) || 0;
+                puntoPlantaDisplay.textContent = `Último Punto-Planta: $${lastPuntoPlanta.toLocaleString('es-CL', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            };
+
+            const abrirCalendarModal = (socioIndex) => {
+                currentSocioIndexCalendar = socioIndex;
+                const socios = JSON.parse(localStorage.getItem('socios'));
+                const socio = socios[socioIndex];
+
+                if (!socio || socio.tipoContrato !== 'Part-Time') return;
+
+                calendarModalTitle.textContent = `Días Trabajados de ${socio.nombre} ${socio.apellido}`;
+                
+                if (!flatpickrInstance) {
+                    flatpickrInstance = flatpickr(flatpickrInput, {
+                        mode: "multiple",
+                        dateFormat: "Y-m-d",
+                        locale: "es",
+                        inline: false,
+                        onChange: (selectedDates, dateStr, instance) => {
+                            const updatedSocios = JSON.parse(localStorage.getItem('socios'));
+                            updatedSocios[currentSocioIndexCalendar].diasTrabajados = selectedDates.map(d => flatpickr.formatDate(d, "Y-m-d"));
+                            updatedSocios[currentSocioIndexCalendar].montoAsignablePartTime = calcularMontoAsignablePartTime(updatedSocios[currentSocioIndexCalendar].diasTrabajados);
+                            
+                            guardarSocios(updatedSocios);
+                            cargarSocios();
+                            selectedDaysCountSpan.textContent = selectedDates.length;
+                        },
+                        onOpen: (selectedDates, dateStr, instance) => {
+                            if (socio.diasTrabajados && socio.diasTrabajados.length > 0) {
+                                instance.setDate(socio.diasTrabajados, true);
+                            } else {
+                                instance.clear();
+                            }
+                            selectedDaysCountSpan.textContent = socio.diasTrabajados ? socio.diasTrabajados.length : 0;
+                        }
+                    });
+                } else {
+                    flatpickrInstance.setDate(socio.diasTrabajados || [], true);
+                    selectedDaysCountSpan.textContent = socio.diasTrabajados ? socio.diasTrabajados.length : 0;
+                }
+
+                calendarModal.style.display = 'flex';
+            };
+
+
+            const abrirPartTimePointsModal = (socioIndex) => {
+                currentSocioIndexPartTimePoints = socioIndex;
+                const socios = JSON.parse(localStorage.getItem('socios'));
+                const socio = socios[socioIndex];
+
+                if (!socio || socio.tipoContrato !== 'Part-Time') return;
+
+                partTimePointsModalTitle.textContent = `Calcular Puntos de ${socio.nombre} ${socio.apellido}`;
+                
+                partTimeModalBasePoints.textContent = typeof socio.puntosAntiguedadBase !== 'undefined' ? socio.puntosAntiguedadBase.toFixed(2) : '0.00';
+                partTimeModalAssignableAmount.textContent = `$${formatNumber(socio.montoAsignablePartTime || 0)}`;
+                
+                if (socio.puntosPropinaPartTime > 0 && (socio.puntosAntiguedadBase || 0) > 0) {
+                    partTimeMultiplicadorInput.value = (socio.puntosPropinaPartTime / socio.puntosAntiguedadBase).toFixed(2);
+                } else {
+                    partTimeMultiplicadorInput.value = '1';
+                }
+
+                partTimePointsValue.textContent = `Puntos: ${parseFloat(socio.puntosPropinaPartTime || 0).toFixed(2)}`; 
+
+                partTimePointsModal.style.display = 'flex';
+            };
+
+            calcularPartTimePointsInternoBtn.addEventListener('click', () => {
+                if (currentSocioIndexPartTimePoints === -1) return;
+
+                const socios = JSON.parse(localStorage.getItem('socios'));
+                const socio = socios[currentSocioIndexPartTimePoints];
+
+                if (!socio || socio.tipoContrato !== 'Part-Time') return;
+
+                const multiplicador = parseNumber(partTimeMultiplicadorInput.value);
+
+                if (isNaN(multiplicador) || multiplicador <= 0) {
+                    alert("Por favor, ingrese un multiplicador válido (un número mayor que cero).");
+                    return;
+                }
+                
+                const montoAsignable = socio.montoAsignablePartTime || 0;
+                const nuevosPuntosPartTime = montoAsignable / multiplicador;
+
+                socio.puntosPropinaPartTime = nuevosPuntosPartTime;
+                partTimePointsValue.textContent = `Puntos: ${parseFloat(nuevosPuntosPartTime).toFixed(2)}`;
+
+                guardarSocios(socios);
+                cargarSocios();
+            });
+
+            const recalcularMontosAsignablesPartTime = () => {
+                const socios = JSON.parse(localStorage.getItem('socios')) || [];
+                let sociosModificados = false;
+
+                socios.forEach(socio => {
+                    if (socio.tipoContrato === 'Part-Time') {
+                        const nuevoMontoAsignable = calcularMontoAsignablePartTime(socio.diasTrabajados || []);
+                        if (socio.montoAsignablePartTime !== nuevoMontoAsignable) {
+                            socio.montoAsignablePartTime = nuevoMontoAsignable;
+                            sociosModificados = true;
+                        }
+                    }
+                });
+
+                if (sociosModificados) {
+                    guardarSocios(socios);
+                    cargarSocios();
+                }
+            };
+
+            const displaySocioAnticiposHistoryModal = (socioIndex) => {
+                const socios = JSON.parse(localStorage.getItem('socios')) || [];
+                const socio = socios[socioIndex];
+
+                if (!socio) {
+                    console.error('Socio no encontrado para mostrar historial de anticipos.');
+                    return;
+                }
+
+                socioAnticiposHistoryModalTitle.textContent = `Historial de Anticipos de ${socio.nombre} ${socio.apellido}`;
+
+                const propinaAsignada = parseFloat(socio.propinaAsignada || 0);
+                const totalAnticiposSocio = (socio.anticipos || []).reduce((sum, ant) => sum + ant.cantidad, 0);
+                const saldoDisponible = propinaAsignada - totalAnticiposSocio;
+
+                modalSocioPropinaAsignada.textContent = `$${formatNumber(propinaAsignada)}`;
+                modalSocioTotalAnticipos.textContent = `$${formatNumber(totalAnticiposSocio)}`;
+                modalSocioSaldo.textContent = `$${formatNumber(saldoDisponible)}`;
+                
+                if (saldoDisponible < 0) {
+                    modalSocioSaldo.classList.add('negative');
+                } else {
+                    modalSocioSaldo.classList.remove('negative');
+                }
+
+                modalSocioAnticiposList.innerHTML = '<h4>Detalle de Anticipos</h4>';
+                if (socio.anticipos && socio.anticipos.length > 0) {
+                    const sortedAnticipos = [...socio.anticipos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+                    sortedAnticipos.forEach((anticipo, idx) => {
+                        const originalAnticipoIndex = socio.anticipos.findIndex(ant => ant.fecha === anticipo.fecha && ant.cantidad === anticipo.cantidad);
+
+                        const historyItem = document.createElement('div');
+                        historyItem.classList.add('anticipo-history-item');
+                        historyItem.innerHTML = `
+                            <span>${formatDate(anticipo.fecha)}: $${formatNumber(anticipo.cantidad)}</span>
+                            <button class="delete-btn" data-socio-index="${socioIndex}" data-anticipo-index="${originalAnticipoIndex}" data-type="anticipo">Borrar</button>
+                        `;
+                        historyItem.querySelector('.delete-btn').addEventListener('click', (event) => {
+                            event.stopPropagation();
+                            const confirmDelete = confirm(`¿Borrar el anticipo de $${formatNumber(anticipo.cantidad)} del ${formatDate(anticipo.fecha)}?`);
+                            if (confirmDelete) {
+                                eliminarItem('anticipo', originalAnticipoIndex, socioIndex, socioAnticiposHistoryModal);
+                            }
+                        });
+                        modalSocioAnticiposList.appendChild(historyItem);
+                    });
+                } else {
+                    modalSocioAnticiposList.innerHTML += '<p style="text-align: center;">No hay anticipos registrados para este socio.</p>';
+                }
+
+                socioAnticiposHistoryModal.style.display = 'flex';
+            };
+
+            // --- Nuevas funciones para Importar/Exportar ---
+            exportDataBtn.addEventListener('click', () => {
+                const data = {
+                    socios: JSON.parse(localStorage.getItem('socios')) || [],
+                    montos: JSON.parse(localStorage.getItem('montos')) || [],
+                    lastPuntoPlantaValue: localStorage.getItem('lastPuntoPlantaValue') || '0',
+                };
+                const dataStr = JSON.stringify(data, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_propina_${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+            importFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) {
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        if (importedData && importedData.socios && importedData.montos) {
+                            const confirmImport = confirm("¿Está seguro de importar estos datos? Se sobrescribirán los datos actuales.");
+                            if (confirmImport) {
+                                localStorage.setItem('socios', JSON.stringify(importedData.socios));
+                                localStorage.setItem('montos', JSON.stringify(importedData.montos));
+                                if (importedData.lastPuntoPlantaValue) {
+                                    localStorage.setItem('lastPuntoPlantaValue', importedData.lastPuntoPlantaValue);
+                                } else {
+                                    localStorage.removeItem('lastPuntoPlantaValue');
+                                }
+                                alert('Datos importados correctamente. La página se recargará.');
+                                window.location.reload();
+                            }
+                        } else {
+                            alert('El archivo JSON no tiene el formato correcto para importar.');
+                        }
+                    } catch (error) {
+                        alert('Error al leer o procesar el archivo JSON. Asegúrese de que el archivo no esté dañado.');
+                        console.error('Error importing data:', error);
+                    }
+                };
+                reader.readAsText(file);
+            });
+            
+            // NUEVA FUNCIONALIDAD: Lógica del buscador
+            socioSearchInput.addEventListener('input', (event) => {
+                const searchTerm = event.target.value.toLowerCase();
+                const socioCards = document.querySelectorAll('.socio-distribucion-card');
+
+                socioCards.forEach(card => {
+                    const nombre = card.querySelector('h3').textContent.toLowerCase();
+                    const area = card.querySelector('p strong').nextSibling.textContent.toLowerCase();
+
+                    if (nombre.includes(searchTerm) || area.includes(searchTerm)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+
+            // NUEVA FUNCIONALIDAD: Borrar todos los datos transaccionales
+            deleteAllDataBtn.addEventListener('click', () => {
+                const confirm1 = confirm("ADVERTENCIA: ¿Estás seguro de que quieres borrar TODOS los montos y anticipos? Esta acción no se puede deshacer.");
+                
+                if (confirm1) {
+                    const confirm2 = prompt("Para confirmar, escribe 'BORRAR' en mayúsculas:");
+                    if (confirm2 === "BORRAR") {
+                        // 1. Borrar todos los montos registrados
+                        localStorage.removeItem('montos');
+
+                        // 2. Borrar todos los anticipos de cada socio
+                        let socios = JSON.parse(localStorage.getItem('socios')) || [];
+                        socios.forEach(socio => {
+                            socio.anticipos = []; // Reinicia el array de anticipos
+                            socio.propinaAsignada = 0; // Opcional: reinicia la propina calculada
+                        });
+                        localStorage.setItem('socios', JSON.stringify(socios)); // Guarda los socios con los anticipos ya limpios
+
+                        // 3. Borrar el último valor de Punto-Planta guardado
+                        localStorage.removeItem('lastPuntoPlantaValue');
+
+                        alert("¡Hecho! Todos los montos y anticipos han sido eliminados. Los socios se han conservado.");
+                        
+                        // 4. Recargar la página para que la interfaz se actualice completamente
+                        window.location.reload();
+
+                    } else {
+                        alert("Acción cancelada. No se ha borrado nada.");
+                    }
+                } else {
+                    alert("Acción cancelada.");
+                }
+            });
+
+
+            // --- Carga inicial al cargar la página ---
+            cargarSocios();
+            cargarMontos();
+            updateGeneralTotals();
+        });
+    </script>
 </body>
 </html>
