@@ -811,30 +811,28 @@
             width: 100%;
         }
 
-        /* --- MEDIA QUERIES PARA ADAPTAR EL MENÚ --- */
         @media (min-width: 992px) {
             .menu-toggle {
-                display: none; /* Ocultamos el botón en pantallas grandes */
+                display: none;
             }
             .side-menu {
-                transform: translateX(0); /* Menú visible por defecto */
+                transform: translateX(0);
             }
             .main-container {
-                margin-left: var(--menu-width); /* Mantenemos el margen del contenido */
+                margin-left: var(--menu-width);
             }
             .container h1 {
-                padding-top: 0; /* Quitamos el padding extra */
+                padding-top: 0;
             }
         }
         @media (max-width: 991px) {
              .main-container.menu-open {
-                margin-left: 0; /* En móvil, el menú se superpone, no empuja el contenido */
+                margin-left: 0;
             }
         }
     </style>
 </head>
 <body>
-    <!-- NUEVA ESTRUCTURA: MENÚ Y CONTENEDOR PRINCIPAL -->
     <nav id="sideMenu" class="side-menu">
         <div class="menu-header">Menú</div>
         <a href="#" class="menu-link active-link" data-target="balanceContent">Balance General</a>
@@ -856,7 +854,6 @@
         <div class="container">
             <h1>Gestión de Propina</h1>
 
-            <!-- Los antiguos .collapsible-content ahora son .content-panel -->
             <div id="balanceContent" class="content-panel active">
                 <h2>Balance General</h2>
                 <div id="balanceReport">
@@ -940,7 +937,7 @@
                     Total General de Anticipos: $0
                 </div>
                 <form id="registroAnticipoForm">
-                    <label for="anticipoSocio">Seleccionar Socio:</label>
+                    <label for="anticipoSocioInput">Seleccionar Socio:</label>
                     <input list="sociosAnticipoList" id="anticipoSocioInput" type="text" placeholder="Buscar socio..." required>
                     <datalist id="sociosAnticipoList"></datalist>
                     <input type="hidden" id="anticipoSocioId">
@@ -996,7 +993,7 @@
         </div>
     </div>
 
-    <!-- Modales (sin cambios) -->
+    <!-- Modales -->
     <div id="dailyTotalsModal" class="modal">
         <div class="modal-content">
             <span class="close-button" data-modal-close="dailyTotalsModal">&times;</span>
@@ -1120,7 +1117,6 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- INICIO: NUEVA LÓGICA DEL MENÚ LATERAL ---
             const menuToggle = document.getElementById('menuToggle');
             const sideMenu = document.getElementById('sideMenu');
             const mainContainer = document.getElementById('mainContainer');
@@ -1130,9 +1126,6 @@
             menuToggle.addEventListener('click', () => {
                 sideMenu.classList.toggle('open');
                 menuToggle.classList.toggle('active');
-                
-                // En pantallas de escritorio, el menú empuja el contenido.
-                // En móvil, el menú se superpone (gestionado por CSS).
                 if (window.innerWidth > 991) {
                     mainContainer.classList.toggle('menu-open');
                 }
@@ -1143,26 +1136,28 @@
                     event.preventDefault();
                     const targetId = link.getAttribute('data-target');
 
-                    // Ocultar todos los paneles y mostrar el objetivo
                     contentPanels.forEach(panel => {
                         panel.classList.remove('active');
                     });
                     document.getElementById(targetId).classList.add('active');
 
-                    // Actualizar enlace activo en el menú
                     menuLinks.forEach(l => l.classList.remove('active-link'));
                     link.classList.add('active-link');
-
-                    // Cerrar el menú en vistas móviles después de la selección
+                    
+                    // INICIO: CORRECCIÓN PARA EL SELECTOR DE SOCIOS
+                    // Si se abre el panel de anticipos, refrescamos el selector.
+                    if (targetId === 'anticiposContent') {
+                        updateAnticipoSocioSelector();
+                    }
+                    // FIN: CORRECCIÓN
+                    
                     if (window.innerWidth <= 991) {
                        sideMenu.classList.remove('open');
                        menuToggle.classList.remove('active');
                     }
                 });
             });
-            // --- FIN: NUEVA LÓGICA DEL MENÚ LATERAL ---
-
-            // El resto de tu código JavaScript permanece aquí sin cambios...
+            // --- El resto del JS ---
             const registroSocioForm = document.getElementById('registroSocioForm');
             const sociosPlantaContainer = document.getElementById('sociosPlantaContainer');
             const sociosPartTimeContainer = document.getElementById('sociosPartTimeContainer');
@@ -1842,4 +1837,5 @@
     </script>
 </body>
 </html>
+
 
