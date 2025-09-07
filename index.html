@@ -213,6 +213,15 @@
             background-color: #c0392b;
             transform: translateY(-1px);
         }
+        
+        /* --- ESTILO PARA EL NUEVO BOTÓN DE IMPORTACIÓN --- */
+        .import-sheets-btn {
+            background-color: #9b59b6;
+            margin-bottom: 20px;
+        }
+        .import-sheets-btn:hover {
+            background-color: #8e44ad;
+        }
 
         .socio-card-container, .monto-card-container, .retiro-card-container {
             display: grid;
@@ -906,6 +915,11 @@
                     Total General de Propina: $0
                 </div>
                 <button type="button" class="show-daily-totals-btn" data-modal-target="dailyTotalsModal">Ver Totales Diarios de Propina</button>
+                
+                <!-- INICIO: BOTÓN DE IMPORTACIÓN AÑADIDO -->
+                <button type="button" class="import-sheets-btn" id="importFromSheetsBtn">Importar desde Sheets</button>
+                <!-- FIN: BOTÓN DE IMPORTACIÓN AÑADIDO -->
+
                 <form id="registroMontoForm">
                     <label for="montoFecha">Fecha:</label>
                     <input type="date" id="montoFecha" required>
@@ -1144,12 +1158,9 @@
                     menuLinks.forEach(l => l.classList.remove('active-link'));
                     link.classList.add('active-link');
                     
-                    // INICIO: CORRECCIÓN PARA EL SELECTOR DE SOCIOS
-                    // Si se abre el panel de anticipos, refrescamos el selector.
                     if (targetId === 'anticiposContent') {
                         updateAnticipoSocioSelector();
                     }
-                    // FIN: CORRECCIÓN
                     
                     if (window.innerWidth <= 991) {
                        sideMenu.classList.remove('open');
@@ -1157,6 +1168,64 @@
                     }
                 });
             });
+
+            // --- INICIO: LÓGICA DE IMPORTACIÓN ---
+            const importFromSheetsBtn = document.getElementById('importFromSheetsBtn');
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxna9EH5LZPTPCPws58pGro6qCrZ8_zNwvUkUHS28BYfd8CsAcD1MRcqlITbDm4lTk/exec'; 
+
+            importFromSheetsBtn.addEventListener('click', async () => {
+                if (!confirm('¿Deseas importar todos los datos de recaudación desde Google Sheets? Esto puede duplicar entradas si ya existen.')) {
+                    return;
+                }
+
+                const originalText = importFromSheetsBtn.textContent;
+                importFromSheetsBtn.textContent = 'Importando...';
+                importFromSheetsBtn.disabled = true;
+
+                try {
+                    const response = await fetch(`${SCRIPT_URL}?action=get`);
+                    if (!response.ok) {
+                        throw new Error(`Error en la solicitud: ${response.statusText}`);
+                    }
+                    const result = await response.json();
+
+                    if (result.status === 'success' && Array.isArray(result.data)) {
+                        let montos = JSON.parse(localStorage.getItem('montos')) || [];
+                        const nuevosMontos = result.data;
+
+                        nuevosMontos.forEach(entry => {
+                            let areaMapeada = 'Boveda';
+                            if (entry.tipo === 'Máquinas') areaMapeada = 'Maquinas';
+                            else if (entry.tipo === 'Mesas') areaMapeada = 'Mesas';
+
+                            // Opcional: Evitar duplicados exactos
+                            const existe = montos.some(m => m.fecha === entry.fecha && m.area === areaMapeada && m.cantidad === entry.monto);
+                            if (!existe) {
+                                montos.push({
+                                    fecha: entry.fecha,
+                                    area: areaMapeada,
+                                    cantidad: entry.monto
+                                });
+                            }
+                        });
+
+                        localStorage.setItem('montos', JSON.stringify(montos));
+                        alert(`¡Importación completada! Se procesaron ${nuevosMontos.length} registros.`);
+                        cargarMontos(); // Actualizar la vista
+                    } else {
+                        throw new Error(result.message || 'La respuesta del script no fue exitosa.');
+                    }
+                } catch (error) {
+                    console.error('Error durante la importación:', error);
+                    alert(`Error al importar los datos: ${error.message}`);
+                } finally {
+                    importFromSheetsBtn.textContent = originalText;
+                    importFromSheetsBtn.disabled = false;
+                }
+            });
+            // --- FIN: LÓGICA DE IMPORTACIÓN ---
+
+
             // --- El resto del JS ---
             const registroSocioForm = document.getElementById('registroSocioForm');
             const sociosPlantaContainer = document.getElementById('sociosPlantaContainer');
@@ -1835,71 +1904,7 @@
             updateGeneralTotals();
         });
     </script>
-    
-    <!-- INICIO: SCRIPT PARA IMPORTAR DATOS DESDE LA PÁGINA DE RECAUDACIÓN -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            const dataToImport = params.get('importData');
-
-            if (dataToImport) {
-                try {
-                    // 1. Decodificar y convertir los datos de la URL a un array de objetos
-                    const importedEntries = JSON.parse(decodeURIComponent(dataToImport));
-
-                    if (Array.isArray(importedEntries) && importedEntries.length > 0) {
-                        // 2. Cargar los montos existentes desde localStorage
-                        let montos = JSON.parse(localStorage.getItem('montos')) || [];
-
-                        // 3. Agregar cada nuevo registro al array de montos
-                        importedEntries.forEach(entry => {
-                            // Mapeamos el 'tipo' de la página 1 al 'area' de la página 2
-                            let areaMapeada = 'Boveda'; // Valor por defecto
-                            if (entry.tipo === 'Máquinas') {
-                                areaMapeada = 'Maquinas';
-                            } else if (entry.tipo === 'Mesas') {
-                                areaMapeada = 'Mesas';
-                            }
-                            
-                            montos.push({
-                                fecha: entry.fecha,
-                                area: areaMapeada,
-                                cantidad: entry.monto
-                            });
-                        });
-
-                        // 4. Guardar el array actualizado de nuevo en localStorage
-                        localStorage.setItem('montos', JSON.stringify(montos));
-
-                        // 5. Limpiar la URL para que los datos no se re-importen si se recarga la página
-                        window.history.replaceState(null, '', window.location.pathname);
-                        
-                        // 6. Mostrar un mensaje de éxito
-                        alert(`¡Se han importado ${importedEntries.length} registros de recaudación con éxito!`);
-                        
-                        // 7. Simular clic para ir a la sección de "Montos Registrados" y recargar la vista
-                        const montosLink = document.querySelector('.menu-link[data-target="montosContent"]');
-                        if (montosLink) {
-                            montosLink.click();
-                        }
-                        
-                        // Forzamos la actualización visual de los montos llamando a la función principal de la app
-                        if (typeof cargarMontos === 'function') {
-                            cargarMontos();
-                        } else {
-                            // Si la función no está disponible globalmente, recargamos la página
-                            window.location.reload();
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error al importar los datos:', error);
-                    alert('Hubo un error al procesar los datos de importación.');
-                    window.history.replaceState(null, '', window.location.pathname);
-                }
-            }
-        });
-    </script>
-    <!-- FIN: SCRIPT DE IMPORTACIÓN -->
 </body>
 </html>
+
 
