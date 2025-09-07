@@ -1835,7 +1835,71 @@
             updateGeneralTotals();
         });
     </script>
+    
+    <!-- INICIO: SCRIPT PARA IMPORTAR DATOS DESDE LA PÁGINA DE RECAUDACIÓN -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const dataToImport = params.get('importData');
+
+            if (dataToImport) {
+                try {
+                    // 1. Decodificar y convertir los datos de la URL a un array de objetos
+                    const importedEntries = JSON.parse(decodeURIComponent(dataToImport));
+
+                    if (Array.isArray(importedEntries) && importedEntries.length > 0) {
+                        // 2. Cargar los montos existentes desde localStorage
+                        let montos = JSON.parse(localStorage.getItem('montos')) || [];
+
+                        // 3. Agregar cada nuevo registro al array de montos
+                        importedEntries.forEach(entry => {
+                            // Mapeamos el 'tipo' de la página 1 al 'area' de la página 2
+                            let areaMapeada = 'Boveda'; // Valor por defecto
+                            if (entry.tipo === 'Máquinas') {
+                                areaMapeada = 'Maquinas';
+                            } else if (entry.tipo === 'Mesas') {
+                                areaMapeada = 'Mesas';
+                            }
+                            
+                            montos.push({
+                                fecha: entry.fecha,
+                                area: areaMapeada,
+                                cantidad: entry.monto
+                            });
+                        });
+
+                        // 4. Guardar el array actualizado de nuevo en localStorage
+                        localStorage.setItem('montos', JSON.stringify(montos));
+
+                        // 5. Limpiar la URL para que los datos no se re-importen si se recarga la página
+                        window.history.replaceState(null, '', window.location.pathname);
+                        
+                        // 6. Mostrar un mensaje de éxito
+                        alert(`¡Se han importado ${importedEntries.length} registros de recaudación con éxito!`);
+                        
+                        // 7. Simular clic para ir a la sección de "Montos Registrados" y recargar la vista
+                        const montosLink = document.querySelector('.menu-link[data-target="montosContent"]');
+                        if (montosLink) {
+                            montosLink.click();
+                        }
+                        
+                        // Forzamos la actualización visual de los montos llamando a la función principal de la app
+                        if (typeof cargarMontos === 'function') {
+                            cargarMontos();
+                        } else {
+                            // Si la función no está disponible globalmente, recargamos la página
+                            window.location.reload();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error al importar los datos:', error);
+                    alert('Hubo un error al procesar los datos de importación.');
+                    window.history.replaceState(null, '', window.location.pathname);
+                }
+            }
+        });
+    </script>
+    <!-- FIN: SCRIPT DE IMPORTACIÓN -->
 </body>
 </html>
-
 
