@@ -43,11 +43,15 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* Header */
         .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
         h1 { color: var(--primary); margin: 0; }
         .fecha-badge { background-color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.9em; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #ddd; }
 
-        .smart-search { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.3s; box-sizing: border-box; }
+        /* Buscadores */
+        .smart-search {
+            width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.3s; box-sizing: border-box;
+        }
         .smart-search:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
 
         /* DASHBOARDS */
@@ -150,7 +154,6 @@
         .history-table th { text-align: left; background: #eee; padding: 8px; }
         .history-table td { border-bottom: 1px solid #eee; padding: 8px; }
         
-        /* ESTILO PARA FILAS BORRABLES */
         .row-deletable { user-select: none; transition: background-color 0.3s; cursor: pointer; }
         .row-deletable:active { background-color: #ffebee; transform: scale(0.99); }
 
@@ -208,8 +211,6 @@
         
         <!-- PESTAÑA 1: REGISTRO DE SOCIOS -->
         <div id="tab-registro" class="tab-content active">
-            
-            <!-- RESUMEN GLOBAL -->
             <div class="dashboard-socios">
                 <div class="mini-stat blue">
                     <span class="ms-val" id="totalSociosDash">0</span>
@@ -229,13 +230,10 @@
                 </div>
             </div>
 
-            <!-- FILTRO DE SOCIOS -->
             <input type="text" id="filtroRegistro" class="smart-search" placeholder="🔍 Buscar socio por nombre, área..." onkeyup="filtrarSociosRegistro()">
-
-            <!-- BOTÓN FLOTANTE PARA ABRIR MODAL -->
             <button class="fab-btn" onclick="abrirModalRegistro()">+</button>
 
-            <!-- MODAL FORMULARIO REGISTRO -->
+            <!-- MODAL REGISTRO -->
             <div id="modalRegistro" class="modal">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -278,7 +276,7 @@
                 </div>
             </div>
 
-            <!-- MODAL RESUMEN FINANCIERO (ESTADO) -->
+            <!-- MODAL RESUMEN FINANCIERO -->
             <div id="modalResumenFinanciero" class="modal">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -579,6 +577,19 @@
                     const data = res.data || {};
                     const saldoAnt = Number(data.saldoAnterior || 0);
                     
+                    // --- DETECTAR AUSENCIAS (NUEVO) ---
+                    const fechasAusencia = new Set();
+                    if(data.extras) {
+                        data.extras.forEach(e => {
+                            if(e.tipo && e.tipo.toLowerCase().includes('ausencia')) {
+                                let f = e.fecha;
+                                if(f.includes('T')) f = f.split('T')[0];
+                                fechasAusencia.add(f);
+                            }
+                        });
+                    }
+
+                    // --- AGRUPACIÓN ---
                     const agrupados = {};
                     let sumaPedidos = 0;
 
@@ -610,25 +621,35 @@
                     const movimientos = Object.values(agrupados);
                     movimientos.forEach(m => sumaPedidos += m.montoTotal);
 
-                    // Calcular Alcance
+                    // --- CÁLCULO ALCANCE CON DESCUENTO DE AUSENCIAS ---
                     let alcance = 0;
                     if(socio.contrato === 'Part-Time') {
                         let dias = data.diasTrabajados || [];
                         document.getElementById('resumenDiasCount').innerText = dias.length;
                         let sumaValor = 0;
-                        dias.forEach(d => { if(globalMapaPuntosDia[d]) sumaValor += globalMapaPuntosDia[d]; });
+                        dias.forEach(d => { 
+                            // Si NO está ausente, suma
+                            if(!fechasAusencia.has(d) && globalMapaPuntosDia[d]) {
+                                sumaValor += globalMapaPuntosDia[d];
+                            }
+                        });
                         alcance = sumaValor * socio.puntos;
                     } else {
-                        alcance = globalValorPuntoTotal * socio.puntos;
+                        // PLANTA: Sumar todos los días MENOS ausencias
+                        let sumaValorTotal = 0;
+                        for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
+                            if (!fechasAusencia.has(dia)) {
+                                sumaValorTotal += valor;
+                            }
+                        }
+                        alcance = sumaValorTotal * socio.puntos;
                     }
 
-                    // Actualizar UI
                     document.getElementById('resumenSaldoAnt').innerText = formatearMoneda(saldoAnt);
                     document.getElementById('resumenAlcance').innerText = formatearMoneda(alcance);
                     document.getElementById('resumenPedido').innerText = formatearMoneda(sumaPedidos);
                     document.getElementById('resumenFinal').innerText = formatearMoneda((alcance + saldoAnt) - sumaPedidos);
 
-                    // Llenar tabla
                     const tbody = document.getElementById('tablaResumenMovimientos');
                     tbody.innerHTML = '';
                     movimientos.sort((a,b) => b.rawDate - a.rawDate);
@@ -638,12 +659,10 @@
                     movimientos.forEach(m => {
                         let f = m.fecha; 
                         if(f.includes('-')) { const p = f.split('-'); if(p.length===3) f = `${p[2]}/${p[1]}`; }
-                        
                         const uniqueDetalles = [...new Set(m.detalles)].join(', ') || '-';
                         const row = `<tr><td>${f}</td><td>${uniqueDetalles}</td><td>${m.montoTotal > 0 ? '-'+formatearMoneda(m.montoTotal) : '-'}</td></tr>`;
                         tbody.innerHTML += row;
                     });
-
                 }
             } catch(e) { console.error(e); }
         }
@@ -685,7 +704,6 @@
         async function guardarSaldoAnterior() {
             const rawSaldo = document.getElementById('inputSaldoAnterior').value.replace(/\./g, '');
             const nuevoSaldo = parseFloat(rawSaldo) || 0;
-            
             const idSocio = document.getElementById('gestionSocioId').value;
             const nombreSocio = document.getElementById('gestionSocioNombre').value;
             toggleLoader(true, "Guardando Saldo...");
@@ -954,6 +972,18 @@
                         document.getElementById('socioDiasCount').innerText = selectedDaysPT.length;
                     }
 
+                    // --- DETECTAR AUSENCIAS ---
+                    const fechasAusencia = new Set();
+                    if(data.extras) {
+                        data.extras.forEach(e => {
+                            if(e.tipo && e.tipo.toLowerCase().includes('ausencia')) {
+                                let f = e.fecha;
+                                if(f.includes('T')) f = f.split('T')[0];
+                                fechasAusencia.add(f);
+                            }
+                        });
+                    }
+
                     // PROCESAR ENTRADAS CON UUID
                     const procesarEntrada = (fechaRaw, tipo, detalle, monto, uuid) => {
                         let fechaKey = fechaRaw || "";
@@ -965,7 +995,6 @@
                             agrupados[fechaKey].tipos.add(tipo);
                             if(detalle && !agrupados[fechaKey].detalles.includes(detalle)) agrupados[fechaKey].detalles.push(detalle);
                             agrupados[fechaKey].montoTotal = Math.max(agrupados[fechaKey].montoTotal, monto);
-                            // Mantenemos el UUID del mayor (simplificación)
                             if(monto > agrupados[fechaKey].montoTotal) agrupados[fechaKey].uuid = uuid;
                         }
                     };
@@ -979,12 +1008,25 @@
                     const ptsSocio = parseFloat(document.getElementById('gestionSocioPuntos').value) || 0;
                     let alcance = 0;
 
+                    // --- CÁLCULO ALCANCE CON DESCUENTO DE AUSENCIAS ---
                     if (socio.contrato === 'Part-Time') {
                         let sumaValorPuntosPT = 0;
-                        selectedDaysPT.forEach(dia => { if(globalMapaPuntosDia[dia]) sumaValorPuntosPT += globalMapaPuntosDia[dia]; });
+                        selectedDaysPT.forEach(dia => { 
+                            // Si NO está ausente, suma
+                            if(!fechasAusencia.has(dia) && globalMapaPuntosDia[dia]) {
+                                sumaValorPuntosPT += globalMapaPuntosDia[dia]; 
+                            }
+                        });
                         alcance = sumaValorPuntosPT * ptsSocio;
                     } else {
-                        alcance = globalValorPuntoTotal * ptsSocio;
+                        // PLANTA: Sumar todos los días MENOS ausencias
+                        let sumaValorTotal = 0;
+                        for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
+                            if (!fechasAusencia.has(dia)) {
+                                sumaValorTotal += valor;
+                            }
+                        }
+                        alcance = sumaValorTotal * ptsSocio;
                     }
 
                     const saldo = (alcance + saldoAnterior) - sumaTotalPedido;
@@ -998,9 +1040,8 @@
                     
                     listaFinal.forEach(item => {
                         const row = document.createElement('tr');
-                        row.classList.add('row-deletable'); // CLASE PARA BORRADO
+                        row.classList.add('row-deletable'); 
                         
-                        // EVENTOS LONG PRESS
                         let pressTimer;
                         row.addEventListener('mousedown', () => { pressTimer = setTimeout(() => mostrarModalBorrar(item), 800); });
                         row.addEventListener('touchstart', () => { pressTimer = setTimeout(() => mostrarModalBorrar(item), 800); });
@@ -1027,7 +1068,6 @@
             document.getElementById('modalConfirmarBorrar').style.display = 'block';
             document.getElementById('txtDetalleBorrar').innerText = `¿Borrar registro del ${item.fecha} (${Array.from(item.tipos).join(',')})?`;
             document.getElementById('borrarUUID').value = item.uuid;
-            // Determinar tipo simple
             document.getElementById('borrarTipo').value = item.montoTotal > 0 ? 'Anticipo' : 'Extra';
         }
 
@@ -1042,7 +1082,6 @@
             try {
                 await callApiSocios('borrarMovimiento', { uuid: uuid, tipo: tipo });
                 showToast('Eliminado correctamente', 'success');
-                // Recargar historial
                 const idSocio = document.getElementById('gestionSocioId').value;
                 cargarHistorialSocio(idSocio);
             } catch(e) {
