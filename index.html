@@ -14,6 +14,7 @@
             --purple: #9b59b6;
             --info: #17a2b8;
             --gastos: #607d8b;
+            --pt-days: #34495e; /* Color para días PT */
             --bg: #f0f2f5;
             --card-bg: #ffffff;
             --text-color: #444;
@@ -42,41 +43,49 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Header */
         .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
         h1 { color: var(--primary); margin: 0; }
         .fecha-badge { background-color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.9em; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #ddd; }
 
-        /* Buscadores */
-        .smart-search {
-            width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.3s; box-sizing: border-box;
-        }
+        .smart-search { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.3s; box-sizing: border-box; }
         .smart-search:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
 
         /* DASHBOARDS */
-        .dashboard-socios { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .mini-stat { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 3px solid transparent; transition: transform 0.2s; }
+        .dashboard-socios { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .mini-stat { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 3px solid transparent; transition: transform 0.2s; position: relative; }
+        
         .mini-stat.blue { border-bottom-color: var(--secondary); }
         .mini-stat.green { border-bottom-color: var(--success); }
         .mini-stat.orange { border-bottom-color: var(--warning); }
         .mini-stat.purple { border-bottom-color: var(--purple); }
         .mini-stat.red { border-bottom-color: var(--danger); }
-        
-        .mini-stat.clickable { cursor: pointer; }
-        .mini-stat.clickable:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); background-color: #fff8e1; }
+        .mini-stat.dark { border-bottom-color: var(--pt-days); background-color: #f4f6f7; }
 
-        .ms-val { display: block; font-size: 1.3em; font-weight: 800; color: var(--text-color); }
+        .mini-stat.clickable { cursor: pointer; }
+        .mini-stat.clickable:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); z-index: 10; }
+
+        .ms-val { display: block; font-size: 1.2em; font-weight: 800; color: var(--text-color); }
         .ms-label { font-size: 0.75em; color: #888; text-transform: uppercase; font-weight: bold; margin-top: 5px; display: block;}
 
-        /* MODAL */
+        /* MODALES */
         .modal { display: none; position: fixed; z-index: 2100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px); animation: fadeInModal 0.3s; }
         @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
-        .modal-content { background-color: #fff; margin: 10% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; animation: slideInModal 0.3s; }
+        .modal-content { background-color: #fff; margin: 5% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; animation: slideInModal 0.3s; max-height: 85vh; overflow-y: auto; }
         @keyframes slideInModal { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .modal-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; border-radius: 12px 12px 0 0; }
-        .modal-body { padding: 30px; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; border-radius: 12px 12px 0 0; position: sticky; top: 0; z-index: 5; }
+        .modal-body { padding: 25px; }
         .close-modal { font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; }
         .close-modal:hover { color: var(--danger); }
+
+        /* Calendario Grid */
+        .calendar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 15px; }
+        .day-btn {
+            padding: 10px; border: 2px solid #eee; border-radius: 8px; background: white; cursor: pointer; text-align: center; transition: all 0.2s;
+        }
+        .day-btn:hover { border-color: var(--secondary); }
+        .day-btn.selected { background-color: var(--secondary); color: white; border-color: var(--secondary); box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); }
+        .day-btn .d-date { font-weight: bold; display: block; margin-bottom: 4px; }
+        .day-btn .d-val { font-size: 0.75em; opacity: 0.8; }
 
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
         .form-group { display: flex; flex-direction: column; }
@@ -89,7 +98,6 @@
         .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background-color: var(--secondary); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 30px; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4); cursor: pointer; transition: all 0.3s; z-index: 1000; border: none; }
         .fab-btn:hover { transform: scale(1.1); background-color: #2980b9; }
 
-        /* ACORDEÓN SOCIOS */
         .area-section { margin-bottom: 15px; }
         .area-header { display: flex; align-items: center; justify-content: space-between; background: white; padding: 15px 20px; border-radius: 8px; border-left: 5px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; transition: background 0.2s; user-select: none; }
         .area-header:hover { background-color: #f9f9f9; }
@@ -104,16 +112,19 @@
         .cards-container { display: none; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; margin-top: 15px; padding-left: 10px; animation: slideDown 0.3s ease-out; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .border-left-mesas { border-left-color: #3498db; } .border-left-cambistas { border-left-color: #9b59b6; }
+        .border-left-mesas { border-left-color: #3498db; } .border-left-mesasPartTime { border-left-color: #3498db; }
+        .border-left-cambistas { border-left-color: #9b59b6; }
         .border-left-maquinas { border-left-color: #e67e22; } .border-left-tecnicos { border-left-color: #7f8c8d; }
         .border-left-boveda { border-left-color: #27ae60; } .border-left-GastosComision { border-left-color: var(--gastos); }
 
         .socio-card { background-color: var(--card-bg); border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); padding: 25px; position: relative; border-top: 5px solid var(--secondary); display: flex; flex-direction: column; }
         .area-tag { position: absolute; top: 15px; right: 15px; font-size: 0.75em; padding: 4px 10px; border-radius: 20px; font-weight: bold; color: white; }
-        .bg-mesas { background-color: #3498db; } .bg-cambistas { background-color: #9b59b6; }
+        .bg-mesas { background-color: #3498db; } .bg-mesasPartTime { background-color: #3498db; }
+        .bg-cambistas { background-color: #9b59b6; }
         .bg-maquinas { background-color: #e67e22; } .bg-tecnicos { background-color: #7f8c8d; }
         .bg-boveda { background-color: #27ae60; } .bg-GastosComision { background-color: var(--gastos); }
-        .border-mesas { border-top-color: #3498db; } .border-cambistas { border-top-color: #9b59b6; }
+        .border-mesas { border-top-color: #3498db; } .border-mesasPartTime { border-top-color: #3498db; }
+        .border-cambistas { border-top-color: #9b59b6; }
         .border-maquinas { border-top-color: #e67e22; } .border-tecnicos { border-top-color: #7f8c8d; }
         .border-boveda { border-top-color: #27ae60; } .border-GastosComision { border-top-color: var(--gastos); }
 
@@ -127,7 +138,6 @@
         .btn-edit { background-color: #fff; border: 1px solid var(--warning); color: var(--warning); }
         .btn-delete { background-color: #fff; border: 1px solid var(--danger); color: var(--danger); }
 
-        /* GESTIÓN LAYOUT */
         .gestion-layout { display: grid; grid-template-columns: 300px 1fr; gap: 30px; }
         .search-panel { background: white; padding: 20px; border-radius: 12px; height: fit-content; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
         .search-results { margin-top: 15px; max-height: 400px; overflow-y: auto; }
@@ -145,7 +155,6 @@
         .amount-minus { color: var(--danger); font-weight: bold; }
         .tag-absent { background: var(--danger); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
 
-        /* RECAUDACIÓN */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border-left: 5px solid var(--secondary); display: flex; flex-direction: column; justify-content: center; }
         .stat-card.purple { border-left-color: var(--purple); }
@@ -167,7 +176,6 @@
 
         @media (max-width: 768px) { .gestion-layout { grid-template-columns: 1fr; } .action-grid { grid-template-columns: 1fr; } }
         
-        /* Toast */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 2500; }
         .toast { min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; transform: translateX(100%); transition: all 0.4s ease; }
         .toast.show { opacity: 1; transform: translateX(0); }
@@ -199,7 +207,6 @@
         <!-- PESTAÑA 1: REGISTRO DE SOCIOS -->
         <div id="tab-registro" class="tab-content active">
             
-            <!-- RESUMEN GLOBAL -->
             <div class="dashboard-socios">
                 <div class="mini-stat blue">
                     <span class="ms-val" id="totalSociosDash">0</span>
@@ -219,13 +226,10 @@
                 </div>
             </div>
 
-            <!-- FILTRO DE SOCIOS -->
             <input type="text" id="filtroRegistro" class="smart-search" placeholder="🔍 Buscar socio por nombre, área..." onkeyup="filtrarSociosRegistro()">
 
-            <!-- BOTÓN FLOTANTE PARA ABRIR MODAL -->
             <button class="fab-btn" onclick="abrirModalRegistro()">+</button>
 
-            <!-- MODAL FORMULARIO REGISTRO -->
             <div id="modalRegistro" class="modal">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -302,11 +306,17 @@
 
                     <!-- ESTADÍSTICAS FINANCIERAS PERSONALES -->
                     <div class="dashboard-socios" style="margin-bottom:20px;">
-                        <!-- TARJETA SALDO ANTERIOR CON CLICK -->
                         <div class="mini-stat orange clickable" onclick="abrirModalSaldo()" title="Clic para editar saldo inicial">
                             <span class="ms-val" id="socioSaldoAnterior">$0</span>
                             <span class="ms-label">Saldo Mes Ant. ✏️</span>
                         </div>
+                        
+                        <!-- TARJETA DIAS TRABAJADOS (SOLO PART-TIME) -->
+                        <div class="mini-stat dark clickable" id="cardDiasTrabajados" onclick="abrirModalCalendario()" style="display:none;" title="Clic para ver calendario">
+                            <span class="ms-val" id="socioDiasCount">0</span>
+                            <span class="ms-label">Días Trab. 📅</span>
+                        </div>
+
                         <div class="mini-stat blue">
                             <span class="ms-val" id="socioAlcance">$0</span>
                             <span class="ms-label">Alcance (Teórico)</span>
@@ -346,7 +356,7 @@
             </div>
         </div>
 
-        <!-- MODAL SALDO ANTERIOR (NUEVO) -->
+        <!-- MODAL SALDO ANTERIOR -->
         <div id="modalSaldo" class="modal">
             <div class="modal-content" style="max-width:400px; margin-top:15%;">
                 <div class="modal-header">
@@ -354,15 +364,25 @@
                     <span class="close-modal" onclick="cerrarModalSaldo()">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <p style="color:#666; font-size:0.9em; margin-bottom:15px;">
-                        Ingresa el monto sobrante o pendiente del mes pasado para este socio.
-                    </p>
-                    <div class="form-group">
-                        <label>Monto ($)</label>
-                        <input type="number" id="inputSaldoAnterior" placeholder="0">
-                    </div>
+                    <p style="color:#666; font-size:0.9em; margin-bottom:15px;">Ingresa el monto sobrante o pendiente del mes pasado.</p>
+                    <div class="form-group"><label>Monto ($)</label><input type="number" id="inputSaldoAnterior" placeholder="0"></div>
+                    <div style="margin-top:20px;"><button class="btn-submit" onclick="guardarSaldoAnterior()" style="width:100%; background-color: var(--warning);">Guardar Saldo</button></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL CALENDARIO PART-TIME -->
+        <div id="modalCalendario" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Días Trabajados</h2>
+                    <span class="close-modal" onclick="cerrarModalCalendario()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p style="color:#666; font-size:0.9em;">Selecciona los días que trabajó este socio. Solo aparecen días con recaudación.</p>
+                    <div id="calendarGrid" class="calendar-grid"></div>
                     <div style="margin-top:20px;">
-                        <button class="btn-submit" onclick="guardarSaldoAnterior()" style="width:100%; background-color: var(--warning);">Guardar Saldo</button>
+                        <button class="btn-submit" onclick="guardarDiasTrabajados()">Guardar Días</button>
                     </div>
                 </div>
             </div>
@@ -416,7 +436,9 @@
 
         let cacheSocios = [];
         let isEditing = false;
-        let globalValorPuntoTotal = 0; 
+        let globalValorPuntoTotal = 0;
+        let globalMapaPuntosDia = {}; // Para saber cuánto vale el punto cada día
+        let selectedDaysPT = []; // Días seleccionados temporalmente en el modal
 
         document.addEventListener('DOMContentLoaded', () => {
             const hoy = new Date();
@@ -446,58 +468,84 @@
             else if(tabName === 'recaudacion') { btns[2].classList.add('active'); cargarRecaudaciones(); }
         }
 
-        // --- MANEJO DE MODALES ---
-        function abrirModalRegistro() {
-            document.getElementById('modalRegistro').style.display = 'block';
-            if(!isEditing) {
-                document.getElementById('registroForm').reset();
-                document.getElementById('editId').value = '';
-                document.getElementById('modalTitle').innerText = 'Nuevo Socio';
-                document.getElementById('btnSubmit').innerText = 'Registrar Socio';
+        // --- MODALES ---
+        function abrirModalRegistro() { document.getElementById('modalRegistro').style.display = 'block'; if(!isEditing) { document.getElementById('registroForm').reset(); document.getElementById('editId').value = ''; document.getElementById('modalTitle').innerText = 'Nuevo Socio'; document.getElementById('btnSubmit').innerText = 'Registrar Socio'; } }
+        function cerrarModalRegistro() { document.getElementById('modalRegistro').style.display = 'none'; isEditing = false; document.getElementById('registroForm').reset(); document.getElementById('editId').value = ''; }
+        
+        function abrirModalSaldo() { document.getElementById('modalSaldo').style.display = 'block'; const valActual = document.getElementById('gestionSocioSaldoAnt').value; document.getElementById('inputSaldoAnterior').value = valActual; }
+        function cerrarModalSaldo() { document.getElementById('modalSaldo').style.display = 'none'; }
+        
+        // --- MODAL CALENDARIO ---
+        function abrirModalCalendario() {
+            document.getElementById('modalCalendario').style.display = 'block';
+            renderCalendarGrid();
+        }
+        function cerrarModalCalendario() { document.getElementById('modalCalendario').style.display = 'none'; }
+
+        function renderCalendarGrid() {
+            const container = document.getElementById('calendarGrid');
+            container.innerHTML = '';
+            
+            // Obtener fechas disponibles ordenadas
+            const fechas = Object.keys(globalMapaPuntosDia).sort().reverse();
+            
+            fechas.forEach(fecha => {
+                const div = document.createElement('div');
+                div.className = 'day-btn';
+                if(selectedDaysPT.includes(fecha)) div.classList.add('selected');
+                
+                const partes = fecha.split('-');
+                const fechaVisual = `${partes[2]}/${partes[1]}`;
+                const valorPunto = globalMapaPuntosDia[fecha];
+
+                div.innerHTML = `<span class="d-date">${fechaVisual}</span><span class="d-val">$${Math.round(valorPunto)}</span>`;
+                div.onclick = () => toggleDaySelection(div, fecha);
+                container.appendChild(div);
+            });
+        }
+
+        function toggleDaySelection(el, fecha) {
+            if(selectedDaysPT.includes(fecha)) {
+                selectedDaysPT = selectedDaysPT.filter(d => d !== fecha);
+                el.classList.remove('selected');
+            } else {
+                selectedDaysPT.push(fecha);
+                el.classList.add('selected');
             }
         }
-        function cerrarModalRegistro() {
-            document.getElementById('modalRegistro').style.display = 'none';
-            isEditing = false;
-            document.getElementById('registroForm').reset();
-            document.getElementById('editId').value = '';
+
+        async function guardarDiasTrabajados() {
+            const id = document.getElementById('gestionSocioId').value;
+            const nombre = document.getElementById('gestionSocioNombre').value;
+            toggleLoader(true, "Guardando días...");
+            try {
+                await callApiSocios('guardarDiasPartTime', { id, nombre, dias: selectedDaysPT });
+                showToast('Días actualizados', 'success');
+                cerrarModalCalendario();
+                cargarHistorialSocio(id); // Recalcular todo
+            } catch(e) {
+                showToast('Error guardando', 'error');
+            } finally { toggleLoader(false); }
         }
-        
-        // MODAL SALDO
-        function abrirModalSaldo() {
-            document.getElementById('modalSaldo').style.display = 'block';
-            const valActual = document.getElementById('gestionSocioSaldoAnt').value;
-            document.getElementById('inputSaldoAnterior').value = valActual;
-        }
-        function cerrarModalSaldo() {
-            document.getElementById('modalSaldo').style.display = 'none';
-        }
+
         async function guardarSaldoAnterior() {
             const nuevoSaldo = parseFloat(document.getElementById('inputSaldoAnterior').value) || 0;
             const idSocio = document.getElementById('gestionSocioId').value;
             const nombreSocio = document.getElementById('gestionSocioNombre').value;
-            
             toggleLoader(true, "Guardando Saldo...");
             try {
-                // Enviar al backend (Nota: Tu GS necesita manejar esta acción 'registrarSaldoAnterior')
                 await callApiSocios('registrarSaldoAnterior', { id: idSocio, nombre: nombreSocio, monto: nuevoSaldo });
-                
                 showToast('Saldo actualizado', 'success');
                 document.getElementById('gestionSocioSaldoAnt').value = nuevoSaldo;
                 cerrarModalSaldo();
-                
-                // Recargar historial para recalcular todo
                 cargarHistorialSocio(idSocio);
-            } catch(e) {
-                showToast('Error al guardar saldo', 'error');
-            } finally {
-                toggleLoader(false);
-            }
+            } catch(e) { showToast('Error al guardar saldo', 'error'); } finally { toggleLoader(false); }
         }
 
         window.onclick = function(event) {
             if (event.target == document.getElementById('modalRegistro')) cerrarModalRegistro();
             if (event.target == document.getElementById('modalSaldo')) cerrarModalSaldo();
+            if (event.target == document.getElementById('modalCalendario')) cerrarModalCalendario();
         }
 
         // =======================================================
@@ -544,7 +592,7 @@
             if (fechaActual.getMonth() < fechaIngreso.getMonth() || (fechaActual.getMonth() === fechaIngreso.getMonth() && fechaActual.getDate() < fechaIngreso.getDate())) { anios--; }
             if (anios < 0) anios = 0;
             const areaNorm = (s.Area || "").toLowerCase().trim();
-            if (areaNorm === 'GastosComision' || areaNorm === 'gastos comisión') {
+            if (areaNorm === 'gastoscomision' || areaNorm.includes('gastos')) {
                 return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: 'GastosComision', contrato: s.TipoContrato, fechaIngreso: fechaStr, anios: anios, puntos: 1 };
             }
             let puntosMaximos = 10;
@@ -561,33 +609,19 @@
 
         document.getElementById('registroForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const d = {
-                Nombre: document.getElementById('nombre').value,
-                Apellido: document.getElementById('apellido').value,
-                FechaIngreso: document.getElementById('fechaIngreso').value,
-                Area: document.getElementById('area').value,
-                TipoContrato: document.getElementById('contrato').value
-            };
+            const d = { Nombre: document.getElementById('nombre').value, Apellido: document.getElementById('apellido').value, FechaIngreso: document.getElementById('fechaIngreso').value, Area: document.getElementById('area').value, TipoContrato: document.getElementById('contrato').value };
             const idEdit = document.getElementById('editId').value;
             toggleLoader(true, isEditing ? "Actualizando..." : "Guardando...");
             try {
-                if (isEditing) {
-                    await callApiSocios('updateSocio', { socioId: idEdit, updates: d });
-                    showToast('Socio actualizado', 'success');
-                } else {
-                    await callApiSocios('addSocio', { socio: d });
-                    showToast('Socio registrado', 'success');
-                }
-                cerrarModalRegistro(); 
-                fetchSociosDeGoogle(); 
+                if (isEditing) { await callApiSocios('updateSocio', { socioId: idEdit, updates: d }); showToast('Socio actualizado', 'success'); } 
+                else { await callApiSocios('addSocio', { socio: d }); showToast('Socio registrado', 'success'); }
+                cerrarModalRegistro(); fetchSociosDeGoogle(); 
             } catch (e) { showToast('Error al guardar', 'error'); } finally { toggleLoader(false); }
         });
 
         function renderizarCards() {
             const container = document.getElementById('mainSociosContainer');
             container.innerHTML = '';
-            
-            // DASHBOARD UPDATE
             let totalSocios = cacheSocios.length;
             let totalPuntos = cacheSocios.reduce((a,b) => a + b.puntos, 0);
             let totalPlanta = cacheSocios.filter(s => s.contrato === 'Planta').length;
@@ -597,77 +631,40 @@
             document.getElementById('totalPlantaDash').innerText = totalPlanta;
             document.getElementById('totalPartTimeDash').innerText = totalPart;
 
-            if(cacheSocios.length === 0) { 
-                container.innerHTML = '<div style="text-align:center; padding:20px;">No hay datos de socios.</div>'; 
-                return; 
-            }
+            if(cacheSocios.length === 0) { container.innerHTML = '<div style="text-align:center; padding:20px;">No hay datos de socios.</div>'; return; }
             
-            const grupos = { 'mesas': [], 'cambistas': [], 'maquinas': [], 'tecnicos': [], 'boveda': [], 'GastosComision': [] };
-            const nombresArea = { 'mesas': 'Mesas', 'cambistas': 'Mesas (Cambistas)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'GastosComision': 'Gastos Comisión' };
+            const grupos = { 'mesas': [], 'mesasPartTime': [], 'cambistas': [], 'maquinas': [], 'tecnicos': [], 'boveda': [], 'GastosComision': [] };
+            const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasPartTime': 'Mesas (Part-Time)', 'cambistas': 'Mesas (Cambistas)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'GastosComision': 'Gastos Comisión' };
 
             cacheSocios.forEach(socio => {
                 let key = socio.area.toLowerCase().replace(/\s/g, '');
-                if (key.includes('cambista')) key = 'cambistas';
-                if (key.includes('gastos')) key = 'GastosComision';
-                if (grupos[key]) grupos[key].push(socio);
-                else { if(!grupos['otros']) grupos['otros'] = []; grupos['otros'].push(socio); nombresArea['otros'] = 'Otros / Sin Clasificar'; }
+                if (key.includes('cambista')) key = 'cambistas'; else if (key.includes('gastos')) key = 'GastosComision';
+                if (key === 'mesas') { if (socio.contrato === 'Part-Time') key = 'mesasPartTime'; else key = 'mesas'; }
+                if (grupos[key]) grupos[key].push(socio); else { if(!grupos['otros']) grupos['otros'] = []; grupos['otros'].push(socio); nombresArea['otros'] = 'Otros / Sin Clasificar'; }
             });
 
             for (const [key, listaSocios] of Object.entries(grupos)) {
                 if (!listaSocios || listaSocios.length === 0) continue;
                 listaSocios.sort((a,b) => a.nombre.localeCompare(b.nombre));
                 const totalPuntosArea = listaSocios.reduce((acc, s) => acc + s.puntos, 0);
-
                 const section = document.createElement('div');
                 section.className = 'area-section';
                 section.setAttribute('data-area-id', key);
-
                 const header = document.createElement('div');
                 header.className = `area-header border-left-${key}`;
                 header.onclick = function() { toggleArea(key); };
-                header.innerHTML = `
-                    <div class="area-info">
-                        <span class="arrow-icon" id="icon-${key}">▼</span>
-                        <div class="area-title">${nombresArea[key] || key.toUpperCase()}</div>
-                    </div>
-                    <div class="area-details">
-                        <span class="area-badge">${listaSocios.length} Soc.</span>
-                        <span class="area-points">Pts: ${totalPuntosArea}</span>
-                    </div>
-                `;
+                header.innerHTML = `<div class="area-info"><span class="arrow-icon" id="icon-${key}">▼</span><div class="area-title">${nombresArea[key] || key.toUpperCase()}</div></div><div class="area-details"><span class="area-badge">${listaSocios.length} Soc.</span><span class="area-points">Pts: ${totalPuntosArea}</span></div>`;
                 section.appendChild(header);
-
                 const grid = document.createElement('div');
                 grid.className = 'cards-container';
                 grid.id = `container-${key}`;
-
                 listaSocios.forEach(socio => {
                     const card = document.createElement('div');
                     card.className = `socio-card border-${key}`;
                     card.setAttribute('data-search-name', `${socio.nombre} ${socio.apellido} ${socio.area}`.toLowerCase());
                     const f = socio.fechaIngreso.split('-');
                     const fechaVis = `${f[2]}/${f[1]}/${f[0]}`;
-                    
-                    card.innerHTML = `
-                        <div class="area-tag bg-${key}">${nombresArea[key] || socio.area}</div>
-                        <div class="card-header">
-                            <h3>${socio.nombre} ${socio.apellido}</h3>
-                            <span class="card-contract">${socio.contrato}</span>
-                        </div>
-                        <div class="card-body">
-                            <div>
-                                <p style="margin:0; font-size:0.9em;">Antigüedad: ${socio.anios} años</p>
-                                <small style="color:#999;">${fechaVis}</small>
-                            </div>
-                            <div class="points-badge">
-                                <span class="points-number">${socio.puntos}</span>
-                            </div>
-                        </div>
-                        <div class="card-actions">
-                            <button class="btn-card btn-edit" onclick="prepararEdicion('${socio.id}')">Editar</button>
-                            <button class="btn-card btn-delete" onclick="eliminarSocio('${socio.id}')">Eliminar</button>
-                        </div>
-                    `;
+                    card.innerHTML = `<div class="area-tag bg-${key}">${nombresArea[key] || socio.area}</div><div class="card-header"><h3>${socio.nombre} ${socio.apellido}</h3><span class="card-contract">${socio.contrato}</span></div><div class="card-body"><div><p style="margin:0; font-size:0.9em;">Antigüedad: ${socio.anios} años</p><small style="color:#999;">${fechaVis}</small></div><div class="points-badge"><span class="points-number">${socio.puntos}</span></div></div><div class="card-actions"><button class="btn-card btn-edit" onclick="prepararEdicion('${socio.id}')">Editar</button><button class="btn-card btn-delete" onclick="eliminarSocio('${socio.id}')">Eliminar</button></div>`;
                     grid.appendChild(card);
                 });
                 section.appendChild(grid);
@@ -679,15 +676,8 @@
             const container = document.getElementById(`container-${key}`);
             const icon = document.getElementById(`icon-${key}`);
             const header = icon.closest('.area-header');
-            if (container.style.display === 'grid') {
-                container.style.display = 'none';
-                header.classList.remove('active');
-                icon.style.transform = 'rotate(0deg)';
-            } else {
-                container.style.display = 'grid';
-                header.classList.add('active');
-                icon.style.transform = 'rotate(180deg)';
-            }
+            if (container.style.display === 'grid') { container.style.display = 'none'; header.classList.remove('active'); icon.style.transform = 'rotate(0deg)'; } 
+            else { container.style.display = 'grid'; header.classList.add('active'); icon.style.transform = 'rotate(180deg)'; }
         }
 
         function filtrarSociosRegistro() {
@@ -700,18 +690,11 @@
                 let foundInArea = false;
                 cards.forEach(card => {
                     const text = card.getAttribute('data-search-name');
-                    if(text.includes(termino)) { card.style.display = 'flex'; foundInArea = true; } 
-                    else { card.style.display = 'none'; }
+                    if(text.includes(termino)) { card.style.display = 'flex'; foundInArea = true; } else { card.style.display = 'none'; }
                 });
                 if (termino.length > 0) {
-                    if (foundInArea) {
-                        area.style.display = 'block'; container.style.display = 'grid'; area.querySelector('.arrow-icon').style.transform = 'rotate(180deg)';
-                    } else { area.style.display = 'none'; }
-                } else {
-                    area.style.display = 'block'; container.style.display = 'none'; 
-                    cards.forEach(c => c.style.display = 'flex');
-                    area.querySelector('.arrow-icon').style.transform = 'rotate(0deg)';
-                }
+                    if (foundInArea) { area.style.display = 'block'; container.style.display = 'grid'; area.querySelector('.arrow-icon').style.transform = 'rotate(180deg)'; } else { area.style.display = 'none'; }
+                } else { area.style.display = 'block'; container.style.display = 'none'; cards.forEach(c => c.style.display = 'flex'); area.querySelector('.arrow-icon').style.transform = 'rotate(0deg)'; }
             });
         }
 
@@ -769,6 +752,22 @@
             document.getElementById('detPuntos').textContent = socio.puntos;
             document.getElementById('cardAusencias').style.display = (socio.contrato === 'Planta') ? 'block' : 'none';
             
+            // CONFIGURAR TARJETA DE DÍAS (Solo Part-Time)
+            const cardDias = document.getElementById('cardDiasTrabajados');
+            if(socio.contrato === 'Part-Time') {
+                cardDias.style.display = 'block';
+                document.getElementById('socioDiasCount').innerText = '...';
+            } else {
+                cardDias.style.display = 'none';
+            }
+
+            // INDICADOR DE CARGA
+            const loadingText = '<span style="color:#999; font-size:0.8em;">Cargando... ⏳</span>';
+            document.getElementById('socioSaldoAnterior').innerHTML = loadingText;
+            document.getElementById('socioAlcance').innerHTML = loadingText;
+            document.getElementById('socioTotalPedido').innerHTML = loadingText;
+            document.getElementById('socioSaldo').innerHTML = loadingText;
+
             cargarHistorialSocio(id);
         }
 
@@ -784,11 +783,19 @@
                     const agrupados = {};
                     let sumaTotalPedido = 0; 
 
-                    // CAPTURAR SALDO ANTERIOR (SI EXISTIERA EN BACKEND)
+                    // Saldo Anterior
                     const saldoAnterior = Number(data.saldoAnterior || 0);
                     document.getElementById('socioSaldoAnterior').innerText = formatearMoneda(saldoAnterior);
                     document.getElementById('gestionSocioSaldoAnt').value = saldoAnterior;
 
+                    // Días Trabajados (Part-Time)
+                    const socio = cacheSocios.find(s => s.id === id);
+                    if(socio.contrato === 'Part-Time') {
+                        selectedDaysPT = data.diasTrabajados || [];
+                        document.getElementById('socioDiasCount').innerText = selectedDaysPT.length;
+                    }
+
+                    // Historial
                     const procesarEntrada = (fechaRaw, tipo, detalle, monto) => {
                         let fechaKey = fechaRaw || "";
                         if(fechaKey.includes('T')) fechaKey = fechaKey.split('T')[0];
@@ -806,12 +813,24 @@
                     if(data.extras && Array.isArray(data.extras)) data.extras.forEach(e => procesarEntrada(e.fecha, (e.tipo || 'Extra').toUpperCase(), e.detalle, 0));
                     
                     const listaFinal = Object.values(agrupados);
-                    
-                    // CALCULAR TOTALES FINANCIEROS (AHORA INCLUYE SALDO ANTERIOR)
                     listaFinal.forEach(item => { sumaTotalPedido += item.montoTotal; });
                     
+                    // CÁLCULO FINANCIERO INTELIGENTE (Planta vs Part-Time)
                     const ptsSocio = parseFloat(document.getElementById('gestionSocioPuntos').value) || 0;
-                    const alcance = globalValorPuntoTotal * ptsSocio;
+                    let alcance = 0;
+
+                    if (socio.contrato === 'Part-Time') {
+                        // Calcular alcance sumando valor punto de los días seleccionados
+                        let sumaValorPuntosPT = 0;
+                        selectedDaysPT.forEach(dia => {
+                            if(globalMapaPuntosDia[dia]) sumaValorPuntosPT += globalMapaPuntosDia[dia];
+                        });
+                        alcance = sumaValorPuntosPT * ptsSocio;
+                    } else {
+                        // Planta: Alcance global total
+                        alcance = globalValorPuntoTotal * ptsSocio;
+                    }
+
                     const saldo = (alcance + saldoAnterior) - sumaTotalPedido;
 
                     document.getElementById('socioTotalPedido').innerText = formatearMoneda(sumaTotalPedido);
@@ -831,7 +850,13 @@
                         row.innerHTML = `<td>${fechaVis}</td><td>${tipoHtml}</td><td>${detalleHtml}</td><td>${montoHtml}</td>`;
                         tbody.appendChild(row);
                     });
-                } else { tbody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">Error: ${res.message}</td></tr>`; }
+                } else { 
+                    tbody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">Error: ${res.message}</td></tr>`;
+                    document.getElementById('socioSaldoAnterior').innerText = "$0";
+                    document.getElementById('socioAlcance').innerText = "$0";
+                    document.getElementById('socioTotalPedido').innerText = "$0";
+                    document.getElementById('socioSaldo').innerText = "$0";
+                }
             } catch (e) { console.error("Error JS:", e); tbody.innerHTML = '<tr><td colspan="4" style="color:red; text-align:center;">Error procesando datos</td></tr>'; }
         }
 
@@ -845,6 +870,7 @@
                 const datos = result.data || []; const grupos = {}; let granTotal = 0; let ultimaFechaStr = "";
                 
                 globalValorPuntoTotal = 0;
+                globalMapaPuntosDia = {}; // Reset mapa diario
 
                 datos.forEach(item => {
                     const fecha = item.fecha; if (!fecha) return;
@@ -861,6 +887,10 @@
                     const dia = grupos[fecha];
                     const divisor = parseFloat(dia.divisor) || 1;
                     const puntoNoche = dia.totalDia / divisor;
+                    
+                    // Guardar valor punto por día para Part-Time
+                    globalMapaPuntosDia[fecha] = puntoNoche;
+                    
                     sumaPuntosGlobal += puntoNoche;
                 });
                 globalValorPuntoTotal = sumaPuntosGlobal; 
