@@ -14,7 +14,7 @@
             --purple: #9b59b6;
             --info: #17a2b8;
             --gastos: #607d8b;
-            --pt-days: #34495e; /* Color para días PT */
+            --pt-days: #34495e;
             --bg: #f0f2f5;
             --card-bg: #ffffff;
             --text-color: #444;
@@ -43,45 +43,44 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* Header */
         .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
         h1 { color: var(--primary); margin: 0; }
         .fecha-badge { background-color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.9em; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #ddd; }
 
-        .smart-search { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.3s; box-sizing: border-box; }
+        /* Buscadores */
+        .smart-search {
+            width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.3s; box-sizing: border-box;
+        }
         .smart-search:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
 
         /* DASHBOARDS */
         .dashboard-socios { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .mini-stat { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 3px solid transparent; transition: transform 0.2s; position: relative; }
-        
+        .mini-stat { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 3px solid transparent; transition: transform 0.2s; }
         .mini-stat.blue { border-bottom-color: var(--secondary); }
         .mini-stat.green { border-bottom-color: var(--success); }
         .mini-stat.orange { border-bottom-color: var(--warning); }
         .mini-stat.purple { border-bottom-color: var(--purple); }
         .mini-stat.red { border-bottom-color: var(--danger); }
         .mini-stat.dark { border-bottom-color: var(--pt-days); background-color: #f4f6f7; }
-
         .mini-stat.clickable { cursor: pointer; }
-        .mini-stat.clickable:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); z-index: 10; }
-
+        .mini-stat.clickable:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); background-color: #fff8e1; }
         .ms-val { display: block; font-size: 1.2em; font-weight: 800; color: var(--text-color); }
-        .ms-label { font-size: 0.75em; color: #888; text-transform: uppercase; font-weight: bold; margin-top: 5px; display: block;}
+        .ms-label { font-size: 0.7em; color: #888; text-transform: uppercase; font-weight: bold; margin-top: 5px; display: block;}
 
         /* MODALES */
         .modal { display: none; position: fixed; z-index: 2100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px); animation: fadeInModal 0.3s; }
         @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
-        .modal-content { background-color: #fff; margin: 5% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; animation: slideInModal 0.3s; max-height: 85vh; overflow-y: auto; }
+        .modal-content { background-color: #fff; margin: 5% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 650px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; animation: slideInModal 0.3s; max-height: 85vh; overflow-y: auto; }
         @keyframes slideInModal { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .modal-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; border-radius: 12px 12px 0 0; position: sticky; top: 0; z-index: 5; }
         .modal-body { padding: 25px; }
         .close-modal { font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; }
         .close-modal:hover { color: var(--danger); }
 
-        /* Calendario Grid */
+        /* Calendario */
         .calendar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 15px; }
-        .day-btn {
-            padding: 10px; border: 2px solid #eee; border-radius: 8px; background: white; cursor: pointer; text-align: center; transition: all 0.2s;
-        }
+        .day-btn { padding: 10px; border: 2px solid #eee; border-radius: 8px; background: white; cursor: pointer; text-align: center; transition: all 0.2s; }
         .day-btn:hover { border-color: var(--secondary); }
         .day-btn.selected { background-color: var(--secondary); color: white; border-color: var(--secondary); box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); }
         .day-btn .d-date { font-weight: bold; display: block; margin-bottom: 4px; }
@@ -133,10 +132,12 @@
         .card-body { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; }
         .points-badge { background: linear-gradient(135deg, var(--primary), #34495e); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .points-number { font-size: 1.2em; font-weight: 800; }
-        .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .btn-card { padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.9em; border: none; font-weight: 600; }
+        .card-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 20px; }
+        .btn-card { padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.85em; border: none; font-weight: 600; text-align: center; }
         .btn-edit { background-color: #fff; border: 1px solid var(--warning); color: var(--warning); }
         .btn-delete { background-color: #fff; border: 1px solid var(--danger); color: var(--danger); }
+        .btn-info { background-color: #fff; border: 1px solid var(--secondary); color: var(--secondary); }
+        .btn-info:hover { background-color: var(--secondary); color: white; }
 
         .gestion-layout { display: grid; grid-template-columns: 300px 1fr; gap: 30px; }
         .search-panel { background: white; padding: 20px; border-radius: 12px; height: fit-content; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
@@ -230,6 +231,7 @@
 
             <button class="fab-btn" onclick="abrirModalRegistro()">+</button>
 
+            <!-- MODAL REGISTRO -->
             <div id="modalRegistro" class="modal">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -271,6 +273,47 @@
                     </div>
                 </div>
             </div>
+
+            <!-- MODAL RESUMEN FINANCIERO (ESTADO) -->
+            <div id="modalResumenFinanciero" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 id="tituloModalResumen">Estado Financiero</h2>
+                        <span class="close-modal" onclick="document.getElementById('modalResumenFinanciero').style.display='none'">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="dashboard-socios">
+                            <div class="mini-stat orange">
+                                <span class="ms-val" id="resumenSaldoAnt">$0</span>
+                                <span class="ms-label">Saldo Ant.</span>
+                            </div>
+                            <!-- Solo PT -->
+                            <div class="mini-stat dark" id="resumenDiasPT" style="display:none;">
+                                <span class="ms-val" id="resumenDiasCount">0</span>
+                                <span class="ms-label">Días Trab.</span>
+                            </div>
+                            <div class="mini-stat blue">
+                                <span class="ms-val" id="resumenAlcance">$0</span>
+                                <span class="ms-label">Alcance</span>
+                            </div>
+                            <div class="mini-stat red">
+                                <span class="ms-val" id="resumenPedido">$0</span>
+                                <span class="ms-label">Pedido</span>
+                            </div>
+                            <div class="mini-stat green">
+                                <span class="ms-val" id="resumenFinal">$0</span>
+                                <span class="ms-label">A Recibir</span>
+                            </div>
+                        </div>
+                        
+                        <h4 style="margin-top:20px; color:#555; border-bottom:1px solid #eee; padding-bottom:10px;">Últimos Movimientos</h4>
+                        <table class="history-table">
+                            <thead><tr><th>Fecha</th><th>Detalle</th><th>Monto</th></tr></thead>
+                            <tbody id="tablaResumenMovimientos"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
             
             <div id="mainSociosContainer"></div>
         </div>
@@ -304,19 +347,15 @@
                         </div>
                     </div>
 
-                    <!-- ESTADÍSTICAS FINANCIERAS PERSONALES -->
                     <div class="dashboard-socios" style="margin-bottom:20px;">
                         <div class="mini-stat orange clickable" onclick="abrirModalSaldo()" title="Clic para editar saldo inicial">
                             <span class="ms-val" id="socioSaldoAnterior">$0</span>
                             <span class="ms-label">Saldo Mes Ant. ✏️</span>
                         </div>
-                        
-                        <!-- TARJETA DIAS TRABAJADOS (SOLO PART-TIME) -->
                         <div class="mini-stat dark clickable" id="cardDiasTrabajados" onclick="abrirModalCalendario()" style="display:none;" title="Clic para ver calendario">
                             <span class="ms-val" id="socioDiasCount">0</span>
                             <span class="ms-label">Días Trab. 📅</span>
                         </div>
-
                         <div class="mini-stat blue">
                             <span class="ms-val" id="socioAlcance">$0</span>
                             <span class="ms-label">Alcance (Teórico)</span>
@@ -437,8 +476,8 @@
         let cacheSocios = [];
         let isEditing = false;
         let globalValorPuntoTotal = 0;
-        let globalMapaPuntosDia = {}; // Para saber cuánto vale el punto cada día
-        let selectedDaysPT = []; // Días seleccionados temporalmente en el modal
+        let globalMapaPuntosDia = {}; 
+        let selectedDaysPT = [];
 
         document.addEventListener('DOMContentLoaded', () => {
             const hoy = new Date();
@@ -475,29 +514,122 @@
         function abrirModalSaldo() { document.getElementById('modalSaldo').style.display = 'block'; const valActual = document.getElementById('gestionSocioSaldoAnt').value; document.getElementById('inputSaldoAnterior').value = valActual; }
         function cerrarModalSaldo() { document.getElementById('modalSaldo').style.display = 'none'; }
         
-        // --- MODAL CALENDARIO ---
-        function abrirModalCalendario() {
-            document.getElementById('modalCalendario').style.display = 'block';
-            renderCalendarGrid();
-        }
+        function abrirModalCalendario() { document.getElementById('modalCalendario').style.display = 'block'; renderCalendarGrid(); }
         function cerrarModalCalendario() { document.getElementById('modalCalendario').style.display = 'none'; }
+
+        // --- VER ESTADO FINANCIERO (MODAL RESUMEN) CON LÓGICA ANTI-DUPLICADOS ---
+        async function verEstadoFinanciero(id) {
+            const socio = cacheSocios.find(s => s.id === id);
+            if(!socio) return;
+
+            document.getElementById('modalResumenFinanciero').style.display = 'block';
+            document.getElementById('tituloModalResumen').innerText = `Estado: ${socio.nombre} ${socio.apellido}`;
+            
+            const loadTxt = '<small>Cargando...</small>';
+            document.getElementById('resumenSaldoAnt').innerHTML = loadTxt;
+            document.getElementById('resumenAlcance').innerHTML = loadTxt;
+            document.getElementById('resumenPedido').innerHTML = loadTxt;
+            document.getElementById('resumenFinal').innerHTML = loadTxt;
+            document.getElementById('tablaResumenMovimientos').innerHTML = '<tr><td colspan="3">Cargando...</td></tr>';
+
+            if(socio.contrato === 'Part-Time') {
+                document.getElementById('resumenDiasPT').style.display = 'block';
+                document.getElementById('resumenDiasCount').innerText = '...';
+            } else {
+                document.getElementById('resumenDiasPT').style.display = 'none';
+            }
+
+            try {
+                const response = await fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${id}`);
+                const res = await response.json();
+                
+                if (res.status === 'success') {
+                    const data = res.data || {};
+                    const saldoAnt = Number(data.saldoAnterior || 0);
+                    
+                    // --- LÓGICA DE AGRUPACIÓN (ANTI-DUPLICADOS) ---
+                    const agrupados = {};
+                    let sumaPedidos = 0;
+
+                    const procesarEntrada = (fechaRaw, tipo, detalle, monto) => {
+                        let fechaKey = fechaRaw || "";
+                        if(fechaKey.includes('T')) fechaKey = fechaKey.split('T')[0];
+                        if(!fechaKey) return;
+
+                        if(!agrupados[fechaKey]) {
+                            agrupados[fechaKey] = {
+                                fecha: fechaKey,
+                                tipos: new Set([tipo]),
+                                detalles: detalle ? [detalle] : [],
+                                montoTotal: monto,
+                                rawDate: new Date(fechaRaw)
+                            };
+                        } else {
+                            agrupados[fechaKey].tipos.add(tipo);
+                            if(detalle && !agrupados[fechaKey].detalles.includes(detalle)) {
+                                agrupados[fechaKey].detalles.push(detalle);
+                            }
+                            // IMPORTANTE: Math.max para no sumar duplicados
+                            agrupados[fechaKey].montoTotal = Math.max(agrupados[fechaKey].montoTotal, monto);
+                        }
+                    };
+
+                    if(data.anticipos) data.anticipos.forEach(a => procesarEntrada(a.fecha, 'Anticipo', 'Adelanto', Number(a.cantidad || a.monto || 0)));
+                    if(data.extras) data.extras.forEach(e => procesarEntrada(e.fecha, (e.tipo || 'Extra'), e.detalle, 0));
+
+                    const movimientos = Object.values(agrupados);
+                    // Calcular Total Pedido después de agrupar
+                    movimientos.forEach(m => sumaPedidos += m.montoTotal);
+
+                    // Calcular Alcance
+                    let alcance = 0;
+                    if(socio.contrato === 'Part-Time') {
+                        let dias = data.diasTrabajados || [];
+                        document.getElementById('resumenDiasCount').innerText = dias.length;
+                        let sumaValor = 0;
+                        dias.forEach(d => { if(globalMapaPuntosDia[d]) sumaValor += globalMapaPuntosDia[d]; });
+                        alcance = sumaValor * socio.puntos;
+                    } else {
+                        alcance = globalValorPuntoTotal * socio.puntos;
+                    }
+
+                    // Actualizar UI
+                    document.getElementById('resumenSaldoAnt').innerText = formatearMoneda(saldoAnt);
+                    document.getElementById('resumenAlcance').innerText = formatearMoneda(alcance);
+                    document.getElementById('resumenPedido').innerText = formatearMoneda(sumaPedidos);
+                    document.getElementById('resumenFinal').innerText = formatearMoneda((alcance + saldoAnt) - sumaPedidos);
+
+                    // Llenar tabla
+                    const tbody = document.getElementById('tablaResumenMovimientos');
+                    tbody.innerHTML = '';
+                    movimientos.sort((a,b) => b.rawDate - a.rawDate);
+                    
+                    if(movimientos.length === 0) tbody.innerHTML = '<tr><td colspan="3" style="color:#999;">Sin movimientos</td></tr>';
+                    
+                    movimientos.forEach(m => {
+                        let f = m.fecha; 
+                        if(f.includes('-')) { const p = f.split('-'); if(p.length===3) f = `${p[2]}/${p[1]}`; }
+                        
+                        const uniqueDetalles = [...new Set(m.detalles)].join(', ') || '-';
+                        const row = `<tr><td>${f}</td><td>${uniqueDetalles}</td><td>${m.montoTotal > 0 ? '-'+formatearMoneda(m.montoTotal) : '-'}</td></tr>`;
+                        tbody.innerHTML += row;
+                    });
+
+                }
+            } catch(e) { console.error(e); }
+        }
 
         function renderCalendarGrid() {
             const container = document.getElementById('calendarGrid');
             container.innerHTML = '';
-            
-            // Obtener fechas disponibles ordenadas
             const fechas = Object.keys(globalMapaPuntosDia).sort().reverse();
-            
             fechas.forEach(fecha => {
                 const div = document.createElement('div');
                 div.className = 'day-btn';
                 if(selectedDaysPT.includes(fecha)) div.classList.add('selected');
-                
                 const partes = fecha.split('-');
                 const fechaVisual = `${partes[2]}/${partes[1]}`;
                 const valorPunto = globalMapaPuntosDia[fecha];
-
                 div.innerHTML = `<span class="d-date">${fechaVisual}</span><span class="d-val">$${Math.round(valorPunto)}</span>`;
                 div.onclick = () => toggleDaySelection(div, fecha);
                 container.appendChild(div);
@@ -505,13 +637,8 @@
         }
 
         function toggleDaySelection(el, fecha) {
-            if(selectedDaysPT.includes(fecha)) {
-                selectedDaysPT = selectedDaysPT.filter(d => d !== fecha);
-                el.classList.remove('selected');
-            } else {
-                selectedDaysPT.push(fecha);
-                el.classList.add('selected');
-            }
+            if(selectedDaysPT.includes(fecha)) { selectedDaysPT = selectedDaysPT.filter(d => d !== fecha); el.classList.remove('selected'); } 
+            else { selectedDaysPT.push(fecha); el.classList.add('selected'); }
         }
 
         async function guardarDiasTrabajados() {
@@ -522,10 +649,8 @@
                 await callApiSocios('guardarDiasPartTime', { id, nombre, dias: selectedDaysPT });
                 showToast('Días actualizados', 'success');
                 cerrarModalCalendario();
-                cargarHistorialSocio(id); // Recalcular todo
-            } catch(e) {
-                showToast('Error guardando', 'error');
-            } finally { toggleLoader(false); }
+                cargarHistorialSocio(id); 
+            } catch(e) { showToast('Error guardando', 'error'); } finally { toggleLoader(false); }
         }
 
         async function guardarSaldoAnterior() {
@@ -546,6 +671,7 @@
             if (event.target == document.getElementById('modalRegistro')) cerrarModalRegistro();
             if (event.target == document.getElementById('modalSaldo')) cerrarModalSaldo();
             if (event.target == document.getElementById('modalCalendario')) cerrarModalCalendario();
+            if (event.target == document.getElementById('modalResumenFinanciero')) document.getElementById('modalResumenFinanciero').style.display='none';
         }
 
         // =======================================================
@@ -664,7 +790,16 @@
                     card.setAttribute('data-search-name', `${socio.nombre} ${socio.apellido} ${socio.area}`.toLowerCase());
                     const f = socio.fechaIngreso.split('-');
                     const fechaVis = `${f[2]}/${f[1]}/${f[0]}`;
-                    card.innerHTML = `<div class="area-tag bg-${key}">${nombresArea[key] || socio.area}</div><div class="card-header"><h3>${socio.nombre} ${socio.apellido}</h3><span class="card-contract">${socio.contrato}</span></div><div class="card-body"><div><p style="margin:0; font-size:0.9em;">Antigüedad: ${socio.anios} años</p><small style="color:#999;">${fechaVis}</small></div><div class="points-badge"><span class="points-number">${socio.puntos}</span></div></div><div class="card-actions"><button class="btn-card btn-edit" onclick="prepararEdicion('${socio.id}')">Editar</button><button class="btn-card btn-delete" onclick="eliminarSocio('${socio.id}')">Eliminar</button></div>`;
+                    card.innerHTML = `
+                        <div class="area-tag bg-${key}">${nombresArea[key] || socio.area}</div>
+                        <div class="card-header"><h3>${socio.nombre} ${socio.apellido}</h3><span class="card-contract">${socio.contrato}</span></div>
+                        <div class="card-body"><div><p style="margin:0; font-size:0.9em;">Antigüedad: ${socio.anios} años</p><small style="color:#999;">${fechaVis}</small></div><div class="points-badge"><span class="points-number">${socio.puntos}</span></div></div>
+                        <div class="card-actions">
+                            <button class="btn-card btn-edit" onclick="prepararEdicion('${socio.id}')">Editar</button>
+                            <button class="btn-card btn-info" onclick="verEstadoFinanciero('${socio.id}')">📊 Estado</button>
+                            <button class="btn-card btn-delete" onclick="eliminarSocio('${socio.id}')">Eliminar</button>
+                        </div>
+                    `;
                     grid.appendChild(card);
                 });
                 section.appendChild(grid);
@@ -752,16 +887,10 @@
             document.getElementById('detPuntos').textContent = socio.puntos;
             document.getElementById('cardAusencias').style.display = (socio.contrato === 'Planta') ? 'block' : 'none';
             
-            // CONFIGURAR TARJETA DE DÍAS (Solo Part-Time)
             const cardDias = document.getElementById('cardDiasTrabajados');
-            if(socio.contrato === 'Part-Time') {
-                cardDias.style.display = 'block';
-                document.getElementById('socioDiasCount').innerText = '...';
-            } else {
-                cardDias.style.display = 'none';
-            }
+            if(socio.contrato === 'Part-Time') { cardDias.style.display = 'block'; document.getElementById('socioDiasCount').innerText = '...'; } 
+            else { cardDias.style.display = 'none'; }
 
-            // INDICADOR DE CARGA
             const loadingText = '<span style="color:#999; font-size:0.8em;">Cargando... ⏳</span>';
             document.getElementById('socioSaldoAnterior').innerHTML = loadingText;
             document.getElementById('socioAlcance').innerHTML = loadingText;
@@ -783,19 +912,16 @@
                     const agrupados = {};
                     let sumaTotalPedido = 0; 
 
-                    // Saldo Anterior
                     const saldoAnterior = Number(data.saldoAnterior || 0);
                     document.getElementById('socioSaldoAnterior').innerText = formatearMoneda(saldoAnterior);
                     document.getElementById('gestionSocioSaldoAnt').value = saldoAnterior;
 
-                    // Días Trabajados (Part-Time)
                     const socio = cacheSocios.find(s => s.id === id);
                     if(socio.contrato === 'Part-Time') {
                         selectedDaysPT = data.diasTrabajados || [];
                         document.getElementById('socioDiasCount').innerText = selectedDaysPT.length;
                     }
 
-                    // Historial
                     const procesarEntrada = (fechaRaw, tipo, detalle, monto) => {
                         let fechaKey = fechaRaw || "";
                         if(fechaKey.includes('T')) fechaKey = fechaKey.split('T')[0];
@@ -815,19 +941,14 @@
                     const listaFinal = Object.values(agrupados);
                     listaFinal.forEach(item => { sumaTotalPedido += item.montoTotal; });
                     
-                    // CÁLCULO FINANCIERO INTELIGENTE (Planta vs Part-Time)
                     const ptsSocio = parseFloat(document.getElementById('gestionSocioPuntos').value) || 0;
                     let alcance = 0;
 
                     if (socio.contrato === 'Part-Time') {
-                        // Calcular alcance sumando valor punto de los días seleccionados
                         let sumaValorPuntosPT = 0;
-                        selectedDaysPT.forEach(dia => {
-                            if(globalMapaPuntosDia[dia]) sumaValorPuntosPT += globalMapaPuntosDia[dia];
-                        });
+                        selectedDaysPT.forEach(dia => { if(globalMapaPuntosDia[dia]) sumaValorPuntosPT += globalMapaPuntosDia[dia]; });
                         alcance = sumaValorPuntosPT * ptsSocio;
                     } else {
-                        // Planta: Alcance global total
                         alcance = globalValorPuntoTotal * ptsSocio;
                     }
 
@@ -870,7 +991,7 @@
                 const datos = result.data || []; const grupos = {}; let granTotal = 0; let ultimaFechaStr = "";
                 
                 globalValorPuntoTotal = 0;
-                globalMapaPuntosDia = {}; // Reset mapa diario
+                globalMapaPuntosDia = {}; 
 
                 datos.forEach(item => {
                     const fecha = item.fecha; if (!fecha) return;
@@ -887,10 +1008,7 @@
                     const dia = grupos[fecha];
                     const divisor = parseFloat(dia.divisor) || 1;
                     const puntoNoche = dia.totalDia / divisor;
-                    
-                    // Guardar valor punto por día para Part-Time
                     globalMapaPuntosDia[fecha] = puntoNoche;
-                    
                     sumaPuntosGlobal += puntoNoche;
                 });
                 globalValorPuntoTotal = sumaPuntosGlobal; 
