@@ -43,20 +43,16 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Header */
         .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
         h1 { color: var(--primary); margin: 0; }
         .fecha-badge { background-color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.9em; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #ddd; }
 
-        /* Buscadores */
-        .smart-search {
-            width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.3s; box-sizing: border-box;
-        }
+        .smart-search { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.3s; box-sizing: border-box; }
         .smart-search:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
 
         /* DASHBOARDS */
         .dashboard-socios { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .mini-stat { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 3px solid transparent; transition: transform 0.2s; }
+        .mini-stat { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 3px solid transparent; transition: transform 0.2s; position: relative; }
         .mini-stat.blue { border-bottom-color: var(--secondary); }
         .mini-stat.green { border-bottom-color: var(--success); }
         .mini-stat.orange { border-bottom-color: var(--warning); }
@@ -153,6 +149,11 @@
         .history-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
         .history-table th { text-align: left; background: #eee; padding: 8px; }
         .history-table td { border-bottom: 1px solid #eee; padding: 8px; }
+        
+        /* ESTILO PARA FILAS BORRABLES */
+        .row-deletable { user-select: none; transition: background-color 0.3s; cursor: pointer; }
+        .row-deletable:active { background-color: #ffebee; transform: scale(0.99); }
+
         .amount-minus { color: var(--danger); font-weight: bold; }
         .tag-absent { background: var(--danger); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
 
@@ -208,6 +209,7 @@
         <!-- PESTAÑA 1: REGISTRO DE SOCIOS -->
         <div id="tab-registro" class="tab-content active">
             
+            <!-- RESUMEN GLOBAL -->
             <div class="dashboard-socios">
                 <div class="mini-stat blue">
                     <span class="ms-val" id="totalSociosDash">0</span>
@@ -227,11 +229,13 @@
                 </div>
             </div>
 
+            <!-- FILTRO DE SOCIOS -->
             <input type="text" id="filtroRegistro" class="smart-search" placeholder="🔍 Buscar socio por nombre, área..." onkeyup="filtrarSociosRegistro()">
 
+            <!-- BOTÓN FLOTANTE PARA ABRIR MODAL -->
             <button class="fab-btn" onclick="abrirModalRegistro()">+</button>
 
-            <!-- MODAL REGISTRO -->
+            <!-- MODAL FORMULARIO REGISTRO -->
             <div id="modalRegistro" class="modal">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -347,15 +351,20 @@
                         </div>
                     </div>
 
+                    <!-- ESTADÍSTICAS FINANCIERAS PERSONALES -->
                     <div class="dashboard-socios" style="margin-bottom:20px;">
+                        <!-- TARJETA SALDO ANTERIOR CON CLICK -->
                         <div class="mini-stat orange clickable" onclick="abrirModalSaldo()" title="Clic para editar saldo inicial">
                             <span class="ms-val" id="socioSaldoAnterior">$0</span>
                             <span class="ms-label">Saldo Mes Ant. ✏️</span>
                         </div>
+                        
+                        <!-- TARJETA DIAS TRABAJADOS (SOLO PART-TIME) -->
                         <div class="mini-stat dark clickable" id="cardDiasTrabajados" onclick="abrirModalCalendario()" style="display:none;" title="Clic para ver calendario">
                             <span class="ms-val" id="socioDiasCount">0</span>
                             <span class="ms-label">Días Trab. 📅</span>
                         </div>
+
                         <div class="mini-stat blue">
                             <span class="ms-val" id="socioAlcance">$0</span>
                             <span class="ms-label">Alcance (Teórico)</span>
@@ -373,7 +382,7 @@
                     <div class="action-grid">
                         <div class="action-card">
                             <div class="action-title">💰 Anticipo de Propina</div>
-                            <div class="form-group"><label>Monto ($)</label><input type="number" id="montoAnticipo" placeholder="Ej: 50000"></div>
+                            <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="numeric" id="montoAnticipo" placeholder="Ej: 50.000" oninput="formatearInputMonto(this)"></div>
                             <div class="form-group" style="margin-top:10px;"><label>Fecha</label><input type="date" id="fechaAnticipo"></div>
                             <button class="btn-action" style="width:100%; margin-top:15px;" onclick="enviarAnticipo()">Registrar Anticipo</button>
                         </div>
@@ -385,7 +394,7 @@
                         </div>
                     </div>
 
-                    <h3 style="border-bottom:1px solid #ddd; padding-bottom:10px;">Historial</h3>
+                    <h3 style="border-bottom:1px solid #ddd; padding-bottom:10px;">Historial <small style="color:#999; font-weight:normal;">(Mantén presionado para borrar)</small></h3>
                     <table class="history-table">
                         <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Monto</th></tr></thead>
                         <tbody id="tablaHistorial"></tbody>
@@ -404,7 +413,7 @@
                 </div>
                 <div class="modal-body">
                     <p style="color:#666; font-size:0.9em; margin-bottom:15px;">Ingresa el monto sobrante o pendiente del mes pasado.</p>
-                    <div class="form-group"><label>Monto ($)</label><input type="number" id="inputSaldoAnterior" placeholder="0"></div>
+                    <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="numeric" id="inputSaldoAnterior" placeholder="0" oninput="formatearInputMonto(this)"></div>
                     <div style="margin-top:20px;"><button class="btn-submit" onclick="guardarSaldoAnterior()" style="width:100%; background-color: var(--warning);">Guardar Saldo</button></div>
                 </div>
             </div>
@@ -422,6 +431,22 @@
                     <div id="calendarGrid" class="calendar-grid"></div>
                     <div style="margin-top:20px;">
                         <button class="btn-submit" onclick="guardarDiasTrabajados()">Guardar Días</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL CONFIRMAR BORRADO -->
+        <div id="modalConfirmarBorrar" class="modal">
+            <div class="modal-content" style="max-width:400px; margin-top:20%;">
+                <div class="modal-body" style="text-align:center;">
+                    <h3 style="color:var(--danger); margin-top:0;">¿Borrar Movimiento?</h3>
+                    <p id="txtDetalleBorrar" style="margin:15px 0; color:#555;">Se eliminará este registro permanentemente.</p>
+                    <input type="hidden" id="borrarUUID">
+                    <input type="hidden" id="borrarTipo">
+                    <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
+                        <button class="btn-action" style="background:#999;" onclick="document.getElementById('modalConfirmarBorrar').style.display='none'">Cancelar</button>
+                        <button class="btn-action" style="background:var(--danger);" onclick="borrarItemConfirmado()">Confirmar Borrado</button>
                     </div>
                 </div>
             </div>
@@ -517,7 +542,14 @@
         function abrirModalCalendario() { document.getElementById('modalCalendario').style.display = 'block'; renderCalendarGrid(); }
         function cerrarModalCalendario() { document.getElementById('modalCalendario').style.display = 'none'; }
 
-        // --- VER ESTADO FINANCIERO (MODAL RESUMEN) CON LÓGICA ANTI-DUPLICADOS ---
+        // --- FORMATO MILES ---
+        function formatearInputMonto(input) {
+            let num = input.value.replace(/\./g, '').replace(/,/g, '').replace(/\D/g, '');
+            if (!num) { input.value = ''; return; }
+            input.value = new Intl.NumberFormat('es-CL').format(num);
+        }
+
+        // --- VER ESTADO FINANCIERO (MODAL RESUMEN) ---
         async function verEstadoFinanciero(id) {
             const socio = cacheSocios.find(s => s.id === id);
             if(!socio) return;
@@ -547,7 +579,6 @@
                     const data = res.data || {};
                     const saldoAnt = Number(data.saldoAnterior || 0);
                     
-                    // --- LÓGICA DE AGRUPACIÓN (ANTI-DUPLICADOS) ---
                     const agrupados = {};
                     let sumaPedidos = 0;
 
@@ -569,7 +600,6 @@
                             if(detalle && !agrupados[fechaKey].detalles.includes(detalle)) {
                                 agrupados[fechaKey].detalles.push(detalle);
                             }
-                            // IMPORTANTE: Math.max para no sumar duplicados
                             agrupados[fechaKey].montoTotal = Math.max(agrupados[fechaKey].montoTotal, monto);
                         }
                     };
@@ -578,7 +608,6 @@
                     if(data.extras) data.extras.forEach(e => procesarEntrada(e.fecha, (e.tipo || 'Extra'), e.detalle, 0));
 
                     const movimientos = Object.values(agrupados);
-                    // Calcular Total Pedido después de agrupar
                     movimientos.forEach(m => sumaPedidos += m.montoTotal);
 
                     // Calcular Alcance
@@ -654,7 +683,9 @@
         }
 
         async function guardarSaldoAnterior() {
-            const nuevoSaldo = parseFloat(document.getElementById('inputSaldoAnterior').value) || 0;
+            const rawSaldo = document.getElementById('inputSaldoAnterior').value.replace(/\./g, '');
+            const nuevoSaldo = parseFloat(rawSaldo) || 0;
+            
             const idSocio = document.getElementById('gestionSocioId').value;
             const nombreSocio = document.getElementById('gestionSocioNombre').value;
             toggleLoader(true, "Guardando Saldo...");
@@ -672,6 +703,7 @@
             if (event.target == document.getElementById('modalSaldo')) cerrarModalSaldo();
             if (event.target == document.getElementById('modalCalendario')) cerrarModalCalendario();
             if (event.target == document.getElementById('modalResumenFinanciero')) document.getElementById('modalResumenFinanciero').style.display='none';
+            if (event.target == document.getElementById('modalConfirmarBorrar')) document.getElementById('modalConfirmarBorrar').style.display='none';
         }
 
         // =======================================================
@@ -922,21 +954,24 @@
                         document.getElementById('socioDiasCount').innerText = selectedDaysPT.length;
                     }
 
-                    const procesarEntrada = (fechaRaw, tipo, detalle, monto) => {
+                    // PROCESAR ENTRADAS CON UUID
+                    const procesarEntrada = (fechaRaw, tipo, detalle, monto, uuid) => {
                         let fechaKey = fechaRaw || "";
                         if(fechaKey.includes('T')) fechaKey = fechaKey.split('T')[0];
                         if(!fechaKey) return;
                         if(!agrupados[fechaKey]) {
-                            agrupados[fechaKey] = { fecha: fechaKey, tipos: new Set([tipo]), detalles: detalle ? [detalle] : [], montoTotal: monto, rawDate: new Date(fechaRaw) };
+                            agrupados[fechaKey] = { fecha: fechaKey, tipos: new Set([tipo]), detalles: detalle ? [detalle] : [], montoTotal: monto, rawDate: new Date(fechaRaw), uuid: uuid };
                         } else {
                             agrupados[fechaKey].tipos.add(tipo);
                             if(detalle && !agrupados[fechaKey].detalles.includes(detalle)) agrupados[fechaKey].detalles.push(detalle);
                             agrupados[fechaKey].montoTotal = Math.max(agrupados[fechaKey].montoTotal, monto);
+                            // Mantenemos el UUID del mayor (simplificación)
+                            if(monto > agrupados[fechaKey].montoTotal) agrupados[fechaKey].uuid = uuid;
                         }
                     };
                     
-                    if(data.anticipos && Array.isArray(data.anticipos)) data.anticipos.forEach(a => procesarEntrada(a.fecha, 'Anticipo', 'Adelanto', Number(a.cantidad || a.monto || 0)));
-                    if(data.extras && Array.isArray(data.extras)) data.extras.forEach(e => procesarEntrada(e.fecha, (e.tipo || 'Extra').toUpperCase(), e.detalle, 0));
+                    if(data.anticipos && Array.isArray(data.anticipos)) data.anticipos.forEach(a => procesarEntrada(a.fecha, 'Anticipo', 'Adelanto', Number(a.cantidad || a.monto || 0), a.uuid));
+                    if(data.extras && Array.isArray(data.extras)) data.extras.forEach(e => procesarEntrada(e.fecha, (e.tipo || 'Extra').toUpperCase(), e.detalle, 0, e.uuid));
                     
                     const listaFinal = Object.values(agrupados);
                     listaFinal.forEach(item => { sumaTotalPedido += item.montoTotal; });
@@ -960,8 +995,19 @@
 
                     if(listaFinal.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">No hay movimientos registrados.</td></tr>'; return; }
                     listaFinal.sort((a,b) => b.rawDate - a.rawDate); 
+                    
                     listaFinal.forEach(item => {
                         const row = document.createElement('tr');
+                        row.classList.add('row-deletable'); // CLASE PARA BORRADO
+                        
+                        // EVENTOS LONG PRESS
+                        let pressTimer;
+                        row.addEventListener('mousedown', () => { pressTimer = setTimeout(() => mostrarModalBorrar(item), 800); });
+                        row.addEventListener('touchstart', () => { pressTimer = setTimeout(() => mostrarModalBorrar(item), 800); });
+                        row.addEventListener('mouseup', () => clearTimeout(pressTimer));
+                        row.addEventListener('touchend', () => clearTimeout(pressTimer));
+                        row.addEventListener('mouseleave', () => clearTimeout(pressTimer));
+
                         let fechaVis = item.fecha;
                         if(fechaVis.includes('-')) { const f = fechaVis.split('-'); if(f.length === 3) fechaVis = `${f[2]}/${f[1]}/${f[0]}`; }
                         const tiposArr = Array.from(item.tipos);
@@ -973,12 +1019,37 @@
                     });
                 } else { 
                     tbody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">Error: ${res.message}</td></tr>`;
-                    document.getElementById('socioSaldoAnterior').innerText = "$0";
-                    document.getElementById('socioAlcance').innerText = "$0";
-                    document.getElementById('socioTotalPedido').innerText = "$0";
-                    document.getElementById('socioSaldo').innerText = "$0";
                 }
             } catch (e) { console.error("Error JS:", e); tbody.innerHTML = '<tr><td colspan="4" style="color:red; text-align:center;">Error procesando datos</td></tr>'; }
+        }
+
+        function mostrarModalBorrar(item) {
+            document.getElementById('modalConfirmarBorrar').style.display = 'block';
+            document.getElementById('txtDetalleBorrar').innerText = `¿Borrar registro del ${item.fecha} (${Array.from(item.tipos).join(',')})?`;
+            document.getElementById('borrarUUID').value = item.uuid;
+            // Determinar tipo simple
+            document.getElementById('borrarTipo').value = item.montoTotal > 0 ? 'Anticipo' : 'Extra';
+        }
+
+        async function borrarItemConfirmado() {
+            const uuid = document.getElementById('borrarUUID').value;
+            const tipo = document.getElementById('borrarTipo').value;
+            if(!uuid) return alert("No se puede borrar (Falta ID)");
+            
+            toggleLoader(true, "Eliminando...");
+            document.getElementById('modalConfirmarBorrar').style.display='none';
+            
+            try {
+                await callApiSocios('borrarMovimiento', { uuid: uuid, tipo: tipo });
+                showToast('Eliminado correctamente', 'success');
+                // Recargar historial
+                const idSocio = document.getElementById('gestionSocioId').value;
+                cargarHistorialSocio(idSocio);
+            } catch(e) {
+                showToast('Error al eliminar', 'error');
+            } finally {
+                toggleLoader(false);
+            }
         }
 
         async function cargarRecaudaciones(silent = false) {
@@ -1048,7 +1119,8 @@
         async function enviarAnticipo() {
             const id = document.getElementById('gestionSocioId').value;
             const nombre = document.getElementById('gestionSocioNombre').value;
-            const monto = document.getElementById('montoAnticipo').value;
+            const rawMonto = document.getElementById('montoAnticipo').value.replace(/\./g, '');
+            const monto = parseInt(rawMonto);
             const fecha = document.getElementById('fechaAnticipo').value;
             if(!monto || !fecha) return showToast('Falta datos', 'error');
             toggleLoader(true);
