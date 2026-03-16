@@ -501,6 +501,7 @@
         let globalValorPuntoTotal = 0;
         let globalMapaPuntosDia = {}; 
         let selectedDaysPT = [];
+        let globalDiasPT = {};
 
         document.addEventListener('DOMContentLoaded', () => {
             const hoy = new Date();
@@ -530,7 +531,6 @@
             else if(tabName === 'recaudacion') { btns[2].classList.add('active'); cargarRecaudaciones(); }
         }
 
-        // --- MODALES ---
         function abrirModalRegistro() { document.getElementById('modalRegistro').style.display = 'block'; if(!isEditing) { document.getElementById('registroForm').reset(); document.getElementById('editId').value = ''; document.getElementById('modalTitle').innerText = 'Nuevo Socio'; document.getElementById('btnSubmit').innerText = 'Registrar Socio'; } }
         function cerrarModalRegistro() { document.getElementById('modalRegistro').style.display = 'none'; isEditing = false; document.getElementById('registroForm').reset(); document.getElementById('editId').value = ''; }
         
@@ -540,14 +540,12 @@
         function abrirModalCalendario() { document.getElementById('modalCalendario').style.display = 'block'; renderCalendarGrid(); }
         function cerrarModalCalendario() { document.getElementById('modalCalendario').style.display = 'none'; }
 
-        // --- FORMATO MILES ---
         function formatearInputMonto(input) {
             let num = input.value.replace(/\./g, '').replace(/,/g, '').replace(/\D/g, '');
             if (!num) { input.value = ''; return; }
             input.value = new Intl.NumberFormat('es-CL').format(num);
         }
 
-        // --- VER ESTADO FINANCIERO (MODAL RESUMEN) ---
         async function verEstadoFinanciero(id) {
             const socio = cacheSocios.find(s => s.id === id);
             if(!socio) return;
@@ -577,7 +575,6 @@
                     const data = res.data || {};
                     const saldoAnt = Number(data.saldoAnterior || 0);
                     
-                    // --- DETECTAR AUSENCIAS (NUEVO) ---
                     const fechasAusencia = new Set();
                     if(data.extras) {
                         data.extras.forEach(e => {
@@ -589,7 +586,6 @@
                         });
                     }
 
-                    // --- AGRUPACIÓN ---
                     const agrupados = {};
                     let sumaPedidos = 0;
 
@@ -621,21 +617,18 @@
                     const movimientos = Object.values(agrupados);
                     movimientos.forEach(m => sumaPedidos += m.montoTotal);
 
-                    // --- CÁLCULO ALCANCE CON DESCUENTO DE AUSENCIAS ---
                     let alcance = 0;
                     if(socio.contrato === 'Part-Time') {
-                        let dias = data.diasTrabajados || [];
+                        let dias = globalDiasPT[id] || [];
                         document.getElementById('resumenDiasCount').innerText = dias.length;
                         let sumaValor = 0;
                         dias.forEach(d => { 
-                            // Si NO está ausente, suma
                             if(!fechasAusencia.has(d) && globalMapaPuntosDia[d]) {
                                 sumaValor += globalMapaPuntosDia[d];
                             }
                         });
                         alcance = sumaValor * socio.puntos;
                     } else {
-                        // PLANTA: Sumar todos los días MENOS ausencias
                         let sumaValorTotal = 0;
                         for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
                             if (!fechasAusencia.has(dia)) {
@@ -695,6 +688,7 @@
             toggleLoader(true, "Guardando días...");
             try {
                 await callApiSocios('guardarDiasPartTime', { id, nombre, dias: selectedDaysPT });
+                globalDiasPT[id] = [...selectedDaysPT];
                 showToast('Días actualizados', 'success');
                 cerrarModalCalendario();
                 cargarHistorialSocio(id); 
@@ -724,9 +718,6 @@
             if (event.target == document.getElementById('modalConfirmarBorrar')) document.getElementById('modalConfirmarBorrar').style.display='none';
         }
 
-        // =======================================================
-        // LÓGICA DE SOCIOS
-        // =======================================================
         function toggleLoader(show, text="Cargando...") {
             const l = document.getElementById('globalLoader');
             document.getElementById('loaderText').innerText = text;
@@ -750,6 +741,11 @@
         async function fetchSociosDeGoogle() {
             toggleLoader(true, "Obteniendo datos...");
             try {
+                const resDias = await callApiSocios('getDiasPartTime');
+                if (resDias.status === 'success') {
+                    globalDiasPT = resDias.data || {};
+                }
+
                 const res = await callApiSocios('getSocios');
                 if (res.status === 'success') {
                     cacheSocios = res.data.map(procesarSocioDesdeGoogle);
@@ -922,6 +918,7 @@
                 lista.appendChild(div);
             });
         }
+        
         function seleccionarSocio(id) {
             const socio = cacheSocios.find(s => s.id === id);
             if (!socio) return;
@@ -968,11 +965,10 @@
 
                     const socio = cacheSocios.find(s => s.id === id);
                     if(socio.contrato === 'Part-Time') {
-                        selectedDaysPT = data.diasTrabajados || [];
+                        selectedDaysPT = globalDiasPT[id] || [];
                         document.getElementById('socioDiasCount').innerText = selectedDaysPT.length;
                     }
 
-                    // --- DETECTAR AUSENCIAS ---
                     const fechasAusencia = new Set();
                     if(data.extras) {
                         data.extras.forEach(e => {
@@ -984,7 +980,6 @@
                         });
                     }
 
-                    // PROCESAR ENTRADAS CON UUID
                     const procesarEntrada = (fechaRaw, tipo, detalle, monto, uuid) => {
                         let fechaKey = fechaRaw || "";
                         if(fechaKey.includes('T')) fechaKey = fechaKey.split('T')[0];
@@ -1008,18 +1003,15 @@
                     const ptsSocio = parseFloat(document.getElementById('gestionSocioPuntos').value) || 0;
                     let alcance = 0;
 
-                    // --- CÁLCULO ALCANCE CON DESCUENTO DE AUSENCIAS ---
                     if (socio.contrato === 'Part-Time') {
                         let sumaValorPuntosPT = 0;
                         selectedDaysPT.forEach(dia => { 
-                            // Si NO está ausente, suma
                             if(!fechasAusencia.has(dia) && globalMapaPuntosDia[dia]) {
                                 sumaValorPuntosPT += globalMapaPuntosDia[dia]; 
                             }
                         });
                         alcance = sumaValorPuntosPT * ptsSocio;
                     } else {
-                        // PLANTA: Sumar todos los días MENOS ausencias
                         let sumaValorTotal = 0;
                         for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
                             if (!fechasAusencia.has(dia)) {
@@ -1092,27 +1084,50 @@
         }
 
         async function cargarRecaudaciones(silent = false) {
-            if(!URL_RECAUDACIONES || URL_RECAUDACIONES.includes("PEGA_AQUI")) { if(!silent) document.getElementById('contenedorFechas').innerHTML = '<div style="color:red; text-align:center;">Falta configurar URL</div>'; return; }
+            if(!URL_RECAUDACIONES || URL_RECAUDACIONES.includes("PEGA_AQUI")) { 
+                if(!silent) document.getElementById('contenedorFechas').innerHTML = '<div style="color:red; text-align:center;">Falta configurar URL</div>'; 
+                return; 
+            }
             if(!silent) toggleLoader(true, "Procesando recaudaciones...");
             try {
-                const response = await fetch(`${URL_RECAUDACIONES}?action=get`);
+                const response = await fetch(`${URL_RECAUDACIONES}?action=get&t=${new Date().getTime()}`);
                 const result = await response.json();
+                
                 if(result.status !== 'success') throw new Error(result.message || "Error al cargar");
-                const datos = result.data || []; const grupos = {}; let granTotal = 0; let ultimaFechaStr = "";
+                
+                const datos = result.data || []; 
+                const grupos = {}; 
+                let granTotal = 0;
                 
                 globalValorPuntoTotal = 0;
                 globalMapaPuntosDia = {}; 
 
                 datos.forEach(item => {
-                    const fecha = item.fecha; if (!fecha) return;
-                    if (fecha > ultimaFechaStr) ultimaFechaStr = fecha;
+                    let fecha = item.fecha; if (!fecha) return;
+                    if(fecha.includes('T')) fecha = fecha.split('T')[0];
+                    
                     if (!grupos[fecha]) grupos[fecha] = { fecha: fecha, divisor: 1.0, totalDia: 0, tipos: {} };
-                    const monto = parseFloat(item.monto) || 0; grupos[fecha].totalDia += monto; granTotal += monto;
-                    const tipo = item.tipo || 'Sin Tipo'; if (!grupos[fecha].tipos[tipo]) grupos[fecha].tipos[tipo] = 0; grupos[fecha].tipos[tipo] += monto;
-                    if (item.divisor) grupos[fecha].divisor = item.divisor;
+                    
+                    const monto = parseFloat(item.monto) || 0; 
+                    grupos[fecha].totalDia += monto; 
+                    granTotal += monto;
+                    
+                    const tipo = item.tipo || 'Sin Tipo'; 
+                    if (!grupos[fecha].tipos[tipo]) grupos[fecha].tipos[tipo] = 0; 
+                    grupos[fecha].tipos[tipo] += monto;
+                    
+                    if (item.divisor) {
+                        let strDivisor = String(item.divisor).replace(',', '.');
+                        let valDivisor = parseFloat(strDivisor);
+                        
+                        if (valDivisor > 0) {
+                            grupos[fecha].divisor = Math.max(grupos[fecha].divisor, valDivisor);
+                        }
+                    }
                 });
                 
-                const fechasOrdenadas = Object.keys(grupos).sort().reverse(); 
+                const fechasOrdenadas = Object.keys(grupos).sort((a,b) => new Date(b) - new Date(a));
+                
                 let sumaPuntosGlobal = 0;
                 fechasOrdenadas.forEach(fecha => {
                     const dia = grupos[fecha];
@@ -1126,12 +1141,18 @@
                 if(silent) return;
 
                 document.getElementById('recGranTotal').innerText = formatearMoneda(granTotal);
-                if (ultimaFechaStr && grupos[ultimaFechaStr]) {
-                    const ultDia = grupos[ultimaFechaStr]; const partes = ultimaFechaStr.split('-');
+                
+                const ultimaFechaReal = fechasOrdenadas[0];
+                
+                if (ultimaFechaReal && grupos[ultimaFechaReal]) {
+                    const ultDia = grupos[ultimaFechaReal]; 
+                    const partes = ultimaFechaReal.split('-');
+                    
                     document.getElementById('recTotalUltimoDia').innerText = formatearMoneda(ultDia.totalDia);
                     document.getElementById('recFechaUltimoDia').innerText = `${partes[2]}/${partes[1]}/${partes[0]}`;
                     document.getElementById('recDivisorActual').innerText = ultDia.divisor;
                 }
+
                 const container = document.getElementById('contenedorFechas'); container.innerHTML = '';
                 if (fechasOrdenadas.length === 0) { container.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">No hay registros.</div>'; } else {
                     fechasOrdenadas.forEach(fecha => {
