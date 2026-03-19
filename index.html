@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema Integral - Fondo Solidario</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary: #2c3e50;
@@ -180,6 +181,65 @@
         .type-value { font-weight: bold; color: #333; }
 
         @media (max-width: 768px) { .gestion-layout { grid-template-columns: 1fr; } .action-grid { grid-template-columns: 1fr; } }
+
+        /* Botones motivo ausencia */
+        .btn-motivo { padding: 5px 10px; border: 1px solid var(--danger); background: white; color: var(--danger); border-radius: 20px; cursor: pointer; font-size: 0.78em; font-weight: 600; transition: all 0.2s; }
+        .btn-motivo:hover, .btn-motivo.activo { background-color: var(--danger); color: white; }
+
+        /* Socio seleccionado en lista */
+        .result-item.seleccionado { background-color: #eaf4fd; border-left: 3px solid var(--secondary); padding-left: 12px; font-weight: bold; }
+
+        /* Feedback visual anticipo */
+        .input-ok { border-color: var(--success) !important; box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.15) !important; }
+        .input-error { border-color: var(--danger) !important; box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.15) !important; }
+
+        /* Skeleton shimmer */
+        @keyframes shimmer { from { background-color: #eee; } to { background-color: #ddd; } }
+
+        /* ===== ARQUEO DE CAJA ===== */
+        .arqueo-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .arqueo-layout { grid-template-columns: 1fr; } }
+        .arqueo-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .arqueo-card h2 { margin: 0 0 15px 0; font-size: 1.1em; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .arqueo-info-box { background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; }
+        #aq-esperadoDisplay { font-size: 1.5rem; font-weight: 700; color: #2563eb; text-align: right; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 5px; }
+        .aq-btn { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.95rem; }
+        .aq-btn-primary { background-color: #2563eb; color: white; }
+        .aq-btn-success { background-color: #10b981; color: white; }
+        .aq-btn-danger { background-color: #ef4444; color: white; }
+        .aq-btn-warning { background-color: #f59e0b; color: white; }
+        .aq-btn-secondary { background-color: #64748b; color: white; }
+        .aq-btn-purple { background-color: #8b5cf6; color: white; }
+        .aq-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+        .aq-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+        .aq-mensaje { padding: 15px; border-radius: 8px; margin-top: 15px; font-weight: 600; text-align: center; }
+        .aq-mensaje.cuadrado { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; }
+        .aq-mensaje.sobrante { background-color: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
+        .aq-mensaje.faltante { background-color: #fee2e2; color: #b91c1c; border: 1px solid #f87171; }
+        .aq-denominacion-row { display: flex; flex-direction: column; padding: 12px 0; border-bottom: 1px dashed #e2e8f0; }
+        .aq-denom-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .aq-denom-main label { flex: 1; font-weight: bold; font-size: 0.95em; }
+        .aq-denom-trace { margin-top: 5px; padding: 5px 10px; background: #f1f5f9; border-radius: 6px; min-height: 25px; display: flex; align-items: center; }
+        .aq-denom-trace span { font-size: 0.85rem; font-family: 'Courier New', monospace; color: #2563eb; word-break: break-all; }
+        .aq-btn-group { display: flex; gap: 5px; }
+        .aq-btn-group button { width: 36px; height: 36px; border: none; border-radius: 6px; color: white; font-size: 1rem; cursor: pointer; }
+        .aq-total-display { text-align: right; min-width: 100px; display: flex; flex-direction: column; align-items: flex-end; }
+        .aq-cantidad-input { width: 75px !important; padding: 4px !important; text-align: center; font-weight: bold; color: #2563eb !important; border: 1px solid #2563eb !important; border-radius: 6px; font-size: 0.9em; }
+        .aq-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
+        .aq-stat-card { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
+        .aq-chart-row { display: flex; align-items: center; margin-bottom: 12px; font-size: 0.9rem; }
+        .aq-chart-bar-area { flex-grow: 1; height: 24px; background: #e2e8f0; border-radius: 6px; overflow: hidden; margin: 0 10px; }
+        .aq-chart-bar { height: 100%; background: #2563eb; border-radius: 6px; display: flex; align-items: center; padding-left: 8px; color: white; font-size: 0.75rem; font-weight: bold; }
+        .aq-calendar-wrapper { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; margin-top: 10px; }
+        .aq-calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        .aq-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #e2e8f0; }
+        .aq-cal-day-hdr { background: #f8fafc; padding: 8px 0; text-align: center; font-size: 0.75rem; font-weight: bold; color: #64748b; }
+        .aq-cal-day { background: #fff; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9em; }
+        .aq-cal-day.selected { background: #2563eb; color: white; font-weight: bold; }
+        .aq-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        .aq-table th, .aq-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        .aq-table th { background-color: #f8fafc; font-weight: 600; color: #64748b; }
+        .aq-table td:last-child, .aq-table th:last-child { text-align: right; }
         
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 2500; }
         .toast { min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; transform: translateX(100%); transition: all 0.4s ease; }
@@ -207,6 +267,7 @@
             <button class="nav-btn active" onclick="switchTab('registro')">Gestión de Socios</button>
             <button class="nav-btn" onclick="switchTab('gestion')">Anticipos y Ausencias</button>
             <button class="nav-btn" onclick="switchTab('recaudacion')">Montos Recaudados</button>
+            <button class="nav-btn" onclick="switchTab('arqueo')">💰 Arqueo de Caja</button>
         </div>
         
         <!-- PESTAÑA 1: REGISTRO DE SOCIOS -->
@@ -322,6 +383,18 @@
 
         <!-- PESTAÑA 2: GESTIÓN (Anticipos) -->
         <div id="tab-gestion" class="tab-content">
+
+            <!-- BANNER CIERRE MES GLOBAL -->
+            <div style="background:linear-gradient(135deg, #6c3483, #8e44ad); border-radius:12px; padding:14px 18px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div>
+                    <div style="color:white; font-weight:800; font-size:1em;">🔒 Cierre de Mes</div>
+                    <div style="color:#e8d5f5; font-size:0.78em; margin-top:2px;">Guarda el remanente de cada socio como saldo del próximo mes</div>
+                </div>
+                <button onclick="cerrarMesTodos()" style="background:white; color:#6c3483; border:none; border-radius:8px; padding:9px 18px; font-weight:800; font-size:0.85em; cursor:pointer; white-space:nowrap;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                    ⚡ Cerrar Mes TODOS
+                </button>
+            </div>
+
             <div class="gestion-layout">
                 <div class="search-panel">
                     <h3>Buscar Socio</h3>
@@ -336,6 +409,7 @@
                     <input type="hidden" id="gestionSocioNombre">
                     <input type="hidden" id="gestionSocioPuntos"> 
                     <input type="hidden" id="gestionSocioSaldoAnt" value="0"> 
+                    <input type="hidden" id="gestionSocioRemanente" value="0">
                     
                     <div class="detail-header">
                         <div>
@@ -351,18 +425,16 @@
 
                     <!-- ESTADÍSTICAS FINANCIERAS PERSONALES -->
                     <div class="dashboard-socios" style="margin-bottom:20px;">
-                        <!-- TARJETA SALDO ANTERIOR CON CLICK -->
+                        <!-- SALDO ANTERIOR -->
                         <div class="mini-stat orange clickable" onclick="abrirModalSaldo()" title="Clic para editar saldo inicial">
                             <span class="ms-val" id="socioSaldoAnterior">$0</span>
                             <span class="ms-label">Saldo Mes Ant. ✏️</span>
                         </div>
-                        
-                        <!-- TARJETA DIAS TRABAJADOS (SOLO PART-TIME) -->
+                        <!-- DIAS TRABAJADOS (SOLO PART-TIME) -->
                         <div class="mini-stat dark clickable" id="cardDiasTrabajados" onclick="abrirModalCalendario()" style="display:none;" title="Clic para ver calendario">
                             <span class="ms-val" id="socioDiasCount">0</span>
                             <span class="ms-label">Días Trab. 📅</span>
                         </div>
-
                         <div class="mini-stat blue">
                             <span class="ms-val" id="socioAlcance">$0</span>
                             <span class="ms-label">Alcance (Teórico)</span>
@@ -371,23 +443,51 @@
                             <span class="ms-val" id="socioTotalPedido">$0</span>
                             <span class="ms-label">Total Pedido</span>
                         </div>
-                        <div class="mini-stat green">
-                            <span class="ms-val" id="socioSaldo">$0</span>
-                            <span class="ms-label">Saldo a Recibir</span>
+                    </div>
+
+                    <!-- BLOQUE RESULTADO FINAL -->
+                    <div style="background:linear-gradient(135deg, #f8fffe, #f0faf5); border:1px solid #b7e4cc; border-radius:12px; padding:16px; margin-bottom:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:8px; border-bottom:1px dashed #cce;">
+                            <span style="font-size:0.85em; color:#555; font-weight:600;">Saldo Real</span>
+                            <span id="socioSaldoReal" style="font-size:1.1em; font-weight:800; color:#2c3e50;">$0</span>
                         </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                            <div style="background:white; border-radius:8px; padding:10px; text-align:center; border:1px solid #d4edda; box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+                                <span style="display:block; font-size:1.3em; font-weight:900; color:#27ae60;" id="socioAPagar">$0</span>
+                                <span style="font-size:0.68em; color:#888; text-transform:uppercase; font-weight:bold; display:block; margin-top:4px;">💵 A Pagar</span>
+                            </div>
+                            <div style="background:white; border-radius:8px; padding:10px; text-align:center; border:1px solid #e8d5f5; box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+                                <span style="display:block; font-size:1.3em; font-weight:900; color:#8e44ad;" id="socioRemanente">$0</span>
+                                <span style="font-size:0.68em; color:#888; text-transform:uppercase; font-weight:bold; display:block; margin-top:4px;">🔄 Remanente</span>
+                            </div>
+                        </div>
+                        <button onclick="cerrarMesSocio()" style="width:100%; background:linear-gradient(135deg, #8e44ad, #6c3483); color:white; border:none; border-radius:8px; padding:11px; font-weight:800; font-size:0.9em; cursor:pointer; letter-spacing:0.5px; transition:0.2s; display:flex; align-items:center; justify-content:center; gap:8px;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+                            🔒 Cerrar Mes (Guardar Remanente)
+                        </button>
+                        <p style="text-align:center; font-size:0.7em; color:#aaa; margin:6px 0 0 0;">El remanente pasa como saldo al próximo mes</p>
                     </div>
 
                     <div class="action-grid">
                         <div class="action-card">
                             <div class="action-title">💰 Anticipo de Propina</div>
-                            <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="numeric" id="montoAnticipo" placeholder="Ej: 50.000" oninput="formatearInputMonto(this)"></div>
+                            <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="numeric" id="montoAnticipo" placeholder="Ej: 50.000" oninput="formatearInputMonto(this)" onkeydown="if(event.key==='Enter') enviarAnticipo()"></div>
                             <div class="form-group" style="margin-top:10px;"><label>Fecha</label><input type="date" id="fechaAnticipo"></div>
                             <button class="btn-action" style="width:100%; margin-top:15px;" onclick="enviarAnticipo()">Registrar Anticipo</button>
                         </div>
                         <div class="action-card" id="cardAusencias" style="display:none;">
                             <div class="action-title" style="color:var(--danger);">📅 Reportar Ausencia</div>
                             <div class="form-group"><label>Fecha Ausencia</label><input type="date" id="fechaAusencia"></div>
-                            <div class="form-group" style="margin-top:10px;"><label>Motivo</label><input type="text" id="motivoAusencia" placeholder="Ej: Licencia, Falta..."></div>
+                            <div class="form-group" style="margin-top:10px;">
+                                <label>Motivo</label>
+                                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;" id="botonesMotivo">
+                                    <button type="button" class="btn-motivo" onclick="seleccionarMotivo('Licencia Médica')">🏥 Licencia Médica</button>
+                                    <button type="button" class="btn-motivo" onclick="seleccionarMotivo('Falta Injustificada')">❌ Falta Injustificada</button>
+                                    <button type="button" class="btn-motivo" onclick="seleccionarMotivo('Vacaciones')">🌴 Vacaciones</button>
+                                    <button type="button" class="btn-motivo" onclick="seleccionarMotivo('Permiso Personal')">📋 Permiso Personal</button>
+                                    <button type="button" class="btn-motivo" onclick="seleccionarMotivo('Otro')">✏️ Otro</button>
+                                </div>
+                                <input type="text" id="motivoAusencia" placeholder="Selecciona o escribe motivo..." style="width:100%; box-sizing:border-box;">
+                            </div>
                             <button class="btn-action" style="background-color:var(--danger); width:100%; margin-top:15px;" onclick="enviarAusencia()">Marcar Ausencia</button>
                         </div>
                     </div>
@@ -400,6 +500,7 @@
                 </div>
                 <div id="mensajeSeleccion" style="display:flex; justify-content:center; align-items:center; color:#999; height:300px; background:white; border-radius:12px;">Selecciona un socio para gestionar.</div>
             </div>
+        </div>
         </div>
 
         <!-- MODAL SALDO ANTERIOR -->
@@ -434,6 +535,30 @@
             </div>
         </div>
 
+        <!-- MODAL CIERRE MES TODOS -->
+        <div id="modalCierreTodos" class="modal">
+            <div class="modal-content" style="max-width:520px; margin-top:8%;">
+                <div class="modal-header" style="background:linear-gradient(135deg,#6c3483,#8e44ad); border-radius:12px 12px 0 0;">
+                    <h2 style="color:white; margin:0;">🔒 Cierre de Mes — Todos los Socios</h2>
+                    <span class="close-modal" onclick="document.getElementById('modalCierreTodos').style.display='none'" style="color:white;">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p style="color:#555; font-size:0.88em; margin-bottom:15px;">Se calculará el remanente de cada socio y se guardará como saldo del próximo mes. Esta acción no puede deshacerse fácilmente.</p>
+                    <div id="cierreTodosProgreso" style="margin-bottom:15px; display:none;">
+                        <div style="background:#eee; border-radius:8px; overflow:hidden; height:12px; margin-bottom:8px;">
+                            <div id="cierreTodosBar" style="height:100%; background:linear-gradient(90deg,#8e44ad,#27ae60); border-radius:8px; width:0%; transition:width 0.3s;"></div>
+                        </div>
+                        <div id="cierreTodosStatus" style="font-size:0.82em; color:#666; text-align:center;">Iniciando...</div>
+                    </div>
+                    <div id="cierreTodosResultado" style="max-height:300px; overflow-y:auto; margin-bottom:15px;"></div>
+                    <div style="display:flex; gap:10px;">
+                        <button id="btnConfirmarCierreTodos" onclick="ejecutarCierreTodos()" class="btn-submit" style="flex:1; background:linear-gradient(135deg,#6c3483,#8e44ad); border:none;">✅ Confirmar y Ejecutar</button>
+                        <button onclick="document.getElementById('modalCierreTodos').style.display='none'" class="btn-submit" style="flex:1; background:#999; border:none;">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- MODAL CONFIRMAR BORRADO -->
         <div id="modalConfirmarBorrar" class="modal">
             <div class="modal-content" style="max-width:400px; margin-top:20%;">
@@ -445,6 +570,45 @@
                     <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
                         <button class="btn-action" style="background:#999;" onclick="document.getElementById('modalConfirmarBorrar').style.display='none'">Cancelar</button>
                         <button class="btn-action" style="background:var(--danger);" onclick="borrarItemConfirmado()">Confirmar Borrado</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- MODAL EDITAR / AGREGAR RECAUDACIÓN -->
+        <div id="modalRecEditar" class="modal">
+            <div class="modal-content" style="max-width:420px; margin-top:8%;">
+                <div class="modal-header">
+                    <h2 id="recModalTitulo" style="margin:0;">Editar Registro</h2>
+                    <span class="close-modal" onclick="document.getElementById('modalRecEditar').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="recEditIdx">
+                    <input type="hidden" id="recEditFechaHidden">
+                    <div class="form-group">
+                        <label>Tipo / Categoría</label>
+                        <select id="recEditTipo" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-top:4px;">
+                            <option value="Maquinas">Maquinas</option>
+                            <option value="Mesas">Mesas</option>
+                            <option value="Otras">Otras</option>
+                            <option value="Otras Mesas">Otras Mesas</option>
+                            <option value="Sin Tipo">Sin Tipo</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-top:14px;">
+                        <label>Fecha</label>
+                        <input type="date" id="recEditFechaInput" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+                    </div>
+                    <div class="form-group" style="margin-top:14px;">
+                        <label>Monto ($)</label>
+                        <input type="text" inputmode="numeric" id="recEditMonto"
+                            style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:1.15em;font-weight:800;box-sizing:border-box;"
+                            oninput="formatearInputMonto(this)" placeholder="Ej: 1.500.000">
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:20px;">
+                        <button id="recBtnGuardar" onclick="rec_guardarCambio()" class="btn-submit" style="flex:1;">Guardar</button>
+                        <button onclick="document.getElementById('modalRecEditar').style.display='none'" class="btn-submit" style="flex:1;background:#999;border:none;">Cancelar</button>
                     </div>
                 </div>
             </div>
@@ -490,14 +654,137 @@
             </div>
         </div>
 
+        <!-- PESTAÑA 4: ARQUEO DE CAJA -->
+        <div id="tab-arqueo" class="tab-content">
+            <!-- Toolbar principal -->
+            <div class="aq-toolbar">
+                <button class="aq-btn aq-btn-primary" onclick="aq_abrirModalConteo()"><i class="fas fa-money-bill-wave"></i> Conteo</button>
+                <button class="aq-btn aq-btn-purple" onclick="aq_abrirModalBackup()"><i class="fas fa-archive"></i> Vista Último</button>
+                <button class="aq-btn aq-btn-warning" onclick="aq_recuperarDeNube()"><i class="fas fa-cloud-download-alt"></i> Cargar</button>
+                <button class="aq-btn aq-btn-success" onclick="aq_guardarEnNube()"><i class="fas fa-cloud-upload-alt"></i> Guardar</button>
+                <button class="aq-btn aq-btn-secondary" onclick="aq_openStatsModal()"><i class="fas fa-chart-pie"></i> Estadísticas</button>
+                <button class="aq-btn aq-btn-secondary" onclick="aq_fetchEsperadoData()" style="padding:10px;"><i class="fas fa-sync-alt"></i></button>
+            </div>
+
+            <div class="arqueo-layout">
+                <!-- IZQUIERDA: Datos Esperados -->
+                <div>
+                    <div class="arqueo-card">
+                        <h2><i class="fas fa-bullseye"></i> Datos Esperados</h2>
+                        <div id="aq-esperadoDisplay">Cargando...</div>
+                        <div class="arqueo-info-box" style="margin-top:15px;">
+                            <p style="margin:0; display:flex; justify-content:space-between;"><span>Recaudación Nube:</span><strong id="aq-divisor-day-total">$0</strong></p>
+                            <small id="aq-divisor-date" style="color:#64748b; display:block; margin-bottom:8px;">Fecha: N/A</small>
+                            <div style="border-top:1px dashed #bfdbfe; margin:5px 0;"></div>
+                            <p style="margin:5px 0; display:flex; justify-content:space-between;"><span>Divisor:</span><strong id="aq-divisor-value">1</strong></p>
+                            <p style="margin:5px 0; display:flex; justify-content:space-between;"><span>💰 Punto Día:</span><strong id="aq-punto-del-dia" style="color:#10b981;">$0</strong></p>
+                            <div style="background:#dcfce7; padding:8px; border-radius:6px; margin-top:10px;">
+                                <p style="margin:0; font-size:0.9em; display:flex; justify-content:space-between;"><span>📊 TOTAL Puntos:</span><strong id="aq-suma-total-puntos">0</strong></p>
+                            </div>
+                            <div style="margin-top:15px; border-top:1px solid #bfdbfe; padding-top:10px;">
+                                <label style="font-weight:600; font-size:0.85em;">Divisor Planta:</label>
+                                <input type="number" id="aq-divisor-planta" value="1.0" step="0.01" style="text-align:right; width:100%; margin-top:4px; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
+                                <label style="font-weight:600; font-size:0.85em; margin-top:10px; display:block;">Divisor Part-Time:</label>
+                                <input type="number" id="aq-divisor-part-time" value="1.0" step="0.01" style="text-align:right; width:100%; margin-top:4px; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
+                            </div>
+                        </div>
+                        <div id="aq-desglose-esperado" style="margin-top:20px;"></div>
+                    </div>
+                    <button class="aq-btn aq-btn-success" style="width:100%; font-size:1.1em; margin-bottom:1rem;" onclick="aq_realizarArqueo()"><i class="fas fa-check-double"></i> Realizar Arqueo</button>
+                </div>
+
+                <!-- DERECHA: Resultados y Análisis -->
+                <div>
+                    <div class="arqueo-card">
+                        <h2><i class="fas fa-cash-register"></i> Resultados</h2>
+                        <div id="aq-desglose-contado"><p style="color:#999; text-align:center;">Sin ingresos.</p></div>
+                        <div style="margin-top:20px; padding-top:15px; border-top:2px solid #2563eb;">
+                            <div style="display:flex; justify-content:space-between; font-size:1.2em; margin-bottom:10px;">
+                                <strong>TOTAL CAJA:</strong> <span id="aq-total-contado" style="color:#10b981; font-weight:800;">$0</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; color:#8b5cf6; margin-bottom:10px;">
+                                <strong>ANTICIPOS (Nube):</strong> <span id="aq-total-anticipos" style="font-weight:700;">$0</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; color:#ef4444; font-size:0.9em; opacity:0.8;">
+                                <strong>RETIRADO:</strong> <span id="aq-total-retiros" style="font-weight:700;">$0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="arqueo-card">
+                        <h2><i class="fas fa-chart-pie"></i> Análisis</h2>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:1.1em;">
+                            <strong>Diferencia Real:</strong> <span id="aq-diferencia" style="font-weight:800;">$0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                            <strong>📊 Puntos Totales:</strong> <span id="aq-division-result" style="color:#64748b;">0</span>
+                        </div>
+                        <p id="aq-mensaje-arqueo" class="aq-mensaje"></p>
+                        <button onclick="aq_archivarEnNube()" class="aq-btn aq-btn-danger" style="width:100%; margin-top:10px;"><i class="fas fa-archive"></i> Archivar Informe Final</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL CONTEO ARQUEO -->
+        <div id="aq-modalConteo" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="document.getElementById('aq-modalConteo').style.display='none'">&times;</span>
+                <h2>💸 Gestión de Efectivo</h2>
+                <div style="margin-bottom:15px; display:flex; gap:10px;">
+                    <button id="aq-undo-btn" onclick="aq_undoAction()" class="aq-btn aq-btn-warning" disabled><i class="fas fa-undo"></i> Deshacer</button>
+                    <button id="aq-redo-btn" onclick="aq_redoAction()" class="aq-btn aq-btn-primary" disabled><i class="fas fa-redo"></i> Rehacer</button>
+                </div>
+                <div id="aq-arqueo-form"></div>
+                <button onclick="document.getElementById('aq-modalConteo').style.display='none'; aq_realizarArqueo();" class="aq-btn aq-btn-primary" style="width:100%; margin-top:20px;">Listo</button>
+            </div>
+        </div>
+
+        <!-- MODAL VISTA ÚLTIMO (Backup) -->
+        <div id="aq-modalBackup" class="modal">
+            <div class="modal-content" style="max-width:800px;">
+                <span class="close-modal" onclick="document.getElementById('aq-modalBackup').style.display='none'">&times;</span>
+                <h2 style="color:#8b5cf6; border-bottom:2px solid #8b5cf6; padding-bottom:10px;"><i class="fas fa-history"></i> Historial de Arqueos Archivados</h2>
+                <div id="aq-backup-list" style="margin-top:15px;"></div>
+                <button onclick="document.getElementById('aq-modalBackup').style.display='none'" class="aq-btn aq-btn-primary" style="width:100%; margin-top:20px;">Cerrar</button>
+            </div>
+        </div>
+
+        <!-- MODAL EDICIÓN FÓRMULA -->
+        <div id="aq-modalEdicion" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="document.getElementById('aq-modalEdicion').style.display='none'">&times;</span>
+                <h2>✏️ Editar Fórmula</h2>
+                <input type="text" id="aq-formula-input" placeholder="Pega tu fórmula aquí..." style="font-size:1.2em; font-family:monospace; margin-top:10px; width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:6px;">
+                <button onclick="aq_guardarEdicionDetalle()" class="aq-btn aq-btn-success" style="width:100%; margin-top:20px;">Guardar Cambios</button>
+            </div>
+        </div>
+
+        <!-- MODAL ESTADÍSTICAS -->
+        <div id="aq-modalStats" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="document.getElementById('aq-modalStats').style.display='none'">&times;</span>
+                <h2>📊 Análisis por Tipo</h2>
+                <div id="aq-stats-content"></div>
+            </div>
+        </div>
+
     </div>
 
     <script>
         const URL_SOCIOS = "https://script.google.com/macros/s/AKfycbyr447pMQtsKoBfp8qTcB1uyE3rORhgPPmZM6Fgia3BgmIvtlZ_h04uGZrmx_HwubHQ/exec";
         const URL_RECAUDACIONES = "https://script.google.com/macros/s/AKfycbz_kCb4aEe437zHGbRqnjCibw1NtAqfCbTNmsVPn9jaZOPBFaZ6-FwmiTLqVxq39X1P/exec"; 
 
+        // ===== ARQUEO DE CAJA - URLs y constantes =====
+        const AQ_URL_GET = 'https://script.google.com/macros/s/AKfycbz_kCb4aEe437zHGbRqnjCibw1NtAqfCbTNmsVPn9jaZOPBFaZ6-FwmiTLqVxq39X1P/exec';
+        const AQ_URL_POST = 'https://script.google.com/macros/s/AKfycbzr0_GPBfp1MuP0YzBUNbwwQAtwr7Nf3oPzX2855_6Fm36T3303_G6TB_7lmE6TnTHLrw/exec';
+        const AQ_DENOMINACIONES = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
+        const AQ_SK_CONTEO = 'arqueoConteoCLP', AQ_SK_MOVI = 'arqueoMoviDisplayCLP', AQ_SK_RETIROS = 'arqueoRetirosCLP', AQ_SK_BACKUP = 'arqueoBackupHistorial_List';
+        let aq_conteo = {}, aq_movi = {}, aq_totalRetirado = 0, aq_totalAnticipos = 0, aq_desgloseEsperado = [], aq_denomEditando = null;
+        let aq_histStates = [], aq_histIdx = -1;
+
         let cacheSocios = [];
         let isEditing = false;
+        let recDatosRaw = [];
         let globalValorPuntoTotal = 0;
         let globalMapaPuntosDia = {}; 
         let selectedDaysPT = [];
@@ -529,6 +816,7 @@
             if(tabName === 'registro') btns[0].classList.add('active');
             else if(tabName === 'gestion') { btns[1].classList.add('active'); renderizarListaBusqueda(); }
             else if(tabName === 'recaudacion') { btns[2].classList.add('active'); cargarRecaudaciones(); }
+            else if(tabName === 'arqueo') { btns[3].classList.add('active'); aq_initSiNoIniciado(); }
         }
 
         function abrirModalRegistro() { document.getElementById('modalRegistro').style.display = 'block'; if(!isEditing) { document.getElementById('registroForm').reset(); document.getElementById('editId').value = ''; document.getElementById('modalTitle').innerText = 'Nuevo Socio'; document.getElementById('btnSubmit').innerText = 'Registrar Socio'; } }
@@ -638,10 +926,14 @@
                         alcance = sumaValorTotal * socio.puntos;
                     }
 
+                    const saldoReal = (alcance + saldoAnt) - sumaPedidos;
+                    const aPagarModal = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
+                    const remanenteModal = saldoReal > 0 ? Math.round(saldoReal - aPagarModal) : Math.round(saldoReal);
+
                     document.getElementById('resumenSaldoAnt').innerText = formatearMoneda(saldoAnt);
                     document.getElementById('resumenAlcance').innerText = formatearMoneda(alcance);
                     document.getElementById('resumenPedido').innerText = formatearMoneda(sumaPedidos);
-                    document.getElementById('resumenFinal').innerText = formatearMoneda((alcance + saldoAnt) - sumaPedidos);
+                    document.getElementById('resumenFinal').innerText = `${formatearMoneda(aPagarModal)} + rem. ${formatearMoneda(remanenteModal)}`;
 
                     const tbody = document.getElementById('tablaResumenMovimientos');
                     tbody.innerHTML = '';
@@ -738,18 +1030,58 @@
             return await response.json();
         }
 
-        async function fetchSociosDeGoogle() {
-            toggleLoader(true, "Obteniendo datos...");
+        const CACHE_KEY_SOCIOS = 'fondo_cache_socios';
+        const CACHE_KEY_DIAS = 'fondo_cache_dias';
+        const CACHE_KEY_REC = 'fondo_cache_recaudacion';
+        const CACHE_TTL = 60 * 60 * 1000; // 1 hora
+
+        function guardarCache(key, data) {
+            try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+        }
+        function leerCache(key) {
             try {
-                const resDias = await callApiSocios('getDiasPartTime');
+                const raw = localStorage.getItem(key);
+                if (!raw) return null;
+                const obj = JSON.parse(raw);
+                if (Date.now() - obj.ts > CACHE_TTL) return null;
+                return obj.data;
+            } catch(e) { return null; }
+        }
+
+        async function fetchSociosDeGoogle() {
+            // Mostrar datos cacheados de inmediato si existen
+            const cachedSocios = leerCache(CACHE_KEY_SOCIOS);
+            const cachedDias = leerCache(CACHE_KEY_DIAS);
+            if (cachedSocios && cachedDias) {
+                globalDiasPT = cachedDias;
+                cacheSocios = cachedSocios.map(procesarSocioDesdeGoogle);
+                renderizarCards();
+                renderizarListaBusqueda();
+                toggleLoader(false);
+                // Actualizar en segundo plano sin bloquear la UI
+                actualizarSociosSilencioso();
+                return;
+            }
+            toggleLoader(true, "Obteniendo datos...");
+            await actualizarSociosSilencioso();
+        }
+
+        async function actualizarSociosSilencioso() {
+            try {
+                // Llamadas EN PARALELO en vez de secuenciales
+                const [resDias, res] = await Promise.all([
+                    callApiSocios('getDiasPartTime'),
+                    callApiSocios('getSocios')
+                ]);
                 if (resDias.status === 'success') {
                     globalDiasPT = resDias.data || {};
+                    guardarCache(CACHE_KEY_DIAS, resDias.data || {});
                 }
-
-                const res = await callApiSocios('getSocios');
                 if (res.status === 'success') {
+                    guardarCache(CACHE_KEY_SOCIOS, res.data);
                     cacheSocios = res.data.map(procesarSocioDesdeGoogle);
                     renderizarCards();
+                    renderizarListaBusqueda();
                 } else { showToast('Error: ' + res.message, 'error'); }
             } catch (e) { console.error(e); showToast('Error de conexión', 'error'); } finally { toggleLoader(false); }
         }
@@ -908,14 +1240,48 @@
             const termino = document.getElementById('buscadorGestion').value.toLowerCase();
             const lista = document.getElementById('listaResultados');
             lista.innerHTML = '';
-            const filtrados = cacheSocios.filter(s => s.nombre.toLowerCase().includes(termino) || s.apellido.toLowerCase().includes(termino));
+            const filtrados = cacheSocios.filter(s => s.nombre.toLowerCase().includes(termino) || s.apellido.toLowerCase().includes(termino) || (s.area||'').toLowerCase().includes(termino));
             if (filtrados.length === 0) { lista.innerHTML = '<div style="padding:10px; color:#999;">No encontrado.</div>'; return; }
+
+            const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasparttime': 'Mesas (Part-Time)', 'cambistas': 'Mesas (Cambistas)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'gastoscomision': 'Gastos Comisión' };
+            const coloresArea = { 'mesas': '#3498db', 'mesasparttime': '#3498db', 'cambistas': '#9b59b6', 'maquinas': '#e67e22', 'tecnicos': '#7f8c8d', 'boveda': '#27ae60', 'gastoscomision': '#607d8b' };
+
+            // Agrupar por área normalizada
+            const grupos = {};
             filtrados.forEach(s => {
-                const div = document.createElement('div');
-                div.className = 'result-item';
-                div.innerHTML = `<strong>${s.nombre} ${s.apellido}</strong> <span style="font-size:0.8em; color:#777;">(${s.contrato})</span>`;
-                div.onclick = () => seleccionarSocio(s.id);
-                lista.appendChild(div);
+                let key = (s.area || 'otros').toLowerCase().replace(/\s/g,'');
+                if(key === 'mesas' && s.contrato === 'Part-Time') key = 'mesasparttime';
+                if(!grupos[key]) grupos[key] = [];
+                grupos[key].push(s);
+            });
+
+            // Orden fijo de áreas
+            const ordenAreas = ['mesas','mesasparttime','cambistas','maquinas','tecnicos','boveda','gastoscomision','otros'];
+            const areasSorted = Object.keys(grupos).sort((a,b) => {
+                const ia = ordenAreas.indexOf(a); const ib = ordenAreas.indexOf(b);
+                return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+            });
+
+            areasSorted.forEach(key => {
+                const socios = grupos[key].sort((a,b) => a.nombre.localeCompare(b.nombre));
+                const color = coloresArea[key] || '#999';
+                const label = nombresArea[key] || key.toUpperCase();
+
+                // Encabezado de área
+                const header = document.createElement('div');
+                header.style.cssText = `padding:5px 10px; font-size:0.72em; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:white; background:${color}; margin-top:6px; border-radius:4px;`;
+                header.textContent = `${label} (${socios.length})`;
+                lista.appendChild(header);
+
+                socios.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = 'result-item';
+                    div.setAttribute('data-socio-id', s.id);
+                    div.style.borderLeft = `3px solid ${color}`;
+                    div.innerHTML = `<strong>${s.nombre} ${s.apellido}</strong> <span style="font-size:0.8em; color:#777;">${s.puntos} pts</span>`;
+                    div.onclick = () => seleccionarSocio(s.id);
+                    lista.appendChild(div);
+                });
             });
         }
         
@@ -942,14 +1308,38 @@
             document.getElementById('socioSaldoAnterior').innerHTML = loadingText;
             document.getElementById('socioAlcance').innerHTML = loadingText;
             document.getElementById('socioTotalPedido').innerHTML = loadingText;
-            document.getElementById('socioSaldo').innerHTML = loadingText;
+            document.getElementById('socioSaldoReal').innerHTML = loadingText;
+            document.getElementById('socioAPagar').innerHTML = '...';
+            document.getElementById('socioRemanente').innerHTML = '...';
+
+            // Resaltar socio seleccionado en la lista
+            document.querySelectorAll('.result-item').forEach(el => el.classList.remove('seleccionado'));
+            const itemSeleccionado = document.querySelector(`.result-item[data-socio-id="${id}"]`);
+            if(itemSeleccionado) itemSeleccionado.classList.add('seleccionado');
+
+            // Scroll automático al panel de detalle en móvil
+            setTimeout(() => { document.getElementById('panelDetalle').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+
+            // Limpiar botones de motivo y poner fechas en hoy
+            document.querySelectorAll('.btn-motivo').forEach(b => b.classList.remove('activo'));
+            document.getElementById('motivoAusencia').value = '';
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('fechaAnticipo').value = hoy;
+            document.getElementById('fechaAusencia').value = hoy;
+            document.getElementById('montoAnticipo').value = '';
 
             cargarHistorialSocio(id);
         }
 
         async function cargarHistorialSocio(id) {
             const tbody = document.getElementById('tablaHistorial');
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;"><div class="spinner" style="width:20px;height:20px;margin:0 auto;"></div> Cargando...</td></tr>';
+            // Skeleton animado mientras carga
+            tbody.innerHTML = Array(3).fill(`<tr>
+                <td><div style="height:14px;background:#eee;border-radius:4px;width:70px;animation:shimmer 1.2s infinite alternate;"></div></td>
+                <td><div style="height:14px;background:#eee;border-radius:4px;width:80px;animation:shimmer 1.2s infinite alternate;"></div></td>
+                <td><div style="height:14px;background:#eee;border-radius:4px;width:100px;animation:shimmer 1.2s infinite alternate;"></div></td>
+                <td><div style="height:14px;background:#eee;border-radius:4px;width:60px;animation:shimmer 1.2s infinite alternate;"></div></td>
+            </tr>`).join('');
             try {
                 const response = await fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${id}`);
                 const res = await response.json();
@@ -1021,11 +1411,34 @@
                         alcance = sumaValorTotal * ptsSocio;
                     }
 
-                    const saldo = (alcance + saldoAnterior) - sumaTotalPedido;
+                    const saldoReal = (alcance + saldoAnterior) - sumaTotalPedido;
+
+                    // Calcular A Pagar (redondeado hacia abajo al múltiplo de $1.000) y Remanente
+                    let aPagar = 0;
+                    let remanente = 0;
+                    if (saldoReal > 0) {
+                        aPagar = Math.floor(saldoReal / 1000) * 1000;
+                        remanente = Math.round(saldoReal - aPagar);
+                    } else {
+                        aPagar = 0;
+                        remanente = Math.round(saldoReal); // negativo → deuda al próximo mes
+                    }
+
+                    // Guardar en hidden para usarlo en cerrarMesSocio
+                    document.getElementById('gestionSocioRemanente').value = remanente;
 
                     document.getElementById('socioTotalPedido').innerText = formatearMoneda(sumaTotalPedido);
                     document.getElementById('socioAlcance').innerText = formatearMoneda(alcance);
-                    document.getElementById('socioSaldo').innerText = formatearMoneda(saldo);
+
+                    const elSaldoReal = document.getElementById('socioSaldoReal');
+                    elSaldoReal.innerText = formatearMoneda(saldoReal);
+                    elSaldoReal.style.color = saldoReal < 0 ? 'var(--danger)' : 'var(--primary)';
+
+                    document.getElementById('socioAPagar').innerText = formatearMoneda(aPagar);
+
+                    const elRem = document.getElementById('socioRemanente');
+                    elRem.innerText = formatearMoneda(remanente);
+                    elRem.style.color = remanente < 0 ? 'var(--danger)' : '#8e44ad';
 
                     if(listaFinal.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">No hay movimientos registrados.</td></tr>'; return; }
                     listaFinal.sort((a,b) => b.rawDate - a.rawDate); 
@@ -1056,11 +1469,191 @@
             } catch (e) { console.error("Error JS:", e); tbody.innerHTML = '<tr><td colspan="4" style="color:red; text-align:center;">Error procesando datos</td></tr>'; }
         }
 
+        // =====================================================
+        // CERRAR MES TODOS - Calcula y guarda remanente de cada socio
+        // =====================================================
+        async function cerrarMesTodos() {
+            if (cacheSocios.length === 0) return showToast('No hay socios cargados', 'error');
+
+            // Previsualización: calcular remanentes de todos ANTES de confirmar
+            const modal = document.getElementById('modalCierreTodos');
+            const resultado = document.getElementById('cierreTodosResultado');
+            const progreso = document.getElementById('cierreTodosProgreso');
+            const btn = document.getElementById('btnConfirmarCierreTodos');
+
+            progreso.style.display = 'none';
+            btn.disabled = false;
+            btn.textContent = '✅ Confirmar y Ejecutar';
+
+            // Mostrar previsualización con los remanentes actuales por socio
+            let previHtml = '<table style="width:100%; font-size:0.85em; border-collapse:collapse;">';
+            previHtml += '<thead><tr style="background:#f0f2f5;"><th style="padding:6px 8px; text-align:left;">Socio</th><th style="padding:6px 8px; text-align:right;">Remanente</th></tr></thead><tbody>';
+
+            // Calcular remanente para cada socio usando los datos en memoria
+            cacheSocios.forEach(socio => {
+                let alcance = 0;
+                const ausencias = new Set(); // no tenemos ausencias en caché, se usan al guardar
+                if (socio.contrato === 'Part-Time') {
+                    const dias = globalDiasPT[socio.id] || [];
+                    let sumaVP = 0;
+                    dias.forEach(d => { if (globalMapaPuntosDia[d]) sumaVP += globalMapaPuntosDia[d]; });
+                    alcance = sumaVP * socio.puntos;
+                } else {
+                    let sumaVT = Object.values(globalMapaPuntosDia).reduce((a, b) => a + b, 0);
+                    alcance = sumaVT * socio.puntos;
+                }
+                // Saldo anterior desde el campo oculto si es el socio activo, si no desde 0 (se actualizará con el fetch real)
+                const saldoAnt = 0; // La API registrará el remanente sobre el saldo real del servidor
+                const saldoReal = alcance + saldoAnt; // Aproximado sin anticipos (son del servidor)
+                // Nota: el cálculo exacto lo hace ejecutarCierreTodos con datos reales del servidor
+                previHtml += `<tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:5px 8px;">${socio.nombre} ${socio.apellido} <span style="font-size:0.75em; color:#888;">(${socio.contrato})</span></td>
+                    <td style="padding:5px 8px; text-align:right; color:#8e44ad; font-weight:bold;">Se calculará al ejecutar</td>
+                </tr>`;
+            });
+            previHtml += '</tbody></table>';
+            previHtml += '<p style="color:#e67e22; font-size:0.78em; margin-top:10px; text-align:center;">⚠️ Los remanentes exactos se calculan al confirmar, ya que requieren datos del servidor (anticipos reales).</p>';
+            resultado.innerHTML = previHtml;
+            modal.style.display = 'block';
+        }
+
+        async function ejecutarCierreTodos() {
+            const btn = document.getElementById('btnConfirmarCierreTodos');
+            const progreso = document.getElementById('cierreTodosProgreso');
+            const bar = document.getElementById('cierreTodosBar');
+            const status = document.getElementById('cierreTodosStatus');
+            const resultado = document.getElementById('cierreTodosResultado');
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Procesando...';
+            progreso.style.display = 'block';
+
+            const total = cacheSocios.length;
+            let procesados = 0, exitosos = 0, errores = 0;
+            let resumenHtml = '<table style="width:100%; font-size:0.82em; border-collapse:collapse;">';
+            resumenHtml += '<thead><tr style="background:#f0f2f5;"><th style="padding:6px 8px; text-align:left;">Socio</th><th style="padding:6px 8px; text-align:right;">A Pagar</th><th style="padding:6px 8px; text-align:right;">Remanente</th><th style="padding:6px 8px; text-align:center;">Estado</th></tr></thead><tbody>';
+
+            for (const socio of cacheSocios) {
+                status.textContent = `Procesando: ${socio.nombre} ${socio.apellido} (${procesados + 1}/${total})`;
+                bar.style.width = `${Math.round(((procesados) / total) * 100)}%`;
+
+                try {
+                    // Traer datos reales del servidor para este socio
+                    const response = await fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${socio.id}`);
+                    const res = await response.json();
+
+                    let remanente = 0, aPagar = 0, saldoReal = 0;
+
+                    if (res.status === 'success') {
+                        const data = res.data || {};
+                        const saldoAnterior = Number(data.saldoAnterior || 0);
+                        let sumaPedido = 0;
+
+                        // Calcular anticipos reales
+                        if (data.anticipos && Array.isArray(data.anticipos)) {
+                            data.anticipos.forEach(a => { sumaPedido += Number(a.cantidad || a.monto || 0); });
+                        }
+
+                        // Calcular ausencias reales
+                        const fechasAusencia = new Set();
+                        if (data.extras) {
+                            data.extras.forEach(e => {
+                                if (e.tipo && e.tipo.toLowerCase().includes('ausencia')) {
+                                    let f = e.fecha; if (f.includes('T')) f = f.split('T')[0]; fechasAusencia.add(f);
+                                }
+                            });
+                        }
+
+                        // Calcular alcance real
+                        let alcance = 0;
+                        if (socio.contrato === 'Part-Time') {
+                            const dias = globalDiasPT[socio.id] || [];
+                            dias.forEach(d => { if (!fechasAusencia.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
+                            alcance *= socio.puntos;
+                        } else {
+                            for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
+                                if (!fechasAusencia.has(dia)) alcance += valor;
+                            }
+                            alcance *= socio.puntos;
+                        }
+
+                        saldoReal = alcance + saldoAnterior - sumaPedido;
+                        aPagar = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
+                        remanente = saldoReal > 0 ? Math.round(saldoReal - aPagar) : Math.round(saldoReal);
+                    }
+
+                    // Guardar remanente como nuevo saldo anterior
+                    await callApiSocios('registrarSaldoAnterior', {
+                        id: socio.id,
+                        nombre: `${socio.nombre} ${socio.apellido}`,
+                        monto: remanente
+                    });
+
+                    exitosos++;
+                    const colorRem = remanente < 0 ? '#e74c3c' : '#8e44ad';
+                    resumenHtml += `<tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:5px 8px;">${socio.nombre} ${socio.apellido}</td>
+                        <td style="padding:5px 8px; text-align:right; color:#27ae60; font-weight:bold;">${formatearMoneda(aPagar)}</td>
+                        <td style="padding:5px 8px; text-align:right; color:${colorRem}; font-weight:bold;">${formatearMoneda(remanente)}</td>
+                        <td style="padding:5px 8px; text-align:center;">✅</td>
+                    </tr>`;
+
+                } catch (e) {
+                    errores++;
+                    resumenHtml += `<tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:5px 8px;">${socio.nombre} ${socio.apellido}</td>
+                        <td colspan="2" style="padding:5px 8px; color:#e74c3c; text-align:center;">Error al procesar</td>
+                        <td style="padding:5px 8px; text-align:center;">❌</td>
+                    </tr>`;
+                }
+
+                procesados++;
+            }
+
+            bar.style.width = '100%';
+            resumenHtml += '</tbody></table>';
+            resultado.innerHTML = resumenHtml;
+            status.textContent = `✅ Completado: ${exitosos} exitosos, ${errores} con error.`;
+
+            btn.textContent = '✅ Completado';
+            showToast(`Cierre completado: ${exitosos}/${total} socios procesados`, exitosos === total ? 'success' : 'error');
+
+            // Recargar socios y limpiar si hay uno seleccionado
+            const idActivo = document.getElementById('gestionSocioId').value;
+            if (idActivo) cargarHistorialSocio(idActivo);
+        }
+
         function mostrarModalBorrar(item) {
             document.getElementById('modalConfirmarBorrar').style.display = 'block';
             document.getElementById('txtDetalleBorrar').innerText = `¿Borrar registro del ${item.fecha} (${Array.from(item.tipos).join(',')})?`;
             document.getElementById('borrarUUID').value = item.uuid;
             document.getElementById('borrarTipo').value = item.montoTotal > 0 ? 'Anticipo' : 'Extra';
+        }
+
+        async function cerrarMesSocio() {
+            const id = document.getElementById('gestionSocioId').value;
+            const nombre = document.getElementById('gestionSocioNombre').value;
+            const remanente = parseInt(document.getElementById('gestionSocioRemanente').value) || 0;
+
+            if (!id) return showToast('Selecciona un socio primero', 'error');
+
+            const signo = remanente >= 0 ? '+' : '';
+            const msg = `¿Cerrar mes para ${nombre}?\n\nRemanente a traspasar: ${signo}${new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP'}).format(remanente)}\n\nEste monto quedará como saldo del próximo mes.`;
+
+            if (!confirm(msg)) return;
+
+            toggleLoader(true, 'Cerrando mes...');
+            try {
+                await callApiSocios('registrarSaldoAnterior', { id, nombre, monto: remanente });
+                showToast(`✅ Mes cerrado. Remanente ${new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP'}).format(remanente)} guardado como saldo anterior.`, 'success');
+                // Actualizar el valor visible del saldo anterior y recargar historial
+                document.getElementById('gestionSocioSaldoAnt').value = remanente;
+                cargarHistorialSocio(id);
+            } catch(e) {
+                showToast('Error al cerrar mes', 'error');
+            } finally {
+                toggleLoader(false);
+            }
         }
 
         async function borrarItemConfirmado() {
@@ -1088,14 +1681,36 @@
                 if(!silent) document.getElementById('contenedorFechas').innerHTML = '<div style="color:red; text-align:center;">Falta configurar URL</div>'; 
                 return; 
             }
+
+            // Mostrar cache inmediatamente si existe
+            const cached = leerCache(CACHE_KEY_REC);
+            if (cached) {
+                procesarDatosRecaudacion(cached, silent);
+                if (silent) return; // si es silencioso y hay cache, no hacer fetch
+                // Actualizar en segundo plano sin loader
+                fetch(`${URL_RECAUDACIONES}?action=get&t=${new Date().getTime()}`)
+                    .then(r => r.json())
+                    .then(result => {
+                        if(result.status === 'success') {
+                            guardarCache(CACHE_KEY_REC, result.data || []);
+                            procesarDatosRecaudacion(result.data || [], false);
+                        }
+                    }).catch(() => {});
+                return;
+            }
+
             if(!silent) toggleLoader(true, "Procesando recaudaciones...");
             try {
                 const response = await fetch(`${URL_RECAUDACIONES}?action=get&t=${new Date().getTime()}`);
                 const result = await response.json();
-                
                 if(result.status !== 'success') throw new Error(result.message || "Error al cargar");
-                
-                const datos = result.data || []; 
+                guardarCache(CACHE_KEY_REC, result.data || []);
+                procesarDatosRecaudacion(result.data || [], silent);
+            } catch (error) { console.error(error); if(!silent) showToast("Error al obtener datos", "error"); } finally { if(!silent) toggleLoader(false); }
+        }
+
+        function procesarDatosRecaudacion(datos, silent) {
+                recDatosRaw = datos;
                 const grupos = {}; 
                 let granTotal = 0;
                 
@@ -1119,10 +1734,7 @@
                     if (item.divisor) {
                         let strDivisor = String(item.divisor).replace(',', '.');
                         let valDivisor = parseFloat(strDivisor);
-                        
-                        if (valDivisor > 0) {
-                            grupos[fecha].divisor = Math.max(grupos[fecha].divisor, valDivisor);
-                        }
+                        if (valDivisor > 0) grupos[fecha].divisor = Math.max(grupos[fecha].divisor, valDivisor);
                     }
                 });
                 
@@ -1156,17 +1768,183 @@
                 const container = document.getElementById('contenedorFechas'); container.innerHTML = '';
                 if (fechasOrdenadas.length === 0) { container.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">No hay registros.</div>'; } else {
                     fechasOrdenadas.forEach(fecha => {
-                        const dia = grupos[fecha]; const partes = fecha.split('-'); const fechaVisual = `${partes[2]}/${partes[1]}/${partes[0]}`;
-                        const divisor = parseFloat(dia.divisor) || 1; const puntoNoche = dia.totalDia / divisor;
-                        let tiposHtml = ''; for (const [nombreTipo, valorTipo] of Object.entries(dia.tipos)) { tiposHtml += `<div class="type-item"><span class="type-name">${nombreTipo}</span><span class="type-value">${formatearMoneda(valorTipo)}</span></div>`; }
-                        const card = document.createElement('div'); card.className = 'date-card'; card.setAttribute('data-search', `${fechaVisual} ${dia.totalDia} ${Object.keys(dia.tipos).join(' ')}`);
-                        card.innerHTML = `<div class="date-header"><div><div class="date-title">📅 ${fechaVisual}<span class="date-divisor" title="Divisor">÷ ${dia.divisor}</span></div><div style="margin-top:5px;"><span class="date-point-badge">Punto Noche: ${formatearMoneda(puntoNoche)}</span></div></div><div class="date-total"><small style="display:block; font-size:0.6em; color:#999; font-weight:normal;">RECAUDADO</small>${formatearMoneda(dia.totalDia)}</div></div><div class="type-grid">${tiposHtml}</div>`;
+                        const dia = grupos[fecha];
+                        const partes = fecha.split('-');
+                        const fechaVisual = `${partes[2]}/${partes[1]}/${partes[0]}`;
+                        const divisor = parseFloat(dia.divisor) || 1;
+                        const puntoNoche = dia.totalDia / divisor;
+                        // Filas por tipo con botones editar/borrar
+                        let tiposHtml = '';
+                        for (const [nombreTipo, valorTipo] of Object.entries(dia.tipos)) {
+                            const reg = recDatosRaw.find(r => { let f = r.fecha; if(f && f.includes('T')) f = f.split('T')[0]; return f === fecha && (r.tipo || 'Sin Tipo') === nombreTipo; });
+                            const idx = reg !== undefined ? reg.originalIndex : 'null';
+                            tiposHtml += `<div class="type-item" style="gap:6px;">`
+                                + `<span class="type-name">${nombreTipo}</span>`
+                                + `<span class="type-value">${formatearMoneda(valorTipo)}</span>`
+                                + `<div style="display:flex;gap:3px;margin-left:auto;">`
+                                + `<button onclick="rec_abrirEditar('${fecha}','${nombreTipo}',${valorTipo},${idx})" style="background:none;border:1px solid var(--secondary);color:var(--secondary);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">✏️</button>`
+                                + `<button onclick="rec_borrarFila(${idx},'${nombreTipo}','${fecha}')" style="background:none;border:1px solid var(--danger);color:var(--danger);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">🗑️</button>`
+                                + `</div></div>`;
+                        }
+                        const card = document.createElement('div');
+                        card.className = 'date-card';
+                        card.setAttribute('data-search', `${fechaVisual} ${dia.totalDia} ${Object.keys(dia.tipos).join(' ')}`);
+                        card.innerHTML = `
+                            <div class="date-header">
+                                <div>
+                                    <div class="date-title">📅 ${fechaVisual}</div>
+                                    <div style="margin-top:4px;"><span class="date-point-badge">Punto Noche: ${formatearMoneda(puntoNoche)}</span></div>
+                                </div>
+                                <div class="date-total"><small style="display:block;font-size:0.6em;color:#999;font-weight:normal;">RECAUDADO</small>${formatearMoneda(dia.totalDia)}</div>
+                            </div>
+                            <div class="type-grid">${tiposHtml}</div>
+                            <div style="background:#f8fafc;border-top:1px solid #eee;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <span style="font-size:0.78em;font-weight:700;color:#555;">Divisor:</span>
+                                    <input type="number" step="0.01" min="0.01" value="${dia.divisor}"
+                                        style="width:72px;padding:5px 6px;border:2px solid var(--secondary);border-radius:7px;font-weight:800;text-align:center;font-size:0.9em;"
+                                        onchange="rec_actualizarDivisor('${fecha}', this.value)">
+                                    <span style="font-size:0.78em;color:var(--success);font-weight:700;">${formatearMoneda(puntoNoche)} / pto</span>
+                                </div>
+                                <div style="display:flex;gap:6px;">
+                                    <button onclick="rec_abrirAgregar('${fecha}')" style="background:var(--success);color:white;border:none;border-radius:7px;padding:6px 11px;font-size:0.8em;font-weight:700;cursor:pointer;">➕ Agregar</button>
+                                    <button onclick="rec_copiarReporte('${fecha}')" style="background:#607d8b;color:white;border:none;border-radius:7px;padding:6px 11px;font-size:0.8em;font-weight:700;cursor:pointer;">📋 Copiar</button>
+                                </div>
+                            </div>`;
                         container.appendChild(card);
                     });
                 }
                 document.getElementById('recTotalPuntos').innerText = formatearMoneda(sumaPuntosGlobal);
-            } catch (error) { console.error(error); if(!silent) showToast("Error al obtener datos", "error"); } finally { if(!silent) toggleLoader(false); }
+                toggleLoader(false);
         }
+
+        // ============================================================
+        // EDICION DE RECAUDACIONES - Editar, Borrar, Agregar, Divisor, Copiar
+        // ============================================================
+
+        function rec_postRec(data) {
+            return fetch(URL_RECAUDACIONES, {
+                method: 'POST',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(data)
+            }).then(r => r.json());
+        }
+
+        function rec_abrirEditar(fecha, tipo, monto, idx) {
+            document.getElementById('recModalTitulo').textContent = 'Editar Registro';
+            document.getElementById('recBtnGuardar').dataset.modo = 'editar';
+            document.getElementById('recEditIdx').value = (idx !== null && idx !== undefined) ? idx : '';
+            document.getElementById('recEditFechaHidden').value = fecha;
+            document.getElementById('recEditFechaInput').value = fecha;
+            // Seleccionar tipo o agregar opcion dinamica
+            const sel = document.getElementById('recEditTipo');
+            let found = false;
+            for (let i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value === tipo) { sel.selectedIndex = i; found = true; break; }
+            }
+            if (!found) {
+                const opt = document.createElement('option');
+                opt.value = tipo; opt.textContent = tipo;
+                sel.appendChild(opt); sel.value = tipo;
+            }
+            document.getElementById('recEditMonto').value = new Intl.NumberFormat('es-CL').format(monto);
+            document.getElementById('modalRecEditar').style.display = 'block';
+        }
+
+        function rec_abrirAgregar(fecha) {
+            document.getElementById('recModalTitulo').textContent = 'Agregar a ' + fecha.split('-').reverse().join('/');
+            document.getElementById('recBtnGuardar').dataset.modo = 'agregar';
+            document.getElementById('recEditIdx').value = '';
+            document.getElementById('recEditFechaHidden').value = fecha;
+            document.getElementById('recEditFechaInput').value = fecha;
+            document.getElementById('recEditTipo').selectedIndex = 0;
+            document.getElementById('recEditMonto').value = '';
+            document.getElementById('modalRecEditar').style.display = 'block';
+            setTimeout(() => document.getElementById('recEditMonto').focus(), 150);
+        }
+
+        async function rec_guardarCambio() {
+            const modo  = document.getElementById('recBtnGuardar').dataset.modo;
+            const idx   = document.getElementById('recEditIdx').value;
+            const tipo  = document.getElementById('recEditTipo').value;
+            const fecha = document.getElementById('recEditFechaInput').value;
+            const raw   = document.getElementById('recEditMonto').value.replace(/\./g, '').replace(/,/g, '');
+            const monto = parseInt(raw);
+            if (!fecha || !monto || !tipo) return showToast('Completa todos los campos', 'error');
+            document.getElementById('modalRecEditar').style.display = 'none';
+            toggleLoader(true, modo === 'editar' ? 'Actualizando...' : 'Guardando...');
+            try {
+                if (modo === 'editar' && idx !== '') {
+                    await rec_postRec({ action: 'update', sheetIndex: parseInt(idx), tipo, fecha, monto });
+                    showToast('Registro actualizado', 'success');
+                } else {
+                    await rec_postRec({ action: 'add', tipo, fecha, monto });
+                    showToast('Registro agregado', 'success');
+                }
+                try { localStorage.removeItem(CACHE_KEY_REC); } catch(e) {}
+                cargarRecaudaciones();
+            } catch(e) {
+                showToast('Error al guardar', 'error');
+            } finally { toggleLoader(false); }
+        }
+
+        async function rec_borrarFila(idx, tipo, fecha) {
+            if (idx === null || idx === undefined || String(idx) === 'null') {
+                return showToast('No se puede identificar el registro', 'error');
+            }
+            const fechaVis = String(fecha).split('-').reverse().join('/');
+            if (!confirm('Borrar "' + tipo + '" del ' + fechaVis + '?')) return;
+            toggleLoader(true, 'Borrando...');
+            try {
+                await rec_postRec({ action: 'delete', index: parseInt(idx) });
+                showToast('Registro eliminado', 'success');
+                try { localStorage.removeItem(CACHE_KEY_REC); } catch(e) {}
+                cargarRecaudaciones();
+            } catch(e) {
+                showToast('Error al borrar', 'error');
+            } finally { toggleLoader(false); }
+        }
+
+        async function rec_actualizarDivisor(fecha, valor) {
+            const val = parseFloat(String(valor).replace(',', '.'));
+            if (!val || val <= 0) return showToast('Divisor invalido', 'error');
+            toggleLoader(true, 'Guardando divisor...');
+            try {
+                await rec_postRec({ action: 'updateDivisor', fecha, divisor: val });
+                showToast('Divisor actualizado', 'success');
+                try { localStorage.removeItem(CACHE_KEY_REC); } catch(e) {}
+                cargarRecaudaciones(true);
+            } catch(e) {
+                showToast('Error al guardar divisor', 'error');
+            } finally { toggleLoader(false); }
+        }
+
+        function rec_copiarReporte(fecha) {
+            const registros = recDatosRaw.filter(r => {
+                let f = r.fecha;
+                if (f && f.includes('T')) f = f.split('T')[0];
+                return f === fecha;
+            });
+            if (!registros.length) return showToast('Sin datos para copiar', 'error');
+            const total = registros.reduce((s, r) => s + (parseFloat(r.monto) || 0), 0);
+            const divReg = registros.find(r => parseFloat(r.divisor) > 0);
+            const divisorDia = divReg ? parseFloat(divReg.divisor) : 1;
+            const puntoNoche = total / divisorDia;
+            const partes = fecha.split('-');
+            const fechaVis = partes[2] + '/' + partes[1] + '/' + partes[0];
+            let txt = 'REPORTE: ' + fechaVis + '\n' + '-'.repeat(28) + '\n';
+            registros.forEach(r => {
+                txt += '- ' + (r.tipo || 'Sin Tipo') + ': ' + formatearMoneda(r.monto) + '\n';
+            });
+            txt += '-'.repeat(28) + '\n';
+            txt += 'TOTAL: ' + formatearMoneda(total) + '\n';
+            txt += 'DIVISOR: ' + divisorDia + '\n';
+            txt += 'PUNTO NOCHE: ' + formatearMoneda(puntoNoche);
+            navigator.clipboard.writeText(txt)
+                .then(() => showToast('Reporte copiado al portapapeles', 'success'))
+                .catch(() => showToast('No se pudo copiar (sin permisos)', 'error'));
+        }
+
         function filtrarRecaudacion() {
             const filter = document.getElementById('filtroRecaudacion').value.toLowerCase();
             const cards = document.querySelectorAll('.date-card');
@@ -1179,26 +1957,425 @@
         async function enviarAnticipo() {
             const id = document.getElementById('gestionSocioId').value;
             const nombre = document.getElementById('gestionSocioNombre').value;
-            const rawMonto = document.getElementById('montoAnticipo').value.replace(/\./g, '');
+            const campoMonto = document.getElementById('montoAnticipo');
+            const rawMonto = campoMonto.value.replace(/\./g, '');
             const monto = parseInt(rawMonto);
             const fecha = document.getElementById('fechaAnticipo').value;
-            if(!monto || !fecha) return showToast('Falta datos', 'error');
+            if(!monto || !fecha) {
+                campoMonto.classList.add('input-error');
+                setTimeout(() => campoMonto.classList.remove('input-error'), 1500);
+                return showToast('Falta datos', 'error');
+            }
+            campoMonto.classList.add('input-ok');
             toggleLoader(true);
-            try { await callApiSocios('registrarBatchAnticipos', { detalleAnticipos: [{ id, nombre, fecha, monto: parseInt(monto) }] }); showToast('Registrado', 'success'); document.getElementById('montoAnticipo').value = ''; cargarHistorialSocio(id); } catch(e) { showToast('Error', 'error'); } finally { toggleLoader(false); }
+            try { 
+                await callApiSocios('registrarBatchAnticipos', { detalleAnticipos: [{ id, nombre, fecha, monto: parseInt(monto) }] }); 
+                showToast('✅ Anticipo registrado correctamente', 'success'); 
+                campoMonto.value = ''; 
+                campoMonto.classList.remove('input-ok');
+                // Restaurar fecha a hoy
+                document.getElementById('fechaAnticipo').value = new Date().toISOString().split('T')[0];
+                campoMonto.focus();
+                cargarHistorialSocio(id); 
+            } catch(e) { 
+                campoMonto.classList.remove('input-ok');
+                showToast('Error al registrar anticipo', 'error'); 
+            } finally { toggleLoader(false); }
         }
         async function enviarAusencia() {
             const id = document.getElementById('gestionSocioId').value;
             const nombre = document.getElementById('gestionSocioNombre').value;
             const fecha = document.getElementById('fechaAusencia').value;
-            const motivo = document.getElementById('motivoAusencia').value;
-            if(!fecha || !motivo) return showToast('Falta datos', 'error');
+            const campoMotivo = document.getElementById('motivoAusencia');
+            const motivo = campoMotivo.value.trim();
+            if(!fecha || !motivo) {
+                campoMotivo.classList.add('input-error');
+                setTimeout(() => campoMotivo.classList.remove('input-error'), 1500);
+                return showToast('Falta datos', 'error');
+            }
             toggleLoader(true);
-            try { await callApiSocios('registrarBatchExtras', { detalleExtras: [{ id, nombre, fecha, tipo: 'ausencia', monto: 0, detalle: `Ausencia: ${motivo}` }] }); showToast('Registrado', 'success'); document.getElementById('motivoAusencia').value = ''; cargarHistorialSocio(id); } catch(e) { showToast('Error', 'error'); } finally { toggleLoader(false); }
+            try { 
+                await callApiSocios('registrarBatchExtras', { detalleExtras: [{ id, nombre, fecha, tipo: 'ausencia', monto: 0, detalle: `Ausencia: ${motivo}` }] }); 
+                showToast('✅ Ausencia registrada correctamente', 'success'); 
+                campoMotivo.value = ''; 
+                // Restaurar fecha a hoy y limpiar botones activos
+                document.getElementById('fechaAusencia').value = new Date().toISOString().split('T')[0];
+                document.querySelectorAll('.btn-motivo').forEach(b => b.classList.remove('activo'));
+                cargarHistorialSocio(id); 
+            } catch(e) { showToast('Error al registrar ausencia', 'error'); } finally { toggleLoader(false); }
+        }
+
+        // Seleccionar motivo con botones predefinidos
+        function seleccionarMotivo(motivo) {
+            document.getElementById('motivoAusencia').value = motivo;
+            document.querySelectorAll('.btn-motivo').forEach(b => {
+                b.classList.toggle('activo', b.textContent.includes(motivo.split(' ')[0]));
+            });
+            if (motivo === 'Otro') {
+                document.getElementById('motivoAusencia').value = '';
+                document.getElementById('motivoAusencia').focus();
+            }
         }
         function showToast(message, type = 'info') {
             const c = document.getElementById('toast-container'); const t = document.createElement('div'); t.className = `toast ${type}`; t.innerText = message; c.appendChild(t);
             setTimeout(() => t.classList.add('show'), 10); setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 3000);
         }
+
+        // ============================================================
+        // ===== ARQUEO DE CAJA - Toda la lógica =====
+        // ============================================================
+        let aq_iniciado = false;
+        function aq_initSiNoIniciado() {
+            if(aq_iniciado) return;
+            aq_iniciado = true;
+            const sc = localStorage.getItem(AQ_SK_CONTEO);
+            const sm = localStorage.getItem(AQ_SK_MOVI);
+            const sr = localStorage.getItem(AQ_SK_RETIROS);
+            if(sc) aq_conteo = JSON.parse(sc);
+            if(sm) aq_movi = JSON.parse(sm);
+            if(sr) aq_totalRetirado = parseInt(sr);
+            aq_histStates = [{ c: JSON.parse(JSON.stringify(aq_conteo)), r: aq_totalRetirado, m: JSON.parse(JSON.stringify(aq_movi)) }];
+            aq_histIdx = 0;
+            aq_fetchEsperadoData();
+            aq_fetchAnticipos();
+        }
+
+        function aq_fmt(n) { return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(Math.round(n || 0)); }
+
+        function aq_evalFormula(str, valDenom) {
+            let clean = str.toString().replace(/[^0-9+\-*/().]/g, '');
+            if(!clean) return { neto: 0, retirosUnits: 0, retirosMonetarios: 0 };
+            try {
+                let neto = Function('"use strict"; return (' + clean + ')')();
+                let retiroUnits = 0;
+                clean.split(/(?=[+-])/).forEach(t => { let n = parseFloat(t); if(n < 0) retiroUnits += Math.abs(n); });
+                return { neto, retirosUnits: retiroUnits, retirosMonetarios: retiroUnits * valDenom };
+            } catch(e) { return { neto: 0, retirosUnits: 0, retirosMonetarios: 0 }; }
+        }
+
+        function aq_saveState() {
+            if(aq_histIdx < aq_histStates.length - 1) aq_histStates = aq_histStates.slice(0, aq_histIdx + 1);
+            aq_histStates.push({ c: JSON.parse(JSON.stringify(aq_conteo)), r: aq_totalRetirado, m: JSON.parse(JSON.stringify(aq_movi)) });
+            aq_histIdx = aq_histStates.length - 1;
+            document.getElementById('aq-undo-btn').disabled = aq_histIdx <= 0;
+            document.getElementById('aq-redo-btn').disabled = true;
+            localStorage.setItem(AQ_SK_CONTEO, JSON.stringify(aq_conteo));
+            localStorage.setItem(AQ_SK_MOVI, JSON.stringify(aq_movi));
+            localStorage.setItem(AQ_SK_RETIROS, aq_totalRetirado.toString());
+        }
+
+        function aq_undoAction() {
+            if(aq_histIdx > 0) {
+                aq_histIdx--;
+                const s = aq_histStates[aq_histIdx];
+                aq_conteo = s.c; aq_totalRetirado = s.r; aq_movi = s.m;
+                document.getElementById('aq-undo-btn').disabled = aq_histIdx === 0;
+                document.getElementById('aq-redo-btn').disabled = false;
+                aq_generarCampos();
+            }
+        }
+
+        function aq_redoAction() {
+            if(aq_histIdx < aq_histStates.length - 1) {
+                aq_histIdx++;
+                const s = aq_histStates[aq_histIdx];
+                aq_conteo = s.c; aq_totalRetirado = s.r; aq_movi = s.m;
+                document.getElementById('aq-undo-btn').disabled = false;
+                document.getElementById('aq-redo-btn').disabled = aq_histIdx === aq_histStates.length - 1;
+                aq_generarCampos();
+            }
+        }
+
+        function aq_generarCampos() {
+            const form = document.getElementById('aq-arqueo-form');
+            if(!form) return;
+            form.innerHTML = '';
+            AQ_DENOMINACIONES.forEach(val => {
+                if(!aq_conteo[val]) aq_conteo[val] = 0;
+                const row = document.createElement('div');
+                row.className = 'aq-denominacion-row';
+                row.innerHTML = `<div class="aq-denom-main">
+                    <label>${aq_fmt(val)}</label>
+                    <div class="aq-btn-group">
+                        <button style="background:#ef4444;" onclick="aq_actCant(${val}, -1)">−</button>
+                        <input type="text" id="aq-inp-${val}" placeholder="Fórmula..." style="width:110px; text-align:center; font-size:0.8em; padding:4px; border:1px solid #e2e8f0; border-radius:6px;">
+                        <button style="background:#10b981;" onclick="aq_actCant(${val}, 1)">+</button>
+                    </div>
+                    <div class="aq-total-display">
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <input type="number" class="aq-cantidad-input" id="aq-cur-${val}" value="${aq_conteo[val]}" onchange="aq_manualEdit(${val})">
+                            <button onclick="aq_abrirModalEdicion(${val})" style="background:#64748b; border:none; color:white; width:28px; height:28px; border-radius:4px; cursor:pointer;"><i class="fas fa-pen" style="font-size:0.7em;"></i></button>
+                        </div>
+                        <div style="font-weight:bold; font-size:0.85em;">${aq_fmt(val * aq_conteo[val])}</div>
+                    </div>
+                </div>
+                <div class="aq-denom-trace"><span>${aq_movi[val] || 'Sin detalle'}</span></div>`;
+                form.appendChild(row);
+            });
+            aq_realizarArqueo();
+        }
+
+        function aq_actCant(val, sign) {
+            const inp = document.getElementById(`aq-inp-${val}`);
+            const formula = inp.value.trim() || "1";
+            const res = aq_evalFormula(formula, val);
+            if(sign === -1 && res.neto > 0) {
+                if(!confirm(`⚠️ CONFIRMAR RETIRO\n\n${res.neto} unidades de ${aq_fmt(val)}\nTotal: ${aq_fmt(res.neto * val)}\n\n¿Proceder?`)) return;
+            }
+            aq_saveState();
+            if(sign === -1) { aq_totalRetirado += Math.abs(res.neto) * val; aq_conteo[val] -= res.neto; }
+            else { aq_conteo[val] += res.neto; aq_totalRetirado += res.retirosMonetarios; }
+            let prev = aq_movi[val] || "";
+            let conector = prev === "" ? (sign === -1 ? "-" : "") : (sign === 1 ? "+" : "-");
+            aq_movi[val] = prev + conector + "(" + formula + ")";
+            inp.value = '';
+            aq_generarCampos();
+        }
+
+        function aq_manualEdit(val) {
+            const inp = document.getElementById(`aq-cur-${val}`);
+            const nc = parseInt(inp.value) || 0;
+            aq_saveState();
+            if(nc < aq_conteo[val]) aq_totalRetirado += (aq_conteo[val] - nc) * val;
+            aq_conteo[val] = nc; aq_movi[val] = "Manual"; aq_generarCampos();
+        }
+
+        function aq_abrirModalEdicion(val) {
+            aq_denomEditando = val;
+            document.getElementById('aq-formula-input').value = aq_movi[val] || "";
+            document.getElementById('aq-modalEdicion').style.display = 'block';
+        }
+
+        function aq_guardarEdicionDetalle() {
+            const val = aq_denomEditando;
+            const fNueva = document.getElementById('aq-formula-input').value;
+            const fVieja = aq_movi[val] || "";
+            const resNueva = aq_evalFormula(fNueva, val);
+            const resVieja = aq_evalFormula(fVieja, val);
+            aq_saveState();
+            aq_totalRetirado -= resVieja.retirosMonetarios;
+            aq_totalRetirado += resNueva.retirosMonetarios;
+            if(aq_totalRetirado < 0) aq_totalRetirado = 0;
+            aq_conteo[val] = resNueva.neto; aq_movi[val] = fNueva;
+            aq_generarCampos(); document.getElementById('aq-modalEdicion').style.display = 'none';
+        }
+
+        function aq_calcTotal() { let t = 0; AQ_DENOMINACIONES.forEach(v => t += v * (aq_conteo[v] || 0)); return t; }
+
+        function aq_realizarArqueo() {
+            const total = Math.round(aq_calcTotal());
+            const espEl = document.getElementById('aq-esperadoDisplay');
+            const espVal = Math.round(parseInt((espEl.textContent || '0').replace(/[^0-9-]/g, ''))) || 0;
+            const dif = Math.round((total + aq_totalAnticipos) - espVal);
+
+            document.getElementById('aq-total-contado').textContent = aq_fmt(total);
+            document.getElementById('aq-total-retiros').textContent = aq_fmt(aq_totalRetirado);
+
+            const difEl = document.getElementById('aq-diferencia');
+            difEl.textContent = aq_fmt(dif);
+            difEl.style.color = dif === 0 ? '#10b981' : (dif > 0 ? '#f59e0b' : '#ef4444');
+
+            const msgEl = document.getElementById('aq-mensaje-arqueo');
+            msgEl.className = 'aq-mensaje ' + (dif === 0 ? 'cuadrado' : (dif > 0 ? 'sobrante' : 'faltante'));
+            msgEl.textContent = dif === 0 ? "CUADRADO 🎉" : (dif > 0 ? "SOBRA ⚠️" : "FALTA 🚨");
+
+            let h = '<table class="aq-table"><thead><tr><th>Denom.</th><th>Cant.</th><th>Subtotal</th></tr></thead><tbody>';
+            let any = false;
+            AQ_DENOMINACIONES.forEach(v => { if(aq_conteo[v] > 0) { any = true; h += `<tr><td>${aq_fmt(v)}</td><td>${aq_conteo[v]}</td><td>${aq_fmt(v*aq_conteo[v])}</td></tr>`; } });
+            document.getElementById('aq-desglose-contado').innerHTML = any ? h + '</tbody></table>' : '<p style="color:#999; text-align:center;">Sin ingresos.</p>';
+        }
+
+        async function aq_fetchEsperadoData() {
+            try {
+                const res = await fetch(AQ_URL_GET);
+                const data = await res.json();
+                const espVal = Math.round(data.totalAcumulado / 100);
+                const totDay = Math.round(data.totalLastDivisorDay / 100);
+                const ultimoDivisor = parseFloat(data.lastDivisor) || 1.0;
+                document.getElementById('aq-esperadoDisplay').textContent = aq_fmt(espVal);
+                document.getElementById('aq-divisor-day-total').textContent = aq_fmt(totDay);
+                document.getElementById('aq-divisor-value').textContent = ultimoDivisor.toFixed(2);
+                document.getElementById('aq-punto-del-dia').textContent = aq_fmt(totDay / ultimoDivisor);
+                document.getElementById('aq-divisor-date').textContent = "Fecha: " + data.lastDivisorDate;
+                aq_desgloseEsperado = data.desgloseEsperado || [];
+                let h = '<table class="aq-table"><thead><tr><th>Tipo</th><th>Monto</th></tr></thead><tbody>';
+                aq_desgloseEsperado.forEach(i => { h += `<tr><td>${i.tipo}</td><td>${aq_fmt(i.monto/100)}</td></tr>`; });
+                document.getElementById('aq-desglose-esperado').innerHTML = h + '</tbody></table>';
+                // Actualizar total puntos desde historial
+                aq_fetchPuntosHistorial();
+                aq_realizarArqueo();
+            } catch(e) { console.error('Arqueo esperado error:', e); }
+        }
+
+        async function aq_fetchPuntosHistorial() {
+            try {
+                const res = await fetch(AQ_URL_GET + '?action=get');
+                const json = await res.json();
+                let totalPts = 0, grouped = {};
+                json.data.forEach(r => {
+                    const d = r.fecha.split(' ')[0];
+                    if(!grouped[d]) grouped[d] = { total: 0, div: r.divisor || 1 };
+                    grouped[d].total += r.monto;
+                });
+                Object.keys(grouped).forEach(d => { totalPts += grouped[d].total / grouped[d].div; });
+                document.getElementById('aq-suma-total-puntos').textContent = Math.round(totalPts).toLocaleString();
+                document.getElementById('aq-division-result').textContent = Math.round(totalPts).toLocaleString();
+            } catch(e) {}
+        }
+
+        async function aq_fetchAnticipos(silent = false) {
+            try {
+                const response = await fetch(URL_SOCIOS, { method: 'POST', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: 'getAllDataDesdeSheets' }) });
+                const json = await response.json();
+                let objetoAnticipos = json.data?.anticipos || json.anticipos || json.result?.anticipos;
+                if(objetoAnticipos) {
+                    const procesados = new Set(); let suma = 0;
+                    Object.entries(objetoAnticipos).forEach(([idSocio, lista]) => {
+                        if(Array.isArray(lista)) lista.forEach(item => {
+                            const monto = parseFloat(item.cantidad) || 0;
+                            if(monto === 0) return;
+                            let fechaSimple = item.fecha?.includes('T') ? item.fecha.split('T')[0] : item.fecha;
+                            const firma = `${idSocio}|${fechaSimple}|${monto}`;
+                            if(procesados.has(firma)) return;
+                            procesados.add(firma); suma += monto;
+                        });
+                    });
+                    aq_totalAnticipos = Math.round(suma);
+                    document.getElementById('aq-total-anticipos').textContent = aq_fmt(aq_totalAnticipos);
+                }
+            } catch(e) {}
+            finally { if(!silent) aq_realizarArqueo(); }
+        }
+
+        function aq_crearBackupLocal() {
+            const totalCaja = Math.round(aq_calcTotal());
+            const espVal = Math.round(parseInt((document.getElementById('aq-esperadoDisplay').textContent || '0').replace(/[^0-9-]/g, ''))) || 0;
+            const dif = Math.round((totalCaja + aq_totalAnticipos) - espVal);
+            const backup = { fecha: new Date().toLocaleString(), totalContado: totalCaja, esperado: espVal, anticipos: Math.round(aq_totalAnticipos), retiros: Math.round(aq_totalRetirado), diferencia: dif, conteo: JSON.parse(JSON.stringify(aq_conteo)), rastros: JSON.parse(JSON.stringify(aq_movi)) };
+            let historial = JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || [];
+            historial.unshift(backup);
+            if(historial.length > 20) historial.pop();
+            localStorage.setItem(AQ_SK_BACKUP, JSON.stringify(historial));
+        }
+
+        function aq_resetear() {
+            aq_conteo = {}; aq_movi = {}; aq_totalRetirado = 0;
+            aq_histStates = []; aq_histIdx = -1;
+            localStorage.removeItem(AQ_SK_CONTEO); localStorage.removeItem(AQ_SK_MOVI); localStorage.removeItem(AQ_SK_RETIROS);
+            aq_generarCampos(); aq_realizarArqueo();
+        }
+
+        function aq_abrirModalConteo() { aq_generarCampos(); document.getElementById('aq-modalConteo').style.display = 'block'; }
+
+        function aq_abrirModalBackup() {
+            const historial = JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || [];
+            const container = document.getElementById('aq-backup-list');
+            if(historial.length === 0) { container.innerHTML = '<p style="color:#999;">Sin registros archivados.</p>'; }
+            else {
+                let html = '';
+                historial.forEach((b, index) => {
+                    const colorDif = b.diferencia >= 0 ? '#10b981' : '#ef4444';
+                    const signo = b.diferencia > 0 ? '+' : '';
+                    const rendido = Math.round((b.totalContado || 0) + (b.anticipos || 0));
+                    html += `<div class="arqueo-card" style="border-left:4px solid #8b5cf6; margin-bottom:15px; padding:15px;">
+                        <div style="border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:bold; color:#64748b;">${b.fecha}</span>
+                            <button onclick="aq_borrarBackup(${index})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1em;" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.9em; margin-bottom:10px;">
+                            <div>💰 En Caja:<br><b>${aq_fmt(b.totalContado)}</b></div>
+                            <div>📉 Retiros:<br><b style="color:#ef4444">${aq_fmt(b.retiros||0)}</b></div>
+                            <div>🧾 Anticipos:<br><b style="color:#8b5cf6">${aq_fmt(b.anticipos||0)}</b></div>
+                            <div>📝 Rendido:<br><b style="color:#2563eb">${aq_fmt(rendido)}</b></div>
+                        </div>
+                        <div style="background:${b.diferencia>=0?'#dcfce7':'#fee2e2'}; padding:10px; border-radius:6px; text-align:center; font-weight:bold; color:${colorDif}; border:1px solid ${colorDif}">
+                            Diferencia: ${signo}${aq_fmt(b.diferencia)} (Esperado: ${aq_fmt(b.esperado)})
+                        </div>
+                        <details style="font-size:0.85em; margin-top:10px; border-top:1px dashed #e2e8f0; padding-top:5px;">
+                            <summary style="cursor:pointer; color:#2563eb; font-weight:600;">Ver Desglose Billetes</summary>
+                            <table style="width:100%; margin-top:5px;">
+                                ${AQ_DENOMINACIONES.map(v => (b.conteo[v]>0||(b.rastros&&b.rastros[v]))?`<tr><td>${aq_fmt(v)}</td><td>${b.conteo[v]}</td><td style="font-family:monospace; color:#2563eb">${(b.rastros?b.rastros[v]:'')||'-'}</td></tr>`:'').join('')}
+                            </table>
+                        </details>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            }
+            document.getElementById('aq-modalBackup').style.display = 'block';
+        }
+
+        function aq_borrarBackup(index) {
+            if(!confirm('¿Eliminar este registro archivado?')) return;
+            let historial = JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || [];
+            historial.splice(index, 1);
+            localStorage.setItem(AQ_SK_BACKUP, JSON.stringify(historial));
+            aq_abrirModalBackup();
+        }
+
+        async function aq_recuperarDeNube() {
+            toggleLoader(true, 'Cargando arqueo...');
+            try {
+                const res = await fetch(AQ_URL_POST + '?action=getLast');
+                const json = await res.json();
+                if(json.status === 'success') {
+                    aq_conteo = json.data.conteoActual || {};
+                    aq_movi = json.data.movimientoDisplay || {};
+                    aq_totalRetirado = json.data.totalRetirado || 0;
+                    aq_generarCampos(); showToast('✅ Datos cargados desde nube', 'success');
+                }
+            } catch(e) { showToast('Error al cargar', 'error'); } finally { toggleLoader(false); }
+        }
+
+        async function aq_guardarEnNube() {
+            if(!confirm('☁️ ¿Subir arqueo y reiniciar?')) return;
+            toggleLoader(true, 'Guardando arqueo...');
+            const espVal = Math.round(parseInt((document.getElementById('aq-esperadoDisplay').textContent||'0').replace(/[^0-9-]/g,''))) || 0;
+            const totalCaja = Math.round(aq_calcTotal());
+            const payload = { conteoActual: aq_conteo, totalRetirado: Math.round(aq_totalRetirado), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
+            try {
+                const resp = await fetch(AQ_URL_POST, { method: 'POST', body: JSON.stringify(payload) });
+                const json = await resp.json();
+                if(json.status === 'success') { aq_crearBackupLocal(); showToast('✅ Guardado exitosamente', 'success'); aq_resetear(); }
+            } catch(e) { showToast('Error al guardar', 'error'); } finally { toggleLoader(false); }
+        }
+
+        async function aq_archivarEnNube() {
+            if(!confirm('🚨 ¿ARCHIVAR INFORME FINAL?')) return;
+            toggleLoader(true, 'Archivando...');
+            const espVal = Math.round(parseInt((document.getElementById('aq-esperadoDisplay').textContent||'0').replace(/[^0-9-]/g,''))) || 0;
+            const totalCaja = Math.round(aq_calcTotal());
+            const payload = { action: 'archive', conteoActual: aq_conteo, totalRetirado: Math.round(aq_totalRetirado), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
+            try {
+                const resp = await fetch(AQ_URL_POST + '?action=archive', { method: 'POST', body: JSON.stringify(payload) });
+                if(resp.ok) { aq_crearBackupLocal(); aq_resetear(); showToast('✅ Informe archivado correctamente', 'success'); }
+            } catch(e) { showToast('Error al archivar', 'error'); } finally { toggleLoader(false); }
+        }
+
+        function aq_openStatsModal() {
+            const container = document.getElementById('aq-stats-content');
+            if(!aq_desgloseEsperado.length) { container.innerHTML = '<p style="color:#999;">No hay datos de desglose. Sincroniza primero.</p>'; document.getElementById('aq-modalStats').style.display='block'; return; }
+            let total = 0; aq_desgloseEsperado.forEach(i => total += i.monto);
+            const sorted = [...aq_desgloseEsperado].sort((a,b) => b.monto - a.monto);
+            const avg = total / aq_desgloseEsperado.length;
+            let h = `<div class="aq-stats-grid">
+                <div class="aq-stat-card"><h4>🏆 Top Fuente</h4><div style="font-weight:700; color:#2563eb;">${sorted[0].tipo}</div><div>${aq_fmt(sorted[0].monto/100)}</div></div>
+                <div class="aq-stat-card"><h4>📈 Promedio</h4><div style="font-weight:700;">${aq_fmt(avg/100)}</div><div>Total: ${aq_fmt(total/100)}</div></div>
+            </div><h3 style="font-size:1rem; border-bottom:1px solid #e2e8f0; padding-bottom:5px; margin-top:20px;">Distribución Porcentual</h3>`;
+            sorted.forEach(item => {
+                const p = ((item.monto/total)*100).toFixed(1);
+                h += `<div class="aq-chart-row"><div style="width:120px; font-size:0.8em; overflow:hidden">${item.tipo}</div><div class="aq-chart-bar-area"><div class="aq-chart-bar" style="width:${p}%">${p}%</div></div><div style="width:100px; text-align:right;">${aq_fmt(item.monto/100)}</div></div>`;
+            });
+            container.innerHTML = h;
+            document.getElementById('aq-modalStats').style.display = 'block';
+        }
+
+        // Cerrar modales del arqueo al clic fuera
+        window.addEventListener('click', function(e) {
+            ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el && e.target === el) el.style.display = 'none';
+            });
+        });
     </script>
 </body>
 </html>
