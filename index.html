@@ -24,16 +24,50 @@
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: var(--text-color); }
         .container { max-width: 1100px; margin: 0 auto; padding-bottom: 80px; }
 
-        /* Loader */
+        /* ── Loader moderno: barra top + toast acción ── */
         #globalLoader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.8); z-index: 3000;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: fixed; top: 0; left: 0; width: 100%; height: 4px;
+            z-index: 9000; display: none; pointer-events: none;
         }
-        .spinner {
-            width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid var(--secondary); border-radius: 50%; animation: spin 1s linear infinite;
+        #loaderBar {
+            height: 4px; width: 0%;
+            background: linear-gradient(90deg, var(--secondary), var(--success));
+            border-radius: 0 4px 4px 0;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 8px rgba(52,152,219,0.6);
         }
+        #loaderActionBadge {
+            position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+            background: rgba(44,62,80,0.92); color: white;
+            padding: 7px 18px; border-radius: 20px; font-size: 0.82em; font-weight: 700;
+            z-index: 9001; display: none; pointer-events: none;
+            backdrop-filter: blur(6px); white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            animation: badgeIn 0.2s ease;
+        }
+        @keyframes badgeIn { from{opacity:0;transform:translateX(-50%) translateY(-8px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .spinner { width:20px; height:20px; border:3px solid #f3f3f3; border-top:3px solid var(--secondary); border-radius:50%; animation:spin 0.8s linear infinite; display:inline-block; }
+
+        /* ── Skeletons ── */
+        @keyframes sk-shimmer {
+            0%   { background-position: -400px 0; }
+            100% { background-position:  400px 0; }
+        }
+        .sk {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 800px 100%;
+            animation: sk-shimmer 1.4s infinite linear;
+            border-radius: 6px;
+        }
+        .sk-card {
+            background: white; border-radius: 15px; padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #eee;
+            margin-bottom: 12px;
+        }
+        .sk-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+        .sk-circle { border-radius:50% !important; flex-shrink:0; }
+        .sk-line { height:12px; border-radius:6px; }
 
         /* Navegación */
         .nav-tabs { display: flex; margin-bottom: 25px; border-bottom: 2px solid #ddd; gap: 10px; overflow-x: auto; }
@@ -206,6 +240,12 @@
         /* Skeleton shimmer */
         @keyframes shimmer { from { background-color: #eee; } to { background-color: #ddd; } }
 
+        /* Notas animaciones */
+        @keyframes nota-in { from{opacity:0;transform:translateY(-10px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+        @keyframes nota-out { from{opacity:1;transform:translateX(0);max-height:200px;margin-bottom:10px;padding:15px 16px} to{opacity:0;transform:translateX(40px);max-height:0;margin-bottom:0;padding:0 16px} }
+        .nota-card { background:white; border-radius:10px; padding:15px 16px; margin-bottom:10px; box-shadow:0 1px 5px rgba(0,0,0,0.07); border-left:4px solid var(--secondary); overflow:hidden; animation:nota-in 0.32s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+        .nota-card.saliendo { animation:nota-out 0.28s ease forwards; pointer-events:none; }
+
         /* ===== ARQUEO DE CAJA ===== */
         @keyframes aq-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
         .aq-syncing { animation: aq-pulse 1s ease-in-out infinite; background:#f59e0b !important; }
@@ -364,10 +404,11 @@
         </div>
     </div>
 
-    <div id="globalLoader" style="display:none;">
-        <div class="spinner"></div>
-        <p style="margin-top:15px; color:#555; font-weight:bold;" id="loaderText">Cargando...</p>
+    <!-- Loader moderno: barra + badge -->
+    <div id="globalLoader">
+        <div id="loaderBar"></div>
     </div>
+    <div id="loaderActionBadge"><span class="spinner"></span> <span id="loaderText">Procesando...</span></div>
 
     <div class="container">
         <div id="toast-container"></div>
@@ -386,6 +427,7 @@
             <button class="nav-btn" onclick="switchTab('gestion')">Anticipos y Ausencias</button>
             <button class="nav-btn" onclick="switchTab('recaudacion')">Montos Recaudados</button>
             <button class="nav-btn" onclick="switchTab('arqueo')">💰 Arqueo de Caja</button>
+            <button class="nav-btn" onclick="switchTab('notas')">📝 Notas Admin</button>
         </div>
         
         <!-- PESTAÑA 1: REGISTRO DE SOCIOS -->
@@ -545,7 +587,7 @@
                     <h3>Buscar Socio</h3>
                     <input type="text" id="buscadorGestion" placeholder="Escribe nombre o apellido..." onkeyup="filtrarSociosGestion()" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ddd; border-radius:8px;">
                     <div id="listaResultados" class="search-results">
-                        <div style="color:#999; font-style:italic; padding:10px;">Cargando lista...</div>
+                        <div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div><div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div><div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div><div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div>
                     </div>
                 </div>
 
@@ -808,8 +850,8 @@
             <h3 style="color:var(--primary); margin-bottom:20px;">Historial Detallado por Fecha</h3>
 
             <div id="contenedorFechas">
-                <div style="text-align:center; padding:40px; color:#999;">
-                    Cargando historial detallado...
+                <div id="skRecaudaciones">
+                    <div class="sk-card"><div class="sk sk-line" style="width:40%;margin-bottom:10px;height:16px"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div></div></div><div class="sk-card"><div class="sk sk-line" style="width:40%;margin-bottom:10px;height:16px"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div></div></div><div class="sk-card"><div class="sk sk-line" style="width:40%;margin-bottom:10px;height:16px"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div></div></div>
                 </div>
             </div>
         </div>
@@ -933,6 +975,28 @@
 
     </div>
 
+        <!-- PESTAÑA 5: NOTAS DE ADMINISTRACIÓN -->
+        <div id="tab-notas" class="tab-content">
+            <div style="max-width:700px; margin:0 auto;">
+                <!-- Formulario nueva nota -->
+                <div style="background:white; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border:1px solid #eee;">
+                    <h3 style="margin:0 0 12px 0; color:var(--primary); font-size:1em;">✏️ Nueva Nota</h3>
+                    <textarea id="notaInputMsg" rows="3" placeholder="Escribe una nota para el equipo..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:0.95em; resize:vertical; box-sizing:border-box; font-family:inherit;"></textarea>
+                    <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+                        <button onclick="notasPublicar()" class="btn-submit" style="padding:9px 24px;">📤 Publicar</button>
+                    </div>
+                </div>
+                <!-- Lista de notas -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h3 style="margin:0; color:var(--primary); font-size:1em;">📋 Notas guardadas</h3>
+                    <button onclick="notasCargar()" style="background:none; border:1px solid #ddd; border-radius:8px; padding:5px 12px; font-size:0.8em; cursor:pointer; color:#666;">🔄 Actualizar</button>
+                </div>
+                <div id="notasListaContainer">
+                    <div style="text-align:center; padding:30px; color:#aaa;">Cargando notas...</div>
+                </div>
+            </div>
+        </div>
+
     <script>
         const URL_SOCIOS = "https://script.google.com/macros/s/AKfycbyr447pMQtsKoBfp8qTcB1uyE3rORhgPPmZM6Fgia3BgmIvtlZ_h04uGZrmx_HwubHQ/exec";
         const URL_RECAUDACIONES = "https://script.google.com/macros/s/AKfycbz_kCb4aEe437zHGbRqnjCibw1NtAqfCbTNmsVPn9jaZOPBFaZ6-FwmiTLqVxq39X1P/exec"; 
@@ -982,9 +1046,37 @@
             if(!URL_SOCIOS || URL_SOCIOS.includes('PEGA_AQUI')) {
                 alert('Falta configurar URL_SOCIOS');
             } else {
-                fetchSociosDeGoogle();
-                cargarRecaudaciones(true);
+                precargarTodo();
             }
+        }
+
+        // Precarga paralela de TODOS los datos al entrar
+        async function precargarTodo() {
+            // 1. Mostrar datos en cache INMEDIATAMENTE (sin esperar red)
+            fetchSociosDeGoogle();
+            cargarRecaudaciones(true);
+
+            // 2. En paralelo, precargar el resto silenciosamente
+            //    para que al llegar a esas secciones ya estén listos
+            await Promise.allSettled([
+                // Notas: traer y cachear
+                fetch(URL_RECAUDACIONES + '?action=getNotes&t=' + Date.now())
+                    .then(r => r.json())
+                    .then(json => {
+                        const notas = (json.data||json.result||[]).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+                        guardarCache(CACHE_KEY_NOTAS, notas);
+                    }).catch(() => {}),
+
+                // Arqueo: precargar datos esperados
+                fetch(AQ_URL_GET)
+                    .then(r => r.json())
+                    .then(data => {
+                        // Guardar en memoria para que aq_initSiNoIniciado los use
+                        if (data && data.totalAcumulado !== undefined) {
+                            localStorage.setItem('fondo_cache_aq_esperado', JSON.stringify({ ts: Date.now(), data }));
+                        }
+                    }).catch(() => {}),
+            ]);
         }
 
         function intentarLogin() {
@@ -1116,6 +1208,7 @@
             else if(tabName === 'gestion') { btns[1].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); renderizarListaBusqueda(); }
             else if(tabName === 'recaudacion') { btns[2].classList.add('active'); fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones(); }
             else if(tabName === 'arqueo') { btns[3].classList.add('active'); fabRec.style.display = 'none'; aq_initSiNoIniciado(); aq_arrancarSync(); }
+            else if(tabName === 'notas') { btns[4].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); notasCargar(); }
         }
 
         function abrirModalRegistro() { document.getElementById('modalRegistro').style.display = 'block'; if(!isEditing) { document.getElementById('registroForm').reset(); document.getElementById('editId').value = ''; document.getElementById('modalTitle').innerText = 'Nuevo Socio'; document.getElementById('btnSubmit').innerText = 'Registrar Socio'; } }
@@ -1382,10 +1475,30 @@
             if (event.target == document.getElementById('modalConfirmarBorrar')) document.getElementById('modalConfirmarBorrar').style.display='none';
         }
 
-        function toggleLoader(show, text="Cargando...") {
-            const l = document.getElementById('globalLoader');
-            document.getElementById('loaderText').innerText = text;
-            l.style.display = show ? 'flex' : 'none';
+        let _loaderTimer = null;
+        function toggleLoader(show, text='Procesando...') {
+            const bar    = document.getElementById('loaderBar');
+            const loader = document.getElementById('globalLoader');
+            const badge  = document.getElementById('loaderActionBadge');
+            const txt    = document.getElementById('loaderText');
+            if (show) {
+                if (txt) txt.textContent = text;
+                // Animar barra: arranca en 0, sube a 80% rápido, se detiene ahí
+                if (bar) { bar.style.transition = 'none'; bar.style.width = '0%'; }
+                loader.style.display = 'block';
+                badge.style.display  = 'flex';
+                clearTimeout(_loaderTimer);
+                _loaderTimer = setTimeout(() => { if(bar) { bar.style.transition = 'width 0.8s ease'; bar.style.width = '80%'; } }, 20);
+            } else {
+                // Completar barra al 100% y luego ocultar
+                if (bar) { bar.style.transition = 'width 0.2s ease'; bar.style.width = '100%'; }
+                badge.style.display = 'none';
+                clearTimeout(_loaderTimer);
+                _loaderTimer = setTimeout(() => {
+                    loader.style.display = 'none';
+                    if (bar) { bar.style.transition = 'none'; bar.style.width = '0%'; }
+                }, 250);
+            }
         }
 
         async function callApiSocios(action, payload = null) {
@@ -1403,9 +1516,10 @@
         }
 
         const CACHE_KEY_SOCIOS = 'fondo_cache_socios';
-        const CACHE_KEY_DIAS = 'fondo_cache_dias';
-        const CACHE_KEY_REC = 'fondo_cache_recaudacion';
-        const CACHE_TTL = 60 * 60 * 1000; // 1 hora
+        const CACHE_KEY_DIAS   = 'fondo_cache_dias';
+        const CACHE_KEY_REC    = 'fondo_cache_recaudacion';
+        const CACHE_KEY_NOTAS  = 'fondo_cache_notas';
+        const CACHE_TTL = 30 * 60 * 1000; // 30 minutos (bajado de 1h para datos más frescos)
 
         function guardarCache(key, data) {
             try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
@@ -1536,8 +1650,28 @@
             const mesPasado  = mesActual === 0 ? 11 : mesActual - 1;
             const anioPasado = mesActual === 0 ? anioActual - 1 : anioActual;
 
-            const subieronMesPasado = [];
-            const subenEsteMes      = [];
+            const subieronMesPasado     = [];
+            const subenEsteMes          = [];
+            const subenProximoPeriodo   = [];
+            const ingresaronEstePeriodo = [];
+
+            // Período actual: 15/mes → 14/mes+1
+            let periodoInicio, periodoFin;
+            if (diaActual >= 15) {
+                periodoInicio = new Date(anioActual, mesActual, 15);
+                periodoFin    = new Date(anioActual, mesActual + 1, 14);
+            } else {
+                periodoInicio = new Date(anioActual, mesActual - 1, 15);
+                periodoFin    = new Date(anioActual, mesActual, 14);
+            }
+            const periodoInicioISO = periodoInicio.toISOString().split('T')[0];
+            const periodoFinISO    = periodoFin.toISOString().split('T')[0];
+
+            // Próximo período: 15/mes+1 → 14/mes+2
+            const proxPeriodoInicio = new Date(periodoFin.getFullYear(), periodoFin.getMonth(), 15);
+            const proxPeriodoFin    = new Date(periodoFin.getFullYear(), periodoFin.getMonth() + 1, 14);
+            const proxMes  = proxPeriodoInicio.getMonth();   // 0-11
+            const proxAnio = proxPeriodoInicio.getFullYear();
 
             cacheSocios.forEach(socio => {
                 if (!socio.fechaIngreso) return;
@@ -1596,12 +1730,35 @@
                         }
                     }
                 }
+                // ── GRUPO 3: ingresaron en el período actual (15→14) ──────
+                const fechaIngNorm = socio.fechaIngreso || '';
+                if (fechaIngNorm >= periodoInicioISO && fechaIngNorm <= periodoFinISO) {
+                    ingresaronEstePeriodo.push({ ...socio });
+                }
+
+                // ── GRUPO 4: suben en el PRÓXIMO período (15/mes+1 → 14/mes+2) ──
+                if (mesIngreso === proxMes) {
+                    const aniosCumpleProx = proxAnio - anioIngreso;
+                    if (aniosCumpleProx >= 1) {
+                        const puntosAntes   = calcularPuntosPorAnios(aniosCumpleProx - 1, socio.area);
+                        const puntosDespues = calcularPuntosPorAnios(aniosCumpleProx, socio.area);
+                        if (puntosDespues > puntosAntes) {
+                            subenProximoPeriodo.push({
+                                ...socio,
+                                puntosNuevos: puntosDespues,
+                                puntosAntes,
+                                diaIngreso,
+                                aniosCumpleProx
+                            });
+                        }
+                    }
+                }
             });
 
             const panel = document.getElementById('panelEscalamientos');
             const lista  = document.getElementById('listaEscalamientos');
 
-            if (!subieronMesPasado.length && !subenEsteMes.length) {
+            if (!subieronMesPasado.length && !subenEsteMes.length && !subenProximoPeriodo.length && !ingresaronEstePeriodo.length) {
                 panel.style.display = 'none';
                 const contEl = document.getElementById('contadorEscalamientos');
                 if(contEl) contEl.innerText = '🏆';
@@ -1609,7 +1766,7 @@
             }
 
             panel.style.display = 'block';
-            const totalAvisos = subieronMesPasado.length + subenEsteMes.length;
+            const totalAvisos = subieronMesPasado.length + subenEsteMes.length + subenProximoPeriodo.length + ingresaronEstePeriodo.length;
             const contEl = document.getElementById('contadorEscalamientos');
             if(contEl) contEl.innerText = totalAvisos;
             let html = '';
@@ -1652,6 +1809,56 @@
             html += renderGrupo('Subieron el mes pasado — aplicar si aún no se hizo', '#e67e22', '⚠️', subieronMesPasado);
             html += renderGrupo('Suben este mes', '#27ae60', '📅', subenEsteMes);
 
+            // Grupo 4: suben el próximo período — informativo, sin botón activo
+            if (subenProximoPeriodo.length) {
+                const pxIniVis = proxPeriodoInicio.toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit'});
+                const pxFinVis = proxPeriodoFin.toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit'});
+                html += '<div style="margin-bottom:12px;">';
+                html += '<div style="font-size:0.78em;font-weight:800;text-transform:uppercase;color:#7c3aed;letter-spacing:0.5px;margin-bottom:8px;">'
+                      + '🔮 Suben el próximo período (' + pxIniVis + ' → ' + pxFinVis + ')</div>';
+                subenProximoPeriodo.forEach(s => {
+                    const areaNom = s.area.charAt(0).toUpperCase() + s.area.slice(1);
+                    const diff    = s.puntosNuevos - s.puntosAntes;
+                    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;'
+                          + 'background:white;border-radius:8px;padding:10px 13px;margin-bottom:6px;'
+                          + 'border-left:4px solid #7c3aed;box-shadow:0 1px 4px rgba(0,0,0,0.07);opacity:0.9;">';
+                    html += '<div>'
+                          + '<span style="font-weight:700;font-size:0.95em;">' + s.nombre + ' ' + s.apellido + '</span>'
+                          + '<span style="font-size:0.75em;color:#888;margin-left:6px;">' + areaNom + ' — día ' + s.diaIngreso + '</span>'
+                          + '<div style="font-size:0.8em;color:#555;margin-top:3px;">'
+                          + '<span style="color:#999;">' + s.puntosAntes + ' pts</span>'
+                          + ' &rarr; <strong style="color:#7c3aed;">' + s.puntosNuevos + ' pts</strong>'
+                          + '<span style="background:#ede9fe;color:#7c3aed;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:4px;">+' + diff + '</span>'
+                          + '</div></div>'
+                          + '<span style="background:#ede9fe;color:#7c3aed;font-size:0.75em;font-weight:800;padding:5px 11px;border-radius:7px;">Próximo período</span>'
+                          + '</div>';
+                });
+                html += '</div>';
+            }
+
+            // Grupo ingresados: sin botón de subir, solo informativo
+            if (ingresaronEstePeriodo.length) {
+                const pIniVis = periodoInicioISO.split('-').reverse().join('/');
+                const pFinVis = periodoFinISO.split('-').reverse().join('/');
+                html += '<div style="margin-bottom:12px;">';
+                html += '<div style="font-size:0.78em;font-weight:800;text-transform:uppercase;color:#2563eb;letter-spacing:0.5px;margin-bottom:8px;">🆕 Ingresaron este período (' + pIniVis + ' → ' + pFinVis + ')</div>';
+                ingresaronEstePeriodo.forEach(s => {
+                    const areaNom = s.area.charAt(0).toUpperCase() + s.area.slice(1);
+                    const fIngVis = s.fechaIngreso.split('-').reverse().join('/');
+                    const fIniPts = (s.fechaInicioPuntos && s.fechaInicioPuntos !== s.fechaIngreso)
+                        ? ' <span style="color:#e67e22;">(pts desde: ' + s.fechaInicioPuntos.split('-').reverse().join('/') + ')</span>' : '';
+                    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;background:white;border-radius:8px;padding:10px 13px;margin-bottom:6px;border-left:4px solid #2563eb;box-shadow:0 1px 4px rgba(0,0,0,0.07);">';
+                    html += '<div>';
+                    html += '<span style="font-weight:700;font-size:0.95em;">' + s.nombre + ' ' + s.apellido + '</span>';
+                    html += '<span style="font-size:0.75em;color:#888;margin-left:6px;">' + areaNom + ' • ' + s.contrato + '</span>';
+                    html += '<div style="font-size:0.8em;color:#555;margin-top:3px;">Ingreso: ' + fIngVis + fIniPts + ' — <strong>' + s.puntos + ' pts</strong></div>';
+                    html += '</div>';
+                    html += '<span style="background:#dbeafe;color:#1d4ed8;font-size:0.75em;font-weight:800;padding:4px 10px;border-radius:6px;">NUEVO</span>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+
             lista.innerHTML = html;
         }
 
@@ -1687,7 +1894,11 @@
             document.getElementById('totalPlantaDash').innerText = totalPlanta;
             document.getElementById('totalPartTimeDash').innerText = totalPart;
 
-            if(cacheSocios.length === 0) { container.innerHTML = '<div style="text-align:center; padding:20px;">No hay datos de socios.</div>'; return; }
+            if(cacheSocios.length === 0) { container.innerHTML = Array(4).fill(`
+                <div class='sk-card'>
+                    <div class='sk-row'><div class='sk sk-circle' style='width:40px;height:40px'></div><div style='flex:1'><div class='sk sk-line' style='width:60%;margin-bottom:8px'></div><div class='sk sk-line' style='width:35%'></div></div></div>
+                    <div class='sk sk-line' style='width:80%;margin-bottom:6px'></div><div class='sk sk-line' style='width:50%'></div>
+                </div>`).join(''); return; }
             
             const grupos = { 'mesas': [], 'mesasPartTime': [], 'cambistas': [], 'maquinas': [], 'tecnicos': [], 'boveda': [], 'GastosComision': [] };
             const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasPartTime': 'Mesas (Part-Time)', 'cambistas': 'Mesas (Cambistas)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'GastosComision': 'Gastos Comisión' };
@@ -1869,13 +2080,13 @@
             if(socio.contrato === 'Part-Time') { cardDias.style.display = 'block'; document.getElementById('socioDiasCount').innerText = '...'; } 
             else { cardDias.style.display = 'none'; }
 
-            const loadingText = '<span style="color:#999; font-size:0.8em;">Cargando... ⏳</span>';
-            document.getElementById('socioSaldoAnterior').innerHTML = loadingText;
-            document.getElementById('socioAlcance').innerHTML = loadingText;
-            document.getElementById('socioTotalPedido').innerHTML = loadingText;
-            document.getElementById('socioSaldoReal').innerHTML = loadingText;
-            document.getElementById('socioAPagar').innerHTML = '...';
-            document.getElementById('socioRemanente').innerHTML = '...';
+            const skEl = '<div class="sk sk-line" style="width:70%;height:14px;margin:4px auto"></div>';
+            document.getElementById('socioSaldoAnterior').innerHTML = skEl;
+            document.getElementById('socioAlcance').innerHTML = skEl;
+            document.getElementById('socioTotalPedido').innerHTML = skEl;
+            document.getElementById('socioSaldoReal').innerHTML = skEl;
+            document.getElementById('socioAPagar').innerHTML = skEl;
+            document.getElementById('socioRemanente').innerHTML = skEl;
 
             // Resaltar socio seleccionado en la lista
             document.querySelectorAll('.result-item').forEach(el => el.classList.remove('seleccionado'));
@@ -2264,14 +2475,14 @@
                 return;
             }
 
-            if(!silent) toggleLoader(true, "Procesando recaudaciones...");
+            // Sin overlay: el skeleton ya muestra el estado de carga
             try {
                 const response = await fetch(`${URL_RECAUDACIONES}?action=get&t=${new Date().getTime()}`);
                 const result = await response.json();
                 if(result.status !== 'success') throw new Error(result.message || "Error al cargar");
                 guardarCache(CACHE_KEY_REC, result.data || []);
                 procesarDatosRecaudacion(result.data || [], silent);
-            } catch (error) { console.error(error); if(!silent) showToast("Error al obtener datos", "error"); } finally { if(!silent) toggleLoader(false); }
+            } catch (error) { console.error(error); if(!silent) showToast("Error al obtener datos", "error"); }
         }
 
         function procesarDatosRecaudacion(datos, silent) {
@@ -2380,7 +2591,6 @@
                     });
                 }
                 document.getElementById('recTotalPuntos').innerText = formatearMoneda(sumaPuntosGlobal);
-                toggleLoader(false);
         }
 
         // ============================================================
@@ -2661,6 +2871,27 @@
             if(sr) aq_totalRetirado = parseInt(sr);
             aq_histStates = [{ c: JSON.parse(JSON.stringify(aq_conteo)), r: aq_totalRetirado, m: JSON.parse(JSON.stringify(aq_movi)) }];
             aq_histIdx = 0;
+            // Usar cache precargado si existe (cargado al login)
+            const aqCached = localStorage.getItem('fondo_cache_aq_esperado');
+            if (aqCached) {
+                try {
+                    const obj = JSON.parse(aqCached);
+                    if (Date.now() - obj.ts < 10 * 60 * 1000) { // valido 10 min
+                        const data = obj.data;
+                        document.getElementById('aq-esperadoDisplay').textContent = aq_fmt(Math.round(data.totalAcumulado / 100));
+                        document.getElementById('aq-divisor-day-total').textContent = aq_fmt(Math.round(data.totalLastDivisorDay / 100));
+                        const div = parseFloat(data.lastDivisor) || 1;
+                        document.getElementById('aq-divisor-value').textContent = div.toFixed(2);
+                        document.getElementById('aq-punto-del-dia').textContent = aq_fmt(Math.round(data.totalLastDivisorDay / 100) / div);
+                        document.getElementById('aq-divisor-date').textContent = 'Fecha: ' + data.lastDivisorDate;
+                        aq_desgloseEsperado = data.desgloseEsperado || [];
+                        let h = '<table class="aq-table"><thead><tr><th>Tipo</th><th>Monto</th></tr></thead><tbody>';
+                        aq_desgloseEsperado.forEach(i => { h += '<tr><td>'+i.tipo+'</td><td>'+aq_fmt(i.monto/100)+'</td></tr>'; });
+                        document.getElementById('aq-desglose-esperado').innerHTML = h + '</tbody></table>';
+                        aq_realizarArqueo();
+                    }
+                } catch(e) {}
+            }
             aq_fetchEsperadoData();
             aq_fetchAnticipos();
         }
@@ -3034,6 +3265,105 @@
             });
             container.innerHTML = h;
             document.getElementById('aq-modalStats').style.display = 'block';
+        }
+
+        // ============================================================
+        // NOTAS DE ADMINISTRACIÓN
+        // ============================================================
+
+        function notasCrearElemento(n, idx) {
+            const fecha = new Date(n.fecha).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+            const autor = (n.autor||'Admin').toUpperCase();
+            const div = document.createElement('div');
+            div.className = 'nota-card';
+            div.dataset.idx = idx;
+            div.innerHTML =
+                '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
+                + '<div style="flex:1;"><div style="font-size:0.75em;color:#999;margin-bottom:5px;font-weight:600;">'+autor+' &middot; '+fecha+'</div>'
+                + '<div style="font-size:0.95em;color:#333;line-height:1.5;white-space:pre-wrap;">'+(n.mensaje||'').replace(/</g,'&lt;')+'</div></div>'
+                + '<button onclick="notasBorrar('+idx+', this)" style="background:none;border:1px solid #fee2e2;color:#ef4444;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:0.8em;flex-shrink:0;" title="Eliminar">&#x1F5D1;</button>'
+                + '</div>';
+            return div;
+        }
+
+        function notasRenderizar(notas) {
+            const cont = document.getElementById('notasListaContainer');
+            if (!cont) return;
+            cont.innerHTML = '';
+            if (!notas.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;">Sin notas guardadas.</div>'; return; }
+            notas.forEach((n, i) => {
+                const idx = n.originalIndex !== undefined ? n.originalIndex : i;
+                const el  = notasCrearElemento(n, idx);
+                el.style.animationDelay = (i * 55) + 'ms';
+                el.style.opacity = '0';
+                cont.appendChild(el);
+                requestAnimationFrame(() => { el.style.opacity = ''; });
+            });
+        }
+
+        async function notasCargar() {
+            const cont = document.getElementById('notasListaContainer');
+            // Mostrar cache inmediatamente si existe
+            const cached = leerCache(CACHE_KEY_NOTAS);
+            if (cached) {
+                notasRenderizar(cached);
+                // Actualizar en segundo plano
+                fetch(URL_RECAUDACIONES + '?action=getNotes&t=' + Date.now())
+                    .then(r => r.json())
+                    .then(json => {
+                        const notas = (json.data||json.result||[]).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+                        guardarCache(CACHE_KEY_NOTAS, notas);
+                        notasRenderizar(notas);
+                    }).catch(() => {});
+                return;
+            }
+            // Sin cache: mostrar skeleton y cargar
+            cont.innerHTML = Array(3).fill('<div class="sk-card" style="margin-bottom:10px;"><div class="sk sk-line" style="width:30%;height:9px;margin-bottom:10px;"></div><div class="sk sk-line" style="width:88%;height:12px;margin-bottom:6px;"></div><div class="sk sk-line" style="width:65%;height:12px;"></div></div>').join('');
+            try {
+                const res = await fetch(URL_RECAUDACIONES + '?action=getNotes&t=' + Date.now());
+                const json = await res.json();
+                const notas = (json.data||json.result||[]).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+                guardarCache(CACHE_KEY_NOTAS, notas);
+                notasRenderizar(notas);
+            } catch(e) { cont.innerHTML = '<div style="text-align:center;padding:20px;color:var(--danger);">Error al cargar notas.</div>'; }
+        }
+
+        async function notasPublicar() {
+            const msg = document.getElementById('notaInputMsg').value.trim();
+            if (!msg) return showToast('Escribe algo antes de publicar','error');
+            const btnPub = document.querySelector('#tab-notas .btn-submit');
+            if (btnPub) { btnPub.disabled=true; btnPub.textContent='Publicando...'; }
+            try {
+                await fetch(URL_RECAUDACIONES,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'addNote',autor:'Admin',mensaje:msg})});
+                document.getElementById('notaInputMsg').value='';
+                showToast('Nota publicada','success');
+                const cont = document.getElementById('notasListaContainer');
+                if (cont.querySelector('div[style*="padding:30px"]')) cont.innerHTML='';
+                const el = notasCrearElemento({fecha:new Date().toISOString(),autor:'Admin',mensaje:msg},-1);
+                cont.insertBefore(el,cont.firstChild);
+                try { localStorage.removeItem(CACHE_KEY_NOTAS); } catch(e) {}
+                setTimeout(notasCargar,1500);
+            } catch(e) { showToast('Error al publicar nota','error'); }
+            finally { if(btnPub){btnPub.disabled=false;btnPub.textContent='Publicar';} }
+        }
+
+        async function notasBorrar(idx, btnEl) {
+            if (!confirm('Eliminar esta nota permanentemente?')) return;
+            const card = btnEl ? btnEl.closest('.nota-card') : null;
+            if (card) {
+                card.classList.add('saliendo');
+                await new Promise(r=>setTimeout(r,300));
+                card.remove();
+                const cont = document.getElementById('notasListaContainer');
+                if (cont && cont.querySelectorAll('.nota-card').length===0)
+                    cont.innerHTML='<div style="text-align:center;padding:30px;color:#aaa;">Sin notas guardadas.</div>';
+            }
+            try {
+                await fetch(URL_RECAUDACIONES,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'deleteNote',index:idx})});
+                showToast('Nota eliminada','success');
+                try { localStorage.removeItem(CACHE_KEY_NOTAS); } catch(e) {}
+                setTimeout(notasCargar,800);
+            } catch(e) { showToast('Error al eliminar nota','error'); notasCargar(); }
         }
 
         // Cerrar modales del arqueo al clic fuera
