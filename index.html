@@ -80,12 +80,22 @@
         .close-modal:hover { color: var(--danger); }
 
         /* Calendario */
-        .calendar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 15px; }
-        .day-btn { padding: 10px; border: 2px solid #eee; border-radius: 8px; background: white; cursor: pointer; text-align: center; transition: all 0.2s; }
-        .day-btn:hover { border-color: var(--secondary); }
-        .day-btn.selected { background-color: var(--secondary); color: white; border-color: var(--secondary); box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); }
-        .day-btn .d-date { font-weight: bold; display: block; margin-bottom: 4px; }
-        .day-btn .d-val { font-size: 0.75em; opacity: 0.8; }
+        /* Calendario PT */
+        .pt-cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+        .pt-cal-nav { background:none; border:1px solid #ddd; border-radius:7px; padding:5px 12px; cursor:pointer; font-size:1em; font-weight:700; color:var(--primary); transition:0.2s; }
+        .pt-cal-nav:hover { background:var(--primary); color:white; border-color:var(--primary); }
+        .pt-cal-title { font-weight:800; font-size:1em; color:var(--primary); }
+        .pt-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+        .pt-cal-dow { text-align:center; font-size:0.7em; font-weight:800; color:#999; padding:4px 0; text-transform:uppercase; }
+        .pt-cal-day { min-height:48px; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:0.85em; transition:all 0.15s; position:relative; }
+        .pt-cal-day.empty { background:transparent; }
+        .pt-cal-day.no-rec { background:#f8f8f8; color:#ccc; cursor:default; }
+        .pt-cal-day.has-rec { background:#f0faf5; border:2px solid #b7e4cc; cursor:pointer; color:#2c3e50; }
+        .pt-cal-day.has-rec:hover { background:#d4f1e3; border-color:var(--success); transform:scale(1.05); }
+        .pt-cal-day.selected { background:var(--secondary); border:2px solid var(--secondary); color:white; box-shadow:0 3px 8px rgba(52,152,219,0.35); }
+        .pt-cal-day.selected:hover { background:#2980b9; border-color:#2980b9; }
+        .pt-cal-day .cal-num { font-weight:800; font-size:0.95em; line-height:1; }
+        .pt-cal-day .cal-val { font-size:0.62em; opacity:0.8; margin-top:2px; }
 
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
         .form-group { display: flex; flex-direction: column; }
@@ -655,16 +665,31 @@
 
         <!-- MODAL CALENDARIO PART-TIME -->
         <div id="modalCalendario" class="modal">
-            <div class="modal-content">
+            <div class="modal-content" style="max-width:480px;">
                 <div class="modal-header">
-                    <h2>Días Trabajados</h2>
+                    <h2 id="calTitulo">📅 Días Trabajados</h2>
                     <span class="close-modal" onclick="cerrarModalCalendario()">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <p style="color:#666; font-size:0.9em;">Selecciona los días que trabajó este socio. Solo aparecen días con recaudación.</p>
-                    <div id="calendarGrid" class="calendar-grid"></div>
-                    <div style="margin-top:20px;">
-                        <button class="btn-submit" onclick="guardarDiasTrabajados()">Guardar Días</button>
+                    <!-- Navegación de meses -->
+                    <div class="pt-cal-header">
+                        <button class="pt-cal-nav" onclick="ptCalCambiarMes(-1)">&#8592;</button>
+                        <span class="pt-cal-title" id="ptCalMesAnio">— — —</span>
+                        <button class="pt-cal-nav" onclick="ptCalCambiarMes(1)">&#8594;</button>
+                    </div>
+                    <!-- Cabecera días de semana -->
+                    <div class="pt-cal-grid" style="margin-bottom:4px;">
+                        <div class="pt-cal-dow">Lu</div><div class="pt-cal-dow">Ma</div>
+                        <div class="pt-cal-dow">Mi</div><div class="pt-cal-dow">Ju</div>
+                        <div class="pt-cal-dow">Vi</div><div class="pt-cal-dow">Sa</div>
+                        <div class="pt-cal-dow">Do</div>
+                    </div>
+                    <!-- Grilla de días -->
+                    <div class="pt-cal-grid" id="ptCalGrid"></div>
+                    <!-- Resumen y guardar -->
+                    <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <span id="ptCalResumen" style="font-size:0.82em; color:#666; font-weight:600;"></span>
+                        <button class="btn-submit" onclick="guardarDiasTrabajados()" style="padding:10px 24px;">💾 Guardar</button>
                     </div>
                 </div>
             </div>
@@ -1099,7 +1124,12 @@
         function abrirModalSaldo() { document.getElementById('modalSaldo').style.display = 'block'; const valActual = document.getElementById('gestionSocioSaldoAnt').value; document.getElementById('inputSaldoAnterior').value = valActual; }
         function cerrarModalSaldo() { document.getElementById('modalSaldo').style.display = 'none'; }
         
-        function abrirModalCalendario() { document.getElementById('modalCalendario').style.display = 'block'; renderCalendarGrid(); }
+        function abrirModalCalendario() {
+            const nombre = document.getElementById('gestionSocioNombre').value || '';
+            document.getElementById('calTitulo').textContent = nombre ? '📅 Días — ' + nombre : '📅 Días Trabajados';
+            document.getElementById('modalCalendario').style.display = 'block';
+            renderCalendarGrid();
+        }
         function cerrarModalCalendario() { document.getElementById('modalCalendario').style.display = 'none'; }
 
         function formatearInputMonto(input) {
@@ -1226,26 +1256,94 @@
             } catch(e) { console.error(e); }
         }
 
+        // Variable para el mes visible en el calendario PT
+        let ptCalFecha = new Date();
+
         function renderCalendarGrid() {
-            const container = document.getElementById('calendarGrid');
-            container.innerHTML = '';
-            const fechas = Object.keys(globalMapaPuntosDia).sort().reverse();
-            fechas.forEach(fecha => {
-                const div = document.createElement('div');
-                div.className = 'day-btn';
-                if(selectedDaysPT.includes(fecha)) div.classList.add('selected');
-                const partes = fecha.split('-');
-                const fechaVisual = `${partes[2]}/${partes[1]}`;
-                const valorPunto = globalMapaPuntosDia[fecha];
-                div.innerHTML = `<span class="d-date">${fechaVisual}</span><span class="d-val">$${Math.round(valorPunto)}</span>`;
-                div.onclick = () => toggleDaySelection(div, fecha);
-                container.appendChild(div);
-            });
+            // Abrir en el mes más reciente con recaudación
+            const fechasConRec = Object.keys(globalMapaPuntosDia).sort();
+            if (fechasConRec.length > 0) {
+                const ultima = fechasConRec[fechasConRec.length - 1].split('-');
+                ptCalFecha = new Date(parseInt(ultima[0]), parseInt(ultima[1]) - 1, 1);
+            } else {
+                ptCalFecha = new Date();
+                ptCalFecha.setDate(1);
+            }
+            ptCalRenderMes();
+        }
+
+        function ptCalCambiarMes(delta) {
+            ptCalFecha.setMonth(ptCalFecha.getMonth() + delta);
+            ptCalRenderMes();
+        }
+
+        function ptCalRenderMes() {
+            const anio = ptCalFecha.getFullYear();
+            const mes  = ptCalFecha.getMonth(); // 0-11
+            const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            document.getElementById('ptCalMesAnio').textContent = MESES[mes] + ' ' + anio;
+
+            const grid = document.getElementById('ptCalGrid');
+            grid.innerHTML = '';
+
+            // Día de la semana del 1ero del mes (0=Dom, ajustar a Lunes=0)
+            const primerDia = new Date(anio, mes, 1).getDay();
+            const offsetLunes = (primerDia === 0) ? 6 : primerDia - 1;
+            const diasEnMes  = new Date(anio, mes + 1, 0).getDate();
+
+            // Celdas vacías al inicio
+            for (let i = 0; i < offsetLunes; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'pt-cal-day empty';
+                grid.appendChild(empty);
+            }
+
+            // Días del mes
+            for (let d = 1; d <= diasEnMes; d++) {
+                const fechaISO = anio + '-' + String(mes + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                const tieneRec = globalMapaPuntosDia[fechaISO] !== undefined;
+                const estaSelec = selectedDaysPT.includes(fechaISO);
+
+                const cell = document.createElement('div');
+                cell.className = 'pt-cal-day ' + (tieneRec ? (estaSelec ? 'selected' : 'has-rec') : 'no-rec');
+
+                let innerHtml = '<span class="cal-num">' + d + '</span>';
+                if (tieneRec) {
+                    const val = Math.round(globalMapaPuntosDia[fechaISO]);
+                    innerHtml += '<span class="cal-val">$' + val.toLocaleString('es-CL') + '</span>';
+                }
+                cell.innerHTML = innerHtml;
+
+                if (tieneRec) {
+                    cell.onclick = () => {
+                        if (selectedDaysPT.includes(fechaISO)) {
+                            selectedDaysPT = selectedDaysPT.filter(x => x !== fechaISO);
+                            cell.className = 'pt-cal-day has-rec';
+                        } else {
+                            selectedDaysPT.push(fechaISO);
+                            cell.className = 'pt-cal-day selected';
+                        }
+                        ptCalActualizarResumen();
+                    };
+                }
+                grid.appendChild(cell);
+            }
+            ptCalActualizarResumen();
+        }
+
+        function ptCalActualizarResumen() {
+            const el = document.getElementById('ptCalResumen');
+            if (!el) return;
+            const total = selectedDaysPT.length;
+            let sumaValor = 0;
+            selectedDaysPT.forEach(d => { if (globalMapaPuntosDia[d]) sumaValor += globalMapaPuntosDia[d]; });
+            el.textContent = total + ' día' + (total !== 1 ? 's' : '') + ' seleccionado' + (total !== 1 ? 's' : '') + ' — Valor acumulado: ' + new Intl.NumberFormat('es-CL', {style:'currency',currency:'CLP'}).format(sumaValor);
         }
 
         function toggleDaySelection(el, fecha) {
-            if(selectedDaysPT.includes(fecha)) { selectedDaysPT = selectedDaysPT.filter(d => d !== fecha); el.classList.remove('selected'); } 
-            else { selectedDaysPT.push(fecha); el.classList.add('selected'); }
+            // Mantener por compatibilidad, ya no se usa directamente
+            if(selectedDaysPT.includes(fecha)) { selectedDaysPT = selectedDaysPT.filter(d => d !== fecha); }
+            else { selectedDaysPT.push(fecha); }
         }
 
         async function guardarDiasTrabajados() {
