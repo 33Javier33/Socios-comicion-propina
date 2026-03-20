@@ -2051,10 +2051,22 @@
                 renderizarListaBusqueda();
                 return;
             }
-            // Cargar datos de movimientos si no los tenemos aún
-            if (!gestionCargandoFiltro && Object.keys(gestionSociosConMovimientos).length === 0) {
-                await cargarMovimientosGestion();
+            // Si ya tenemos los datos, filtrar directo
+            if (Object.keys(gestionSociosConMovimientos).length > 0) {
+                renderizarListaBusqueda();
+                return;
             }
+            // Primera vez: mostrar skeleton en lista, cargar y renderizar
+            const lista = document.getElementById('listaResultados');
+            const colorActivo = colores[tipo];
+            lista.innerHTML =
+                '<div style="padding:12px 10px; text-align:center;">'
+                + '<div style="display:inline-flex;align-items:center;gap:8px;color:'+colorActivo+';font-size:0.82em;font-weight:700;">'
+                + '<div class="spinner" style="width:14px;height:14px;border-width:2px;"></div>'
+                + 'Buscando socios con ' + (tipo==='anticipos'?'anticipos':'ausencias') + '...'
+                + '</div></div>'
+                + Array(4).fill('<div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div>').join('');
+            await cargarMovimientosGestion();
             renderizarListaBusqueda();
         }
 
