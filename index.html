@@ -585,6 +585,13 @@
             <div class="gestion-layout">
                 <div class="search-panel">
                     <h3>Buscar Socio</h3>
+                    <!-- Filtros rápidos -->
+                    <div style="display:flex; gap:5px; margin-bottom:10px; flex-wrap:wrap;">
+                        <button id="filtroGestionTodos" onclick="setFiltroGestion('todos')" style="flex:1; padding:6px 8px; border:1px solid var(--secondary); background:var(--secondary); color:white; border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">Todos</button>
+                        <button id="filtroGestionAnticipos" onclick="setFiltroGestion('anticipos')" style="flex:1; padding:6px 8px; border:1px solid var(--warning); background:white; color:var(--warning); border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">💰 Anticipos</button>
+                        <button id="filtroGestionAusencias" onclick="setFiltroGestion('ausencias')" style="flex:1; padding:6px 8px; border:1px solid var(--danger); background:white; color:var(--danger); border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">📅 Ausencias</button>
+                    </div>
+                    <div id="filtroGestionInfo" style="font-size:0.75em; color:#888; margin-bottom:6px; min-height:16px;"></div>
                     <input type="text" id="buscadorGestion" placeholder="Escribe nombre o apellido..." onkeyup="filtrarSociosGestion()" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ddd; border-radius:8px;">
                     <div id="listaResultados" class="search-results">
                         <div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div><div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div><div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div><div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div>
@@ -1205,7 +1212,18 @@
             btns.forEach(b => b.classList.remove('active'));
             const fabRec = document.getElementById('fabRecAgregar');
             if(tabName === 'registro') { btns[0].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); }
-            else if(tabName === 'gestion') { btns[1].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); renderizarListaBusqueda(); }
+            else if(tabName === 'gestion') {
+                btns[1].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync();
+                gestionSociosConMovimientos = {}; // limpiar para datos frescos
+                gestionFiltroActivo = 'todos';
+                // Resetear botones
+                ['Todos','Anticipos','Ausencias'].forEach((t,i) => {
+                    const btn = document.getElementById('filtroGestion'+t);
+                    const colores = ['var(--secondary)','var(--warning)','var(--danger)'];
+                    if(btn) { btn.style.background = i===0 ? colores[i] : 'white'; btn.style.color = i===0 ? 'white' : colores[i]; }
+                });
+                renderizarListaBusqueda();
+            }
             else if(tabName === 'recaudacion') { btns[2].classList.add('active'); fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones(); }
             else if(tabName === 'arqueo') { btns[3].classList.add('active'); fabRec.style.display = 'none'; aq_initSiNoIniciado(); aq_arrancarSync(); }
             else if(tabName === 'notas') { btns[4].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); notasCargar(); }
@@ -2011,13 +2029,88 @@
             catch(e) { showToast('Error', 'error'); toggleLoader(false); }
         }
 
+        let gestionFiltroActivo = 'todos'; // 'todos' | 'anticipos' | 'ausencias'
+        let gestionSociosConMovimientos = {}; // { id: { anticipos: bool, ausencias: bool } }
+        let gestionCargandoFiltro = false;
+
         function filtrarSociosGestion() { renderizarListaBusqueda(); }
+
+        async function setFiltroGestion(tipo) {
+            gestionFiltroActivo = tipo;
+            // Actualizar estilos de botones
+            const colores = { todos: 'var(--secondary)', anticipos: 'var(--warning)', ausencias: 'var(--danger)' };
+            ['todos','anticipos','ausencias'].forEach(t => {
+                const btn = document.getElementById('filtroGestion' + t.charAt(0).toUpperCase() + t.slice(1));
+                if (!btn) return;
+                const activo = t === tipo;
+                btn.style.background = activo ? colores[t] : 'white';
+                btn.style.color      = activo ? 'white'    : colores[t];
+            });
+            if (tipo === 'todos') {
+                document.getElementById('filtroGestionInfo').textContent = '';
+                renderizarListaBusqueda();
+                return;
+            }
+            // Cargar datos de movimientos si no los tenemos aún
+            if (!gestionCargandoFiltro && Object.keys(gestionSociosConMovimientos).length === 0) {
+                await cargarMovimientosGestion();
+            }
+            renderizarListaBusqueda();
+        }
+
+        async function cargarMovimientosGestion() {
+            if (gestionCargandoFiltro) return;
+            gestionCargandoFiltro = true;
+            const infoEl = document.getElementById('filtroGestionInfo');
+            if (infoEl) infoEl.textContent = 'Consultando servidor...';
+            try {
+                // Traer datos de todos los socios en paralelo
+                const resultados = await Promise.allSettled(
+                    cacheSocios.map(s =>
+                        fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${s.id}`)
+                            .then(r => r.json())
+                            .then(res => ({ id: s.id, data: res.data || {} }))
+                            .catch(() => ({ id: s.id, data: {} }))
+                    )
+                );
+                gestionSociosConMovimientos = {};
+                resultados.forEach(r => {
+                    if (r.status !== 'fulfilled') return;
+                    const { id, data } = r.value;
+                    const tieneAnticipos = Array.isArray(data.anticipos) && data.anticipos.length > 0;
+                    const tieneAusencias = Array.isArray(data.extras) &&
+                        data.extras.some(e => e.tipo && e.tipo.toLowerCase().includes('ausencia'));
+                    gestionSociosConMovimientos[id] = { anticipos: tieneAnticipos, ausencias: tieneAusencias };
+                });
+                if (infoEl) infoEl.textContent = '';
+            } catch(e) {
+                if (infoEl) infoEl.textContent = 'Error al consultar';
+            } finally {
+                gestionCargandoFiltro = false;
+            }
+        }
         function renderizarListaBusqueda() {
             const termino = document.getElementById('buscadorGestion').value.toLowerCase();
             const lista = document.getElementById('listaResultados');
             lista.innerHTML = '';
-            const filtrados = cacheSocios.filter(s => s.nombre.toLowerCase().includes(termino) || s.apellido.toLowerCase().includes(termino) || (s.area||'').toLowerCase().includes(termino));
-            if (filtrados.length === 0) { lista.innerHTML = '<div style="padding:10px; color:#999;">No encontrado.</div>'; return; }
+            let filtrados = cacheSocios.filter(s => s.nombre.toLowerCase().includes(termino) || s.apellido.toLowerCase().includes(termino) || (s.area||'').toLowerCase().includes(termino));
+            // Aplicar filtro de movimientos si está activo
+            if (gestionFiltroActivo !== 'todos' && Object.keys(gestionSociosConMovimientos).length > 0) {
+                filtrados = filtrados.filter(s => {
+                    const mov = gestionSociosConMovimientos[s.id];
+                    if (!mov) return false;
+                    return gestionFiltroActivo === 'anticipos' ? mov.anticipos : mov.ausencias;
+                });
+                const infoEl = document.getElementById('filtroGestionInfo');
+                if (infoEl) infoEl.textContent = filtrados.length + ' socio' + (filtrados.length !== 1 ? 's' : '') +
+                    (gestionFiltroActivo === 'anticipos' ? ' con anticipos' : ' con ausencias');
+            }
+            if (filtrados.length === 0) {
+                lista.innerHTML = '<div style="padding:14px; color:#999; text-align:center; font-size:0.88em;">'
+                    + (gestionFiltroActivo !== 'todos' ? 'Ninguno tiene ' + (gestionFiltroActivo === 'anticipos' ? 'anticipos' : 'ausencias') + ' registrados.' : 'No encontrado.')
+                    + '</div>';
+                return;
+            }
 
             const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasparttime': 'Mesas (Part-Time)', 'cambistas': 'Mesas (Cambistas)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'gastoscomision': 'Gastos Comisión' };
             const coloresArea = { 'mesas': '#3498db', 'mesasparttime': '#3498db', 'cambistas': '#9b59b6', 'maquinas': '#e67e22', 'tecnicos': '#7f8c8d', 'boveda': '#27ae60', 'gastoscomision': '#607d8b' };
@@ -2054,7 +2147,10 @@
                     div.className = 'result-item';
                     div.setAttribute('data-socio-id', s.id);
                     div.style.borderLeft = `3px solid ${color}`;
-                    div.innerHTML = `<strong>${s.nombre} ${s.apellido}</strong> <span style="font-size:0.8em; color:#777;">${s.puntos} pts</span>`;
+                    const mov = gestionSociosConMovimientos[s.id];
+                    const badgeAnt = mov && mov.anticipos ? '<span style="background:#fff3cd;color:#856404;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:4px;">💰 ANT</span>' : '';
+                    const badgeAus = mov && mov.ausencias ? '<span style="background:#fde8e8;color:#9b1c1c;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">📅 AUS</span>' : '';
+                    div.innerHTML = `<strong>${s.nombre} ${s.apellido}</strong> <span style="font-size:0.8em; color:#777;">${s.puntos} pts</span>${badgeAnt}${badgeAus}`;
                     div.onclick = () => seleccionarSocio(s.id);
                     lista.appendChild(div);
                 });
