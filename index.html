@@ -947,7 +947,8 @@
                     <button id="aq-redo-btn" onclick="aq_redoAction()" class="aq-btn aq-btn-primary" disabled><i class="fas fa-redo"></i> Rehacer</button>
                 </div>
                 <div id="aq-arqueo-form"></div>
-                <button onclick="document.getElementById('aq-modalConteo').style.display='none'; aq_realizarArqueo();" class="aq-btn aq-btn-primary" style="width:100%; margin-top:20px;">Listo</button>
+                <div id="aq-resumen-sesion" style="display:none; margin-top:16px; background:#f8fafc; border-radius:10px; padding:14px; border:1px solid #e2e8f0;"></div>
+                <button onclick="aq_listoConteo()" class="aq-btn aq-btn-primary" style="width:100%; margin-top:12px;">Listo ✓</button>
             </div>
         </div>
 
@@ -1016,6 +1017,7 @@
         let aq_conteo = {}, aq_movi = {}, aq_totalRetirado = 0, aq_totalAnticipos = 0, aq_desgloseEsperado = [], aq_denomEditando = null;
         let aq_histStates = [], aq_histIdx = -1;
         let aq_syncInterval = null; // intervalo de sincronizacion automatica
+        let aq_snapAlAbrir = null;  // snapshot del conteo al abrir el modal
 
         let cacheSocios = [];
         let isEditing = false;
@@ -3273,7 +3275,75 @@
             aq_generarCampos(); aq_realizarArqueo();
         }
 
-        function aq_abrirModalConteo() { aq_generarCampos(); document.getElementById('aq-modalConteo').style.display = 'block'; }
+        function aq_abrirModalConteo() {
+            aq_generarCampos();
+            // Guardar snapshot del estado ANTES de hacer cambios
+            aq_snapAlAbrir = {
+                conteo: JSON.parse(JSON.stringify(aq_conteo)),
+                totalRetirado: aq_totalRetirado
+            };
+            document.getElementById('aq-resumen-sesion').style.display = 'none';
+            document.getElementById('aq-modalConteo').style.display = 'block';
+        }
+
+        function aq_listoConteo() {
+            if (!aq_snapAlAbrir) {
+                document.getElementById('aq-modalConteo').style.display = 'none';
+                aq_realizarArqueo();
+                return;
+            }
+            // Calcular diferencias vs snapshot al abrir
+            let totalIngresado = 0;
+            let totalRetirado  = 0;
+            let hayMovimientos = false;
+            const lineas = [];
+
+            AQ_DENOMINACIONES.forEach(val => {
+                const antes  = aq_snapAlAbrir.conteo[val] || 0;
+                const despues = aq_conteo[val] || 0;
+                const diff   = despues - antes;
+                if (diff === 0) return;
+                hayMovimientos = true;
+                const monto = diff * val;
+                if (diff > 0) {
+                    totalIngresado += monto;
+                    lineas.push('<div style="display:flex;justify-content:space-between;font-size:0.82em;padding:3px 0;color:#10b981;">'
+                        + '<span>+ ' + diff + ' x ' + aq_fmt(val) + '</span>'
+                        + '<span style="font-weight:700;">+' + aq_fmt(monto) + '</span></div>');
+                } else {
+                    totalRetirado += Math.abs(monto);
+                    lineas.push('<div style="display:flex;justify-content:space-between;font-size:0.82em;padding:3px 0;color:#ef4444;">'
+                        + '<span>− ' + Math.abs(diff) + ' x ' + aq_fmt(val) + '</span>'
+                        + '<span style="font-weight:700;">−' + aq_fmt(Math.abs(monto)) + '</span></div>');
+                }
+            });
+
+            if (!hayMovimientos) {
+                // Sin cambios: cerrar directo
+                document.getElementById('aq-modalConteo').style.display = 'none';
+                aq_realizarArqueo();
+                return;
+            }
+
+            const neto = totalIngresado - totalRetirado;
+            const colorNeto = neto >= 0 ? '#10b981' : '#ef4444';
+            const signoNeto = neto >= 0 ? '+' : '';
+
+            let html = '<div style="font-weight:800;font-size:0.85em;color:#374151;margin-bottom:8px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">📋 Resumen de esta sesión</div>';
+            html += lineas.join('');
+            html += '<div style="border-top:1px solid #e2e8f0;margin-top:8px;padding-top:8px;display:flex;flex-direction:column;gap:4px;">';
+            if (totalIngresado > 0) html += '<div style="display:flex;justify-content:space-between;font-size:0.82em;"><span style="color:#10b981;font-weight:700;">Total ingresado</span><span style="color:#10b981;font-weight:800;">+' + aq_fmt(totalIngresado) + '</span></div>';
+            if (totalRetirado  > 0) html += '<div style="display:flex;justify-content:space-between;font-size:0.82em;"><span style="color:#ef4444;font-weight:700;">Total retirado</span><span style="color:#ef4444;font-weight:800;">−' + aq_fmt(totalRetirado) + '</span></div>';
+            html += '<div style="display:flex;justify-content:space-between;font-size:0.9em;margin-top:4px;"><span style="font-weight:800;">Neto sesión</span><span style="font-weight:900;color:' + colorNeto + ';">' + signoNeto + aq_fmt(neto) + '</span></div>';
+            html += '</div>';
+            html += '<button onclick="document.getElementById(\'aq-modalConteo\').style.display=\'none\'; aq_realizarArqueo();" class="aq-btn aq-btn-primary" style="width:100%;margin-top:10px;">Cerrar</button>';
+
+            const resumen = document.getElementById('aq-resumen-sesion');
+            resumen.innerHTML = html;
+            resumen.style.display = 'block';
+            resumen.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            aq_snapAlAbrir = null;
+        }
 
         function aq_abrirModalBackup() {
             const historial = JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || [];
