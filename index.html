@@ -5,24 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema Integral - Fondo Solidario</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #2c3e50;
-            --secondary: #3498db;
-            --success: #27ae60;
-            --warning: #f39c12;
-            --danger: #e74c3c;
-            --purple: #9b59b6;
-            --info: #17a2b8;
-            --gastos: #607d8b;
-            --pt-days: #34495e;
-            --bg: #f0f2f5;
-            --card-bg: #ffffff;
-            --text-color: #444;
+            --primary:    #0f172a;
+            --secondary:  #3b82f6;
+            --success:    #10b981;
+            --warning:    #f59e0b;
+            --danger:     #ef4444;
+            --purple:     #8b5cf6;
+            --info:       #06b6d4;
+            --gastos:     #64748b;
+            --pt-days:    #334155;
+            --bg:         #0f172a;
+            --card-bg:    #1e293b;
+            --surface:    #263348;
+            --border:     rgba(255,255,255,0.07);
+            --text-color: #f1f5f9;
+            --text-muted: #94a3b8;
         }
 
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: var(--text-color); }
+        body {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(ellipse at 20% 10%, rgba(59,130,246,0.08) 0%, transparent 50%),
+                              radial-gradient(ellipse at 80% 80%, rgba(16,185,129,0.05) 0%, transparent 50%);
+            background-attachment: fixed;
+            margin: 0; padding: 20px; color: var(--text-color);
+            min-height: 100vh;
+        }
         .container { max-width: 1100px; margin: 0 auto; padding-bottom: 80px; }
+        * { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+        *::-webkit-scrollbar { width: 6px; height: 6px; }
+        *::-webkit-scrollbar-track { background: transparent; }
+        *::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        *::-webkit-scrollbar-thumb:hover { background: #475569; }
 
         /* ── Loader moderno: barra top + toast acción ── */
         #globalLoader {
@@ -55,62 +72,65 @@
             100% { background-position:  400px 0; }
         }
         .sk {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background: linear-gradient(90deg, #1e293b 25%, #263348 50%, #1e293b 75%);
             background-size: 800px 100%;
             animation: sk-shimmer 1.4s infinite linear;
             border-radius: 6px;
         }
         .sk-card {
-            background: white; border-radius: 15px; padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #eee;
-            margin-bottom: 12px;
+            background: var(--card-bg); border-radius: 14px; padding: 20px;
+            border: 1px solid var(--border); margin-bottom: 12px;
         }
         .sk-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
         .sk-circle { border-radius:50% !important; flex-shrink:0; }
-        .sk-line { height:12px; border-radius:6px; }
+        .sk-line { height:11px; border-radius:6px; }
 
         /* Navegación */
-        .nav-tabs { display: flex; margin-bottom: 25px; border-bottom: 2px solid #ddd; gap: 10px; overflow-x: auto; }
-        .nav-btn { padding: 12px 20px; border: none; background: none; font-size: 1.05em; font-weight: 600; color: #7f8c8d; cursor: pointer; border-bottom: 4px solid transparent; transition: all 0.3s; white-space: nowrap; }
-        .nav-btn.active { color: var(--secondary); border-bottom-color: var(--secondary); }
-        .nav-btn:hover { color: var(--primary); }
-        .tab-content { display: none; animation: fadeIn 0.4s; }
+        .nav-tabs { display: flex; margin-bottom: 28px; border-bottom: 1px solid var(--border); gap: 4px; overflow-x: auto; background: var(--card-bg); border-radius: 14px 14px 0 0; padding: 6px 6px 0; }
+        .nav-btn { padding: 10px 18px; border: none; background: none; font-size: 0.88em; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; transition: all 0.25s; white-space: nowrap; letter-spacing: 0.02em; }
+        .nav-btn.active { color: var(--secondary); border-bottom-color: var(--secondary); background: rgba(59,130,246,0.08); }
+        .nav-btn:hover:not(.active) { color: var(--text-color); background: rgba(255,255,255,0.04); }
+        .tab-content { display: none; animation: fadeIn 0.35s cubic-bezier(0.4,0,0.2,1); }
         .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Header */
-        .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
-        h1 { color: var(--primary); margin: 0; }
-        .fecha-badge { background-color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.9em; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #ddd; }
+        .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+        h1 { color: var(--text-color); margin: 0; font-size: 1.4em; font-weight: 800; letter-spacing: -0.02em; }
+        h1 small { color: var(--text-muted); font-weight: 400; }
+        .fecha-badge { background: var(--card-bg); padding: 7px 14px; border-radius: 20px; font-size: 0.82em; color: var(--text-muted); border: 1px solid var(--border); font-weight: 500; }
 
         /* Buscadores */
         .smart-search {
-            width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.3s; box-sizing: border-box;
+            width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: 10px; font-size: 0.95em; margin-bottom: 20px; transition: all 0.25s; box-sizing: border-box;
+            background: var(--surface); color: var(--text-color); font-family: 'DM Sans', sans-serif;
         }
-        .smart-search:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
+        .smart-search::placeholder { color: var(--text-muted); }
+        .smart-search:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
 
         /* DASHBOARDS */
-        .dashboard-socios { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .mini-stat { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 3px solid transparent; transition: transform 0.2s; position: relative; }
-        .mini-stat.blue { border-bottom-color: var(--secondary); }
-        .mini-stat.green { border-bottom-color: var(--success); }
-        .mini-stat.orange { border-bottom-color: var(--warning); }
-        .mini-stat.purple { border-bottom-color: var(--purple); }
-        .mini-stat.red { border-bottom-color: var(--danger); }
-        .mini-stat.dark { border-bottom-color: var(--pt-days); background-color: #f4f6f7; }
+        .dashboard-socios { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 24px; }
+        .mini-stat { background: var(--card-bg); padding: 16px; border-radius: 12px; border: 1px solid var(--border); text-align: center; transition: transform 0.2s, box-shadow 0.2s; position: relative; }
+        .mini-stat.blue  { border-top: 2px solid var(--secondary); }
+        .mini-stat.green { border-top: 2px solid var(--success); }
+        .mini-stat.orange{ border-top: 2px solid var(--warning); }
+        .mini-stat.purple{ border-top: 2px solid var(--purple); }
+        .mini-stat.red   { border-top: 2px solid var(--danger); }
+        .mini-stat.dark  { border-top: 2px solid var(--pt-days); background: var(--surface); }
         .mini-stat.clickable { cursor: pointer; }
-        .mini-stat.clickable:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); background-color: #fff8e1; }
-        .ms-val { display: block; font-size: 1.2em; font-weight: 800; color: var(--text-color); }
-        .ms-label { font-size: 0.7em; color: #888; text-transform: uppercase; font-weight: bold; margin-top: 5px; display: block;}
+        .mini-stat.clickable:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.15); }
+        .ms-val { display: block; font-size: 1.25em; font-weight: 800; color: var(--text-color); }
+        .ms-label { font-size: 0.68em; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-top: 5px; display: block; letter-spacing: 0.05em; }
 
         /* MODALES */
-        .modal { display: none; position: fixed; z-index: 2100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px); animation: fadeInModal 0.3s; }
+        .modal { display: none; position: fixed; z-index: 2100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(8px); animation: fadeInModal 0.25s; }
         @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
-        .modal-content { background-color: #fff; margin: 5% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 650px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; animation: slideInModal 0.3s; max-height: 85vh; overflow-y: auto; }
-        @keyframes slideInModal { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .modal-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; border-radius: 12px 12px 0 0; position: sticky; top: 0; z-index: 5; }
-        .modal-body { padding: 25px; }
-        .close-modal { font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; }
+        .modal-content { background: var(--card-bg); border: 1px solid var(--border); margin: 5% auto; padding: 0; border-radius: 16px; width: 90%; max-width: 650px; box-shadow: 0 25px 60px rgba(0,0,0,0.5); position: relative; animation: slideInModal 0.3s cubic-bezier(0.34,1.56,0.64,1); max-height: 88vh; overflow-y: auto; }
+        @keyframes slideInModal { from { transform: translateY(-16px) scale(0.97); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        .modal-header { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface); border-radius: 16px 16px 0 0; position: sticky; top: 0; z-index: 5; }
+        .modal-header h2 { color: var(--text-color); font-size: 1em; font-weight: 700; margin: 0; }
+        .modal-body { padding: 22px; }
+        .close-modal { font-size: 24px; font-weight: 300; color: var(--text-muted); cursor: pointer; line-height: 1; }
         .close-modal:hover { color: var(--danger); }
 
         /* Calendario */
@@ -120,48 +140,51 @@
         .pt-cal-nav:hover { background:var(--primary); color:white; border-color:var(--primary); }
         .pt-cal-title { font-weight:800; font-size:1em; color:var(--primary); }
         .pt-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
-        .pt-cal-dow { text-align:center; font-size:0.7em; font-weight:800; color:#999; padding:4px 0; text-transform:uppercase; }
+        .pt-cal-dow { text-align:center; font-size:0.7em; font-weight:800; color:var(--text-muted); padding:4px 0; text-transform:uppercase; }
         .pt-cal-day { min-height:48px; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:0.85em; transition:all 0.15s; position:relative; }
         .pt-cal-day.empty { background:transparent; }
-        .pt-cal-day.no-rec { background:#f8f8f8; color:#ccc; cursor:default; }
-        .pt-cal-day.has-rec { background:#f0faf5; border:2px solid #b7e4cc; cursor:pointer; color:#2c3e50; }
-        .pt-cal-day.has-rec:hover { background:#d4f1e3; border-color:var(--success); transform:scale(1.05); }
+        .pt-cal-day.no-rec { background:rgba(255,255,255,0.03); color:#475569; cursor:default; }
+        .pt-cal-day.has-rec { background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); cursor:pointer; color:var(--text-color); }
+        .pt-cal-day.has-rec:hover { background:rgba(16,185,129,0.18); border-color:var(--success); transform:scale(1.05); }
         .pt-cal-day.selected { background:var(--secondary); border:2px solid var(--secondary); color:white; box-shadow:0 3px 8px rgba(52,152,219,0.35); }
         .pt-cal-day.selected:hover { background:#2980b9; border-color:#2980b9; }
         .pt-cal-day .cal-num { font-weight:800; font-size:0.95em; line-height:1; }
         .pt-cal-day .cal-val { font-size:0.62em; opacity:0.8; margin-top:2px; }
 
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; }
         .form-group { display: flex; flex-direction: column; }
-        label { font-weight: 600; margin-bottom: 8px; color: var(--primary); font-size: 0.9em; }
-        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; transition: all 0.3s; width: 100%; box-sizing: border-box; }
-        input:focus, select:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
-        .btn-submit, .btn-action { background-color: var(--secondary); color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-submit:hover { background-color: #2980b9; }
+        label { font-weight: 600; margin-bottom: 7px; color: var(--text-muted); font-size: 0.82em; text-transform: uppercase; letter-spacing: 0.04em; }
+        input, select { padding: 11px 13px; border: 1px solid var(--border); border-radius: 9px; font-size: 14px; transition: all 0.25s; width: 100%; box-sizing: border-box; background: var(--surface); color: var(--text-color); font-family: 'DM Sans', sans-serif; }
+        input::placeholder { color: var(--text-muted); }
+        select option { background: var(--card-bg); color: var(--text-color); }
+        input:focus, select:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); background: var(--card-bg); }
+        .btn-submit, .btn-action { background: linear-gradient(135deg, var(--secondary), #2563eb); color: white; padding: 12px 18px; border: none; border-radius: 9px; font-weight: 700; cursor: pointer; transition: 0.2s; font-family: 'DM Sans', sans-serif; letter-spacing: 0.01em; }
+        .btn-submit:hover, .btn-action:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,130,246,0.35); }
 
-        .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background-color: var(--secondary); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 30px; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4); cursor: pointer; transition: all 0.3s; z-index: 1000; border: none; }
-        .fab-btn:hover { transform: scale(1.1); background-color: #2980b9; }
+        .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 58px; height: 58px; background: linear-gradient(135deg, var(--secondary), #2563eb); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 28px; box-shadow: 0 8px 24px rgba(59,130,246,0.45); cursor: pointer; transition: all 0.25s; z-index: 1000; border: none; }
+        .fab-btn:hover { transform: scale(1.1) translateY(-2px); box-shadow: 0 12px 32px rgba(59,130,246,0.55); }
 
-        .area-section { margin-bottom: 15px; }
-        .area-header { display: flex; align-items: center; justify-content: space-between; background: white; padding: 15px 20px; border-radius: 8px; border-left: 5px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; transition: background 0.2s; user-select: none; }
-        .area-header:hover { background-color: #f9f9f9; }
-        .area-info { display: flex; align-items: center; gap: 15px; }
-        .area-title { font-size: 1.1em; font-weight: bold; color: var(--primary); margin: 0; }
-        .area-details { display: flex; gap: 10px; align-items: center; }
-        .area-badge { background: #eee; color: #555; padding: 4px 10px; border-radius: 15px; font-size: 0.8em; font-weight: bold; }
-        .area-points { background: var(--primary); color: white; padding: 4px 10px; border-radius: 15px; font-size: 0.8em; font-weight: bold; }
-        .arrow-icon { transition: transform 0.3s ease; color: #999; font-size: 1.2em; }
+        .area-section { margin-bottom: 10px; }
+        .area-header { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); padding: 13px 18px; border-radius: 11px; border-left: 4px solid #334155; border: 1px solid var(--border); border-left-width: 4px; cursor: pointer; transition: all 0.2s; user-select: none; margin-bottom: 6px; }
+        .area-header:hover { background: var(--surface); border-color: rgba(255,255,255,0.12); }
+        .area-info { display: flex; align-items: center; gap: 14px; }
+        .area-title { font-size: 0.97em; font-weight: 700; color: var(--text-color); margin: 0; letter-spacing:-0.01em; }
+        .area-details { display: flex; gap: 8px; align-items: center; }
+        .area-badge { background: var(--surface); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 700; border: 1px solid var(--border); }
+        .area-points { background: rgba(59,130,246,0.15); color: var(--secondary); padding: 3px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 700; border: 1px solid rgba(59,130,246,0.25); }
+        .arrow-icon { transition: transform 0.3s ease; color: var(--text-muted); font-size: 0.9em; }
         .area-header.active .arrow-icon { transform: rotate(180deg); }
 
-        .cards-container { display: none; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; margin-top: 15px; padding-left: 10px; animation: slideDown 0.3s ease-out; }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .cards-container { display: none; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; margin-top: 8px; padding-left: 6px; animation: slideDown 0.3s ease-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 
         .border-left-mesas { border-left-color: #3498db; } .border-left-mesasPartTime { border-left-color: #3498db; }
         .border-left-cambistas { border-left-color: #9b59b6; }
         .border-left-maquinas { border-left-color: #e67e22; } .border-left-tecnicos { border-left-color: #7f8c8d; }
         .border-left-boveda { border-left-color: #27ae60; } .border-left-GastosComision { border-left-color: var(--gastos); }
 
-        .socio-card { background-color: var(--card-bg); border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); padding: 25px; position: relative; border-top: 5px solid var(--secondary); display: flex; flex-direction: column; }
+        .socio-card { background: var(--card-bg); border-radius: 14px; border: 1px solid var(--border); padding: 20px; position: relative; border-top: 3px solid var(--secondary); display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; }
+        .socio-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.12); }
         .area-tag { position: absolute; top: 15px; right: 15px; font-size: 0.75em; padding: 4px 10px; border-radius: 20px; font-weight: bold; color: white; }
         .bg-mesas { background-color: #3498db; } .bg-mesasPartTime { background-color: #3498db; }
         .bg-cambistas { background-color: #9b59b6; }
@@ -172,70 +195,75 @@
         .border-maquinas { border-top-color: #e67e22; } .border-tecnicos { border-top-color: #7f8c8d; }
         .border-boveda { border-top-color: #27ae60; } .border-GastosComision { border-top-color: var(--gastos); }
 
-        .card-header h3 { margin: 0; color: var(--primary); font-size: 1.2em; }
-        .card-contract { font-size: 0.85em; color: #555; text-transform: uppercase; font-weight: bold; background-color: #f0f2f5; padding: 2px 8px; border-radius: 4px; }
-        .card-body { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; }
-        .points-badge { background: linear-gradient(135deg, var(--primary), #34495e); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .points-number { font-size: 1.2em; font-weight: 800; }
-        .card-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 20px; }
-        .btn-card { padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.85em; border: none; font-weight: 600; text-align: center; }
-        .btn-edit { background-color: #fff; border: 1px solid var(--warning); color: var(--warning); }
-        .btn-delete { background-color: #fff; border: 1px solid var(--danger); color: var(--danger); }
-        .btn-info { background-color: #fff; border: 1px solid var(--secondary); color: var(--secondary); }
-        .btn-info:hover { background-color: var(--secondary); color: white; }
+        .card-header h3 { margin: 0; color: var(--text-color); font-size: 1.05em; font-weight: 700; letter-spacing: -0.01em; }
+        .card-contract { font-size: 0.72em; color: var(--text-muted); text-transform: uppercase; font-weight: 700; background: var(--surface); padding: 3px 8px; border-radius: 5px; border: 1px solid var(--border); letter-spacing: 0.05em; }
+        .card-body { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+        .points-badge { background: linear-gradient(135deg, var(--secondary), #2563eb); color: white; width: 48px; height: 48px; border-radius: 50%; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 4px 12px rgba(59,130,246,0.4); }
+        .points-number { font-size: 1.15em; font-weight: 800; }
+        .card-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 16px; }
+        .btn-card { padding: 8px 6px; border-radius: 7px; cursor: pointer; font-size: 0.8em; border: none; font-weight: 600; text-align: center; transition: 0.2s; font-family: 'DM Sans', sans-serif; }
+        .btn-edit   { background: rgba(245,158,11,0.1);  border: 1px solid rgba(245,158,11,0.3);  color: var(--warning); }
+        .btn-delete { background: rgba(239,68,68,0.1);   border: 1px solid rgba(239,68,68,0.3);   color: var(--danger);  }
+        .btn-info   { background: rgba(59,130,246,0.1);  border: 1px solid rgba(59,130,246,0.3);  color: var(--secondary); }
+        .btn-edit:hover   { background: var(--warning);  color: white; }
+        .btn-delete:hover { background: var(--danger);   color: white; }
+        .btn-info:hover   { background: var(--secondary); color: white; }
 
-        .gestion-layout { display: grid; grid-template-columns: 300px 1fr; gap: 30px; }
-        .search-panel { background: white; padding: 20px; border-radius: 12px; height: fit-content; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .search-results { margin-top: 15px; max-height: 400px; overflow-y: auto; }
-        .result-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
-        .result-item:hover { background-color: #f9f9f9; padding-left: 15px; }
-        .detail-panel { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); display: none; }
-        .detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
-        
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-        .action-card { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
-        
-        .history-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
-        .history-table th { text-align: left; background: #eee; padding: 8px; }
-        .history-table td { border-bottom: 1px solid #eee; padding: 8px; }
-        
-        .row-deletable { user-select: none; transition: background-color 0.3s; cursor: pointer; }
-        .row-deletable:active { background-color: #ffebee; transform: scale(0.99); }
+        .gestion-layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+        .search-panel { background: var(--card-bg); padding: 18px; border-radius: 14px; height: fit-content; border: 1px solid var(--border); }
+        .search-results { margin-top: 12px; max-height: 420px; overflow-y: auto; }
+        .result-item { padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.18s; display: flex; justify-content: space-between; align-items: center; color: var(--text-color); font-size: 0.9em; }
+        .result-item:hover { background: var(--surface); padding-left: 16px; }
+        .detail-panel { background: var(--card-bg); padding: 24px; border-radius: 14px; border: 1px solid var(--border); display: none; }
+        .detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
 
-        .amount-minus { color: var(--danger); font-weight: bold; }
-        .tag-absent { background: var(--danger); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+        .action-card { background: var(--surface); padding: 18px; border-radius: 10px; border: 1px solid var(--border); }
+        .action-title { font-weight: 700; color: var(--text-color); margin-bottom: 12px; font-size: 0.9em; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border-left: 5px solid var(--secondary); display: flex; flex-direction: column; justify-content: center; }
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 0.87em; }
+        .history-table th { text-align: left; background: var(--surface); padding: 9px 10px; color: var(--text-muted); font-weight: 700; font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+        .history-table td { border-bottom: 1px solid var(--border); padding: 9px 10px; color: var(--text-color); }
+
+        .row-deletable { user-select: none; transition: background-color 0.2s; cursor: pointer; }
+        .row-deletable:hover { background: rgba(255,255,255,0.03); }
+        .row-deletable:active { background: rgba(239,68,68,0.08); transform: scale(0.995); }
+
+        .amount-minus { color: var(--danger); font-weight: 700; }
+        .tag-absent { background: rgba(239,68,68,0.15); color: #fca5a5; padding: 2px 8px; border-radius: 5px; font-size: 0.78em; font-weight: 700; border: 1px solid rgba(239,68,68,0.3); }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px; }
+        .stat-card { background: var(--card-bg); padding: 18px 20px; border-radius: 12px; border: 1px solid var(--border); border-left: 3px solid var(--secondary); display: flex; flex-direction: column; justify-content: center; }
         .stat-card.purple { border-left-color: var(--purple); }
-        .stat-card.green { border-left-color: var(--success); }
-        .stat-card.info { border-left-color: var(--info); background-color: #f0fbff; }
-        .stat-label { font-size: 0.8em; color: #777; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; }
-        .stat-value { font-size: 1.6em; font-weight: 800; color: var(--primary); }
-        .stat-sub { font-size: 0.75em; color: #999; margin-top: 5px; }
-        .date-card { background: white; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; overflow: hidden; transition: all 0.3s; }
-        .date-header { background-color: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        .date-title { font-size: 1.1em; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
-        .date-divisor { background-color: #e8daef; color: #8e44ad; padding: 4px 10px; border-radius: 15px; font-size: 0.8em; font-weight: bold; }
-        .date-point-badge { background-color: var(--info); color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.9em; font-weight: bold; display: inline-block; }
-        .date-total { font-size: 1.2em; font-weight: 800; color: var(--success); text-align: right; }
-        .type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); padding: 15px 20px; gap: 15px; }
-        .type-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
-        .type-name { font-size: 0.9em; color: #666; font-weight: 600; }
-        .type-value { font-weight: bold; color: #333; }
+        .stat-card.green  { border-left-color: var(--success); }
+        .stat-card.info   { border-left-color: var(--info); }
+        .stat-label { font-size: 0.72em; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.05em; }
+        .stat-value { font-size: 1.55em; font-weight: 800; color: var(--text-color); }
+        .stat-sub { font-size: 0.72em; color: var(--text-muted); margin-top: 4px; }
+        .date-card { background: var(--card-bg); border-radius: 14px; border: 1px solid var(--border); margin-bottom: 16px; overflow: hidden; transition: border-color 0.2s; }
+        .date-card:hover { border-color: rgba(255,255,255,0.15); }
+        .date-header { background: var(--surface); padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .date-title { font-size: 1em; font-weight: 700; color: var(--text-color); display: flex; align-items: center; gap: 8px; }
+        .date-divisor { background: rgba(139,92,246,0.15); color: #a78bfa; padding: 3px 10px; border-radius: 12px; font-size: 0.78em; font-weight: 700; border: 1px solid rgba(139,92,246,0.3); }
+        .date-point-badge { background: rgba(6,182,212,0.15); color: var(--info); padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 700; border: 1px solid rgba(6,182,212,0.3); display: inline-block; }
+        .date-total { font-size: 1.1em; font-weight: 800; color: var(--success); text-align: right; }
+        .type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); padding: 14px 18px; gap: 12px; }
+        .type-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+        .type-name { font-size: 0.87em; color: var(--text-muted); font-weight: 600; }
+        .type-value { font-weight: 700; color: var(--text-color); font-family: 'DM Mono', monospace; font-size: 0.9em; }
 
         @media (max-width: 768px) { .gestion-layout { grid-template-columns: 1fr; } .action-grid { grid-template-columns: 1fr; } }
 
         /* Botones motivo ausencia */
-        .btn-motivo { padding: 5px 10px; border: 1px solid var(--danger); background: white; color: var(--danger); border-radius: 20px; cursor: pointer; font-size: 0.78em; font-weight: 600; transition: all 0.2s; }
-        .btn-motivo:hover, .btn-motivo.activo { background-color: var(--danger); color: white; }
+        .btn-motivo { padding: 5px 11px; border: 1px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); color: #fca5a5; border-radius: 20px; cursor: pointer; font-size: 0.76em; font-weight: 600; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
+        .btn-motivo:hover, .btn-motivo.activo { background: var(--danger); color: white; border-color: var(--danger); }
 
         /* Socio seleccionado en lista */
-        .result-item.seleccionado { background-color: #eaf4fd; border-left: 3px solid var(--secondary); padding-left: 12px; font-weight: bold; }
+        .result-item.seleccionado { background: rgba(59,130,246,0.1); border-left: 3px solid var(--secondary); padding-left: 16px; font-weight: 700; color: var(--secondary); }
 
         /* Feedback visual anticipo */
-        .input-ok { border-color: var(--success) !important; box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.15) !important; }
-        .input-error { border-color: var(--danger) !important; box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.15) !important; }
+        .input-ok    { border-color: var(--success) !important; box-shadow: 0 0 0 3px rgba(16,185,129,0.15) !important; }
+        .input-error { border-color: var(--danger)  !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.15)  !important; }
 
         /* Skeleton shimmer */
         @keyframes shimmer { from { background-color: #eee; } to { background-color: #ddd; } }
@@ -243,58 +271,64 @@
         /* Notas animaciones */
         @keyframes nota-in { from{opacity:0;transform:translateY(-10px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes nota-out { from{opacity:1;transform:translateX(0);max-height:200px;margin-bottom:10px;padding:15px 16px} to{opacity:0;transform:translateX(40px);max-height:0;margin-bottom:0;padding:0 16px} }
-        .nota-card { background:white; border-radius:10px; padding:15px 16px; margin-bottom:10px; box-shadow:0 1px 5px rgba(0,0,0,0.07); border-left:4px solid var(--secondary); overflow:hidden; animation:nota-in 0.32s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+        .nota-card { background:var(--card-bg); border-radius:10px; padding:15px 16px; margin-bottom:10px; border:1px solid var(--border); border-left:4px solid var(--secondary); overflow:hidden; animation:nota-in 0.32s cubic-bezier(0.34,1.56,0.64,1) forwards; }
         .nota-card.saliendo { animation:nota-out 0.28s ease forwards; pointer-events:none; }
 
         /* ===== ARQUEO DE CAJA ===== */
         @keyframes aq-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
         .aq-syncing { animation: aq-pulse 1s ease-in-out infinite; background:#f59e0b !important; }
-        .arqueo-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .arqueo-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         @media (max-width: 768px) { .arqueo-layout { grid-template-columns: 1fr; } }
-        .arqueo-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .arqueo-card h2 { margin: 0 0 15px 0; font-size: 1.1em; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .arqueo-info-box { background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; }
-        #aq-esperadoDisplay { font-size: 1.5rem; font-weight: 700; color: #2563eb; text-align: right; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 5px; }
-        .aq-btn { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.95rem; }
-        .aq-btn-primary { background-color: #2563eb; color: white; }
-        .aq-btn-success { background-color: #10b981; color: white; }
-        .aq-btn-danger { background-color: #ef4444; color: white; }
-        .aq-btn-warning { background-color: #f59e0b; color: white; }
-        .aq-btn-secondary { background-color: #64748b; color: white; }
-        .aq-btn-purple { background-color: #8b5cf6; color: white; }
-        .aq-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+        .arqueo-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; }
+        .arqueo-card h2 { margin: 0 0 14px 0; font-size: 1em; color: var(--text-color); border-bottom: 1px solid var(--border); padding-bottom: 10px; font-weight: 700; }
+        .arqueo-info-box { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-radius: 10px; padding: 1rem; }
+        #aq-esperadoDisplay { font-size: 1.5rem; font-weight: 800; color: var(--secondary); text-align: right; padding: 10px 14px; background: rgba(59,130,246,0.08); border-radius: 10px; border: 1px solid rgba(59,130,246,0.2); margin-top: 6px; font-family: 'DM Mono', monospace; }
+        .aq-btn { padding: 10px 16px; border: none; border-radius: 9px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; font-family: 'DM Sans', sans-serif; }
+        .aq-btn-primary   { background: #2563eb; color: white; }
+        .aq-btn-success   { background: #059669; color: white; }
+        .aq-btn-danger    { background: #dc2626; color: white; }
+        .aq-btn-warning   { background: #d97706; color: white; }
+        .aq-btn-secondary { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+        .aq-btn-purple    { background: #7c3aed; color: white; }
+        .aq-btn:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .aq-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-        .aq-mensaje { padding: 15px; border-radius: 8px; margin-top: 15px; font-weight: 600; text-align: center; }
-        .aq-mensaje.cuadrado { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; }
-        .aq-mensaje.sobrante { background-color: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
-        .aq-mensaje.faltante { background-color: #fee2e2; color: #b91c1c; border: 1px solid #f87171; }
-        .aq-denominacion-row { display: flex; flex-direction: column; padding: 12px 0; border-bottom: 1px dashed #e2e8f0; }
+        .aq-mensaje { padding: 14px; border-radius: 10px; margin-top: 14px; font-weight: 700; text-align: center; font-size: 1em; letter-spacing: 0.02em; }
+        .aq-mensaje.cuadrado { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+        .aq-mensaje.sobrante { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+        .aq-mensaje.faltante { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+        .aq-denominacion-row { display: flex; flex-direction: column; padding: 11px 0; border-bottom: 1px solid var(--border); }
         .aq-denom-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .aq-denom-main label { flex: 1; font-weight: bold; font-size: 0.95em; }
-        .aq-denom-trace { margin-top: 5px; padding: 5px 10px; background: #f1f5f9; border-radius: 6px; min-height: 25px; display: flex; align-items: center; }
-        .aq-denom-trace span { font-size: 0.85rem; font-family: 'Courier New', monospace; color: #2563eb; word-break: break-all; }
+        .aq-denom-main label { flex: 1; font-weight: 700; font-size: 0.95em; color: var(--text-color); }
+        .aq-denom-trace { margin-top: 5px; padding: 5px 10px; background: rgba(59,130,246,0.06); border-radius: 6px; min-height: 25px; display: flex; align-items: center; border: 1px solid rgba(59,130,246,0.1); }
+        .aq-denom-trace span { font-size: 0.82rem; font-family: 'DM Mono', monospace; color: #60a5fa; word-break: break-all; }
         .aq-btn-group { display: flex; gap: 5px; }
-        .aq-btn-group button { width: 36px; height: 36px; border: none; border-radius: 6px; color: white; font-size: 1rem; cursor: pointer; }
+        .aq-btn-group button { width: 36px; height: 36px; border: none; border-radius: 8px; color: white; font-size: 1.1rem; cursor: pointer; font-weight: 700; transition: 0.15s; }
+        .aq-btn-group button:hover { transform: scale(1.1); opacity: 0.9; }
         .aq-total-display { text-align: right; min-width: 100px; display: flex; flex-direction: column; align-items: flex-end; }
-        .aq-cantidad-input { width: 75px !important; padding: 4px !important; text-align: center; font-weight: bold; color: #2563eb !important; border: 1px solid #2563eb !important; border-radius: 6px; font-size: 0.9em; }
-        .aq-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
-        .aq-stat-card { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
-        .aq-chart-row { display: flex; align-items: center; margin-bottom: 12px; font-size: 0.9rem; }
-        .aq-chart-bar-area { flex-grow: 1; height: 24px; background: #e2e8f0; border-radius: 6px; overflow: hidden; margin: 0 10px; }
-        .aq-chart-bar { height: 100%; background: #2563eb; border-radius: 6px; display: flex; align-items: center; padding-left: 8px; color: white; font-size: 0.75rem; font-weight: bold; }
-        .aq-calendar-wrapper { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; margin-top: 10px; }
-        .aq-calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
-        .aq-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #e2e8f0; }
-        .aq-cal-day-hdr { background: #f8fafc; padding: 8px 0; text-align: center; font-size: 0.75rem; font-weight: bold; color: #64748b; }
-        .aq-cal-day { background: #fff; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9em; }
-        .aq-cal-day.selected { background: #2563eb; color: white; font-weight: bold; }
-        .aq-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        .aq-table th, .aq-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
-        .aq-table th { background-color: #f8fafc; font-weight: 600; color: #64748b; }
+        .aq-total-display div { color: var(--text-color); font-weight: 700; }
+        .aq-cantidad-input { width: 75px !important; padding: 5px !important; text-align: center; font-weight: 800; color: #60a5fa !important; border: 1px solid rgba(59,130,246,0.4) !important; border-radius: 7px; font-size: 0.95em; background: rgba(59,130,246,0.08) !important; font-family: 'DM Mono', monospace; }
+        .aq-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 18px; }
+        .aq-stat-card { background: var(--surface); padding: 14px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+        .aq-stat-card h4 { color: var(--text-muted); margin: 0 0 6px; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+        .aq-stat-card div { color: var(--text-color); font-weight: 800; font-size: 1.1em; }
+        .aq-chart-row { display: flex; align-items: center; margin-bottom: 10px; font-size: 0.88rem; color: var(--text-color); }
+        .aq-chart-bar-area { flex-grow: 1; height: 22px; background: var(--surface); border-radius: 6px; overflow: hidden; margin: 0 10px; border: 1px solid var(--border); }
+        .aq-chart-bar { height: 100%; background: linear-gradient(90deg, var(--secondary), #2563eb); border-radius: 6px; display: flex; align-items: center; padding-left: 8px; color: white; font-size: 0.72rem; font-weight: 700; }
+        .aq-calendar-wrapper { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--card-bg); margin-top: 10px; }
+        .aq-calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--surface); border-bottom: 1px solid var(--border); color: var(--text-color); }
+        .aq-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); }
+        .aq-cal-day-hdr { background: var(--surface); padding: 8px 0; text-align: center; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); }
+        .aq-cal-day { background: var(--card-bg); height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9em; color: var(--text-color); transition: background 0.15s; }
+        .aq-cal-day:hover { background: var(--surface); }
+        .aq-cal-day.selected { background: var(--secondary); color: white; font-weight: 700; }
+        .aq-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
+        .aq-table th, .aq-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+        .aq-table th { background: var(--surface); font-weight: 700; color: var(--text-muted); font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.04em; }
+        .aq-table td { color: var(--text-color); }
         .aq-table td:last-child, .aq-table th:last-child { text-align: right; }
         
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 2500; }
-        .toast { min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; transform: translateX(100%); transition: all 0.4s ease; }
+        .toast { min-width: 250px; background-color: var(--text-color); color: #fff; text-align: center; border-radius: 8px; padding: 16px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; transform: translateX(100%); transition: all 0.4s ease; }
         .toast.show { opacity: 1; transform: translateX(0); }
         .toast.success { background-color: var(--success); }
         .toast.error { background-color: var(--danger); }
@@ -307,9 +341,9 @@
             padding: 20px;
         }
         .login-box {
-            background: white; border-radius: 20px; padding: 40px 32px;
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 40px 32px;
             width: 100%; max-width: 360px; text-align: center;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+            box-shadow: 0 30px 70px rgba(0,0,0,0.6);
             animation: loginIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
         }
         @keyframes loginIn { from { opacity:0; transform: translateY(30px) scale(0.95); } to { opacity:1; transform: translateY(0) scale(1); } }
@@ -320,23 +354,23 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 2em; box-shadow: 0 8px 20px rgba(52,152,219,0.35);
         }
-        .login-title { font-size: 1.3em; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
-        .login-sub { font-size: 0.82em; color: #999; margin-bottom: 28px; }
+        .login-title { font-size: 1.3em; font-weight: 800; color: var(--text-color); margin-bottom: 4px; }
+        .login-sub { font-size: 0.82em; color: var(--text-muted); margin-bottom: 28px; }
         .login-user-badge {
-            background: #f0f4f8; border-radius: 10px; padding: 10px 16px;
-            font-size: 0.85em; color: #555; font-weight: 600; margin-bottom: 20px;
+            background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px;
+            font-size: 0.85em; color: var(--text-muted); font-weight: 600; margin-bottom: 20px;
             display: flex; align-items: center; gap: 8px; justify-content: center;
         }
         .pin-wrapper { position: relative; margin-bottom: 8px; }
         .pin-input {
-            width: 100%; padding: 14px 48px 14px 18px; border: 2px solid #e0e0e0;
+            width: 100%; padding: 14px 48px 14px 18px; border: 2px solid var(--border);
             border-radius: 12px; font-size: 1.5em; font-weight: 800; letter-spacing: 8px;
-            text-align: center; color: var(--primary); transition: 0.3s; box-sizing: border-box;
+            text-align: center; color: var(--text-color); background: var(--surface); transition: 0.3s; box-sizing: border-box; font-family: 'DM Mono', monospace;
         }
         .pin-input:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 0 3px rgba(52,152,219,0.12); }
         .pin-eye {
             position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-            cursor: pointer; color: #aaa; font-size: 1.1em; user-select: none;
+            cursor: pointer; color: var(--text-muted); font-size: 1.1em; user-select: none;
             transition: color 0.2s;
         }
         .pin-eye:hover { color: var(--primary); }
@@ -358,8 +392,9 @@
         .login-recover:hover { color: var(--primary); }
         .recover-panel { display: none; margin-top: 16px; border-top: 1px solid #eee; padding-top: 16px; }
         .recover-panel input {
-            width: 100%; padding: 11px 14px; border: 2px solid #e0e0e0; border-radius: 10px;
+            width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 10px;
             font-size: 0.95em; margin-bottom: 10px; box-sizing: border-box; transition: 0.3s;
+            background: var(--surface); color: var(--text-color); font-family: 'DM Sans', sans-serif;
         }
         .recover-panel input:focus { border-color: var(--secondary); outline: none; }
         .btn-recover {
@@ -399,7 +434,7 @@
             <div class="recover-panel" id="recoverPanel">
                 <input type="text" id="claveRecuperar" placeholder="Clave de recuperación" autocomplete="off">
                 <button class="btn-recover" onclick="recuperarPin()">Verificar y Resetear</button>
-                <div id="recoverMsg" style="font-size:0.8em;margin-top:8px;color:#888;"></div>
+                <div id="recoverMsg" style="font-size:0.8em;margin-top:8px;color:var(--text-muted);"></div>
             </div>
         </div>
     </div>
@@ -414,7 +449,7 @@
         <div id="toast-container"></div>
 
         <div class="header-section">
-            <h1>Sistema Integral <small style="font-size:0.5em; color:#777;">Fondo Solidario</small></h1>
+            <h1>Sistema Integral <small style="font-size:0.5em; color:var(--text-muted);">Fondo Solidario</small></h1>
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <div class="fecha-badge" id="fechaHoyBadge"></div>
                 <div id="inactividadBadge" style="display:none; background:#fff3cd; color:#856404; border:1px solid #ffc107; border-radius:20px; padding:6px 12px; font-size:0.78em; font-weight:700;">⏱ <span id="inactividadTimer">15:00</span></div>
@@ -465,7 +500,7 @@
                             <strong style="color:#e67e22; font-size:1em;">Escalamiento de Puntos</strong>
                         </div>
                         <button onclick="document.getElementById('panelEscalamientos').style.display='none'"
-                            style="background:none;border:none;color:#aaa;font-size:1.3em;cursor:pointer;line-height:1;">✕</button>
+                            style="background:none;border:none;color:var(--text-muted);font-size:1.3em;cursor:pointer;line-height:1;">✕</button>
                     </div>
                     <div id="listaEscalamientos"></div>
                 </div>
@@ -491,9 +526,9 @@
                                 <div class="form-group"><label>Apellido</label><input type="text" id="apellido" required placeholder="Ej: Pérez"></div>
                                 <div class="form-group"><label>Fecha Ingreso</label><input type="date" id="fechaIngreso" required></div>
                                 <div class="form-group">
-                                    <label>Fecha Inicio Puntos <small style="color:#888;font-weight:normal;">(opcional)</small></label>
+                                    <label>Fecha Inicio Puntos <small style="color:var(--text-muted);font-weight:normal;">(opcional)</small></label>
                                     <input type="date" id="fechaInicioPuntos">
-                                    <small style="color:#aaa;font-size:0.78em;">Si se deja vacía, se usa la fecha de ingreso</small>
+                                    <small style="color:var(--text-muted);font-size:0.78em;">Si se deja vacía, se usa la fecha de ingreso</small>
                                 </div>
                                 <div class="form-group">
                                     <label>Área</label>
@@ -526,37 +561,53 @@
 
             <!-- MODAL RESUMEN FINANCIERO -->
             <div id="modalResumenFinanciero" class="modal">
-                <div class="modal-content">
+                <div class="modal-content" style="max-width:440px;">
                     <div class="modal-header">
-                        <h2 id="tituloModalResumen">Estado Financiero</h2>
+                        <h2 id="tituloModalResumen" style="font-size:1em;">Estado Financiero</h2>
                         <span class="close-modal" onclick="document.getElementById('modalResumenFinanciero').style.display='none'">&times;</span>
                     </div>
-                    <div class="modal-body">
-                        <div class="dashboard-socios">
-                            <div class="mini-stat orange">
-                                <span class="ms-val" id="resumenSaldoAnt">$0</span>
-                                <span class="ms-label">Saldo Ant.</span>
+                    <div class="modal-body" style="padding-top:12px;">
+
+                        <!-- Fila superior: stats pequeños -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                            <div style="background:#fff7ed;border-radius:10px;padding:10px 12px;border-left:3px solid #f59e0b;">
+                                <div style="font-size:0.7em;color:#92400e;font-weight:700;text-transform:uppercase;margin-bottom:3px;">Saldo Anterior</div>
+                                <div id="resumenSaldoAnt" style="font-size:1em;font-weight:800;color:#b45309;">$0</div>
                             </div>
-                            <!-- Solo PT -->
-                            <div class="mini-stat dark" id="resumenDiasPT" style="display:none;">
-                                <span class="ms-val" id="resumenDiasCount">0</span>
-                                <span class="ms-label">Días Trab.</span>
+                            <div style="background:#eff6ff;border-radius:10px;padding:10px 12px;border-left:3px solid #3b82f6;">
+                                <div style="font-size:0.7em;color:#1e40af;font-weight:700;text-transform:uppercase;margin-bottom:3px;">Alcance</div>
+                                <div id="resumenAlcance" style="font-size:1em;font-weight:800;color:#1d4ed8;">$0</div>
                             </div>
-                            <div class="mini-stat blue">
-                                <span class="ms-val" id="resumenAlcance">$0</span>
-                                <span class="ms-label">Alcance</span>
+                            <div style="background:#fef2f2;border-radius:10px;padding:10px 12px;border-left:3px solid #ef4444;">
+                                <div style="font-size:0.7em;color:#991b1b;font-weight:700;text-transform:uppercase;margin-bottom:3px;">Anticipos</div>
+                                <div id="resumenPedido" style="font-size:1em;font-weight:800;color:#dc2626;">$0</div>
                             </div>
-                            <div class="mini-stat red">
-                                <span class="ms-val" id="resumenPedido">$0</span>
-                                <span class="ms-label">Pedido</span>
-                            </div>
-                            <div class="mini-stat green">
-                                <span class="ms-val" id="resumenFinal">$0</span>
-                                <span class="ms-label">A Recibir</span>
+                            <div id="resumenDiasPT" style="display:none;background:#f0fdf4;border-radius:10px;padding:10px 12px;border-left:3px solid #22c55e;">
+                                <div style="font-size:0.7em;color:#166534;font-weight:700;text-transform:uppercase;margin-bottom:3px;">Días Trab.</div>
+                                <div id="resumenDiasCount" style="font-size:1em;font-weight:800;color:#15803d;">0</div>
                             </div>
                         </div>
-                        
-                        <h4 style="margin-top:20px; color:#555; border-bottom:1px solid #eee; padding-bottom:10px;">Últimos Movimientos</h4>
+
+                        <!-- Tarjeta A Pagar destacada -->
+                        <div style="background:linear-gradient(135deg,#1e40af,#3b82f6);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+                            <div>
+                                <div style="color:rgba(255,255,255,0.8);font-size:0.72em;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">💳 A Pagar</div>
+                                <div id="resumenFinal" style="color:white;font-size:1.6em;font-weight:900;margin-top:2px;">$0</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:6px 10px;text-align:center;">
+                                <div style="color:rgba(255,255,255,0.7);font-size:0.62em;font-weight:600;">REMANENTE</div>
+                                <div id="resumenRemanente" style="color:white;font-size:1em;font-weight:800;">$0</div>
+                            </div>
+                        </div>
+
+                        <!-- Tarjeta Remanente separada con estado -->
+                        <div id="resumenRemanenteCard" style="border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+                            <div id="resumenRemanenteLabel" style="font-size:0.8em;font-weight:700;"></div>
+                            <div id="resumenRemanenteValor" style="font-size:1em;font-weight:900;"></div>
+                        </div>
+
+                        <!-- Movimientos -->
+                        <div style="font-size:0.78em;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">Movimientos</div>
                         <table class="history-table">
                             <thead><tr><th>Fecha</th><th>Detalle</th><th>Monto</th></tr></thead>
                             <tbody id="tablaResumenMovimientos"></tbody>
@@ -591,7 +642,7 @@
                         <button id="filtroGestionAnticipos" onclick="setFiltroGestion('anticipos')" style="flex:1; padding:6px 8px; border:1px solid var(--warning); background:white; color:var(--warning); border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">💰 Anticipos</button>
                         <button id="filtroGestionAusencias" onclick="setFiltroGestion('ausencias')" style="flex:1; padding:6px 8px; border:1px solid var(--danger); background:white; color:var(--danger); border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">📅 Ausencias</button>
                     </div>
-                    <div id="filtroGestionInfo" style="font-size:0.75em; color:#888; margin-bottom:6px; min-height:16px;"></div>
+                    <div id="filtroGestionInfo" style="font-size:0.75em; color:var(--text-muted); margin-bottom:6px; min-height:16px;"></div>
                     <input type="text" id="buscadorGestion" placeholder="Escribe nombre o apellido..." onkeyup="filtrarSociosGestion()" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ddd; border-radius:8px;">
                     <div id="listaResultados" class="search-results">
                         <div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div><div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div><div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div><div style="padding:10px 8px;border-bottom:1px solid #f0f0f0"><div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div><div class="sk sk-line" style="width:40%;height:9px"></div></div>
@@ -609,7 +660,7 @@
                         <div>
                             <h2 id="detNombre" style="margin:0; color:var(--primary);">Nombre Socio</h2>
                             <span id="detContrato" class="card-contract" style="font-size:1em; margin-top:5px;">PLANTA</span>
-                            <div style="margin-top:5px; color:#666;" id="detArea">Área</div>
+                            <div style="margin-top:5px; color:var(--text-muted);" id="detArea">Área</div>
                         </div>
                         <div class="points-badge" style="width:70px; height:70px;">
                             <span id="detPuntos" class="points-number" style="font-size:1.6em;">0</span>
@@ -642,23 +693,23 @@
                     <!-- BLOQUE RESULTADO FINAL -->
                     <div style="background:linear-gradient(135deg, #f8fffe, #f0faf5); border:1px solid #b7e4cc; border-radius:12px; padding:16px; margin-bottom:20px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:8px; border-bottom:1px dashed #cce;">
-                            <span style="font-size:0.85em; color:#555; font-weight:600;">Saldo Real</span>
-                            <span id="socioSaldoReal" style="font-size:1.1em; font-weight:800; color:#2c3e50;">$0</span>
+                            <span style="font-size:0.85em; color:var(--text-muted); font-weight:600;">Saldo Real</span>
+                            <span id="socioSaldoReal" style="font-size:1.1em; font-weight:800; color:var(--text-color);">$0</span>
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
                             <div style="background:white; border-radius:8px; padding:10px; text-align:center; border:1px solid #d4edda; box-shadow:0 1px 4px rgba(0,0,0,0.05);">
                                 <span style="display:block; font-size:1.3em; font-weight:900; color:#27ae60;" id="socioAPagar">$0</span>
-                                <span style="font-size:0.68em; color:#888; text-transform:uppercase; font-weight:bold; display:block; margin-top:4px;">💵 A Pagar</span>
+                                <span style="font-size:0.68em; color:var(--text-muted); text-transform:uppercase; font-weight:bold; display:block; margin-top:4px;">💵 A Pagar</span>
                             </div>
                             <div style="background:white; border-radius:8px; padding:10px; text-align:center; border:1px solid #e8d5f5; box-shadow:0 1px 4px rgba(0,0,0,0.05);">
                                 <span style="display:block; font-size:1.3em; font-weight:900; color:#8e44ad;" id="socioRemanente">$0</span>
-                                <span style="font-size:0.68em; color:#888; text-transform:uppercase; font-weight:bold; display:block; margin-top:4px;">🔄 Remanente</span>
+                                <span style="font-size:0.68em; color:var(--text-muted); text-transform:uppercase; font-weight:bold; display:block; margin-top:4px;">🔄 Remanente</span>
                             </div>
                         </div>
                         <button onclick="cerrarMesSocio()" style="width:100%; background:linear-gradient(135deg, #8e44ad, #6c3483); color:white; border:none; border-radius:8px; padding:11px; font-weight:800; font-size:0.9em; cursor:pointer; letter-spacing:0.5px; transition:0.2s; display:flex; align-items:center; justify-content:center; gap:8px;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
                             🔒 Cerrar Mes (Guardar Remanente)
                         </button>
-                        <p style="text-align:center; font-size:0.7em; color:#aaa; margin:6px 0 0 0;">El remanente pasa como saldo al próximo mes</p>
+                        <p style="text-align:center; font-size:0.7em; color:var(--text-muted); margin:6px 0 0 0;">El remanente pasa como saldo al próximo mes</p>
                     </div>
 
                     <div class="action-grid">
@@ -686,13 +737,13 @@
                         </div>
                     </div>
 
-                    <h3 style="border-bottom:1px solid #ddd; padding-bottom:10px;">Historial <small style="color:#999; font-weight:normal;">(Mantén presionado para borrar)</small></h3>
+                    <h3 style="border-bottom:1px solid #ddd; padding-bottom:10px;">Historial <small style="color:var(--text-muted); font-weight:normal;">(Mantén presionado para borrar)</small></h3>
                     <table class="history-table">
                         <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Monto</th></tr></thead>
                         <tbody id="tablaHistorial"></tbody>
                     </table>
                 </div>
-                <div id="mensajeSeleccion" style="display:flex; justify-content:center; align-items:center; color:#999; height:300px; background:white; border-radius:12px;">Selecciona un socio para gestionar.</div>
+                <div id="mensajeSeleccion" style="display:flex; justify-content:center; align-items:center; color:var(--text-muted); height:300px; background:white; border-radius:12px;">Selecciona un socio para gestionar.</div>
             </div>
         </div>
         </div>
@@ -705,7 +756,7 @@
                     <span class="close-modal" onclick="cerrarModalSaldo()">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <p style="color:#666; font-size:0.9em; margin-bottom:15px;">Ingresa el monto sobrante o pendiente del mes pasado.</p>
+                    <p style="color:var(--text-muted); font-size:0.9em; margin-bottom:15px;">Ingresa el monto sobrante o pendiente del mes pasado.</p>
                     <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="numeric" id="inputSaldoAnterior" placeholder="0" oninput="formatearInputMonto(this)"></div>
                     <div style="margin-top:20px;"><button class="btn-submit" onclick="guardarSaldoAnterior()" style="width:100%; background-color: var(--warning);">Guardar Saldo</button></div>
                 </div>
@@ -737,7 +788,7 @@
                     <div class="pt-cal-grid" id="ptCalGrid"></div>
                     <!-- Resumen y guardar -->
                     <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                        <span id="ptCalResumen" style="font-size:0.82em; color:#666; font-weight:600;"></span>
+                        <span id="ptCalResumen" style="font-size:0.82em; color:var(--text-muted); font-weight:600;"></span>
                         <button class="btn-submit" onclick="guardarDiasTrabajados()" style="padding:10px 24px;">💾 Guardar</button>
                     </div>
                 </div>
@@ -752,12 +803,12 @@
                     <span class="close-modal" onclick="document.getElementById('modalCierreTodos').style.display='none'" style="color:white;">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <p style="color:#555; font-size:0.88em; margin-bottom:15px;">Se calculará el remanente de cada socio y se guardará como saldo del próximo mes. Esta acción no puede deshacerse fácilmente.</p>
+                    <p style="color:var(--text-muted); font-size:0.88em; margin-bottom:15px;">Se calculará el remanente de cada socio y se guardará como saldo del próximo mes. Esta acción no puede deshacerse fácilmente.</p>
                     <div id="cierreTodosProgreso" style="margin-bottom:15px; display:none;">
                         <div style="background:#eee; border-radius:8px; overflow:hidden; height:12px; margin-bottom:8px;">
                             <div id="cierreTodosBar" style="height:100%; background:linear-gradient(90deg,#8e44ad,#27ae60); border-radius:8px; width:0%; transition:width 0.3s;"></div>
                         </div>
-                        <div id="cierreTodosStatus" style="font-size:0.82em; color:#666; text-align:center;">Iniciando...</div>
+                        <div id="cierreTodosStatus" style="font-size:0.82em; color:var(--text-muted); text-align:center;">Iniciando...</div>
                     </div>
                     <div id="cierreTodosResultado" style="max-height:300px; overflow-y:auto; margin-bottom:15px;"></div>
                     <div style="display:flex; gap:10px;">
@@ -773,7 +824,7 @@
             <div class="modal-content" style="max-width:400px; margin-top:20%;">
                 <div class="modal-body" style="text-align:center;">
                     <h3 style="color:var(--danger); margin-top:0;">¿Borrar Movimiento?</h3>
-                    <p id="txtDetalleBorrar" style="margin:15px 0; color:#555;">Se eliminará este registro permanentemente.</p>
+                    <p id="txtDetalleBorrar" style="margin:15px 0; color:var(--text-muted);">Se eliminará este registro permanentemente.</p>
                     <input type="hidden" id="borrarUUID">
                     <input type="hidden" id="borrarTipo">
                     <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
@@ -870,7 +921,7 @@
                 <button class="aq-btn aq-btn-warning" onclick="aq_recuperarDeNube()"><i class="fas fa-cloud-download-alt"></i> Cargar</button>
                 <button class="aq-btn aq-btn-success" onclick="aq_guardarEnNube()"><i class="fas fa-cloud-upload-alt"></i> Guardar</button>
                 <button class="aq-btn aq-btn-secondary" onclick="aq_openStatsModal()"><i class="fas fa-chart-pie"></i> Estadísticas</button>
-                <div id="aq-sync-indicator" style="display:flex;align-items:center;gap:6px;font-size:0.75em;color:#64748b;padding:6px 10px;background:#f1f5f9;border-radius:8px;border:1px solid #e2e8f0;">
+                <div id="aq-sync-indicator" style="display:flex;align-items:center;gap:6px;font-size:0.75em;color:var(--text-muted);padding:6px 10px;background:var(--surface);border-radius:8px;border:1px solid var(--border);">
                     <span id="aq-sync-dot" style="width:8px;height:8px;border-radius:50%;background:#27ae60;display:inline-block;"></span>
                     <span id="aq-sync-txt">Sincronizado</span>
                 </div>
@@ -884,16 +935,16 @@
                         <div id="aq-esperadoDisplay">Cargando...</div>
                         <div class="arqueo-info-box" style="margin-top:15px;">
                             <p style="margin:0; display:flex; justify-content:space-between;"><span>Recaudación Nube:</span><strong id="aq-divisor-day-total">$0</strong></p>
-                            <small id="aq-divisor-date" style="color:#64748b; display:block; margin-bottom:8px;">Fecha: N/A</small>
-                            <div style="border-top:1px dashed #bfdbfe; margin:5px 0;"></div>
+                            <small id="aq-divisor-date" style="color:var(--text-muted); display:block; margin-bottom:8px;">Fecha: N/A</small>
+                            <div style="border-top:1px dashed rgba(59,130,246,0.3); margin:5px 0;"></div>
                             <p style="margin:5px 0; display:flex; justify-content:space-between;"><span>Divisor:</span><strong id="aq-divisor-value">1</strong></p>
                             <p style="margin:5px 0; display:flex; justify-content:space-between;"><span>💰 Punto Día:</span><strong id="aq-punto-del-dia" style="color:#10b981;">$0</strong></p>
-                            <div style="background:#dcfce7; padding:8px; border-radius:6px; margin-top:10px;">
-                                <p style="margin:0; font-size:0.9em; display:flex; justify-content:space-between;"><span>📊 TOTAL Puntos:</span><strong id="aq-suma-total-puntos">0</strong></p>
+                            <div style="background:rgba(16,185,129,0.1); padding:8px; border-radius:6px; margin-top:10px; border:1px solid rgba(16,185,129,0.2);">
+                                <p style="margin:0; font-size:0.9em; display:flex; justify-content:space-between;"><span>📊 TOTAL Puntos:</span><strong id="aq-suma-total-puntos" style="color:#34d399;">0</strong></p>
                             </div>
-                            <div style="margin-top:15px; border-top:1px solid #bfdbfe; padding-top:10px;">
+                            <div style="margin-top:15px; border-top:1px solid rgba(59,130,246,0.2); padding-top:10px;">
                                 <label style="font-weight:600; font-size:0.85em;">Divisor Planta:</label>
-                                <input type="number" id="aq-divisor-planta" value="1.0" step="0.01" style="text-align:right; width:100%; margin-top:4px; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
+                                <input type="number" id="aq-divisor-planta" value="1.0" step="0.01" style="text-align:right; width:100%; margin-top:4px; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text-color);">
                                 <label style="font-weight:600; font-size:0.85em; margin-top:10px; display:block;">Divisor Part-Time:</label>
                                 <input type="number" id="aq-divisor-part-time" value="1.0" step="0.01" style="text-align:right; width:100%; margin-top:4px; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
                             </div>
@@ -907,8 +958,8 @@
                 <div>
                     <div class="arqueo-card">
                         <h2><i class="fas fa-cash-register"></i> Resultados</h2>
-                        <div id="aq-desglose-contado"><p style="color:#999; text-align:center;">Sin ingresos.</p></div>
-                        <div style="margin-top:20px; padding-top:15px; border-top:2px solid #2563eb;">
+                        <div id="aq-desglose-contado"><p style="color:var(--text-muted); text-align:center;">Sin ingresos.</p></div>
+                        <div style="margin-top:20px; padding-top:15px; border-top:2px solid rgba(59,130,246,0.4);">
                             <div style="display:flex; justify-content:space-between; font-size:1.2em; margin-bottom:10px;">
                                 <strong>TOTAL CAJA:</strong> <span id="aq-total-contado" style="color:#10b981; font-weight:800;">$0</span>
                             </div>
@@ -926,7 +977,7 @@
                             <strong>Diferencia Real:</strong> <span id="aq-diferencia" style="font-weight:800;">$0</span>
                         </div>
                         <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-                            <strong>📊 Puntos Totales:</strong> <span id="aq-division-result" style="color:#64748b;">0</span>
+                            <strong>📊 Puntos Totales:</strong> <span id="aq-division-result" style="color:var(--text-muted);">0</span>
                         </div>
                         <p id="aq-mensaje-arqueo" class="aq-mensaje"></p>
                         <button onclick="aq_archivarEnNube()" class="aq-btn aq-btn-danger" style="width:100%; margin-top:10px;"><i class="fas fa-archive"></i> Archivar Informe Final</button>
@@ -995,10 +1046,10 @@
                 <!-- Lista de notas -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <h3 style="margin:0; color:var(--primary); font-size:1em;">📋 Notas guardadas</h3>
-                    <button onclick="notasCargar()" style="background:none; border:1px solid #ddd; border-radius:8px; padding:5px 12px; font-size:0.8em; cursor:pointer; color:#666;">🔄 Actualizar</button>
+                    <button onclick="notasCargar()" style="background:none; border:1px solid #ddd; border-radius:8px; padding:5px 12px; font-size:0.8em; cursor:pointer; color:var(--text-muted);">🔄 Actualizar</button>
                 </div>
                 <div id="notasListaContainer">
-                    <div style="text-align:center; padding:30px; color:#aaa;">Cargando notas...</div>
+                    <div style="text-align:center; padding:30px; color:var(--text-muted);">Cargando notas...</div>
                 </div>
             </div>
         </div>
@@ -1271,8 +1322,18 @@
             }
 
             try {
-                const response = await fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${id}`);
-                const res = await response.json();
+                // Usar cache si existe y es fresco
+                let res;
+                const cached = cacheSocioIndividual[id];
+                if (cached && (Date.now() - cached.ts < CACHE_SOCIO_TTL)) {
+                    res = { status: 'success', data: cached.data };
+                } else {
+                    const response = await fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${id}`);
+                    res = await response.json();
+                    if (res.status === 'success') {
+                        cacheSocioIndividual[id] = { ts: Date.now(), data: res.data };
+                    }
+                }
                 
                 if (res.status === 'success') {
                     const data = res.data || {};
@@ -1348,13 +1409,37 @@
                     document.getElementById('resumenSaldoAnt').innerText = formatearMoneda(saldoAnt);
                     document.getElementById('resumenAlcance').innerText = formatearMoneda(alcance);
                     document.getElementById('resumenPedido').innerText = formatearMoneda(sumaPedidos);
-                    document.getElementById('resumenFinal').innerText = `${formatearMoneda(aPagarModal)} + rem. ${formatearMoneda(remanenteModal)}`;
+                    document.getElementById('resumenFinal').innerText = formatearMoneda(aPagarModal);
+                    document.getElementById('resumenRemanente').innerText = formatearMoneda(remanenteModal);
+                    // Tarjeta remanente separada con color según estado
+                    const remCard  = document.getElementById('resumenRemanenteCard');
+                    const remLabel = document.getElementById('resumenRemanenteLabel');
+                    const remValor = document.getElementById('resumenRemanenteValor');
+                    if (remanenteModal < 0) {
+                        remCard.style.cssText  = 'border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;background:#fef2f2;border:1px solid #fca5a5;';
+                        remLabel.style.color   = '#dc2626';
+                        remLabel.innerHTML     = '⚠️ Deuda para el próximo mes';
+                        remValor.style.color   = '#dc2626';
+                        remValor.innerText     = formatearMoneda(remanenteModal);
+                    } else if (remanenteModal === 0) {
+                        remCard.style.cssText  = 'border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;background:#f0fdf4;border:1px solid #86efac;';
+                        remLabel.style.color   = '#16a34a';
+                        remLabel.innerHTML     = '✅ Sin remanente';
+                        remValor.style.color   = '#16a34a';
+                        remValor.innerText     = '$0';
+                    } else {
+                        remCard.style.cssText  = 'border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;background:#faf5ff;border:1px solid #d8b4fe;';
+                        remLabel.style.color   = '#7c3aed';
+                        remLabel.innerHTML     = '💜 Remanente al próximo mes';
+                        remValor.style.color   = '#7c3aed';
+                        remValor.innerText     = formatearMoneda(remanenteModal);
+                    }
 
                     const tbody = document.getElementById('tablaResumenMovimientos');
                     tbody.innerHTML = '';
                     movimientos.sort((a,b) => b.rawDate - a.rawDate);
                     
-                    if(movimientos.length === 0) tbody.innerHTML = '<tr><td colspan="3" style="color:#999;">Sin movimientos</td></tr>';
+                    if(movimientos.length === 0) tbody.innerHTML = '<tr><td colspan="3" style="color:var(--text-muted);">Sin movimientos</td></tr>';
                     
                     movimientos.forEach(m => {
                         let f = m.fecha; 
@@ -1536,7 +1621,9 @@
         const CACHE_KEY_SOCIOS = 'fondo_cache_socios';
         const CACHE_KEY_DIAS   = 'fondo_cache_dias';
         const CACHE_KEY_REC    = 'fondo_cache_recaudacion';
-        const CACHE_KEY_NOTAS  = 'fondo_cache_notas';
+        const CACHE_KEY_NOTAS   = 'fondo_cache_notas';
+        const CACHE_SOCIO_TTL   = 5 * 60 * 1000; // 5 min para datos individuales
+        const cacheSocioIndividual = {}; // { id: { ts, data } }
         const CACHE_TTL = 30 * 60 * 1000; // 30 minutos (bajado de 1h para datos más frescos)
 
         function guardarCache(key, data) {
@@ -1668,7 +1755,8 @@
             const mesPasado  = mesActual === 0 ? 11 : mesActual - 1;
             const anioPasado = mesActual === 0 ? anioActual - 1 : anioActual;
 
-            const subieronMesPasado     = [];
+            const subieronMesPasado     = []; // puntos NO aplicados aún
+            const subieronReciente      = []; // puntos YA aplicados el mes pasado
             const subenEsteMes          = [];
             const subenProximoPeriodo   = [];
             const ingresaronEstePeriodo = [];
@@ -1709,42 +1797,61 @@
 
                 // ── GRUPO 1: cumplió aniversario el MES PASADO ─────────────────
                 if (mesIngreso === mesPasado) {
-                    // Años completos que cumplió en el mes pasado
-                    const aniosCumplidos = anioPasado - anioIngreso;
+                    const aniosCumplidos  = anioPasado - anioIngreso;
                     if (aniosCumplidos >= 1) {
-                        // Puntos ANTES del aniversario (año anterior)
-                        const puntosAntes  = calcularPuntosPorAnios(aniosCumplidos - 1, socio.area);
-                        // Puntos DESPUÉS del aniversario (año actual)
+                        const puntosAntes   = calcularPuntosPorAnios(aniosCumplidos - 1, socio.area);
                         const puntosDespues = calcularPuntosPorAnios(aniosCumplidos, socio.area);
-                        // Solo avisar si realmente sube de puntos en ese aniversario
                         if (puntosDespues > puntosAntes) {
-                            subieronMesPasado.push({
-                                ...socio,
-                                puntosNuevos: puntosDespues,
-                                puntosAntes,
-                                aniosCumplidos
-                            });
+                            // ¿Ya se aplicó el escalamiento? (puntos en Sheets >= esperados)
+                            if (socio.puntos >= puntosDespues) {
+                                // Ya aplicado → grupo informativo 'subieron recientemente'
+                                subieronReciente.push({
+                                    ...socio,
+                                    puntosNuevos: puntosDespues,
+                                    puntosAntes,
+                                    aniosCumplidos
+                                });
+                            } else {
+                                // Aún no aplicado → pendiente de aplicar
+                                subieronMesPasado.push({
+                                    ...socio,
+                                    puntosNuevos: puntosDespues,
+                                    puntosAntes,
+                                    aniosCumplidos
+                                });
+                            }
                         }
                     }
                 }
 
                 // ── GRUPO 2: cumple aniversario ESTE MES ───────────────────────
                 if (mesIngreso === mesActual) {
-                    // Años que cumple este mes (ya ocurrió si diaActual >= diaIngreso)
                     const aniosCumpleEsteMes = anioActual - anioIngreso;
                     if (aniosCumpleEsteMes >= 1) {
                         const puntosAntes   = calcularPuntosPorAnios(aniosCumpleEsteMes - 1, socio.area);
                         const puntosDespues = calcularPuntosPorAnios(aniosCumpleEsteMes, socio.area);
                         if (puntosDespues > puntosAntes) {
                             const yaOcurrio = diaActual >= diaIngreso;
-                            subenEsteMes.push({
-                                ...socio,
-                                puntosNuevos: puntosDespues,
-                                puntosAntes,
-                                diaIngreso,
-                                aniosCumpleEsteMes,
-                                yaOcurrio
-                            });
+                            // Si ya ocurrió el día Y ya se aplicó → subió recientemente
+                            if (yaOcurrio && socio.puntos >= puntosDespues) {
+                                subieronReciente.push({
+                                    ...socio,
+                                    puntosNuevos: puntosDespues,
+                                    puntosAntes,
+                                    diaIngreso,
+                                    aniosCumpleEsteMes,
+                                    yaOcurrio: true
+                                });
+                            } else {
+                                subenEsteMes.push({
+                                    ...socio,
+                                    puntosNuevos: puntosDespues,
+                                    puntosAntes,
+                                    diaIngreso,
+                                    aniosCumpleEsteMes,
+                                    yaOcurrio
+                                });
+                            }
                         }
                     }
                 }
@@ -1776,7 +1883,7 @@
             const panel = document.getElementById('panelEscalamientos');
             const lista  = document.getElementById('listaEscalamientos');
 
-            if (!subieronMesPasado.length && !subenEsteMes.length && !subenProximoPeriodo.length && !ingresaronEstePeriodo.length) {
+            if (!subieronMesPasado.length && !subieronReciente.length && !subenEsteMes.length && !subenProximoPeriodo.length && !ingresaronEstePeriodo.length) {
                 panel.style.display = 'none';
                 const contEl = document.getElementById('contadorEscalamientos');
                 if(contEl) contEl.innerText = '🏆';
@@ -1784,7 +1891,7 @@
             }
 
             panel.style.display = 'block';
-            const totalAvisos = subieronMesPasado.length + subenEsteMes.length + subenProximoPeriodo.length + ingresaronEstePeriodo.length;
+            const totalAvisos = subieronMesPasado.length + subieronReciente.length + subenEsteMes.length + subenProximoPeriodo.length + ingresaronEstePeriodo.length;
             const contEl = document.getElementById('contadorEscalamientos');
             if(contEl) contEl.innerText = totalAvisos;
             let html = '';
@@ -1802,15 +1909,15 @@
                     const colorBtn = s.yaOcurrio === false ? '#aaa' : color;
                     bloque += `
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;
-                        background:white;border-radius:8px;padding:10px 13px;margin-bottom:6px;
+                        background:var(--surface);border-radius:8px;padding:10px 13px;margin-bottom:6px;
                         border-left:4px solid ${color};box-shadow:0 1px 4px rgba(0,0,0,0.07);">
                         <div>
                             <span style="font-weight:700;font-size:0.95em;">${s.nombre} ${s.apellido}</span>
-                            <span style="font-size:0.75em;color:#888;margin-left:6px;">${areaNombre}${subLabel}</span>
-                            <div style="font-size:0.8em;color:#555;margin-top:3px;">
-                                <span style="color:#999;">${s.puntosAntes} pts</span>
+                            <span style="font-size:0.75em;color:var(--text-muted);margin-left:6px;">${areaNombre}${subLabel}</span>
+                            <div style="font-size:0.8em;color:var(--text-muted);margin-top:3px;">
+                                <span style="color:var(--text-muted);">${s.puntosAntes} pts</span>
                                 → <strong style="color:${color};">${s.puntosNuevos} pts</strong>
-                                <span style="background:#e8f8ee;color:#27ae60;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:4px;">+${diff}</span>
+                                <span style="background:rgba(16,185,129,0.15);color:#34d399;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:4px;">+${diff}</span>
                             </div>
                         </div>
                         <button onclick="subirPuntosSocio('${s.id}','${s.nombre} ${s.apellido}',${s.puntosNuevos})"
@@ -1827,6 +1934,30 @@
             html += renderGrupo('Subieron el mes pasado — aplicar si aún no se hizo', '#e67e22', '⚠️', subieronMesPasado);
             html += renderGrupo('Suben este mes', '#27ae60', '📅', subenEsteMes);
 
+            // Grupo 'Subieron recientemente' — ya aplicado, solo informativo
+            if (subieronReciente.length) {
+                html += '<div style="margin-bottom:12px;">';
+                html += '<div style="font-size:0.78em;font-weight:800;text-transform:uppercase;color:#0891b2;letter-spacing:0.5px;margin-bottom:8px;">✅ Subieron recientemente — escalamiento ya aplicado</div>';
+                subieronReciente.forEach(s => {
+                    const areaNom = s.area.charAt(0).toUpperCase() + s.area.slice(1);
+                    const diff    = s.puntosNuevos - s.puntosAntes;
+                    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;'
+                          + 'background:var(--surface);border-radius:8px;padding:10px 13px;margin-bottom:6px;'
+                          + 'border-left:4px solid #0891b2;box-shadow:0 1px 4px rgba(0,0,0,0.07);opacity:0.85;">';
+                    html += '<div>'
+                          + '<span style="font-weight:700;font-size:0.95em;">' + s.nombre + ' ' + s.apellido + '</span>'
+                          + '<span style="font-size:0.75em;color:var(--text-muted);margin-left:6px;">' + areaNom + '</span>'
+                          + '<div style="font-size:0.8em;color:var(--text-muted);margin-top:3px;">'
+                          + '<span style="color:var(--text-muted);">' + s.puntosAntes + ' pts</span>'
+                          + ' &rarr; <strong style="color:#0891b2;">' + s.puntosNuevos + ' pts</strong>'
+                          + '<span style="background:rgba(6,182,212,0.15);color:#22d3ee;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:4px;">+' + diff + '</span>'
+                          + '</div></div>'
+                          + '<span style="background:rgba(6,182,212,0.15);color:#22d3ee;font-size:0.75em;font-weight:800;padding:5px 11px;border-radius:7px;">Aplicado ✓</span>'
+                          + '</div>';
+                });
+                html += '</div>';
+            }
+
             // Grupo 4: suben el próximo período — informativo, sin botón activo
             if (subenProximoPeriodo.length) {
                 const pxIniVis = proxPeriodoInicio.toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit'});
@@ -1838,17 +1969,17 @@
                     const areaNom = s.area.charAt(0).toUpperCase() + s.area.slice(1);
                     const diff    = s.puntosNuevos - s.puntosAntes;
                     html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;'
-                          + 'background:white;border-radius:8px;padding:10px 13px;margin-bottom:6px;'
+                          + 'background:var(--surface);border-radius:8px;padding:10px 13px;margin-bottom:6px;'
                           + 'border-left:4px solid #7c3aed;box-shadow:0 1px 4px rgba(0,0,0,0.07);opacity:0.9;">';
                     html += '<div>'
                           + '<span style="font-weight:700;font-size:0.95em;">' + s.nombre + ' ' + s.apellido + '</span>'
-                          + '<span style="font-size:0.75em;color:#888;margin-left:6px;">' + areaNom + ' — día ' + s.diaIngreso + '</span>'
-                          + '<div style="font-size:0.8em;color:#555;margin-top:3px;">'
-                          + '<span style="color:#999;">' + s.puntosAntes + ' pts</span>'
+                          + '<span style="font-size:0.75em;color:var(--text-muted);margin-left:6px;">' + areaNom + ' — día ' + s.diaIngreso + '</span>'
+                          + '<div style="font-size:0.8em;color:var(--text-muted);margin-top:3px;">'
+                          + '<span style="color:var(--text-muted);">' + s.puntosAntes + ' pts</span>'
                           + ' &rarr; <strong style="color:#7c3aed;">' + s.puntosNuevos + ' pts</strong>'
-                          + '<span style="background:#ede9fe;color:#7c3aed;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:4px;">+' + diff + '</span>'
+                          + '<span style="background:rgba(139,92,246,0.15);color:#a78bfa;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:4px;">+' + diff + '</span>'
                           + '</div></div>'
-                          + '<span style="background:#ede9fe;color:#7c3aed;font-size:0.75em;font-weight:800;padding:5px 11px;border-radius:7px;">Próximo período</span>'
+                          + '<span style="background:rgba(139,92,246,0.15);color:#a78bfa;font-size:0.75em;font-weight:800;padding:5px 11px;border-radius:7px;">Próximo período</span>'
                           + '</div>';
                 });
                 html += '</div>';
@@ -1865,13 +1996,13 @@
                     const fIngVis = s.fechaIngreso.split('-').reverse().join('/');
                     const fIniPts = (s.fechaInicioPuntos && s.fechaInicioPuntos !== s.fechaIngreso)
                         ? ' <span style="color:#e67e22;">(pts desde: ' + s.fechaInicioPuntos.split('-').reverse().join('/') + ')</span>' : '';
-                    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;background:white;border-radius:8px;padding:10px 13px;margin-bottom:6px;border-left:4px solid #2563eb;box-shadow:0 1px 4px rgba(0,0,0,0.07);">';
+                    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;background:var(--surface);border-radius:8px;padding:10px 13px;margin-bottom:6px;border-left:4px solid #2563eb;box-shadow:0 1px 4px rgba(0,0,0,0.07);">';
                     html += '<div>';
                     html += '<span style="font-weight:700;font-size:0.95em;">' + s.nombre + ' ' + s.apellido + '</span>';
-                    html += '<span style="font-size:0.75em;color:#888;margin-left:6px;">' + areaNom + ' • ' + s.contrato + '</span>';
-                    html += '<div style="font-size:0.8em;color:#555;margin-top:3px;">Ingreso: ' + fIngVis + fIniPts + ' — <strong>' + s.puntos + ' pts</strong></div>';
+                    html += '<span style="font-size:0.75em;color:var(--text-muted);margin-left:6px;">' + areaNom + ' • ' + s.contrato + '</span>';
+                    html += '<div style="font-size:0.8em;color:var(--text-muted);margin-top:3px;">Ingreso: ' + fIngVis + fIniPts + ' — <strong>' + s.puntos + ' pts</strong></div>';
                     html += '</div>';
-                    html += '<span style="background:#dbeafe;color:#1d4ed8;font-size:0.75em;font-weight:800;padding:4px 10px;border-radius:6px;">NUEVO</span>';
+                    html += '<span style="background:rgba(59,130,246,0.15);color:#60a5fa;font-size:0.75em;font-weight:800;padding:4px 10px;border-radius:6px;">NUEVO</span>';
                     html += '</div>';
                 });
                 html += '</div>';
@@ -1954,7 +2085,7 @@
                     if (socio.fechaInicioPuntos && socio.fechaInicioPuntos !== socio.fechaIngreso) {
                         const fipLabel = socio.fechaInicioPuntos.split('-').reverse().join('/');
                         if (socio.puntosActivos === false) {
-                            fipVis = `<small style="display:block;margin-top:3px;background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:4px;padding:2px 6px;font-size:0.72em;font-weight:700;">⏳ Puntos inician: ${fipLabel}</small>`;
+                            fipVis = `<small style="display:block;margin-top:3px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid #ffc107;border-radius:4px;padding:2px 6px;font-size:0.72em;font-weight:700;">⏳ Puntos inician: ${fipLabel}</small>`;
                         } else {
                             fipVis = `<small style="color:#e67e22;font-size:0.75em;">⏱ Puntos desde: ${fipLabel}</small>`;
                         }
@@ -1962,7 +2093,7 @@
                     card.innerHTML = `
                         <div class="area-tag bg-${key}">${nombresArea[key] || socio.area}</div>
                         <div class="card-header"><h3>${socio.nombre} ${socio.apellido}</h3><span class="card-contract">${socio.contrato}</span></div>
-                        <div class="card-body"><div><p style="margin:0; font-size:0.9em;">Antigüedad: ${socio.anios} años</p><small style="color:#999;">${fechaVis}</small>${fipVis}</div><div class="points-badge"><span class="points-number">${socio.puntos}</span></div></div>
+                        <div class="card-body"><div><p style="margin:0; font-size:0.9em;">Antigüedad: ${socio.anios} años</p><small style="color:var(--text-muted);">${fechaVis}</small>${fipVis}</div><div class="points-badge"><span class="points-number">${socio.puntos}</span></div></div>
                         <div class="card-actions">
                             <button class="btn-card btn-edit" onclick="prepararEdicion('${socio.id}')">Editar</button>
                             <button class="btn-card btn-info" onclick="verEstadoFinanciero('${socio.id}')">📊 Estado</button>
@@ -2118,7 +2249,7 @@
                     (gestionFiltroActivo === 'anticipos' ? ' con anticipos' : ' con ausencias');
             }
             if (filtrados.length === 0) {
-                lista.innerHTML = '<div style="padding:14px; color:#999; text-align:center; font-size:0.88em;">'
+                lista.innerHTML = '<div style="padding:14px; color:var(--text-muted); text-align:center; font-size:0.88em;">'
                     + (gestionFiltroActivo !== 'todos' ? 'Ninguno tiene ' + (gestionFiltroActivo === 'anticipos' ? 'anticipos' : 'ausencias') + ' registrados.' : 'No encontrado.')
                     + '</div>';
                 return;
@@ -2160,9 +2291,9 @@
                     div.setAttribute('data-socio-id', s.id);
                     div.style.borderLeft = `3px solid ${color}`;
                     const mov = gestionSociosConMovimientos[s.id];
-                    const badgeAnt = mov && mov.anticipos ? '<span style="background:#fff3cd;color:#856404;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:4px;">💰 ANT</span>' : '';
-                    const badgeAus = mov && mov.ausencias ? '<span style="background:#fde8e8;color:#9b1c1c;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">📅 AUS</span>' : '';
-                    div.innerHTML = `<strong>${s.nombre} ${s.apellido}</strong> <span style="font-size:0.8em; color:#777;">${s.puntos} pts</span>${badgeAnt}${badgeAus}`;
+                    const badgeAnt = mov && mov.anticipos ? '<span style="background:rgba(245,158,11,0.15);color:#fbbf24;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:4px;">💰 ANT</span>' : '';
+                    const badgeAus = mov && mov.ausencias ? '<span style="background:rgba(239,68,68,0.15);color:#f87171;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">📅 AUS</span>' : '';
+                    div.innerHTML = `<strong>${s.nombre} ${s.apellido}</strong> <span style="font-size:0.8em; color:var(--text-muted);">${s.puntos} pts</span>${badgeAnt}${badgeAus}`;
                     div.onclick = () => seleccionarSocio(s.id);
                     lista.appendChild(div);
                 });
@@ -2326,7 +2457,7 @@
                     elRem.innerText = formatearMoneda(remanente);
                     elRem.style.color = remanente < 0 ? 'var(--danger)' : '#8e44ad';
 
-                    if(listaFinal.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">No hay movimientos registrados.</td></tr>'; return; }
+                    if(listaFinal.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">No hay movimientos registrados.</td></tr>'; return; }
                     listaFinal.sort((a,b) => b.rawDate - a.rawDate); 
                     
                     listaFinal.forEach(item => {
@@ -2343,16 +2474,16 @@
                         let fechaVis = item.fecha;
                         if(fechaVis.includes('-')) { const f = fechaVis.split('-'); if(f.length === 3) fechaVis = `${f[2]}/${f[1]}/${f[0]}`; }
                         const tiposArr = Array.from(item.tipos);
-                        let tipoHtml = tiposArr.includes('AUSENCIA') ? '<span class="tag-absent">AUSENCIA</span>' : `<span style="font-weight:bold; color:#555;">${tiposArr.join(' + ')}</span>`;
+                        let tipoHtml = tiposArr.includes('AUSENCIA') ? '<span class="tag-absent">AUSENCIA</span>' : `<span style="font-weight:bold; color:var(--text-muted);">${tiposArr.join(' + ')}</span>`;
                         const detalleHtml = [...new Set(item.detalles)].join(', ') || '-';
                         const montoHtml = item.montoTotal > 0 ? `<span class="amount-minus">-${formatearMoneda(item.montoTotal)}</span>` : '-';
                         row.innerHTML = `<td>${fechaVis}</td><td>${tipoHtml}</td><td>${detalleHtml}</td><td>${montoHtml}</td>`;
                         tbody.appendChild(row);
                     });
                 } else { 
-                    tbody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">Error: ${res.message}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="4" style="color:var(--danger); text-align:center;">Error: ${res.message}</td></tr>`;
                 }
-            } catch (e) { console.error("Error JS:", e); tbody.innerHTML = '<tr><td colspan="4" style="color:red; text-align:center;">Error procesando datos</td></tr>'; }
+            } catch (e) { console.error("Error JS:", e); tbody.innerHTML = '<tr><td colspan="4" style="color:var(--danger); text-align:center;">Error procesando datos</td></tr>'; }
         }
 
         // =====================================================
@@ -2393,7 +2524,7 @@
                 const saldoReal = alcance + saldoAnt; // Aproximado sin anticipos (son del servidor)
                 // Nota: el cálculo exacto lo hace ejecutarCierreTodos con datos reales del servidor
                 previHtml += `<tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:5px 8px;">${socio.nombre} ${socio.apellido} <span style="font-size:0.75em; color:#888;">(${socio.contrato})</span></td>
+                    <td style="padding:5px 8px;">${socio.nombre} ${socio.apellido} <span style="font-size:0.75em; color:var(--text-muted);">(${socio.contrato})</span></td>
                     <td style="padding:5px 8px; text-align:right; color:#8e44ad; font-weight:bold;">Se calculará al ejecutar</td>
                 </tr>`;
             });
@@ -2564,7 +2695,7 @@
 
         async function cargarRecaudaciones(silent = false) {
             if(!URL_RECAUDACIONES || URL_RECAUDACIONES.includes("PEGA_AQUI")) { 
-                if(!silent) document.getElementById('contenedorFechas').innerHTML = '<div style="color:red; text-align:center;">Falta configurar URL</div>'; 
+                if(!silent) document.getElementById('contenedorFechas').innerHTML = '<div style="color:var(--danger); text-align:center;">Falta configurar URL</div>'; 
                 return; 
             }
 
@@ -2652,7 +2783,7 @@
                 }
 
                 const container = document.getElementById('contenedorFechas'); container.innerHTML = '';
-                if (fechasOrdenadas.length === 0) { container.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">No hay registros.</div>'; } else {
+                if (fechasOrdenadas.length === 0) { container.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:20px;">No hay registros.</div>'; } else {
                     fechasOrdenadas.forEach(fecha => {
                         const dia = grupos[fecha];
                         const partes = fecha.split('-');
@@ -2681,12 +2812,12 @@
                                     <div class="date-title">📅 ${fechaVisual}</div>
                                     <div style="margin-top:4px;"><span class="date-point-badge">Punto Noche: ${formatearMoneda(puntoNoche)}</span></div>
                                 </div>
-                                <div class="date-total"><small style="display:block;font-size:0.6em;color:#999;font-weight:normal;">RECAUDADO</small>${formatearMoneda(dia.totalDia)}</div>
+                                <div class="date-total"><small style="display:block;font-size:0.6em;color:var(--text-muted);font-weight:normal;">RECAUDADO</small>${formatearMoneda(dia.totalDia)}</div>
                             </div>
                             <div class="type-grid">${tiposHtml}</div>
                             <div style="background:#f8fafc;border-top:1px solid #eee;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
                                 <div style="display:flex;align-items:center;gap:8px;">
-                                    <span style="font-size:0.78em;font-weight:700;color:#555;">Divisor:</span>
+                                    <span style="font-size:0.78em;font-weight:700;color:var(--text-muted);">Divisor:</span>
                                     <input type="number" step="0.01" min="0.01" value="${dia.divisor}"
                                         style="width:72px;padding:5px 6px;border:2px solid var(--secondary);border-radius:7px;font-weight:800;text-align:center;font-size:0.9em;"
                                         onchange="rec_actualizarDivisor('${fecha}', this.value)">
@@ -3148,7 +3279,7 @@
             let h = '<table class="aq-table"><thead><tr><th>Denom.</th><th>Cant.</th><th>Subtotal</th></tr></thead><tbody>';
             let any = false;
             AQ_DENOMINACIONES.forEach(v => { if(aq_conteo[v] > 0) { any = true; h += `<tr><td>${aq_fmt(v)}</td><td>${aq_conteo[v]}</td><td>${aq_fmt(v*aq_conteo[v])}</td></tr>`; } });
-            document.getElementById('aq-desglose-contado').innerHTML = any ? h + '</tbody></table>' : '<p style="color:#999; text-align:center;">Sin ingresos.</p>';
+            document.getElementById('aq-desglose-contado').innerHTML = any ? h + '</tbody></table>' : '<p style="color:var(--text-muted); text-align:center;">Sin ingresos.</p>';
         }
 
         async function aq_fetchEsperadoData() {
@@ -3327,7 +3458,7 @@
             const colorNeto = neto >= 0 ? '#10b981' : '#ef4444';
             const signoNeto = neto >= 0 ? '+' : '';
 
-            let html = '<div style="font-weight:800;font-size:0.85em;color:#374151;margin-bottom:8px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">📋 Resumen de esta sesión</div>';
+            let html = '<div style="font-weight:800;font-size:0.85em;color:var(--text-color);margin-bottom:8px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">📋 Resumen de esta sesión</div>';
             html += lineas.join('');
             html += '<div style="border-top:1px solid #e2e8f0;margin-top:8px;padding-top:8px;display:flex;flex-direction:column;gap:4px;">';
             if (totalIngresado > 0) html += '<div style="display:flex;justify-content:space-between;font-size:0.82em;"><span style="color:#10b981;font-weight:700;">Total ingresado</span><span style="color:#10b981;font-weight:800;">+' + aq_fmt(totalIngresado) + '</span></div>';
@@ -3346,7 +3477,7 @@
         function aq_abrirModalBackup() {
             const historial = JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || [];
             const container = document.getElementById('aq-backup-list');
-            if(historial.length === 0) { container.innerHTML = '<p style="color:#999;">Sin registros archivados.</p>'; }
+            if(historial.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);">Sin registros archivados.</p>'; }
             else {
                 let html = '';
                 historial.forEach((b, index) => {
@@ -3429,7 +3560,7 @@
 
         function aq_openStatsModal() {
             const container = document.getElementById('aq-stats-content');
-            if(!aq_desgloseEsperado.length) { container.innerHTML = '<p style="color:#999;">No hay datos de desglose. Sincroniza primero.</p>'; document.getElementById('aq-modalStats').style.display='block'; return; }
+            if(!aq_desgloseEsperado.length) { container.innerHTML = '<p style="color:var(--text-muted);">No hay datos de desglose. Sincroniza primero.</p>'; document.getElementById('aq-modalStats').style.display='block'; return; }
             let total = 0; aq_desgloseEsperado.forEach(i => total += i.monto);
             const sorted = [...aq_desgloseEsperado].sort((a,b) => b.monto - a.monto);
             const avg = total / aq_desgloseEsperado.length;
@@ -3459,8 +3590,8 @@
             div.dataset.rowIndex = rowIndex;
             div.innerHTML =
                 '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
-                + '<div style="flex:1;"><div style="font-size:0.75em;color:#999;margin-bottom:5px;font-weight:600;">'+autor+' &middot; '+fecha+'</div>'
-                + '<div style="font-size:0.95em;color:#333;line-height:1.5;white-space:pre-wrap;">'+(n.mensaje||'').replace(/</g,'&lt;')+'</div></div>'
+                + '<div style="flex:1;"><div style="font-size:0.75em;color:var(--text-muted);margin-bottom:5px;font-weight:600;">'+autor+' &middot; '+fecha+'</div>'
+                + '<div style="font-size:0.95em;color:var(--text-color);line-height:1.5;white-space:pre-wrap;">'+(n.mensaje||'').replace(/</g,'&lt;')+'</div></div>'
                 + '<button onclick="notasBorrar(this)" style="background:none;border:1px solid #fee2e2;color:#ef4444;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:0.8em;flex-shrink:0;" title="Eliminar">&#x1F5D1;</button>'
                 + '</div>';
             return div;
@@ -3470,7 +3601,7 @@
             const cont = document.getElementById('notasListaContainer');
             if (!cont) return;
             cont.innerHTML = '';
-            if (!notas.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;">Sin notas guardadas.</div>'; return; }
+            if (!notas.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);">Sin notas guardadas.</div>'; return; }
             notas.forEach((n, i) => {
                 const idx = n.originalIndex !== undefined ? n.originalIndex : i;
                 const el  = notasCrearElemento(n, idx);
@@ -3541,7 +3672,7 @@
                 card.remove();
                 const cont = document.getElementById('notasListaContainer');
                 if (cont && cont.querySelectorAll('.nota-card').length === 0)
-                    cont.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;">Sin notas guardadas.</div>';
+                    cont.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);">Sin notas guardadas.</div>';
             }
             // 2. Llamar al servidor — script espera { action, index } donde index es fila en Sheets
             try {
