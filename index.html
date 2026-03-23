@@ -2640,187 +2640,182 @@
         }
 
         function imprimirReciboSocio() {
-            const id      = document.getElementById('gestionSocioId').value;
-            const socio   = cacheSocios.find(s => s.id === id);
+            const id     = document.getElementById('gestionSocioId').value;
+            const socio  = cacheSocios.find(s => s.id === id);
             if (!socio) return showToast('Selecciona un socio primero', 'error');
 
-            // Leer valores ya calculados del panel
-            const nombre       = document.getElementById('gestionSocioNombre').value;
-            const puntos       = document.getElementById('gestionSocioPuntos').value || socio.puntos;
-            const area         = (socio.area || '').toUpperCase();
-            const contrato     = (socio.contrato || '').toUpperCase();
-            const anioIngreso  = socio.fechaIngreso ? socio.fechaIngreso.split('-')[0] : '-';
-            const saldoAnt     = document.getElementById('socioSaldoAnterior').innerText || '$0';
-            const alcance      = document.getElementById('socioAlcance').innerText || '$0';
-            const totalPedido  = document.getElementById('socioTotalPedido').innerText || '$0';
-            const saldoReal    = document.getElementById('socioSaldoReal').innerText || '$0';
-            const aPagar       = document.getElementById('socioAPagar').innerText || '$0';
-            const remanente    = document.getElementById('socioRemanente').innerText || '$0';
+            // ── Datos del socio ───────────────────────────────────────────
+            const nombre      = document.getElementById('gestionSocioNombre').value;
+            const puntos      = parseFloat(document.getElementById('gestionSocioPuntos').value || socio.puntos) || 0;
+            const area        = (socio.area || '').replace(/gastoscomision/i,'Gastos Comisión')
+                                 .replace(/mesas/i,'Mesas').replace(/maquinas/i,'Máquinas')
+                                 .replace(/tecnicos/i,'Técnicos').replace(/boveda/i,'Bóveda')
+                                 .replace(/cambistas/i,'Cambistas');
+            const contrato    = (socio.contrato || '').toUpperCase();
+            const anioIngreso = socio.fechaIngreso ? socio.fechaIngreso.split('-')[0] : '-';
+            // Fecha inicio puntos si difiere del ingreso
+            const fipLabel    = (socio.fechaInicioPuntos && socio.fechaInicioPuntos !== socio.fechaIngreso)
+                                  ? socio.fechaInicioPuntos.split('-').reverse().join('/') : null;
 
-            // Calcular cierre de punto (valor punto * puntos del socio)
-            const valorPuntoDia = Object.values(globalMapaPuntosDia).reduce((a,b)=>a+b, 0) || 0;
-            const cierrePunto   = formatearMoneda(Math.round(valorPuntoDia * parseFloat(puntos)));
+            // ── Cifras financieras (ya calculadas en el panel) ────────────
+            const saldoAnt    = document.getElementById('socioSaldoAnterior').innerText || '$0';
+            const alcance     = document.getElementById('socioAlcance').innerText || '$0';
+            const totalPedido = document.getElementById('socioTotalPedido').innerText || '$0';
+            const saldoReal   = document.getElementById('socioSaldoReal').innerText || '$0';
+            const aPagar      = document.getElementById('socioAPagar').innerText || '$0';
+            const remanente   = document.getElementById('socioRemanente').innerText || '$0';
 
-            // Período actual
+            // ── Cierre de Punto = Total Puntos Noche (de Montos Recaudados) × puntos del socio ──
+            // recTotalPuntos es la "Suma de Puntos Noche" del panel de Recaudaciones
+            const totalPuntosNoche = document.getElementById('recTotalPuntos');
+            let valorPuntoNoche = 0;
+            if (totalPuntosNoche) {
+                const raw = totalPuntosNoche.innerText.replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.');
+                valorPuntoNoche = parseFloat(raw) || 0;
+            }
+            const cierrePunto = formatearMoneda(Math.round(valorPuntoNoche * puntos));
+            // También mostramos el valor del punto noche
+            const valorPuntoFmt = formatearMoneda(Math.round(valorPuntoNoche));
+
+            // ── Período ───────────────────────────────────────────────────
             const { inicio, fin } = aq_calcularPeriodoActual();
-            const fmtFecha = iso => { const p = iso.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
-            const periodoStr = `${fmtFecha(inicio)} AL ${fmtFecha(fin)}`;
-            const fechaHoy = new Date().toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',year:'numeric'});
+            const fmtF = iso => { const p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
+            const periodoStr = fmtF(inicio) + ' AL ' + fmtF(fin);
+            const fechaHoy   = new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
 
-            // Obtener historial de movimientos de la tabla
+            // ── Historial de movimientos de la tabla ──────────────────────
             const filas = document.getElementById('tablaHistorial');
-            let anticiposHtml = '';
+            let movHtml = '';
             let numAnt = 1;
             if (filas) {
                 Array.from(filas.querySelectorAll('tr')).forEach(tr => {
-                    const celdas = tr.querySelectorAll('td');
-                    if (celdas.length < 3) return;
-                    const tipo  = celdas[1].textContent.trim();
-                    const monto = celdas[3] ? celdas[3].textContent.trim() : '-';
-                    const fech  = celdas[0].textContent.trim();
+                    const td = tr.querySelectorAll('td');
+                    if (td.length < 4) return;
+                    const fecha = td[0].textContent.trim();
+                    const tipo  = td[1].textContent.trim();
+                    const det   = td[2].textContent.trim();
+                    const monto = td[3].textContent.trim();
                     const esAnticipo = tipo.toLowerCase().includes('anticipo');
-                    anticiposHtml += '<tr>'
-                        + '<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;color:#666;">' + (esAnticipo ? numAnt++ : '-') + '</td>'
-                        + '<td style="padding:4px 8px;border-bottom:1px solid #eee;">' + tipo + '</td>'
-                        + '<td style="padding:4px 8px;border-bottom:1px solid #eee;">' + fech + '</td>'
-                        + '<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;">' + monto + '</td>'
-                        + '</tr>';
+                    const esAusencia = tipo.toLowerCase().includes('ausencia');
+                    const color = esAusencia ? '#c0392b' : (esAnticipo ? '#2980b9' : '#555');
+                    movHtml +=
+                        '<tr>' +
+                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;text-align:center;color:#aaa;font-size:9px;">' + (esAnticipo ? numAnt++ : '—') + '</td>' +
+                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;color:' + color + ';font-weight:700;font-size:9px;">' + tipo + '</td>' +
+                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;font-size:9px;">' + fecha + (det && det!=='-' ? '<br><span style=\'color:#999;font-size:8px;\'>' + det + '</span>' : '') + '</td>' +
+                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;font-size:9px;">' + monto + '</td>' +
+                        '</tr>';
                 });
             }
-            if (!anticiposHtml) anticiposHtml = '<tr><td colspan="4" style="padding:6px 8px;color:#aaa;text-align:center;">Sin movimientos registrados</td></tr>';
+            if (!movHtml) movHtml = '<tr><td colspan="4" style="padding:6px;color:#aaa;text-align:center;font-size:9px;">Sin movimientos registrados</td></tr>';
 
-            // ── Construir el HTML del recibo ────────────────────────────
-            const recibo = `<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'>
-<title>Recibo - ${nombre}</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #000; background: white; }
-  .page { width: 80mm; margin: 0 auto; padding: 8px; }
-  .header { text-align: center; border: 2px solid #000; padding: 8px; margin-bottom: 10px; }
-  .header h1 { font-size: 13px; font-weight: bold; letter-spacing: 1px; }
-  .header p  { font-size: 10px; margin-top: 2px; }
-  .section-title { text-align: center; font-weight: bold; font-size: 12px; border-bottom: 1px solid #000; padding-bottom: 3px; margin: 10px 0 6px; letter-spacing: 1px; }
-  .row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee; }
-  .row.bold { font-weight: bold; }
-  .row.big  { font-size: 15px; font-weight: 900; border-top: 2px solid #000; margin-top: 4px; padding-top: 6px; }
-  .row label { color: #555; font-size: 10px; }
-  table { width: 100%; border-collapse: collapse; margin: 4px 0; }
-  th { background: #f0f0f0; padding: 4px 8px; text-align: left; font-size: 10px; border-bottom: 1px solid #ccc; }
-  .divider { border-top: 1px solid #000; margin: 8px 0; }
-  .footer { text-align: center; font-size: 9px; color: #888; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 6px; }
-  .copy-label { text-align:center; font-size:9px; font-weight:bold; background:#f0f0f0; padding:2px; margin-bottom:6px; letter-spacing:2px; }
-  .cut { border-top: 2px dashed #000; margin: 16px 0; text-align:center; font-size:9px; color:#aaa; padding-top:4px; }
-  @media print {
-    @page { margin: 2mm; size: 80mm auto; }
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .cut { page-break-after: always; }
-  }
-  @media screen {
-    body { background: #e0e0e0; padding: 10px; }
-    .page { background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-  }
-</style></head><body><div class='page'>
+            const fipRow = fipLabel
+                ? '<div class=\'row\'><label>INICIO PUNTOS</label><span>' + fipLabel + '</span></div>'
+                : '';
 
-<!-- ===== COPIA ADMINISTRADOR ===== -->
-<div class='copy-label'>COPIA ADMINISTRADOR</div>
-<div class='header'>
-  <h1>FONDO DE SOLIDARIDAD</h1>
-  <p>CASINO DE PTO. VARAS</p>
-  <p>LEY 17312 DEL 29/07/70</p>
-  <p><strong>PUERTO VARAS</strong></p>
-</div>
-<div class='section-title'>DATOS</div>
-<div class='row'><label>NOMBRE</label><strong>${nombre}</strong></div>
-<div class='row'><label>ÁREA</label><span>${area}</span></div>
-<div class='row'><label>CONTRATO</label><span>${contrato}</span></div>
-<div class='row'><label>AÑO INGRESO</label><span>${anioIngreso}</span></div>
-<div class='row'><label>PUNTOS</label><span>${puntos}</span></div>
-<div class='row'><label>CIERRE PUNTO</label><strong>${cierrePunto}</strong></div>
-<div class='divider'></div>
-<div class='section-title'>DETALLE</div>
-<div class='row'><label>SALDO ANTERIOR</label><span>${saldoAnt}</span></div>
-<div class='row'><label>ALCANCE TEÓRICO</label><span>${alcance}</span></div>
-<div class='row'><label>TOTAL PEDIDO</label><span>${totalPedido}</span></div>
-<div class='row bold'><label>SALDO REAL</label><span>${saldoReal}</span></div>
-<div class='divider'></div>
-<div class='row'><label>REDONDEADO</label><span></span></div>
-<div class='row big'><label>TOTAL A PAGAR</label><strong>\$ ${aPagar}</strong></div>
-<div class='row' style='margin-top:6px;'><label>REMANENTE</label><span>${remanente}</span></div>
-<div class='divider'></div>
-<div class='section-title'>ANTICIPOS / MOVIMIENTOS</div>
-<table><thead><tr><th>#</th><th>Tipo</th><th>Fecha</th><th style='text-align:right'>Monto</th></tr></thead>
-<tbody>${anticiposHtml}</tbody></table>
-<div class='divider'></div>
-<div class='section-title'>RESUMEN</div>
-<div class='row'><span>PERÍODO ${periodoStr}</span></div>
-<div style='margin-top:18px;padding-top:10px;'>
-  <div style='display:flex;justify-content:space-between;gap:20px;margin-bottom:16px;'>
-    <div style='flex:1;text-align:center;'>
-      <div style='border-top:1px solid #000;padding-top:4px;font-size:9px;color:#555;'>FIRMA SOCIO</div>
-      <div style='font-size:10px;font-weight:bold;margin-top:2px;'>${nombre}</div>
-    </div>
-    <div style='flex:1;text-align:center;'>
-      <div style='border-top:1px solid #000;padding-top:4px;font-size:9px;color:#555;'>FIRMA ADMINISTRADOR</div>
-    </div>
-  </div>
-</div>
-<div class='footer'>Emitido: ${fechaHoy} &nbsp;|&nbsp; Sistema Fondo Solidario</div>
+            // ── Plantilla del recibo (se repite 2 veces: admin + socio) ──
+            function bloqueRecibo(etiqueta) {
+                return (
+                    '<div class=\'copy-label\'>' + etiqueta + '</div>' +
+                    '<div class=\'header\'>' +
+                    '  <h1>FONDO DE SOLIDARIDAD</h1>' +
+                    '  <p>CASINO DE PTO. VARAS</p>' +
+                    '  <p>LEY 17312 DEL 29/07/70</p>' +
+                    '  <p><strong>PUERTO VARAS</strong></p>' +
+                    '</div>' +
 
-<!-- ===== CORTE ===== -->
-<div class='cut'>✂ &nbsp; CORTAR AQUÍ &nbsp; ✂</div>
+                    '<div class=\'section-title\'>DATOS</div>' +
+                    '<div class=\'row\'><label>NOMBRE</label><strong>' + nombre + '</strong></div>' +
+                    '<div class=\'row\'><label>ÁREA</label><span>' + area + '</span></div>' +
+                    '<div class=\'row\'><label>CONTRATO</label><span>' + contrato + '</span></div>' +
+                    '<div class=\'row\'><label>AÑO INGRESO</label><span>' + anioIngreso + '</span></div>' +
+                    fipRow +
+                    '<div class=\'row\'><label>PUNTOS</label><span>' + puntos + '</span></div>' +
+                    '<div class=\'row\'><label>SUBE PUNTOS</label><span>' + (socio.mesIngreso || '-') + '</span></div>' +
+                    '<div class=\'row\'><label>SECCIÓN</label><span>' + contrato + '</span></div>' +
 
-<!-- ===== COPIA SOCIO ===== -->
-<div class='copy-label'>COMPROBANTE SOCIO</div>
-<div class='header'>
-  <h1>FONDO DE SOLIDARIDAD</h1>
-  <p>CASINO DE PTO. VARAS</p>
-  <p>LEY 17312 DEL 29/07/70</p>
-  <p><strong>PUERTO VARAS</strong></p>
-</div>
-<div class='section-title'>DATOS</div>
-<div class='row'><label>NOMBRE</label><strong>${nombre}</strong></div>
-<div class='row'><label>ÁREA</label><span>${area}</span></div>
-<div class='row'><label>CONTRATO</label><span>${contrato}</span></div>
-<div class='row'><label>AÑO INGRESO</label><span>${anioIngreso}</span></div>
-<div class='row'><label>PUNTOS</label><span>${puntos}</span></div>
-<div class='row'><label>CIERRE PUNTO</label><strong>${cierrePunto}</strong></div>
-<div class='divider'></div>
-<div class='section-title'>DETALLE</div>
-<div class='row'><label>SALDO ANTERIOR</label><span>${saldoAnt}</span></div>
-<div class='row'><label>ALCANCE TEÓRICO</label><span>${alcance}</span></div>
-<div class='row'><label>TOTAL PEDIDO</label><span>${totalPedido}</span></div>
-<div class='row bold'><label>SALDO REAL</label><span>${saldoReal}</span></div>
-<div class='divider'></div>
-<div class='row'><label>REDONDEADO</label><span></span></div>
-<div class='row big'><label>TOTAL A PAGAR</label><strong>\$ ${aPagar}</strong></div>
-<div class='row' style='margin-top:6px;'><label>REMANENTE</label><span>${remanente}</span></div>
-<div class='divider'></div>
-<div class='section-title'>ANTICIPOS / MOVIMIENTOS</div>
-<table><thead><tr><th>#</th><th>Tipo</th><th>Fecha</th><th style='text-align:right'>Monto</th></tr></thead>
-<tbody>${anticiposHtml}</tbody></table>
-<div class='divider'></div>
-<div class='section-title'>RESUMEN</div>
-<div class='row'><span>PERÍODO ${periodoStr}</span></div>
-<div style='margin-top:18px;padding-top:10px;'>
-  <div style='display:flex;justify-content:space-between;gap:20px;margin-bottom:16px;'>
-    <div style='flex:1;text-align:center;'>
-      <div style='border-top:1px solid #000;padding-top:4px;font-size:9px;color:#555;'>FIRMA SOCIO</div>
-      <div style='font-size:10px;font-weight:bold;margin-top:2px;'>${nombre}</div>
-    </div>
-    <div style='flex:1;text-align:center;'>
-      <div style='border-top:1px solid #000;padding-top:4px;font-size:9px;color:#555;'>FIRMA ADMINISTRADOR</div>
-    </div>
-  </div>
-</div>
-<div class='footer'>Emitido: ${fechaHoy} &nbsp;|&nbsp; Sistema Fondo Solidario</div>
-</div></body></html>`;
+                    '<div class=\'divider\'></div>' +
+                    '<div class=\'section-title\'>CIERRE PUNTO</div>' +
+                    '<div class=\'row\'><label>VALOR PUNTO NOCHE</label><span>' + valorPuntoFmt + '</span></div>' +
+                    '<div class=\'row bold\'><label>CIERRE PUNTO (total)</label><strong>' + cierrePunto + '</strong></div>' +
 
-            // Abrir ventana de impresión
-            const win = window.open('', '_blank', 'width=400,height=700');
-            win.document.write(recibo);
+                    '<div class=\'divider\'></div>' +
+                    '<div class=\'section-title\'>DETALLE</div>' +
+                    '<div class=\'row\'><label>BRUTO (Alcance Teórico)</label><span>' + alcance + '</span></div>' +
+                    '<div class=\'row\'><label>ANTICIPOS</label><span>' + totalPedido + '</span></div>' +
+                    '<div class=\'row\'><label>SALDO ANTERIOR</label><span>' + saldoAnt + '</span></div>' +
+                    '<div class=\'row bold\'><label>SALDO REAL</label><strong>' + saldoReal + '</strong></div>' +
+
+                    '<div class=\'divider\'></div>' +
+                    '<div class=\'row\'><label>REDONDEADO</label><span></span></div>' +
+                    '<div class=\'row big\'><span>$ ' + aPagar + '</span></div>' +
+                    '<div class=\'row\'><label>REMANENTE</label><span>' + remanente + '</span></div>' +
+
+                    '<div class=\'divider\'></div>' +
+                    '<div class=\'section-title\'>ANTICIPOS</div>' +
+                    '<table><thead><tr>' +
+                    '<th>#</th><th>Tipo</th><th>Fecha</th><th style=\'text-align:right\'>Monto</th>' +
+                    '</tr></thead><tbody>' + movHtml + '</tbody></table>' +
+
+                    '<div class=\'divider\'></div>' +
+                    '<div class=\'section-title\'>RESUMEN</div>' +
+                    '<div style=\'text-align:center;font-weight:bold;font-size:10px;margin:4px 0;\'>PERÍODO ' + periodoStr + '</div>' +
+
+                    '<div class=\'firmas\'>' +
+                    '  <div class=\'firma-box\'>' +
+                    '    <div class=\'firma-linea\'></div>' +
+                    '    <div class=\'firma-nombre\'>' + nombre + '</div>' +
+                    '    <div class=\'firma-label\'>FIRMA SOCIO</div>' +
+                    '  </div>' +
+                    '  <div class=\'firma-box\'>' +
+                    '    <div class=\'firma-linea\'></div>' +
+                    '    <div class=\'firma-nombre\'>&nbsp;</div>' +
+                    '    <div class=\'firma-label\'>FIRMA ADMINISTRADOR</div>' +
+                    '  </div>' +
+                    '</div>' +
+                    '<div class=\'footer\'>Emitido: ' + fechaHoy + ' &nbsp;|&nbsp; Sistema Fondo Solidario</div>'
+                );
+            }
+
+            const html =
+                '<!DOCTYPE html><html lang=\'es\'><head><meta charset=\'UTF-8\'>' +
+                '<title>Recibo - ' + nombre + '</title>' +
+                '<style>' +
+                '* { margin:0; padding:0; box-sizing:border-box; }' +
+                'body { font-family: Arial, sans-serif; font-size: 11px; color:#000; background:white; }' +
+                '.page { width:80mm; margin:0 auto; padding:8px; }' +
+                '.header { text-align:center; border:2px solid #000; padding:8px; margin-bottom:10px; }' +
+                '.header h1 { font-size:13px; font-weight:bold; letter-spacing:1px; }' +
+                '.header p { font-size:10px; margin-top:2px; }' +
+                '.section-title { text-align:center; font-weight:bold; font-size:11px; border-bottom:1px solid #000; padding-bottom:3px; margin:8px 0 5px; letter-spacing:1px; }' +
+                '.row { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid #eee; font-size:10px; }' +
+                '.row.bold { font-weight:bold; }' +
+                '.row.big { font-size:18px; font-weight:900; border-top:2px solid #000; border-bottom:2px solid #000; margin:6px 0; padding:6px 0; justify-content:center; letter-spacing:1px; }' +
+                '.row label { color:#555; }' +
+                'table { width:100%; border-collapse:collapse; margin:4px 0; }' +
+                'th { background:#f0f0f0; padding:3px 5px; font-size:9px; border-bottom:1px solid #ccc; }' +
+                '.divider { border-top:1px solid #000; margin:7px 0; }' +
+                '.copy-label { text-align:center; font-size:9px; font-weight:bold; background:#000; color:white; padding:3px; margin-bottom:8px; letter-spacing:2px; }' +
+                '.cut { border-top:2px dashed #000; margin:16px 0; text-align:center; font-size:9px; color:#aaa; padding-top:4px; }' +
+                '.firmas { display:flex; gap:12px; margin-top:16px; margin-bottom:8px; }' +
+                '.firma-box { flex:1; text-align:center; }' +
+                '.firma-linea { border-top:1px solid #000; margin-bottom:4px; margin-top:20px; }' +
+                '.firma-nombre { font-size:9px; font-weight:bold; }' +
+                '.firma-label { font-size:8px; color:#555; margin-top:1px; }' +
+                '.footer { text-align:center; font-size:8px; color:#888; border-top:1px dashed #ccc; padding-top:5px; margin-top:6px; }' +
+                '@media print { @page { margin:2mm; size:80mm auto; } .cut { page-break-after:always; } }' +
+                '@media screen { body { background:#ccc; padding:10px; } .page { background:white; box-shadow:0 2px 8px rgba(0,0,0,0.3); } }' +
+                '</style></head><body><div class=\'page\'>' +
+                bloqueRecibo('★ COPIA ADMINISTRADOR ★') +
+                '<div class=\'cut\'>✂ &nbsp; CORTAR AQUÍ &nbsp; ✂</div>' +
+                bloqueRecibo('★ COMPROBANTE SOCIO ★') +
+                '</div></body></html>';
+
+            const win = window.open('', '_blank', 'width=420,height=750');
+            win.document.write(html);
             win.document.close();
             win.focus();
-            setTimeout(() => win.print(), 500);
+            setTimeout(() => win.print(), 600);
         }
 
         async function cerrarMesSocio() {
