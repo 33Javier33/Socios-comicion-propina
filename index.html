@@ -2789,7 +2789,7 @@
                 );
             }
 
-            const html =
+            const htmlBase =
                 '<!DOCTYPE html><html lang=\'es\'><head><meta charset=\'UTF-8\'>' +
                 '<title>Recibo - ' + nombre + '</title>' +
                 '<style>' +
@@ -2818,13 +2818,36 @@
                 '@media print { @page { margin:2mm; size:80mm auto; } .cut { page-break-after:always; } }' +
                 '@media screen { body { background:#ccc; padding:10px; } .page { background:white; box-shadow:0 2px 8px rgba(0,0,0,0.3); } }' +
                 '</style></head><body><div class=\'page\'>' +
-                bloqueRecibo('★ COPIA ADMINISTRADOR ★') +
-                '<div class=\'cut\'>✂ &nbsp; CORTAR AQUÍ &nbsp; ✂</div>' +
-                bloqueRecibo('★ COMPROBANTE SOCIO ★') +
-                '</div></body></html>';
+                ''; // contenido se construye después según opción elegida
+
+            // Preguntar cuántas copias
+            const opcion = window.confirm(
+                '¿Cómo deseas imprimir?\n\n'
+                + 'OK  →  Una sola copia (tú decides si imprimes 2 veces)\n'
+                + 'Cancelar  →  Dos copias en una hoja (corte manual)'
+            );
+
+            let contenido;
+            if (opcion) {
+                // Una sola copia — el admin elige cuál (admin o socio)
+                const cual = window.confirm(
+                    '¿Qué copia imprimir ahora?\n\n'
+                    + 'OK  →  Copia Administrador\n'
+                    + 'Cancelar  →  Comprobante Socio'
+                );
+                const etiqueta = cual ? '★ COPIA ADMINISTRADOR ★' : '★ COMPROBANTE SOCIO ★';
+                contenido = htmlBase + bloqueRecibo(etiqueta) + '</div></body></html>';
+            } else {
+                // Dos copias en una hoja con línea de corte
+                contenido = htmlBase
+                    + bloqueRecibo('★ COPIA ADMINISTRADOR ★')
+                    + '<div class=\'cut\'>✂ &nbsp; CORTAR AQUÍ &nbsp; ✂</div>'
+                    + bloqueRecibo('★ COMPROBANTE SOCIO ★')
+                    + '</div></body></html>';
+            }
 
             const win = window.open('', '_blank', 'width=420,height=750');
-            win.document.write(html);
+            win.document.write(contenido);
             win.document.close();
             win.focus();
             setTimeout(() => win.print(), 600);
