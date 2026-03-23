@@ -172,7 +172,7 @@
 
         .border-left-mesas { border-left-color: #3498db; } .border-left-mesasPartTime { border-left-color: #3498db; }
         .border-left-cambistas { border-left-color: #9b59b6; }
-        .border-left-máquinas { border-left-color: #e67e22; } .border-left-tecnicos { border-left-color: #7f8c8d; }
+        .border-left-maquinas { border-left-color: #e67e22; } .border-left-tecnicos { border-left-color: #7f8c8d; }
         .border-left-boveda { border-left-color: #27ae60; } .border-left-GastosComision { border-left-color: var(--gastos); }
 
         .socio-card { background: var(--card-bg); border-radius: 14px; border: 1px solid var(--border); padding: 20px; position: relative; border-top: 3px solid var(--secondary); display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; }
@@ -180,11 +180,11 @@
         .area-tag { position: absolute; top: 15px; right: 15px; font-size: 0.75em; padding: 4px 10px; border-radius: 20px; font-weight: bold; color: white; }
         .bg-mesas { background-color: #3498db; } .bg-mesasPartTime { background-color: #3498db; }
         .bg-cambistas { background-color: #9b59b6; }
-        .bg-Máquinas  { background-color: #e67e22; } .bg-tecnicos { background-color: #7f8c8d; }
+        .bg-maquinas { background-color: #e67e22; } .bg-tecnicos { background-color: #7f8c8d; }
         .bg-boveda { background-color: #27ae60; } .bg-GastosComision { background-color: var(--gastos); }
         .border-mesas { border-top-color: #3498db; } .border-mesasPartTime { border-top-color: #3498db; }
         .border-cambistas { border-top-color: #9b59b6; }
-        .border-Máquinas  { border-top-color: #e67e22; } .border-tecnicos { border-top-color: #7f8c8d; }
+        .border-maquinas { border-top-color: #e67e22; } .border-tecnicos { border-top-color: #7f8c8d; }
         .border-boveda { border-top-color: #27ae60; } .border-GastosComision { border-top-color: var(--gastos); }
 
         .card-header h3 { margin: 0; color: var(--text-color); font-size: 1.05em; font-weight: 700; letter-spacing: -0.01em; }
@@ -527,7 +527,7 @@
                                         <option value="" disabled selected>Seleccionar...</option>
                                         <option value="mesas">Mesas</option>
                                         <option value="cambistas">Mesas - Cambistas</option>
-                                        <option value="Máquinas ">Máquinas</option>
+                                        <option value="maquinas">Máquinas</option>
                                         <option value="tecnicos">Técnicos</option>
                                         <option value="boveda">Bóveda</option>
                                         <option value="GastosComision">GastosComision</option>
@@ -845,7 +845,7 @@
                     <div class="form-group">
                         <label>Tipo / Categoría</label>
                         <select id="recEditTipo" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-top:4px;">
-                            <option value="Máquinas ">Máquinas</option>
+                            <option value="Maquinas">Máquinas</option>
                             <option value="Mesas">Mesas</option>
                             <option value="Otras">Otras</option>
                         </select>
@@ -1693,7 +1693,7 @@
             }
             let puntosMaximos = 10;
             if (areaNorm === 'mesas') puntosMaximos = 20;
-            else if (areaNorm === 'Máquinas ') puntosMaximos = 12;
+            else if (areaNorm === 'maquinas') puntosMaximos = 12;
             else if (areaNorm === 'tecnicos') puntosMaximos = 12;
             else if (areaNorm === 'boveda') puntosMaximos = 10;
             else if (areaNorm.includes('cambista')) puntosMaximos = 8;
@@ -1725,7 +1725,7 @@
             const a = (area || '').toLowerCase();
             if (a.includes('gastos')) return 1;
             if (a === 'mesas' || a === 'mesasparttime') return 20;
-            if (a === 'Máquinas ') return 12;
+            if (a === 'maquinas') return 12;
             if (a === 'tecnicos') return 12;
             if (a === 'boveda') return 10;
             if (a.includes('cambista')) return 8;
@@ -2047,8 +2047,8 @@
                     <div class='sk sk-line' style='width:80%;margin-bottom:6px'></div><div class='sk sk-line' style='width:50%'></div>
                 </div>`).join(''); return; }
             
-            const grupos = { 'mesas': [], 'mesasPartTime': [], 'cambistas': [], 'Máquinas ': [], 'tecnicos': [], 'boveda': [], 'GastosComision': [] };
-            const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasPartTime': 'Mesas (Part-Time)', 'cambistas': 'Mesas (Cambistas)', 'Máquinas ': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'GastosComision': 'Gastos Comisión' };
+            const grupos = { 'mesas': [], 'mesasPartTime': [], 'cambistas': [], 'maquinas': [], 'tecnicos': [], 'boveda': [], 'GastosComision': [] };
+            const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasPartTime': 'Mesas (Part-Time)', 'cambistas': 'Mesas (Cambistas)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'GastosComision': 'Gastos Comisión' };
 
             cacheSocios.forEach(socio => {
                 let key = socio.area.toLowerCase().replace(/\s/g, '');
@@ -2253,8 +2253,8 @@
                 return;
             }
 
-            const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasparttime': 'Mesas (Part-Time)', 'cambistas': 'Mesas (Cambistas)', 'Máquinas ': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'gastoscomision': 'Gastos Comisión' };
-            const coloresArea = { 'mesas': '#3498db', 'mesasparttime': '#3498db', 'cambistas': '#9b59b6', 'Máquinas ': '#e67e22', 'tecnicos': '#7f8c8d', 'boveda': '#27ae60', 'gastoscomision': '#607d8b' };
+            const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasparttime': 'Mesas (Part-Time)', 'cambistas': 'Mesas (Cambistas)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'gastoscomision': 'Gastos Comisión' };
+            const coloresArea = { 'mesas': '#3498db', 'mesasparttime': '#3498db', 'cambistas': '#9b59b6', 'maquinas': '#e67e22', 'tecnicos': '#7f8c8d', 'boveda': '#27ae60', 'gastoscomision': '#607d8b' };
 
             // Agrupar por área normalizada
             const grupos = {};
@@ -2266,7 +2266,7 @@
             });
 
             // Orden fijo de áreas
-            const ordenAreas = ['mesas','mesasparttime','cambistas','Máquinas ','tecnicos','boveda','gastoscomision','otros'];
+            const ordenAreas = ['mesas','mesasparttime','cambistas','maquinas','tecnicos','boveda','gastoscomision','otros'];
             const areasSorted = Object.keys(grupos).sort((a,b) => {
                 const ia = ordenAreas.indexOf(a); const ib = ordenAreas.indexOf(b);
                 return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
@@ -2654,7 +2654,7 @@
             const nombre      = document.getElementById('gestionSocioNombre').value;
             const puntos      = parseFloat(document.getElementById('gestionSocioPuntos').value || socio.puntos) || 0;
             const area        = (socio.area || '').replace(/gastoscomision/i,'Gastos Comisión')
-                                 .replace(/mesas/i,'Mesas').replace(/Máquinas /i,'Máquinas')
+                                 .replace(/mesas/i,'Mesas').replace(/maquinas/i,'Máquinas')
                                  .replace(/tecnicos/i,'Técnicos').replace(/boveda/i,'Bóveda')
                                  .replace(/cambistas/i,'Cambistas');
             const contrato    = (socio.contrato || '').toUpperCase();
