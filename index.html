@@ -693,9 +693,14 @@
                                 <span style="font-size:0.68em; color:#7f8c8d; text-transform:uppercase; font-weight:bold; display:block; margin-top:4px;">🔄 Remanente</span>
                             </div>
                         </div>
-                        <button onclick="cerrarMesSocio()" style="width:100%; background:linear-gradient(135deg, #8e44ad, #6c3483); color:white; border:none; border-radius:8px; padding:11px; font-weight:800; font-size:0.9em; cursor:pointer; letter-spacing:0.5px; transition:0.2s; display:flex; align-items:center; justify-content:center; gap:8px;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
-                            🔒 Cerrar Mes (Guardar Remanente)
-                        </button>
+                        <div style="display:flex; gap:8px; margin-bottom:0;">
+                            <button onclick="cerrarMesSocio()" style="flex:1; background:linear-gradient(135deg, #8e44ad, #6c3483); color:white; border:none; border-radius:8px; padding:11px; font-weight:800; font-size:0.9em; cursor:pointer; transition:0.2s; display:flex; align-items:center; justify-content:center; gap:6px;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+                                🔒 Cerrar Mes
+                            </button>
+                            <button onclick="imprimirReciboSocio()" style="background:linear-gradient(135deg, #2980b9, #1a6fa8); color:white; border:none; border-radius:8px; padding:11px 14px; font-weight:800; font-size:0.9em; cursor:pointer; transition:0.2s; display:flex; align-items:center; gap:6px; white-space:nowrap;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'" title="Imprimir recibo del socio">
+                                🖨️ Imprimir Recibo
+                            </button>
+                        </div>
                         <p style="text-align:center; font-size:0.7em; color:#7f8c8d; margin:6px 0 0 0;">El remanente pasa como saldo al próximo mes</p>
                     </div>
 
@@ -2632,6 +2637,160 @@
             document.getElementById('txtDetalleBorrar').innerText = `¿Borrar registro del ${item.fecha} (${Array.from(item.tipos).join(',')})?`;
             document.getElementById('borrarUUID').value = item.uuid;
             document.getElementById('borrarTipo').value = item.montoTotal > 0 ? 'Anticipo' : 'Extra';
+        }
+
+        function imprimirReciboSocio() {
+            const id      = document.getElementById('gestionSocioId').value;
+            const socio   = cacheSocios.find(s => s.id === id);
+            if (!socio) return showToast('Selecciona un socio primero', 'error');
+
+            // Leer valores ya calculados del panel
+            const nombre       = document.getElementById('gestionSocioNombre').value;
+            const puntos       = document.getElementById('gestionSocioPuntos').value || socio.puntos;
+            const area         = (socio.area || '').toUpperCase();
+            const contrato     = (socio.contrato || '').toUpperCase();
+            const anioIngreso  = socio.fechaIngreso ? socio.fechaIngreso.split('-')[0] : '-';
+            const saldoAnt     = document.getElementById('socioSaldoAnterior').innerText || '$0';
+            const alcance      = document.getElementById('socioAlcance').innerText || '$0';
+            const totalPedido  = document.getElementById('socioTotalPedido').innerText || '$0';
+            const saldoReal    = document.getElementById('socioSaldoReal').innerText || '$0';
+            const aPagar       = document.getElementById('socioAPagar').innerText || '$0';
+            const remanente    = document.getElementById('socioRemanente').innerText || '$0';
+
+            // Calcular cierre de punto (valor punto * puntos del socio)
+            const valorPuntoDia = Object.values(globalMapaPuntosDia).reduce((a,b)=>a+b, 0) || 0;
+            const cierrePunto   = formatearMoneda(Math.round(valorPuntoDia * parseFloat(puntos)));
+
+            // Período actual
+            const { inicio, fin } = aq_calcularPeriodoActual();
+            const fmtFecha = iso => { const p = iso.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
+            const periodoStr = `${fmtFecha(inicio)} AL ${fmtFecha(fin)}`;
+            const fechaHoy = new Date().toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',year:'numeric'});
+
+            // Obtener historial de movimientos de la tabla
+            const filas = document.getElementById('tablaHistorial');
+            let anticiposHtml = '';
+            let numAnt = 1;
+            if (filas) {
+                Array.from(filas.querySelectorAll('tr')).forEach(tr => {
+                    const celdas = tr.querySelectorAll('td');
+                    if (celdas.length < 3) return;
+                    const tipo  = celdas[1].textContent.trim();
+                    const monto = celdas[3] ? celdas[3].textContent.trim() : '-';
+                    const fech  = celdas[0].textContent.trim();
+                    const esAnticipo = tipo.toLowerCase().includes('anticipo');
+                    anticiposHtml += '<tr>'
+                        + '<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;color:#666;">' + (esAnticipo ? numAnt++ : '-') + '</td>'
+                        + '<td style="padding:4px 8px;border-bottom:1px solid #eee;">' + tipo + '</td>'
+                        + '<td style="padding:4px 8px;border-bottom:1px solid #eee;">' + fech + '</td>'
+                        + '<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;">' + monto + '</td>'
+                        + '</tr>';
+                });
+            }
+            if (!anticiposHtml) anticiposHtml = '<tr><td colspan="4" style="padding:6px 8px;color:#aaa;text-align:center;">Sin movimientos registrados</td></tr>';
+
+            // ── Construir el HTML del recibo ────────────────────────────
+            const recibo = `<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'>
+<title>Recibo - ${nombre}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #000; background: white; }
+  .page { width: 80mm; margin: 0 auto; padding: 8px; }
+  .header { text-align: center; border: 2px solid #000; padding: 8px; margin-bottom: 10px; }
+  .header h1 { font-size: 13px; font-weight: bold; letter-spacing: 1px; }
+  .header p  { font-size: 10px; margin-top: 2px; }
+  .section-title { text-align: center; font-weight: bold; font-size: 12px; border-bottom: 1px solid #000; padding-bottom: 3px; margin: 10px 0 6px; letter-spacing: 1px; }
+  .row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee; }
+  .row.bold { font-weight: bold; }
+  .row.big  { font-size: 15px; font-weight: 900; border-top: 2px solid #000; margin-top: 4px; padding-top: 6px; }
+  .row label { color: #555; font-size: 10px; }
+  table { width: 100%; border-collapse: collapse; margin: 4px 0; }
+  th { background: #f0f0f0; padding: 4px 8px; text-align: left; font-size: 10px; border-bottom: 1px solid #ccc; }
+  .divider { border-top: 1px solid #000; margin: 8px 0; }
+  .footer { text-align: center; font-size: 9px; color: #888; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 6px; }
+  .copy-label { text-align:center; font-size:9px; font-weight:bold; background:#f0f0f0; padding:2px; margin-bottom:6px; letter-spacing:2px; }
+  .cut { border-top: 2px dashed #000; margin: 16px 0; text-align:center; font-size:9px; color:#aaa; padding-top:4px; }
+  @media print { @page { margin: 0; size: 80mm auto; } body { -webkit-print-color-adjust: exact; } }
+</style></head><body><div class='page'>
+
+<!-- ===== COPIA ADMINISTRADOR ===== -->
+<div class='copy-label'>COPIA ADMINISTRADOR</div>
+<div class='header'>
+  <h1>FONDO DE SOLIDARIDAD</h1>
+  <p>CASINO DE PTO. VARAS</p>
+  <p>LEY 17312 DEL 29/07/70</p>
+  <p><strong>PUERTO VARAS</strong></p>
+</div>
+<div class='section-title'>DATOS</div>
+<div class='row'><label>NOMBRE</label><strong>${nombre}</strong></div>
+<div class='row'><label>ÁREA</label><span>${area}</span></div>
+<div class='row'><label>CONTRATO</label><span>${contrato}</span></div>
+<div class='row'><label>AÑO INGRESO</label><span>${anioIngreso}</span></div>
+<div class='row'><label>PUNTOS</label><span>${puntos}</span></div>
+<div class='row'><label>CIERRE PUNTO</label><strong>${cierrePunto}</strong></div>
+<div class='divider'></div>
+<div class='section-title'>DETALLE</div>
+<div class='row'><label>SALDO ANTERIOR</label><span>${saldoAnt}</span></div>
+<div class='row'><label>ALCANCE TEÓRICO</label><span>${alcance}</span></div>
+<div class='row'><label>TOTAL PEDIDO</label><span>${totalPedido}</span></div>
+<div class='row bold'><label>SALDO REAL</label><span>${saldoReal}</span></div>
+<div class='divider'></div>
+<div class='row'><label>REDONDEADO</label><span></span></div>
+<div class='row big'><label>TOTAL A PAGAR</label><strong>\$ ${aPagar}</strong></div>
+<div class='row' style='margin-top:6px;'><label>REMANENTE</label><span>${remanente}</span></div>
+<div class='divider'></div>
+<div class='section-title'>ANTICIPOS / MOVIMIENTOS</div>
+<table><thead><tr><th>#</th><th>Tipo</th><th>Fecha</th><th style='text-align:right'>Monto</th></tr></thead>
+<tbody>${anticiposHtml}</tbody></table>
+<div class='divider'></div>
+<div class='section-title'>RESUMEN</div>
+<div class='row'><span>PERÍODO ${periodoStr}</span></div>
+<div class='footer'>Emitido: ${fechaHoy} &nbsp;|&nbsp; Sistema Fondo Solidario</div>
+
+<!-- ===== CORTE ===== -->
+<div class='cut'>✂ &nbsp; CORTAR AQUÍ &nbsp; ✂</div>
+
+<!-- ===== COPIA SOCIO ===== -->
+<div class='copy-label'>COMPROBANTE SOCIO</div>
+<div class='header'>
+  <h1>FONDO DE SOLIDARIDAD</h1>
+  <p>CASINO DE PTO. VARAS</p>
+  <p>LEY 17312 DEL 29/07/70</p>
+  <p><strong>PUERTO VARAS</strong></p>
+</div>
+<div class='section-title'>DATOS</div>
+<div class='row'><label>NOMBRE</label><strong>${nombre}</strong></div>
+<div class='row'><label>ÁREA</label><span>${area}</span></div>
+<div class='row'><label>CONTRATO</label><span>${contrato}</span></div>
+<div class='row'><label>AÑO INGRESO</label><span>${anioIngreso}</span></div>
+<div class='row'><label>PUNTOS</label><span>${puntos}</span></div>
+<div class='row'><label>CIERRE PUNTO</label><strong>${cierrePunto}</strong></div>
+<div class='divider'></div>
+<div class='section-title'>DETALLE</div>
+<div class='row'><label>SALDO ANTERIOR</label><span>${saldoAnt}</span></div>
+<div class='row'><label>ALCANCE TEÓRICO</label><span>${alcance}</span></div>
+<div class='row'><label>TOTAL PEDIDO</label><span>${totalPedido}</span></div>
+<div class='row bold'><label>SALDO REAL</label><span>${saldoReal}</span></div>
+<div class='divider'></div>
+<div class='row'><label>REDONDEADO</label><span></span></div>
+<div class='row big'><label>TOTAL A PAGAR</label><strong>\$ ${aPagar}</strong></div>
+<div class='row' style='margin-top:6px;'><label>REMANENTE</label><span>${remanente}</span></div>
+<div class='divider'></div>
+<div class='section-title'>ANTICIPOS / MOVIMIENTOS</div>
+<table><thead><tr><th>#</th><th>Tipo</th><th>Fecha</th><th style='text-align:right'>Monto</th></tr></thead>
+<tbody>${anticiposHtml}</tbody></table>
+<div class='divider'></div>
+<div class='section-title'>RESUMEN</div>
+<div class='row'><span>PERÍODO ${periodoStr}</span></div>
+<div class='footer'>Emitido: ${fechaHoy} &nbsp;|&nbsp; Sistema Fondo Solidario<br>Firma: ___________________________</div>
+</div></body></html>`;
+
+            // Abrir ventana de impresión
+            const win = window.open('', '_blank', 'width=400,height=700');
+            win.document.write(recibo);
+            win.document.close();
+            win.focus();
+            setTimeout(() => win.print(), 500);
         }
 
         async function cerrarMesSocio() {
