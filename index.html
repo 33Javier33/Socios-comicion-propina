@@ -2708,6 +2708,24 @@
                 : '';
 
             // ── Plantilla del recibo (se repite 2 veces: admin + socio) ──
+            // ── Calcular etiqueta SUBE PUNTOS ────────────────────────
+            const maxPuntos = calcularPuntosMaximos(socio.area);
+            let subePuntosLabel;
+            if (socio.puntos >= maxPuntos) {
+                subePuntosLabel = 'TOPE MÁXIMO (' + maxPuntos + ' pts)';
+            } else {
+                // Obtener día y mes de la fecha base de puntos
+                const fechaBase = (socio.fechaInicioPuntos && socio.fechaInicioPuntos !== socio.fechaIngreso)
+                    ? socio.fechaInicioPuntos : socio.fechaIngreso;
+                const bp = fechaBase ? fechaBase.split('-') : null;
+                if (bp && bp.length === 3) {
+                    const MESES_CORTO = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+                    subePuntosLabel = bp[2] + ' DE ' + MESES_CORTO[parseInt(bp[1]) - 1];
+                } else {
+                    subePuntosLabel = '-';
+                }
+            }
+
             function bloqueRecibo(etiqueta) {
                 return (
                     '<div class=\'copy-label\'>' + etiqueta + '</div>' +
@@ -2725,8 +2743,7 @@
                     '<div class=\'row\'><label>AÑO INGRESO</label><span>' + anioIngreso + '</span></div>' +
                     fipRow +
                     '<div class=\'row\'><label>PUNTOS</label><span>' + puntos + '</span></div>' +
-                    '<div class=\'row\'><label>SUBE PUNTOS</label><span>' + (socio.mesIngreso || '-') + '</span></div>' +
-                    '<div class=\'row\'><label>SECCIÓN</label><span>' + contrato + '</span></div>' +
+                    '<div class=\'row\'><label>SUBE PUNTOS</label><span>' + subePuntosLabel + '</span></div>' +
 
                     '<div class=\'divider\'></div>' +
                     '<div class=\'section-title\'>CIERRE PUNTO</div>' +
