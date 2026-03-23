@@ -2710,7 +2710,15 @@
   .footer { text-align: center; font-size: 9px; color: #888; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 6px; }
   .copy-label { text-align:center; font-size:9px; font-weight:bold; background:#f0f0f0; padding:2px; margin-bottom:6px; letter-spacing:2px; }
   .cut { border-top: 2px dashed #000; margin: 16px 0; text-align:center; font-size:9px; color:#aaa; padding-top:4px; }
-  @media print { @page { margin: 0; size: 80mm auto; } body { -webkit-print-color-adjust: exact; } }
+  @media print {
+    @page { margin: 2mm; size: 80mm auto; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cut { page-break-after: always; }
+  }
+  @media screen {
+    body { background: #e0e0e0; padding: 10px; }
+    .page { background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  }
 </style></head><body><div class='page'>
 
 <!-- ===== COPIA ADMINISTRADOR ===== -->
@@ -2745,6 +2753,17 @@
 <div class='divider'></div>
 <div class='section-title'>RESUMEN</div>
 <div class='row'><span>PERÍODO ${periodoStr}</span></div>
+<div style='margin-top:18px;padding-top:10px;'>
+  <div style='display:flex;justify-content:space-between;gap:20px;margin-bottom:16px;'>
+    <div style='flex:1;text-align:center;'>
+      <div style='border-top:1px solid #000;padding-top:4px;font-size:9px;color:#555;'>FIRMA SOCIO</div>
+      <div style='font-size:10px;font-weight:bold;margin-top:2px;'>${nombre}</div>
+    </div>
+    <div style='flex:1;text-align:center;'>
+      <div style='border-top:1px solid #000;padding-top:4px;font-size:9px;color:#555;'>FIRMA ADMINISTRADOR</div>
+    </div>
+  </div>
+</div>
 <div class='footer'>Emitido: ${fechaHoy} &nbsp;|&nbsp; Sistema Fondo Solidario</div>
 
 <!-- ===== CORTE ===== -->
@@ -2782,7 +2801,18 @@
 <div class='divider'></div>
 <div class='section-title'>RESUMEN</div>
 <div class='row'><span>PERÍODO ${periodoStr}</span></div>
-<div class='footer'>Emitido: ${fechaHoy} &nbsp;|&nbsp; Sistema Fondo Solidario<br>Firma: ___________________________</div>
+<div style='margin-top:18px;padding-top:10px;'>
+  <div style='display:flex;justify-content:space-between;gap:20px;margin-bottom:16px;'>
+    <div style='flex:1;text-align:center;'>
+      <div style='border-top:1px solid #000;padding-top:4px;font-size:9px;color:#555;'>FIRMA SOCIO</div>
+      <div style='font-size:10px;font-weight:bold;margin-top:2px;'>${nombre}</div>
+    </div>
+    <div style='flex:1;text-align:center;'>
+      <div style='border-top:1px solid #000;padding-top:4px;font-size:9px;color:#555;'>FIRMA ADMINISTRADOR</div>
+    </div>
+  </div>
+</div>
+<div class='footer'>Emitido: ${fechaHoy} &nbsp;|&nbsp; Sistema Fondo Solidario</div>
 </div></body></html>`;
 
             // Abrir ventana de impresión
