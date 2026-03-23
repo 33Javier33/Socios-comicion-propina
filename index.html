@@ -2665,17 +2665,11 @@
             const aPagar      = document.getElementById('socioAPagar').innerText || '$0';
             const remanente   = document.getElementById('socioRemanente').innerText || '$0';
 
-            // ── Cierre de Punto = Total Puntos Noche (de Montos Recaudados) × puntos del socio ──
-            // recTotalPuntos es la "Suma de Puntos Noche" del panel de Recaudaciones
-            const totalPuntosNoche = document.getElementById('recTotalPuntos');
-            let valorPuntoNoche = 0;
-            if (totalPuntosNoche) {
-                const raw = totalPuntosNoche.innerText.replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.');
-                valorPuntoNoche = parseFloat(raw) || 0;
-            }
-            const cierrePunto = formatearMoneda(Math.round(valorPuntoNoche * puntos));
-            // También mostramos el valor del punto noche
-            const valorPuntoFmt = formatearMoneda(Math.round(valorPuntoNoche));
+            // ── Cierre de Punto = suma de (totalDia/divisor) de cada noche en recaudaciones
+            // globalValorPuntoTotal es exactamente esa suma, calculada en procesarDatosRecaudacion
+            const valorPuntoNoche = globalValorPuntoTotal || 0;
+            const cierrePunto     = formatearMoneda(Math.round(valorPuntoNoche * puntos));
+            const valorPuntoFmt   = formatearMoneda(Math.round(valorPuntoNoche));
 
             // ── Período ───────────────────────────────────────────────────
             const { inicio, fin } = aq_calcularPeriodoActual();
