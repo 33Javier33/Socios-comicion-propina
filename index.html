@@ -33,7 +33,7 @@
         .container { max-width: 1100px; margin: 0 auto; padding-bottom: 80px; }
 
 
-        /* ── Loader moderno: barra top + toast acción ── */
+        /* ── Loader moderno ── */
         #globalLoader {
             position: fixed; top: 0; left: 0; width: 100%; height: 4px;
             z-index: 9000; display: none; pointer-events: none;
@@ -125,7 +125,6 @@
         .close-modal { font-size: 24px; font-weight: 300; color: #7f8c8d; cursor: pointer; line-height: 1; }
         .close-modal:hover { color: var(--danger); }
 
-        /* Calendario */
         /* Calendario PT */
         .pt-cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
         .pt-cal-nav { background:none; border:1px solid #ddd; border-radius:7px; padding:5px 12px; cursor:pointer; font-size:1em; font-weight:700; color:var(--primary); transition:0.2s; }
@@ -239,9 +238,10 @@
         .date-divisor { background-color: #e8daef; color: #8e44ad; padding: 4px 10px; border-radius: 15px; font-size: 0.8em; font-weight: bold; }
         .date-point-badge { background-color: var(--info); color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.9em; font-weight: bold; display: inline-block; }
         .date-total { font-size: 1.1em; font-weight: 800; color: var(--success); text-align: right; }
-        .type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); padding: 14px 18px; gap: 12px; }
+        
+        .type-grid { display: flex; flex-direction: column; padding: 14px 18px; gap: 8px; }
         .type-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
-        .type-name { font-size: 0.87em; color: #7f8c8d; font-weight: 600; }
+        .type-name { font-size: 0.87em; color: #7f8c8d; font-weight: 600; min-width: 140px; }
         .type-value { font-weight: bold; color: #333; }
 
         @media (max-width: 768px) { .gestion-layout { grid-template-columns: 1fr; } .action-grid { grid-template-columns: 1fr; } }
@@ -256,9 +256,6 @@
         /* Feedback visual anticipo */
         .input-ok    { border-color: var(--success) !important; box-shadow: 0 0 0 3px rgba(16,185,129,0.15) !important; }
         .input-error { border-color: var(--danger)  !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.15)  !important; }
-
-        /* Skeleton shimmer */
-        @keyframes shimmer { from { background-color: #eee; } to { background-color: #ddd; } }
 
         /* Notas animaciones */
         @keyframes nota-in { from{opacity:0;transform:translateY(-10px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
@@ -624,7 +621,7 @@
                         ⚡ Cerrar Mes TODOS
                     </button>
                     <button onclick="informeAnticipos()" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.5); border-radius:8px; padding:9px 18px; font-weight:800; font-size:0.85em; cursor:pointer; white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
-                        📋 Informe Anticipos
+                        📋 Detalle Anticipos
                     </button>
                 </div>
             </div>
@@ -718,6 +715,13 @@
                             <div class="action-title">💰 Anticipo de Propina</div>
                             <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="numeric" id="montoAnticipo" placeholder="Ej: 50.000" oninput="formatearInputMonto(this)" onkeydown="if(event.key==='Enter') enviarAnticipo()"></div>
                             <div class="form-group" style="margin-top:10px;"><label>Fecha</label><input type="date" id="fechaAnticipo"></div>
+                            <div class="form-group" style="margin-top:10px;">
+                                <label style="display:flex;justify-content:space-between;align-items:center;">
+                                    Responsable
+                                    <button type="button" onclick="responsables_abrirConfig()" style="background:none;border:none;color:#7f8c8d;cursor:pointer;font-size:0.9em;padding:0;" title="Gestionar responsables">⚙️</button>
+                                </label>
+                                <select id="responsableAnticipo" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:0.9em;"></select>
+                            </div>
                             <button class="btn-action" style="width:100%; margin-top:15px;" onclick="enviarAnticipo()">Registrar Anticipo</button>
                         </div>
                         <div class="action-card" id="cardAusencias" style="display:none;">
@@ -746,7 +750,6 @@
                 </div>
                 <div id="mensajeSeleccion" style="display:flex; justify-content:center; align-items:center; color:#7f8c8d; height:300px; background:white; border-radius:12px;">Selecciona un socio para gestionar.</div>
             </div>
-        </div>
         </div>
 
         <!-- MODAL SALDO ANTERIOR -->
@@ -837,7 +840,7 @@
         </div>
 
 
-        <!-- MODAL EDITAR / AGREGAR RECAUDACIÓN -->
+        <!-- MODAL EDICITAR / AGREGAR RECAUDACIÓN -->
         <div id="modalRecEditar" class="modal">
             <div class="modal-content" style="max-width:420px; margin-top:8%;">
                 <div class="modal-header">
@@ -850,9 +853,10 @@
                     <div class="form-group">
                         <label>Tipo / Categoría</label>
                         <select id="recEditTipo" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-top:4px;">
-                            <option value="Maquinas">Máquinas</option>
-                            <option value="Mesas">Mesas</option>
-                            <option value="Otras">Otras</option>
+                            <option value="SalaDeJuegos">Sala de Juegos</option>
+                            <option value="EfectivoMDA">Efectivo MDA</option>
+                            <option value="TarjetaMDA">Tarjeta MDA</option>
+                            <option value="Boveda">Bóveda</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin-top:14px;">
@@ -875,9 +879,12 @@
 
         <!-- PESTAÑA 3: RECAUDACIONES -->
         <div id="tab-recaudacion" class="tab-content">
-            <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-                <input type="text" id="filtroRecaudacion" class="smart-search" placeholder="📅 Filtrar por fecha o monto..." onkeyup="filtrarRecaudacion()" style="width:60%; margin-bottom:0;">
-                <button onclick="cargarRecaudaciones()" class="btn-action" style="background:#7f8c8d; width:auto; padding:8px 20px;">🔄 Actualizar Datos</button>
+            <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <input type="text" id="filtroRecaudacion" class="smart-search" placeholder="📅 Filtrar por fecha o monto..." onkeyup="filtrarRecaudacion()" style="width:40%; margin-bottom:0;">
+                <div style="display:flex; gap:8px;">
+                    <button onclick="informeMontosDiarios()" class="btn-action" style="background:var(--success); width:auto; padding:8px 16px; font-weight:800;" title="Generar Informe Excel de Montos Diarios">📊 Informe Montos Diarios</button>
+                    <button onclick="cargarRecaudaciones()" class="btn-action" style="background:#7f8c8d; width:auto; padding:8px 20px;">🔄 Actualizar Datos</button>
+                </div>
             </div>
             
             <div class="stats-grid">
@@ -1080,6 +1087,28 @@
             </div>
         </div>
 
+        <!-- MODAL responsables -->
+        <div id="modalResponsables" class="modal">
+            <div class="modal-content" style="max-width:420px;">
+                <div class="modal-header">
+                    <h2>⚙️ Gestionar Responsables</h2>
+                    <span class="close-modal" onclick="responsables_cerrarConfig()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size:0.82em;color:#7f8c8d;margin-bottom:12px;">Configura las iniciales y área de cada Responsable. Se guardan en este dispositivo.</p>
+                    <div id="responsables-lista" style="margin-bottom:14px;"></div>
+                    <div style="display:flex;gap:8px;margin-bottom:14px;">
+                        <input type="text" id="resp-new-ini" placeholder="Iniciales (ej: N.M)" maxlength="6"
+                            style="flex:1;padding:8px;border:1px solid #ddd;border-radius:7px;font-size:0.9em;">
+                        <input type="text" id="resp-new-area" placeholder="Área (ej: S.J)" maxlength="6"
+                            style="flex:1;padding:8px;border:1px solid #ddd;border-radius:7px;font-size:0.9em;">
+                        <button onclick="responsables_agregar()" class="btn-submit" style="padding:8px 14px;white-space:nowrap;">+ Agregar</button>
+                    </div>
+                    <button onclick="responsables_cerrarConfig()" class="btn-action" style="width:100%;background:#7f8c8d;">Cerrar</button>
+                </div>
+            </div>
+        </div>
+
     <script>
         const URL_SOCIOS = "https://script.google.com/macros/s/AKfycbyr447pMQtsKoBfp8qTcB1uyE3rORhgPPmZM6Fgia3BgmIvtlZ_h04uGZrmx_HwubHQ/exec";
         const URL_RECAUDACIONES = "https://script.google.com/macros/s/AKfycbz_kCb4aEe437zHGbRqnjCibw1NtAqfCbTNmsVPn9jaZOPBFaZ6-FwmiTLqVxq39X1P/exec"; 
@@ -1102,38 +1131,100 @@
         let selectedDaysPT = [];
         let globalDiasPT = {};
 
-        // ── Helper de impresión compatible con Android (sin window.open) ──
-        function printHTML(htmlContent) {
-            // Eliminar iframe anterior si existe
-            const old = document.getElementById('_printFrame');
-            if (old) old.remove();
-            const frame = document.createElement('iframe');
-            frame.id = '_printFrame';
-            frame.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;';
-            document.body.appendChild(frame);
-            const doc = frame.contentDocument || frame.contentWindow.document;
-            doc.open();
-            doc.write(htmlContent);
-            doc.close();
-            // Esperar a que carguen estilos antes de imprimir
-            setTimeout(() => {
-                try {
-                    frame.contentWindow.focus();
-                    frame.contentWindow.print();
-                } catch(e) {
-                    // Fallback: Blob URL para descarga directa en Android
-                    const blob = new Blob([htmlContent], { type: 'text/html' });
-                    const url  = URL.createObjectURL(blob);
-                    const a    = document.createElement('a');
-                    a.href     = url;
-                    a.download = 'documento.html';
-                    a.click();
-                    setTimeout(() => URL.revokeObjectURL(url), 3000);
-                }
-            }, 600);
+        function printHTML(htmlContent, filename) {
+            // Reemplazamos el <title> para que Android use ese nombre al guardar como PDF
+            // e inyectamos window.print() automático dentro del documento
+            const printScript = '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script>';
+            let fullHtml = htmlContent.replace(/<title>[^<]*<\/title>/i, '<title>' + filename + '<\/title>');
+            // Insertamos el script de impresión antes del cierre de </head>
+            if (fullHtml.indexOf('</head>') !== -1) {
+                fullHtml = fullHtml.replace('</head>', printScript + '</head>');
+            } else {
+                fullHtml = printScript + fullHtml;
+            }
+
+            const blob = new Blob([fullHtml], {type: 'text/html; charset=utf-8'});
+            const url  = URL.createObjectURL(blob);
+            const win  = window.open(url, '_blank');
+
+            if (win) {
+                setTimeout(() => URL.revokeObjectURL(url), 120000);
+            } else {
+                // Bloqueador de popups: descarga directa
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename + '.html';
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════
+        // RESPONSABLES DE ANTICIPOS
+        // ══════════════════════════════════════════════════════════
+        const RESP_KEY = 'fondo_responsables';
+        const RESP_DEFAULT = [
+            { ini: 'N.M', area: 'S.J' },
+            { ini: 'P.M', area: 'S.J' },
+            { ini: 'C.P', area: 'S.J' }
+        ];
+
+        function responsables_cargar() {
+            try { return JSON.parse(localStorage.getItem(RESP_KEY)) || RESP_DEFAULT; }
+            catch(e) { return RESP_DEFAULT; }
+        }
+        function responsables_guardar(lista) {
+            try { localStorage.setItem(RESP_KEY, JSON.stringify(lista)); } catch(e) {}
+        }
+        function responsables_poblarSelector() {
+            const sel = document.getElementById('responsableAnticipo');
+            if (!sel) return;
+            const lista = responsables_cargar();
+            sel.innerHTML = lista.map(e =>
+                '<option value="' + e.ini + '|' + e.area + '">' + e.ini + ' (' + e.area + ')</option>'
+            ).join('');
+        }
+        function responsables_abrirConfig() {
+            responsables_renderLista();
+            document.getElementById('modalResponsables').style.display = 'block';
+        }
+        function responsables_cerrarConfig() {
+            document.getElementById('modalResponsables').style.display = 'none';
+            responsables_poblarSelector();
+        }
+        function responsables_renderLista() {
+            const lista = responsables_cargar();
+            const cont  = document.getElementById('responsables-lista');
+            if (!lista.length) { cont.innerHTML = '<p style="color:#aaa;font-size:0.85em;">Sin responsables. Agrega uno abajo.</p>'; return; }
+            cont.innerHTML = lista.map((e, i) =>
+                '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f8f9fa;border-radius:8px;margin-bottom:6px;border:1px solid #eee;">'
+                + '<span style="font-weight:700;flex:1;">' + e.ini + '</span>'
+                + '<span style="color:#7f8c8d;font-size:0.85em;">' + e.area + '</span>'
+                + '<button onclick="responsables_eliminar(' + i + ')" style="background:none;border:1px solid #fca5a5;color:#ef4444;border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.8em;">✕</button>'
+                + '</div>'
+            ).join('');
+        }
+        function responsables_agregar() {
+            const ini  = document.getElementById('resp-new-ini').value.trim().toUpperCase();
+            const area = document.getElementById('resp-new-area').value.trim().toUpperCase();
+            if (!ini || !area) return showToast('Completa iniciales y área', 'error');
+            const lista = responsables_cargar();
+            lista.push({ ini, area });
+            responsables_guardar(lista);
+            document.getElementById('resp-new-ini').value = '';
+            document.getElementById('resp-new-area').value = '';
+            responsables_renderLista();
+            showToast('Responsable agregado', 'success');
+        }
+        function responsables_eliminar(idx) {
+            const lista = responsables_cargar();
+            lista.splice(idx, 1);
+            responsables_guardar(lista);
+            responsables_renderLista();
         }
 
         // ===== CONSTANTES LOGIN =====
+
         const PIN_KEY      = 'fs_pin';
         const SESSION_KEY  = 'fs_sesion';
         const PIN_DEFAULT  = '1234'; // PIN inicial, se cambia tras recuperación
@@ -1158,6 +1249,7 @@
             document.getElementById('fechaAnticipo').value = todayISO;
             document.getElementById('fechaAusencia').value = todayISO;
             iniciarWatchdogInactividad();
+            responsables_poblarSelector();
             if(!URL_SOCIOS || URL_SOCIOS.includes('PEGA_AQUI')) {
                 alert('Falta configurar URL_SOCIOS');
             } else {
@@ -1167,14 +1259,10 @@
 
         // Precarga paralela de TODOS los datos al entrar
         async function precargarTodo() {
-            // 1. Mostrar datos en cache INMEDIATAMENTE (sin esperar red)
             fetchSociosDeGoogle();
             cargarRecaudaciones(true);
 
-            // 2. En paralelo, precargar el resto silenciosamente
-            //    para que al llegar a esas secciones ya estén listos
             await Promise.allSettled([
-                // Notas: traer y cachear
                 fetch(URL_RECAUDACIONES + '?action=getNotes&t=' + Date.now())
                     .then(r => r.json())
                     .then(json => {
@@ -1182,11 +1270,9 @@
                         guardarCache(CACHE_KEY_NOTAS, notas);
                     }).catch(() => {}),
 
-                // Arqueo: precargar datos esperados
                 fetch(AQ_URL_GET)
                     .then(r => r.json())
                     .then(data => {
-                        // Guardar en memoria para que aq_initSiNoIniciado los use
                         if (data && data.totalAcumulado !== undefined) {
                             localStorage.setItem('fondo_cache_aq_esperado', JSON.stringify({ ts: Date.now(), data }));
                         }
@@ -1201,7 +1287,6 @@
             if (pin === pinGuardado) {
                 errEl.style.display = 'none';
                 sessionStorage.setItem(SESSION_KEY, 'ok');
-                // Animacion de salida
                 const overlay = document.getElementById('loginOverlay');
                 overlay.style.transition = 'opacity 0.4s';
                 overlay.style.opacity = '0';
@@ -1210,7 +1295,6 @@
                 errEl.style.display = 'block';
                 document.getElementById('pinInput').value = '';
                 document.getElementById('pinInput').focus();
-                // Shake del input
                 const inp = document.getElementById('pinInput');
                 inp.style.borderColor = 'var(--danger)';
                 inp.style.animation = 'shake 0.4s';
@@ -1241,14 +1325,12 @@
             sessionStorage.removeItem(SESSION_KEY);
             clearTimeout(inactividadTimeout);
             clearInterval(inactividadInterval);
-            // Limpiar UI
             document.getElementById('pinInput').value = "";
             document.getElementById('loginError').style.display = "none";
             document.getElementById('recoverPanel').style.display = "none";
             document.getElementById('claveRecuperar').value = "";
             document.getElementById('recoverMsg').textContent = "";
             document.getElementById('inactividadBadge').style.display = "none";
-            // Mostrar overlay con animacion
             const overlay = document.getElementById('loginOverlay');
             overlay.style.opacity = "0";
             overlay.style.display = "flex";
@@ -1260,21 +1342,18 @@
         }
 
         function resetearInactividad() {
-            if (!sessionStorage.getItem(SESSION_KEY)) return; // no hay sesion activa
+            if (!sessionStorage.getItem(SESSION_KEY)) return;
             clearTimeout(inactividadTimeout);
             clearInterval(inactividadInterval);
             tiempoRestante = INACTIVIDAD_MS;
-            // Ocultar badge si estaba visible
             const badge = document.getElementById('inactividadBadge');
             if (badge) badge.style.display = "none";
-            // Mostrar badge los ultimos 2 minutos
             inactividadInterval = setInterval(() => {
                 tiempoRestante -= 1000;
                 const mins = Math.floor(tiempoRestante / 60000);
                 const secs = Math.floor((tiempoRestante % 60000) / 1000);
                 const timerEl = document.getElementById('inactividadTimer');
                 if (timerEl) timerEl.textContent = mins + ":" + String(secs).padStart(2, "0");
-                // Mostrar badge en los ultimos 2 minutos
                 if (tiempoRestante <= 2 * 60 * 1000 && badge) badge.style.display = "flex";
                 if (tiempoRestante <= 0) {
                     clearInterval(inactividadInterval);
@@ -1287,7 +1366,7 @@
         function iniciarWatchdogInactividad() {
             const eventos = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"];
             eventos.forEach(ev => document.addEventListener(ev, resetearInactividad, { passive: true }));
-            resetearInactividad(); // arrancar el primer ciclo
+            resetearInactividad();
         }
 
         function recuperarPin() {
@@ -1322,9 +1401,8 @@
             if(tabName === 'registro') { btns[0].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); }
             else if(tabName === 'gestion') {
                 btns[1].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync();
-                gestionSociosConMovimientos = {}; // limpiar para datos frescos
+                gestionSociosConMovimientos = {}; 
                 gestionFiltroActivo = 'todos';
-                // Resetear botones
                 ['Todos','Anticipos','Ausencias'].forEach((t,i) => {
                     const btn = document.getElementById('filtroGestion'+t);
                     const colores = ['var(--secondary)','var(--warning)','var(--danger)'];
@@ -1379,7 +1457,6 @@
             }
 
             try {
-                // Usar cache si existe y es fresco
                 let res;
                 const cached = cacheSocioIndividual[id];
                 if (cached && (Date.now() - cached.ts < CACHE_SOCIO_TTL)) {
@@ -1468,7 +1545,6 @@
                     document.getElementById('resumenPedido').innerText = formatearMoneda(sumaPedidos);
                     document.getElementById('resumenFinal').innerText = formatearMoneda(aPagarModal);
                     document.getElementById('resumenRemanente').innerText = formatearMoneda(remanenteModal);
-                    // Tarjeta remanente separada con color según estado
                     const remCard  = document.getElementById('resumenRemanenteCard');
                     const remLabel = document.getElementById('resumenRemanenteLabel');
                     const remValor = document.getElementById('resumenRemanenteValor');
@@ -1509,11 +1585,9 @@
             } catch(e) { console.error(e); }
         }
 
-        // Variable para el mes visible en el calendario PT
         let ptCalFecha = new Date();
 
         function renderCalendarGrid() {
-            // Abrir en el mes más reciente con recaudación
             const fechasConRec = Object.keys(globalMapaPuntosDia).sort();
             if (fechasConRec.length > 0) {
                 const ultima = fechasConRec[fechasConRec.length - 1].split('-');
@@ -1532,26 +1606,23 @@
 
         function ptCalRenderMes() {
             const anio = ptCalFecha.getFullYear();
-            const mes  = ptCalFecha.getMonth(); // 0-11
+            const mes  = ptCalFecha.getMonth();
             const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
             document.getElementById('ptCalMesAnio').textContent = MESES[mes] + ' ' + anio;
 
             const grid = document.getElementById('ptCalGrid');
             grid.innerHTML = '';
 
-            // Día de la semana del 1ero del mes (0=Dom, ajustar a Lunes=0)
             const primerDia = new Date(anio, mes, 1).getDay();
             const offsetLunes = (primerDia === 0) ? 6 : primerDia - 1;
             const diasEnMes  = new Date(anio, mes + 1, 0).getDate();
 
-            // Celdas vacías al inicio
             for (let i = 0; i < offsetLunes; i++) {
                 const empty = document.createElement('div');
                 empty.className = 'pt-cal-day empty';
                 grid.appendChild(empty);
             }
 
-            // Días del mes
             for (let d = 1; d <= diasEnMes; d++) {
                 const fechaISO = anio + '-' + String(mes + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
                 const tieneRec = globalMapaPuntosDia[fechaISO] !== undefined;
@@ -1594,7 +1665,6 @@
         }
 
         function toggleDaySelection(el, fecha) {
-            // Mantener por compatibilidad, ya no se usa directamente
             if(selectedDaysPT.includes(fecha)) { selectedDaysPT = selectedDaysPT.filter(d => d !== fecha); }
             else { selectedDaysPT.push(fecha); }
         }
@@ -1643,14 +1713,12 @@
             const txt    = document.getElementById('loaderText');
             if (show) {
                 if (txt) txt.textContent = text;
-                // Animar barra: arranca en 0, sube a 80% rápido, se detiene ahí
                 if (bar) { bar.style.transition = 'none'; bar.style.width = '0%'; }
                 loader.style.display = 'block';
                 badge.style.display  = 'flex';
                 clearTimeout(_loaderTimer);
                 _loaderTimer = setTimeout(() => { if(bar) { bar.style.transition = 'width 0.8s ease'; bar.style.width = '80%'; } }, 20);
             } else {
-                // Completar barra al 100% y luego ocultar
                 if (bar) { bar.style.transition = 'width 0.2s ease'; bar.style.width = '100%'; }
                 badge.style.display = 'none';
                 clearTimeout(_loaderTimer);
@@ -1679,9 +1747,9 @@
         const CACHE_KEY_DIAS   = 'fondo_cache_dias';
         const CACHE_KEY_REC    = 'fondo_cache_recaudacion';
         const CACHE_KEY_NOTAS   = 'fondo_cache_notas';
-        const CACHE_SOCIO_TTL   = 5 * 60 * 1000; // 5 min para datos individuales
-        const cacheSocioIndividual = {}; // { id: { ts, data } }
-        const CACHE_TTL = 30 * 60 * 1000; // 30 minutos (bajado de 1h para datos más frescos)
+        const CACHE_SOCIO_TTL   = 5 * 60 * 1000;
+        const cacheSocioIndividual = {};
+        const CACHE_TTL = 30 * 60 * 1000;
 
         function guardarCache(key, data) {
             try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
@@ -1697,7 +1765,6 @@
         }
 
         async function fetchSociosDeGoogle() {
-            // Mostrar datos cacheados de inmediato si existen
             const cachedSocios = leerCache(CACHE_KEY_SOCIOS);
             const cachedDias = leerCache(CACHE_KEY_DIAS);
             if (cachedSocios && cachedDias) {
@@ -1706,7 +1773,6 @@
                 renderizarCards();
                 renderizarListaBusqueda();
                 toggleLoader(false);
-                // Actualizar en segundo plano sin bloquear la UI
                 actualizarSociosSilencioso();
                 return;
             }
@@ -1716,7 +1782,6 @@
 
         async function actualizarSociosSilencioso() {
             try {
-                // Llamadas EN PARALELO en vez de secuenciales
                 const [resDias, res] = await Promise.all([
                     callApiSocios('getDiasPartTime'),
                     callApiSocios('getSocios')
@@ -1738,7 +1803,6 @@
         function procesarSocioDesdeGoogle(s) {
             const fechaStr = s.FechaIngreso;
             if(!fechaStr) return { ...s, anios: 0, puntos: 0 };
-            // Usar FechaInicioPuntos si existe, si no usar FechaIngreso
             const fechaPuntosStr = (s.FechaInicioPuntos && s.FechaInicioPuntos.trim()) ? s.FechaInicioPuntos.trim() : fechaStr;
             const partesPuntos = fechaPuntosStr.split('-');
             const fechaParaPuntos = new Date(parseInt(partesPuntos[0]), parseInt(partesPuntos[1]) - 1, parseInt(partesPuntos[2]));
@@ -1746,7 +1810,6 @@
             let anios = fechaActual.getFullYear() - fechaParaPuntos.getFullYear();
             if (fechaActual.getMonth() < fechaParaPuntos.getMonth() || (fechaActual.getMonth() === fechaParaPuntos.getMonth() && fechaActual.getDate() < fechaParaPuntos.getDate())) { anios--; }
             if (anios < 0) anios = 0;
-            // puntosActivos = false si FechaInicioPuntos es futura (aún no empieza a contar)
             const puntosActivos = fechaParaPuntos <= fechaActual;
             const areaNorm = (s.Area || '').toLowerCase().trim();
             if (areaNorm === 'gastoscomision' || areaNorm.includes('gastos')) {
@@ -1777,11 +1840,6 @@
             } catch (e) { showToast('Error al guardar', 'error'); } finally { toggleLoader(false); }
         });
 
-
-        // ============================================================
-        // ESCALAMIENTO DE PUNTOS - Aviso mensual
-        // ============================================================
-
         function calcularPuntosMaximos(area) {
             const a = (area || '').toLowerCase();
             if (a.includes('gastos')) return 1;
@@ -1804,21 +1862,19 @@
             if (!cacheSocios.length) return;
 
             const hoy       = new Date();
-            const mesActual = hoy.getMonth();   // 0-11
+            const mesActual = hoy.getMonth();
             const anioActual = hoy.getFullYear();
             const diaActual  = hoy.getDate();
 
-            // Calcular mes pasado correctamente (enero → diciembre año anterior)
             const mesPasado  = mesActual === 0 ? 11 : mesActual - 1;
             const anioPasado = mesActual === 0 ? anioActual - 1 : anioActual;
 
-            const subieronMesPasado     = []; // puntos NO aplicados aún
-            const subieronReciente      = []; // puntos YA aplicados el mes pasado
+            const subieronMesPasado     = [];
+            const subieronReciente      = [];
             const subenEsteMes          = [];
             const subenProximoPeriodo   = [];
             const ingresaronEstePeriodo = [];
 
-            // Período actual: 15/mes → 14/mes+1
             let periodoInicio, periodoFin;
             if (diaActual >= 15) {
                 periodoInicio = new Date(anioActual, mesActual, 15);
@@ -1830,10 +1886,9 @@
             const periodoInicioISO = periodoInicio.toISOString().split('T')[0];
             const periodoFinISO    = periodoFin.toISOString().split('T')[0];
 
-            // Próximo período: 15/mes+1 → 14/mes+2
             const proxPeriodoInicio = new Date(periodoFin.getFullYear(), periodoFin.getMonth(), 15);
             const proxPeriodoFin    = new Date(periodoFin.getFullYear(), periodoFin.getMonth() + 1, 14);
-            const proxMes  = proxPeriodoInicio.getMonth();   // 0-11
+            const proxMes  = proxPeriodoInicio.getMonth();
             const proxAnio = proxPeriodoInicio.getFullYear();
 
             cacheSocios.forEach(socio => {
@@ -1841,47 +1896,31 @@
                 const areaNorm = (socio.area || '').toLowerCase();
                 if (areaNorm.includes('gastos')) return;
 
-                // Usar fechaInicioPuntos si existe, si no fechaIngreso
                 const fechaBase = (socio.fechaInicioPuntos && socio.fechaInicioPuntos !== socio.fechaIngreso)
                     ? socio.fechaInicioPuntos : socio.fechaIngreso;
                 const partes     = fechaBase.split('-');
                 const anioIngreso = parseInt(partes[0]);
-                const mesIngreso  = parseInt(partes[1]) - 1; // 0-11
+                const mesIngreso  = parseInt(partes[1]) - 1;
                 const diaIngreso  = parseInt(partes[2]);
 
                 const max = calcularPuntosMaximos(socio.area);
-                if (socio.puntos >= max) return; // tope alcanzado
+                if (socio.puntos >= max) return;
 
-                // ── GRUPO 1: cumplió aniversario el MES PASADO ─────────────────
                 if (mesIngreso === mesPasado) {
                     const aniosCumplidos  = anioPasado - anioIngreso;
                     if (aniosCumplidos >= 1) {
                         const puntosAntes   = calcularPuntosPorAnios(aniosCumplidos - 1, socio.area);
                         const puntosDespues = calcularPuntosPorAnios(aniosCumplidos, socio.area);
                         if (puntosDespues > puntosAntes) {
-                            // ¿Ya se aplicó el escalamiento? (puntos en Sheets >= esperados)
                             if (socio.puntos >= puntosDespues) {
-                                // Ya aplicado → grupo informativo 'subieron recientemente'
-                                subieronReciente.push({
-                                    ...socio,
-                                    puntosNuevos: puntosDespues,
-                                    puntosAntes,
-                                    aniosCumplidos
-                                });
+                                subieronReciente.push({ ...socio, puntosNuevos: puntosDespues, puntosAntes, aniosCumplidos });
                             } else {
-                                // Aún no aplicado → pendiente de aplicar
-                                subieronMesPasado.push({
-                                    ...socio,
-                                    puntosNuevos: puntosDespues,
-                                    puntosAntes,
-                                    aniosCumplidos
-                                });
+                                subieronMesPasado.push({ ...socio, puntosNuevos: puntosDespues, puntosAntes, aniosCumplidos });
                             }
                         }
                     }
                 }
 
-                // ── GRUPO 2: cumple aniversario ESTE MES ───────────────────────
                 if (mesIngreso === mesActual) {
                     const aniosCumpleEsteMes = anioActual - anioIngreso;
                     if (aniosCumpleEsteMes >= 1) {
@@ -1889,49 +1928,26 @@
                         const puntosDespues = calcularPuntosPorAnios(aniosCumpleEsteMes, socio.area);
                         if (puntosDespues > puntosAntes) {
                             const yaOcurrio = diaActual >= diaIngreso;
-                            // Si ya ocurrió el día Y ya se aplicó → subió recientemente
                             if (yaOcurrio && socio.puntos >= puntosDespues) {
-                                subieronReciente.push({
-                                    ...socio,
-                                    puntosNuevos: puntosDespues,
-                                    puntosAntes,
-                                    diaIngreso,
-                                    aniosCumpleEsteMes,
-                                    yaOcurrio: true
-                                });
+                                subieronReciente.push({ ...socio, puntosNuevos: puntosDespues, puntosAntes, diaIngreso, aniosCumpleEsteMes, yaOcurrio: true });
                             } else {
-                                subenEsteMes.push({
-                                    ...socio,
-                                    puntosNuevos: puntosDespues,
-                                    puntosAntes,
-                                    diaIngreso,
-                                    aniosCumpleEsteMes,
-                                    yaOcurrio
-                                });
+                                subenEsteMes.push({ ...socio, puntosNuevos: puntosDespues, puntosAntes, diaIngreso, aniosCumpleEsteMes, yaOcurrio });
                             }
                         }
                     }
                 }
-                // ── GRUPO 3: ingresaron en el período actual (15→14) ──────
                 const fechaIngNorm = socio.fechaIngreso || '';
                 if (fechaIngNorm >= periodoInicioISO && fechaIngNorm <= periodoFinISO) {
                     ingresaronEstePeriodo.push({ ...socio });
                 }
 
-                // ── GRUPO 4: suben en el PRÓXIMO período (15/mes+1 → 14/mes+2) ──
                 if (mesIngreso === proxMes) {
                     const aniosCumpleProx = proxAnio - anioIngreso;
                     if (aniosCumpleProx >= 1) {
                         const puntosAntes   = calcularPuntosPorAnios(aniosCumpleProx - 1, socio.area);
                         const puntosDespues = calcularPuntosPorAnios(aniosCumpleProx, socio.area);
                         if (puntosDespues > puntosAntes) {
-                            subenProximoPeriodo.push({
-                                ...socio,
-                                puntosNuevos: puntosDespues,
-                                puntosAntes,
-                                diaIngreso,
-                                aniosCumpleProx
-                            });
+                            subenProximoPeriodo.push({ ...socio, puntosNuevos: puntosDespues, puntosAntes, diaIngreso, aniosCumpleProx });
                         }
                     }
                 }
@@ -1959,9 +1975,7 @@
                     <div style="font-size:0.78em;font-weight:800;text-transform:uppercase;color:${color};letter-spacing:0.5px;margin-bottom:8px;">${icono} ${titulo}</div>`;
                 socios.forEach(s => {
                     const areaNombre  = s.area.charAt(0).toUpperCase() + s.area.slice(1);
-                    const subLabel    = s.diaIngreso
-                        ? ` — día ${s.diaIngreso}${s.yaOcurrio ? ' ✓' : ' (próximo)'}`
-                        : '';
+                    const subLabel    = s.diaIngreso ? ` — día ${s.diaIngreso}${s.yaOcurrio ? ' ✓' : ' (próximo)'}` : '';
                     const diff = s.puntosNuevos - s.puntosAntes;
                     const colorBtn = s.yaOcurrio === false ? '#aaa' : color;
                     bloque += `
@@ -1991,7 +2005,6 @@
             html += renderGrupo('Subieron el mes pasado — aplicar si aún no se hizo', '#e67e22', '⚠️', subieronMesPasado);
             html += renderGrupo('Suben este mes', '#27ae60', '📅', subenEsteMes);
 
-            // Grupo 'Subieron recientemente' — ya aplicado, solo informativo
             if (subieronReciente.length) {
                 html += '<div style="margin-bottom:12px;">';
                 html += '<div style="font-size:0.78em;font-weight:800;text-transform:uppercase;color:#0891b2;letter-spacing:0.5px;margin-bottom:8px;">✅ Subieron recientemente — escalamiento ya aplicado</div>';
@@ -2015,7 +2028,6 @@
                 html += '</div>';
             }
 
-            // Grupo 4: suben el próximo período — informativo, sin botón activo
             if (subenProximoPeriodo.length) {
                 const pxIniVis = proxPeriodoInicio.toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit'});
                 const pxFinVis = proxPeriodoFin.toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit'});
@@ -2042,7 +2054,6 @@
                 html += '</div>';
             }
 
-            // Grupo ingresados: sin botón de subir, solo informativo
             if (ingresaronEstePeriodo.length) {
                 const pIniVis = periodoInicioISO.split('-').reverse().join('/');
                 const pFinVis = periodoFinISO.split('-').reverse().join('/');
@@ -2074,7 +2085,6 @@
             try {
                 await callApiSocios('updateSocio', { socioId: id, updates: { Puntos: puntosNuevos } });
                 showToast(`✅ ${nombre}: ${puntosNuevos} pts aplicados`, 'success');
-                // Limpiar cache y recargar para reflejar el cambio
                 try { localStorage.removeItem(CACHE_KEY_SOCIOS); } catch(e) {}
                 await actualizarSociosSilencioso();
             } catch(e) {
@@ -2088,13 +2098,11 @@
             const container = document.getElementById('mainSociosContainer');
             container.innerHTML = '';
             let totalSocios = cacheSocios.length;
-            // Solo contar puntos/planta/part-time de socios con puntos ya activos
             const sociosActivos = cacheSocios.filter(s => s.puntosActivos !== false);
             let totalPuntos = sociosActivos.reduce((a,b) => a + b.puntos, 0);
             let totalPlanta = sociosActivos.filter(s => s.contrato === 'Planta').length;
             let totalPart   = sociosActivos.filter(s => s.contrato === 'Part-Time').length;
             let puntosPlanta = sociosActivos.filter(s => s.contrato === 'Planta').reduce((a,b) => a + b.puntos, 0);
-            // Socios pendientes de inicio (fecha futura)
             const sociosPendientes = cacheSocios.filter(s => s.puntosActivos === false);
             document.getElementById('totalSociosDash').innerText = totalSocios;
             document.getElementById('totalPuntosDash').innerText = totalPuntos;
@@ -2139,7 +2147,6 @@
                     card.setAttribute('data-search-name', `${socio.nombre} ${socio.apellido} ${socio.area}`.toLowerCase());
                     const f = socio.fechaIngreso.split('-');
                     const fechaVis = `${f[2]}/${f[1]}/${f[0]}`;
-                    // Badge fecha inicio puntos
                     let fipVis = '';
                     if (socio.fechaInicioPuntos && socio.fechaInicioPuntos !== socio.fechaIngreso) {
                         const fipLabel = socio.fechaInicioPuntos.split('-').reverse().join('/');
@@ -2200,7 +2207,6 @@
                 document.getElementById('nombre').value = socio.nombre;
                 document.getElementById('apellido').value = socio.apellido;
                 document.getElementById('fechaIngreso').value = socio.fechaIngreso;
-                // Fecha inicio puntos: mostrar solo si difiere de fechaIngreso
                 const fip = socio.fechaInicioPuntos || '';
                 document.getElementById('fechaInicioPuntos').value = (fip !== socio.fechaIngreso) ? fip : '';
                 let areaVal = socio.area;
@@ -2219,15 +2225,14 @@
             catch(e) { showToast('Error', 'error'); toggleLoader(false); }
         }
 
-        let gestionFiltroActivo = 'todos'; // 'todos' | 'anticipos' | 'ausencias'
-        let gestionSociosConMovimientos = {}; // { id: { anticipos: bool, ausencias: bool } }
+        let gestionFiltroActivo = 'todos';
+        let gestionSociosConMovimientos = {};
         let gestionCargandoFiltro = false;
 
         function filtrarSociosGestion() { renderizarListaBusqueda(); }
 
         async function setFiltroGestion(tipo) {
             gestionFiltroActivo = tipo;
-            // Actualizar estilos de botones
             const colores = { todos: 'var(--secondary)', anticipos: 'var(--warning)', ausencias: 'var(--danger)' };
             ['todos','anticipos','ausencias'].forEach(t => {
                 const btn = document.getElementById('filtroGestion' + t.charAt(0).toUpperCase() + t.slice(1));
@@ -2241,12 +2246,10 @@
                 renderizarListaBusqueda();
                 return;
             }
-            // Si ya tenemos los datos, filtrar directo
             if (Object.keys(gestionSociosConMovimientos).length > 0) {
                 renderizarListaBusqueda();
                 return;
             }
-            // Primera vez: mostrar skeleton en lista, cargar y renderizar
             const lista = document.getElementById('listaResultados');
             const colorActivo = colores[tipo];
             lista.innerHTML =
@@ -2266,7 +2269,6 @@
             const infoEl = document.getElementById('filtroGestionInfo');
             if (infoEl) infoEl.textContent = 'Consultando servidor...';
             try {
-                // Traer datos de todos los socios en paralelo
                 const resultados = await Promise.allSettled(
                     cacheSocios.map(s =>
                         fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${s.id}`)
@@ -2296,7 +2298,6 @@
             const lista = document.getElementById('listaResultados');
             lista.innerHTML = '';
             let filtrados = cacheSocios.filter(s => s.nombre.toLowerCase().includes(termino) || s.apellido.toLowerCase().includes(termino) || (s.area||'').toLowerCase().includes(termino));
-            // Aplicar filtro de movimientos si está activo
             if (gestionFiltroActivo !== 'todos' && Object.keys(gestionSociosConMovimientos).length > 0) {
                 filtrados = filtrados.filter(s => {
                     const mov = gestionSociosConMovimientos[s.id];
@@ -2317,7 +2318,6 @@
             const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasparttime': 'Mesas (Part-Time)', 'cambistas': 'Mesas (Cambistas)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'gastoscomision': 'Gastos Comisión' };
             const coloresArea = { 'mesas': '#3498db', 'mesasparttime': '#3498db', 'cambistas': '#9b59b6', 'maquinas': '#e67e22', 'tecnicos': '#7f8c8d', 'boveda': '#27ae60', 'gastoscomision': '#607d8b' };
 
-            // Agrupar por área normalizada
             const grupos = {};
             filtrados.forEach(s => {
                 let key = (s.area || 'otros').toLowerCase().replace(/\s/g,'');
@@ -2326,7 +2326,6 @@
                 grupos[key].push(s);
             });
 
-            // Orden fijo de áreas
             const ordenAreas = ['mesas','mesasparttime','cambistas','maquinas','tecnicos','boveda','gastoscomision','otros'];
             const areasSorted = Object.keys(grupos).sort((a,b) => {
                 const ia = ordenAreas.indexOf(a); const ib = ordenAreas.indexOf(b);
@@ -2338,7 +2337,6 @@
                 const color = coloresArea[key] || '#999';
                 const label = nombresArea[key] || key.toUpperCase();
 
-                // Encabezado de área
                 const header = document.createElement('div');
                 header.style.cssText = `padding:5px 10px; font-size:0.72em; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:white; background:${color}; margin-top:6px; border-radius:4px;`;
                 header.textContent = `${label} (${socios.length})`;
@@ -2386,15 +2384,12 @@
             document.getElementById('socioAPagar').innerHTML = skEl;
             document.getElementById('socioRemanente').innerHTML = skEl;
 
-            // Resaltar socio seleccionado en la lista
             document.querySelectorAll('.result-item').forEach(el => el.classList.remove('seleccionado'));
             const itemSeleccionado = document.querySelector(`.result-item[data-socio-id="${id}"]`);
             if(itemSeleccionado) itemSeleccionado.classList.add('seleccionado');
 
-            // Scroll automático al panel de detalle en móvil
             setTimeout(() => { document.getElementById('panelDetalle').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
 
-            // Limpiar botones de motivo y poner fechas en hoy
             document.querySelectorAll('.btn-motivo').forEach(b => b.classList.remove('activo'));
             document.getElementById('motivoAusencia').value = '';
             const hoy = new Date().toISOString().split('T')[0];
@@ -2402,12 +2397,12 @@
             document.getElementById('fechaAusencia').value = hoy;
             document.getElementById('montoAnticipo').value = '';
 
+            responsables_poblarSelector();
             cargarHistorialSocio(id);
         }
 
         async function cargarHistorialSocio(id) {
             const tbody = document.getElementById('tablaHistorial');
-            // Skeleton animado mientras carga
             tbody.innerHTML = Array(3).fill(`<tr>
                 <td><div style="height:14px;background:#eee;border-radius:4px;width:70px;animation:shimmer 1.2s infinite alternate;"></div></td>
                 <td><div style="height:14px;background:#eee;border-radius:4px;width:80px;animation:shimmer 1.2s infinite alternate;"></div></td>
@@ -2444,7 +2439,6 @@
                         });
                     }
 
-                    // Clave única por registro (fecha + tipo + uuid) → sin mezclas
                     const procesarEntrada = (fechaRaw, tipo, detalle, monto, uuid) => {
                         let fecha = fechaRaw || "";
                         if(fecha.includes('T')) fecha = fecha.split('T')[0];
@@ -2460,8 +2454,17 @@
                         };
                     };
                     
-                    if(data.anticipos && Array.isArray(data.anticipos)) data.anticipos.forEach(a => procesarEntrada(a.fecha, 'Anticipo', 'Adelanto', Number(a.cantidad || a.monto || 0), a.uuid));
-                    if(data.extras && Array.isArray(data.extras)) data.extras.forEach(e => procesarEntrada(e.fecha, (e.tipo || 'Extra').toUpperCase(), e.detalle, 0, e.uuid));
+                    if(data.anticipos && Array.isArray(data.anticipos)) {
+                        data.anticipos.forEach(a => {
+                            const respInfo = a.responsable ? ` (Resp: ${a.responsable} ${a.areaResponsable||''})` : '';
+                            procesarEntrada(a.fecha, 'Anticipo', 'Adelanto' + respInfo, Number(a.cantidad || a.monto || 0), a.uuid);
+                        });
+                    }
+                    if(data.extras && Array.isArray(data.extras)) {
+                        data.extras.forEach(e => {
+                            procesarEntrada(e.fecha, (e.tipo || 'Extra').toUpperCase(), e.detalle, 0, e.uuid);
+                        });
+                    }
                     
                     const listaFinal = Object.values(agrupados);
                     listaFinal.forEach(item => { sumaTotalPedido += item.montoTotal; });
@@ -2489,7 +2492,6 @@
 
                     const saldoReal = (alcance + saldoAnterior) - sumaTotalPedido;
 
-                    // Calcular A Pagar (redondeado hacia abajo al múltiplo de $1.000) y Remanente
                     let aPagar = 0;
                     let remanente = 0;
                     if (saldoReal > 0) {
@@ -2497,10 +2499,9 @@
                         remanente = Math.round(saldoReal - aPagar);
                     } else {
                         aPagar = 0;
-                        remanente = Math.round(saldoReal); // negativo → deuda al próximo mes
+                        remanente = Math.round(saldoReal);
                     }
 
-                    // Guardar en hidden para usarlo en cerrarMesSocio
                     document.getElementById('gestionSocioRemanente').value = remanente;
 
                     document.getElementById('socioTotalPedido').innerText = formatearMoneda(sumaTotalPedido);
@@ -2545,13 +2546,148 @@
             } catch (e) { console.error("Error JS:", e); tbody.innerHTML = '<tr><td colspan="4" style="color:var(--danger); text-align:center;">Error procesando datos</td></tr>'; }
         }
 
-        // =====================================================
-        // CERRAR MES TODOS - Calcula y guarda remanente de cada socio
-        // =====================================================
+        // ============================================================
+        // INFORME DETALLE ANTICIPOS (CON NOMBRE DINÁMICO)
+        // ============================================================
+        async function informeAnticipos() {
+            if (!cacheSocios.length) return showToast('No hay socios cargados', 'error');
+            toggleLoader(true, 'Generando informe...');
+            try {
+                const { inicio, fin } = aq_calcularPeriodoActual();
+                const fmtF = iso => { const p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
+                const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+                const MESES_ABR = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+                const hoyDate = new Date();
+                const periodoStr = fmtF(inicio) + ' AL ' + fmtF(fin);
+                
+                // NOMBRE DE ARCHIVO DINÁMICO: Detalle Anticipos Mes DD-MM-AAAA.pdf
+                const fechaHoyNom = hoyDate.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'-');
+                const mesNombreNom = MESES[hoyDate.getMonth()];
+                const fileName = `Detalle Anticipos ${mesNombreNom} ${fechaHoyNom}`;
+
+                const fechaHoyVis = hoyDate.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
+                const fmt = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v);
+
+                const resultados = await Promise.allSettled(
+                    cacheSocios.map(s =>
+                        fetch(URL_SOCIOS + '?action=getDatosSocio&socioId=' + s.id)
+                            .then(r => r.json())
+                            .then(res => ({ socio: s, data: res.data || {} }))
+                            .catch(() => ({ socio: s, data: {} }))
+                    )
+                );
+
+                const ordenAreas = ['mesas','mesasparttime','cambistas','maquinas','tecnicos','boveda','gastoscomision'];
+                const resultOk = resultados
+                    .filter(r => r.status === 'fulfilled').map(r => r.value)
+                    .sort((a,b) => {
+                        const ia = ordenAreas.indexOf((a.socio.area||'').toLowerCase());
+                        const ib = ordenAreas.indexOf((b.socio.area||'').toLowerCase());
+                        return ((ia===-1?99:ia)-(ib===-1?99:ib)) || a.socio.nombre.localeCompare(b.socio.nombre);
+                    });
+
+                const filas = [];
+                let totalGeneral = 0, numero = 1;
+
+                resultOk.forEach(({ socio, data }) => {
+                    const anticipos = (data.anticipos || []).filter(a => {
+                        let f = a.fecha || ''; if (f.includes('T')) f = f.split('T')[0];
+                        return f >= inicio && f <= fin;
+                    });
+                    if (!anticipos.length) return;
+                    const totalSocio = anticipos.reduce((s,a) => s + (Number(a.cantidad||a.monto)||0), 0);
+                    totalGeneral += totalSocio;
+                    anticipos.forEach((ant, idx) => {
+                        let f = ant.fecha || ''; if (f.includes('T')) f = f.split('T')[0];
+                        const fp = f.split('-');
+                        const fechaVis = fp.length===3 ? fp[2]+'/'+( MESES_ABR[parseInt(fp[1])-1]||fp[1])+'/'+fp[0] : f;
+                        const areaNom = (socio.area||'').slice(0,2).toUpperCase();
+                        const resp    = socio.contrato === 'Part-Time' ? 'P.T' : 'P.M';
+                        const responsable  = ant.responsable || '';
+                        const respArea    = ant.areaResponsable || '';
+                        filas.push({
+                            n: idx===0 ? numero++ : '',
+                            nombre: idx===0 ? (socio.nombre+' '+socio.apellido).toUpperCase() : '',
+                            area: idx===0 ? areaNom : '',
+                            resp,
+                            fecha: fechaVis,
+                            valor: Number(ant.cantidad||ant.monto)||0,
+                            responsable, respArea,
+                            totalSocio: idx===anticipos.length-1 ? totalSocio : null
+                        });
+                    });
+                });
+
+                if (!filas.length) { toggleLoader(false); return showToast('No hay anticipos en el período actual', 'error'); }
+
+                let tablaCuerpo = '';
+                filas.forEach((f, i) => {
+                    const bg = i%2===0 ? '#fff' : '#f9f9f9';
+                    tablaCuerpo +=
+                        '<tr style="background:'+bg+'">'
+                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:center;font-weight:bold;">'+( f.n||'')+'</td>'
+                        + '<td style="padding:5px 8px;border:1px solid #ddd;font-weight:'+(f.nombre?'700':'400')+';">'+( f.nombre||'')+'</td>'
+                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:center;">'+f.area+'</td>'
+                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:center;">'+f.fecha+'</td>'
+                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:right;font-weight:700;">'+fmt(f.valor)+'</td>'
+                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:center;font-weight:700;color:#2980b9;">'+( f.responsable||'')+(f.respArea?' <span style="color:#888;font-size:9px;">('+f.respArea+')</span>':'')+'</td>'
+                        + (f.totalSocio!==null
+                            ? '<td style="padding:5px 8px;border:1px solid #ddd;text-align:right;font-weight:900;color:#c0392b;">'+fmt(f.totalSocio)+'</td>'
+                            : '<td style="padding:5px 8px;border:1px solid #ddd;"></td>')
+                        + '</tr>';
+                });
+
+                const htmlInforme =
+                    '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+                    + '<title>'+fileName+'</title>'
+                    + '<style>'
+                    + '* { margin:0; padding:0; box-sizing:border-box; }'
+                    + 'body { font-family:Arial,sans-serif; font-size:11px; color:#000; padding:20px; }'
+                    + 'h1 { font-size:14px; text-align:center; font-weight:900; letter-spacing:1px; margin-bottom:4px; }'
+                    + '.subtitulo { text-align:center; font-size:11px; margin-bottom:16px; font-weight:600; }'
+                    + '.total-header { background:#c0392b; color:white; padding:8px 16px; font-size:14px; font-weight:900; display:flex; justify-content:space-between; margin-bottom:14px; border-radius:4px; }'
+                    + 'table { width:100%; border-collapse:collapse; margin-bottom:12px; }'
+                    + 'th { background:#2c3e50; color:white; padding:6px 8px; font-size:10px; text-align:left; border:1px solid #2c3e50; }'
+                    + '.total-row td { background:#f0f0f0; font-weight:900; font-size:13px; padding:8px; border:2px solid #2c3e50; }'
+                    + '.firma-section { display:flex; gap:40px; margin-top:30px; justify-content:center; }'
+                    + '.firma-box { text-align:center; min-width:160px; }'
+                    + '.firma-linea { border-top:1px solid #000; margin-bottom:4px; margin-top:30px; }'
+                    + '.firma-label { font-size:10px; color:#555; }'
+                    + '.footer { text-align:center; font-size:9px; color:#aaa; margin-top:20px; border-top:1px dashed #ccc; padding-top:8px; }'
+                    + '@media print { @page { margin:15mm; size:A4; } body { padding:0; } }'
+                    + '@media screen { body { background:#ddd; } .page { background:white; max-width:900px; margin:0 auto; padding:20px; box-shadow:0 2px 12px rgba(0,0,0,0.2); } }'
+                    + '</style><script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script></head><body><div class="page">'
+                    + '<h1>FONDO DE SOLIDARIDAD &mdash; CASINO DE PTO. VARAS</h1>'
+                    + '<div class="subtitulo">LEY 17312 DEL 29/07/70 &nbsp;&nbsp;|&nbsp;&nbsp; PUERTO VARAS</div>'
+                    + '<div class="total-header"><span>TOTAL EGRESOS</span><span>'+fmt(totalGeneral)+'</span></div>'
+                    + '<div class="subtitulo" style="margin-bottom:10px;">PERÍODO '+periodoStr+'</div>'
+                    + '<table><thead><tr>'
+                    + '<th style="width:30px;text-align:center;">N°</th>'
+                    + '<th>NOMBRE</th>'
+                    + '<th style="width:40px;text-align:center;">ÁREA</th>'
+                    + '<th style="width:90px;text-align:center;">FECHA</th>'
+                    + '<th style="width:90px;text-align:right;">VALOR</th>'
+                    + '<th style="width:80px;text-align:center;">RESPONSABLE</th>'
+                    + '<th style="width:90px;text-align:right;">TOTAL SOCIO</th>'
+                    + '</tr></thead>'
+                    + '<tbody>'+tablaCuerpo+'</tbody>'
+                    + '<tfoot><tr class="total-row">'
+                    + '<td colspan="5" style="text-align:right;">TOTAL GENERAL</td>'
+                    + '<td colspan="2" style="text-align:right;color:#c0392b;">'+fmt(totalGeneral)+'</td>'
+                    + '</tr></tfoot></table>'
+                    + ''
+                    + '<div class="footer">Emitido: '+fechaHoyVis+' &nbsp;|&nbsp; Sistema Fondo Solidario</div>'
+                    + '</div></body></html>';
+
+                printHTML(htmlInforme, fileName);
+
+            } catch(e) { console.error(e); showToast('Error generando informe', 'error'); }
+            finally { toggleLoader(false); }
+        }
+
         async function cerrarMesTodos() {
             if (cacheSocios.length === 0) return showToast('No hay socios cargados', 'error');
 
-            // Previsualización: calcular remanentes de todos ANTES de confirmar
             const modal = document.getElementById('modalCierreTodos');
             const resultado = document.getElementById('cierreTodosResultado');
             const progreso = document.getElementById('cierreTodosProgreso');
@@ -2561,27 +2697,10 @@
             btn.disabled = false;
             btn.textContent = '✅ Confirmar y Ejecutar';
 
-            // Mostrar previsualización con los remanentes actuales por socio
             let previHtml = '<table style="width:100%; font-size:0.85em; border-collapse:collapse;">';
             previHtml += '<thead><tr style="background:#f0f2f5;"><th style="padding:6px 8px; text-align:left;">Socio</th><th style="padding:6px 8px; text-align:right;">Remanente</th></tr></thead><tbody>';
 
-            // Calcular remanente para cada socio usando los datos en memoria
             cacheSocios.forEach(socio => {
-                let alcance = 0;
-                const ausencias = new Set(); // no tenemos ausencias en caché, se usan al guardar
-                if (socio.contrato === 'Part-Time') {
-                    const dias = globalDiasPT[socio.id] || [];
-                    let sumaVP = 0;
-                    dias.forEach(d => { if (globalMapaPuntosDia[d]) sumaVP += globalMapaPuntosDia[d]; });
-                    alcance = sumaVP * socio.puntos;
-                } else {
-                    let sumaVT = Object.values(globalMapaPuntosDia).reduce((a, b) => a + b, 0);
-                    alcance = sumaVT * socio.puntos;
-                }
-                // Saldo anterior desde el campo oculto si es el socio activo, si no desde 0 (se actualizará con el fetch real)
-                const saldoAnt = 0; // La API registrará el remanente sobre el saldo real del servidor
-                const saldoReal = alcance + saldoAnt; // Aproximado sin anticipos (son del servidor)
-                // Nota: el cálculo exacto lo hace ejecutarCierreTodos con datos reales del servidor
                 previHtml += `<tr style="border-bottom:1px solid #eee;">
                     <td style="padding:5px 8px;">${socio.nombre} ${socio.apellido} <span style="font-size:0.75em; color:#7f8c8d;">(${socio.contrato})</span></td>
                     <td style="padding:5px 8px; text-align:right; color:#8e44ad; font-weight:bold;">Se calculará al ejecutar</td>
@@ -2614,7 +2733,6 @@
                 bar.style.width = `${Math.round(((procesados) / total) * 100)}%`;
 
                 try {
-                    // Traer datos reales del servidor para este socio
                     const response = await fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${socio.id}`);
                     const res = await response.json();
 
@@ -2625,12 +2743,10 @@
                         const saldoAnterior = Number(data.saldoAnterior || 0);
                         let sumaPedido = 0;
 
-                        // Calcular anticipos reales
                         if (data.anticipos && Array.isArray(data.anticipos)) {
                             data.anticipos.forEach(a => { sumaPedido += Number(a.cantidad || a.monto || 0); });
                         }
 
-                        // Calcular ausencias reales
                         const fechasAusencia = new Set();
                         if (data.extras) {
                             data.extras.forEach(e => {
@@ -2640,7 +2756,6 @@
                             });
                         }
 
-                        // Calcular alcance real
                         let alcance = 0;
                         if (socio.contrato === 'Part-Time') {
                             const dias = globalDiasPT[socio.id] || [];
@@ -2658,7 +2773,6 @@
                         remanente = saldoReal > 0 ? Math.round(saldoReal - aPagar) : Math.round(saldoReal);
                     }
 
-                    // Guardar remanente como nuevo saldo anterior
                     await callApiSocios('registrarSaldoAnterior', {
                         id: socio.id,
                         nombre: `${socio.nombre} ${socio.apellido}`,
@@ -2694,7 +2808,6 @@
             btn.textContent = '✅ Completado';
             showToast(`Cierre completado: ${exitosos}/${total} socios procesados`, exitosos === total ? 'success' : 'error');
 
-            // Recargar socios y limpiar si hay uno seleccionado
             const idActivo = document.getElementById('gestionSocioId').value;
             if (idActivo) cargarHistorialSocio(idActivo);
         }
@@ -2706,25 +2819,154 @@
             document.getElementById('borrarTipo').value = item.montoTotal > 0 ? 'Anticipo' : 'Extra';
         }
 
+        // ============================================================
+        // INFORME MONTOS DIARIOS (ESTILO EXCEL - SIMILAR A FOTO)
+        // ============================================================
+        async function informeMontosDiarios() {
+            if(!recDatosRaw || recDatosRaw.length === 0) return showToast("No hay datos de recaudación", "error");
+            toggleLoader(true, "Generando informe montos...");
+
+            try {
+                const { inicio, fin } = aq_calcularPeriodoActual();
+                const hoy = new Date();
+                const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+                
+                // NOMBRE DE ARCHIVO: Montos diarios mes DD-MM-YYYY.pdf
+                const fechaHoyNom = hoy.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'-');
+                const mesNombreNom = MESES[hoy.getMonth()];
+                const fileName = `Montos diarios ${mesNombreNom} ${fechaHoyNom}`;
+
+                const fmt = v => new Intl.NumberFormat('es-CL',{maximumFractionDigits:0}).format(v || 0);
+                
+                // Generar array de días del período
+                let diasArr = [];
+                let dCurr = new Date(inicio + "T12:00:00");
+                let dEnd = new Date(fin + "T12:00:00");
+                while(dCurr <= dEnd) {
+                    diasArr.push(dCurr.toISOString().split('T')[0]);
+                    dCurr.setDate(dCurr.getDate() + 1);
+                }
+
+                let filasHtml = "";
+                let sumSJ = 0, sumMDAE = 0, sumMDAT = 0, sumBov = 0, sumTotal = 0;
+                let acumulado = 0;
+
+                diasArr.forEach((fecha, idx) => {
+                    const registros = recDatosRaw.filter(r => {
+                        let f = r.fecha; if(f && f.includes('T')) f = f.split('T')[0];
+                        return f === fecha;
+                    });
+
+                    // MAPEADO: Mesas -> Sala de Juegos
+                    const sj   = registros.filter(r => (r.tipo === 'Mesas' || r.tipo === 'SalaDeJuegos')).reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
+                    const mdae = registros.filter(r => (r.tipo === 'EfectivoMDA' || r.tipo === 'MDA (EFECTIVO)')).reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
+                    const mdat = registros.filter(r => (r.tipo === 'TarjetaMDA' || r.tipo === 'MDA (TARJETA)')).reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
+                    const bov  = registros.filter(r => r.tipo === 'Boveda').reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
+                    
+                    const totalDia = sj + mdae + mdat + bov;
+                    acumulado += totalDia;
+                    
+                    sumSJ += sj; sumMDAE += mdae; sumMDAT += mdat; sumBov += bov; sumTotal += totalDia;
+
+                    const divisor = parseFloat(registros[0]?.divisor) || 1;
+                    const puntoNoche = totalDia / divisor;
+
+                    const dObj = new Date(fecha + "T12:00:00");
+                    const nomDia = dObj.toLocaleDateString('es-ES', {weekday:'short'}).toUpperCase();
+                    const numDia = dObj.getDate();
+
+                    filasHtml += `
+                        <tr>
+                            <td style="border:1px solid #000; text-align:center; background:#f2f2f2; font-weight:bold; color:red;">${numDia}</td>
+                            <td style="border:1px solid #000; text-align:center; background:#ffffcc;">${nomDia}</td>
+                            <td style="border:1px solid #000; text-align:center;">${divisor > 1 ? fmt(divisor) : (registros[0]?.divisor || '-')}</td>
+                            <td style="border:1px solid #000; text-align:right;">${sj > 0 ? fmt(sj) : ''}</td>
+                            <td style="border:1px solid #000; text-align:right;">${mdae > 0 ? fmt(mdae) : ''}</td>
+                            <td style="border:1px solid #000; text-align:right;">${mdat > 0 ? fmt(mdat) : ''}</td>
+                            <td style="border:1px solid #000; text-align:right;">${bov > 0 ? fmt(bov) : ''}</td>
+                            <td style="border:1px solid #000; text-align:right; font-weight:bold;">${totalDia > 0 ? fmt(totalDia) : '0'}</td>
+                            <td style="border:1px solid #000; text-align:right;">${acumulado > 0 ? fmt(acumulado) : '0'}</td>
+                            <td style="border:1px solid #000; text-align:right; background:#e2f0d9;">${puntoNoche > 0 ? fmt(puntoNoche) : '0'}</td>
+                            <td style="border:1px solid #000; text-align:center; background:#f2f2f2;">${numDia}</td>
+                        </tr>`;
+                });
+
+                const promedio = sumTotal / diasArr.length;
+                const periodoVis = inicio.split('-').reverse().join('/') + " AL " + fin.split('-').reverse().join('/');
+
+                const html = `
+                <html><head><title>${fileName}</title><style>
+                    body { font-family: Arial, sans-serif; font-size: 10px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+                    th { border: 1px solid #000; background: #000; color: #fff; padding: 4px; font-size: 8px; }
+                    td { border: 1px solid #000; padding: 3px; }
+                    .header-box { background: #ffff00; border: 2px solid #000; display: inline-block; padding: 5px 30px; font-weight: bold; font-size: 11px; margin-bottom: 10px; }
+                    .promedio-box { border: 2px solid #000; text-align: center; float: right; width: 150px; }
+                    .promedio-title { background: #d9d9d9; padding: 2px 5px; border-bottom: 1px solid #000; font-weight: bold; font-size: 9px; }
+                    .promedio-val { padding: 5px; font-size: 16px; font-weight: bold; }
+                </style></head><body>
+                    <div style="overflow: hidden;">
+                        <div class="header-box">PERIODO ${periodoVis}</div>
+                        <div class="promedio-box">
+                            <div class="promedio-title">PROMEDIO DIARIO</div>
+                            <div class="promedio-val">${fmt(promedio)}</div>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>N°</th><th>Dia</th><th>Puntaje</th><th>Sala de Juegos</th><th>MDA (EFECTIVO)</th>
+                                <th>MDA (TARJETA)</th><th>BOVEDA</th><th>Total</th><th>Acumulado</th><th>Punto Diario</th><th>Dia</th>
+                            </tr>
+                        </thead>
+                        <tbody>${filasHtml}</tbody>
+                        <tfoot style="background: #ffffcc; font-weight: bold;">
+                            <tr>
+                                <td colspan="3" style="text-align:center;">Totales</td>
+                                <td style="text-align:right;">${fmt(sumSJ)}</td>
+                                <td style="text-align:right;">${fmt(sumMDAE)}</td>
+                                <td style="text-align:right;">${fmt(sumMDAT)}</td>
+                                <td style="text-align:right;">${fmt(sumBov)}</td>
+                                <td style="text-align:right;">${fmt(sumTotal)}</td>
+                                <td colspan="3"></td>
+                            </tr>
+                            <tr style="background: #000; color: #fff;">
+                                <td colspan="3" style="text-align:center;">MDA TOTAL</td>
+                                <td colspan="3" style="text-align:center; font-size:14px;">${fmt(sumMDAE + sumMDAT)}</td>
+                                <td colspan="5"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </body></html>`;
+
+                printHTML(html, fileName);
+
+            } catch(e) { console.error(e); showToast("Error al generar reporte Excel", "error"); }
+            finally { toggleLoader(false); }
+        }
+
+        // ============================================================
+        // IMPRIMIR RECIBO INDIVIDUAL (CON NOMBRE DINÁMICO)
+        // ============================================================
         function imprimirReciboSocio() {
             const id     = document.getElementById('gestionSocioId').value;
             const socio  = cacheSocios.find(s => s.id === id);
             if (!socio) return showToast('Selecciona un socio primero', 'error');
 
-            // ── Datos del socio ───────────────────────────────────────────
-            const nombre      = document.getElementById('gestionSocioNombre').value;
+            const nombreSocio = `${socio.nombre} ${socio.apellido}`;
+            const hoy = new Date();
+            const fechaNom = hoy.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'-');
+            
+            // NOMBRE DE ARCHIVO: Recibo Carlos Perez mes 26-03-2026.pdf
+            const fileName = `Recibo ${nombreSocio} mes ${fechaNom}`;
+
             const puntos      = parseFloat(document.getElementById('gestionSocioPuntos').value || socio.puntos) || 0;
-            const area        = (socio.area || '').replace(/gastoscomision/i,'Gastos Comisión')
-                                 .replace(/mesas/i,'Mesas').replace(/maquinas/i,'Máquinas')
-                                 .replace(/tecnicos/i,'Técnicos').replace(/boveda/i,'Bóveda')
-                                 .replace(/cambistas/i,'Cambistas');
+            const area        = (socio.area || '').toUpperCase();
             const contrato    = (socio.contrato || '').toUpperCase();
             const anioIngreso = socio.fechaIngreso ? socio.fechaIngreso.split('-')[0] : '-';
-            // Fecha inicio puntos si difiere del ingreso
             const fipLabel    = (socio.fechaInicioPuntos && socio.fechaInicioPuntos !== socio.fechaIngreso)
                                   ? socio.fechaInicioPuntos.split('-').reverse().join('/') : null;
 
-            // ── Cifras financieras (ya calculadas en el panel) ────────────
             const saldoAnt    = document.getElementById('socioSaldoAnterior').innerText || '$0';
             const alcance     = document.getElementById('socioAlcance').innerText || '$0';
             const totalPedido = document.getElementById('socioTotalPedido').innerText || '$0';
@@ -2732,19 +2974,14 @@
             const aPagar      = document.getElementById('socioAPagar').innerText || '$0';
             const remanente   = document.getElementById('socioRemanente').innerText || '$0';
 
-            // ── Cierre de Punto = suma de (totalDia/divisor) de cada noche en recaudaciones
-            // globalValorPuntoTotal es exactamente esa suma, calculada en procesarDatosRecaudacion
             const valorPuntoNoche = globalValorPuntoTotal || 0;
-            const cierrePunto     = formatearMoneda(Math.round(valorPuntoNoche * puntos));
             const valorPuntoFmt   = formatearMoneda(Math.round(valorPuntoNoche));
 
-            // ── Período ───────────────────────────────────────────────────
             const { inicio, fin } = aq_calcularPeriodoActual();
             const fmtF = iso => { const p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
             const periodoStr = fmtF(inicio) + ' AL ' + fmtF(fin);
-            const fechaHoy   = new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
+            const fechaHoyVis   = hoy.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
 
-            // ── Historial de movimientos de la tabla ──────────────────────
             const filas = document.getElementById('tablaHistorial');
             let movHtml = '';
             let numAnt = 1;
@@ -2752,168 +2989,113 @@
                 Array.from(filas.querySelectorAll('tr')).forEach(tr => {
                     const td = tr.querySelectorAll('td');
                     if (td.length < 4) return;
-                    const fecha = td[0].textContent.trim();
-                    const tipo  = td[1].textContent.trim();
-                    const det   = td[2].textContent.trim();
-                    const monto = td[3].textContent.trim();
-                    const esAnticipo = tipo.toLowerCase().includes('anticipo');
-                    const esAusencia = tipo.toLowerCase().includes('ausencia');
+                    const fechaRow = td[0].textContent.trim();
+                    const tipoRow  = td[1].textContent.trim();
+                    const detRow   = td[2].textContent.trim();
+                    const montoRow = td[3].textContent.trim();
+                    const esAnticipo = tipoRow.toLowerCase().includes('anticipo');
+                    const esAusencia = tipoRow.toLowerCase().includes('ausencia');
                     const color = esAusencia ? '#c0392b' : (esAnticipo ? '#2980b9' : '#555');
+                    
                     movHtml +=
                         '<tr>' +
                         '<td style="padding:3px 5px;border-bottom:1px solid #eee;text-align:center;color:#aaa;font-size:9px;">' + (esAnticipo ? numAnt++ : '—') + '</td>' +
-                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;color:' + color + ';font-weight:700;font-size:9px;">' + tipo + '</td>' +
-                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;font-size:9px;">' + fecha + (det && det!=='-' ? '<br><span style=\'color:#999;font-size:8px;\'>' + det + '</span>' : '') + '</td>' +
-                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;font-size:9px;">' + monto + '</td>' +
+                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;color:' + color + ';font-weight:700;font-size:9px;">' + tipoRow + '</td>' +
+                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;font-size:9px;">' + fechaRow + (detRow && detRow!=='-' ? '<br><span style=\'color:#999;font-size:8px;\'>' + detRow + '</span>' : '') + '</td>' +
+                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;font-size:9px;">' + montoRow + '</td>' +
                         '</tr>';
                 });
             }
-            if (!movHtml) movHtml = '<tr><td colspan="4" style="padding:6px;color:#aaa;text-align:center;font-size:9px;">Sin movimientos registrados</td></tr>';
 
-            const fipRow = fipLabel
-                ? '<div class=\'row\'><label>INICIO PUNTOS</label><span>' + fipLabel + '</span></div>'
-                : '';
-
-            // ── Plantilla del recibo (se repite 2 veces: admin + socio) ──
-            // ── Calcular etiqueta SUBE PUNTOS ────────────────────────
             const maxPuntos = calcularPuntosMaximos(socio.area);
-            let subePuntosLabel;
-            if (socio.puntos >= maxPuntos) {
-                subePuntosLabel = 'TOPE MÁXIMO (' + maxPuntos + ' pts)';
-            } else {
-                // Obtener día y mes de la fecha base de puntos
-                const fechaBase = (socio.fechaInicioPuntos && socio.fechaInicioPuntos !== socio.fechaIngreso)
-                    ? socio.fechaInicioPuntos : socio.fechaIngreso;
-                const bp = fechaBase ? fechaBase.split('-') : null;
-                if (bp && bp.length === 3) {
-                    const MESES_CORTO = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
-                    subePuntosLabel = bp[2] + ' DE ' + MESES_CORTO[parseInt(bp[1]) - 1];
-                } else {
-                    subePuntosLabel = '-';
-                }
+            let subePuntosLabel = "-";
+            const fechaBase = (socio.fechaInicioPuntos && socio.fechaInicioPuntos !== socio.fechaIngreso) ? socio.fechaInicioPuntos : socio.fechaIngreso;
+            const bp = fechaBase ? fechaBase.split('-') : null;
+            if (bp && bp.length === 3) {
+                const MESES_CORTO = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+                subePuntosLabel = bp[2] + ' DE ' + MESES_CORTO[parseInt(bp[1]) - 1];
             }
 
             function bloqueRecibo(etiqueta) {
-                return (
-                    '<div class=\'copy-label\'>' + etiqueta + '</div>' +
-                    '<div class=\'header\'>' +
-                    '  <h1>FONDO DE SOLIDARIDAD</h1>' +
-                    '  <p>CASINO DE PTO. VARAS</p>' +
-                    '  <p>LEY 17312 DEL 29/07/70</p>' +
-                    '  <p><strong>PUERTO VARAS</strong></p>' +
-                    '</div>' +
+                return `
+                    <div class='copy-label'>${etiqueta}</div>
+                    <div class='header'>
+                      <h1>FONDO DE SOLIDARIDAD</h1>
+                      <p>CASINO DE PTO. VARAS</p>
+                      <p>LEY 17312 DEL 29/07/70</p>
+                      <p><strong>PUERTO VARAS</strong></p>
+                    </div>
+                    <div class='section-title'>DATOS</div>
+                    <div class='row'><label>NOMBRE</label><strong>${nombreSocio.toUpperCase()}</strong></div>
+                    <div class='row'><label>ÁREA</label><span>${area}</span></div>
+                    <div class='row'><label>CONTRATO</label><span>${contrato}</span></div>
+                    <div class='row'><label>AÑO INGRESO</label><span>${anioIngreso}</span></div>
+                    ${fipLabel ? `<div class='row'><label>INICIO PUNTOS</label><span>${fipLabel}</span></div>` : ''}
+                    <div class='row'><label>PUNTOS</label><span>${puntos}</span></div>
+                    <div class='row'><label>SUBE PUNTOS</label><span>${subePuntosLabel}</span></div>
+                    <div class='divider'></div>
+                    <div class='section-title'>CIERRE PUNTO</div>
+                    <div class='row'><label>VALOR PUNTO NOCHE</label><span>${valorPuntoFmt}</span></div>
+                    <div class='divider'></div>
+                    <div class='section-title'>DETALLE</div>
+                    <div class='row'><label>BRUTO (Alcance)</label><span>${alcance}</span></div>
+                    <div class='row'><label>ANTICIPOS</label><span>${totalPedido}</span></div>
+                    <div class='row'><label>SALDO ANTERIOR</label><span>${saldoAnt}</span></div>
+                    <div class='row bold'><label>SALDO REAL</label><strong>${saldoReal}</strong></div>
+                    <div class='divider'></div>
+                    <div style='text-align:center;font-size:9px;font-weight:bold;margin-top:6px;letter-spacing:1px;'>TOTAL A COBRAR</div>
+                    <div class='row big'><span>$ ${aPagar}</span></div>
+                    <div class='row'><label>REMANENTE</label><span>${remanente}</span></div>
+                    <div class='divider'></div>
+                    <div class='section-title'>MOVIMIENTOS / RESPONSABLES</div>
+                    <table><thead><tr><th>#</th><th>Tipo</th><th>Detalle</th><th>Monto</th></tr></thead>
+                    <tbody>${movHtml}</tbody></table>
+                    <div class='divider'></div>
+                    <div style='text-align:center;font-weight:bold;font-size:10px;margin:4px 0;'>PERÍODO ${periodoStr}</div>
+                    <div class='firmas'>
+                      <div class='firma-box'><div class='firma-linea'></div><div class='firma-nombre'>${nombreSocio.toUpperCase()}</div><div class='firma-label'>FIRMA SOCIO</div></div>
 
-                    '<div class=\'section-title\'>DATOS</div>' +
-                    '<div class=\'row\'><label>NOMBRE</label><strong>' + nombre + '</strong></div>' +
-                    '<div class=\'row\'><label>ÁREA</label><span>' + area + '</span></div>' +
-                    '<div class=\'row\'><label>CONTRATO</label><span>' + contrato + '</span></div>' +
-                    '<div class=\'row\'><label>AÑO INGRESO</label><span>' + anioIngreso + '</span></div>' +
-                    fipRow +
-                    '<div class=\'row\'><label>PUNTOS</label><span>' + puntos + '</span></div>' +
-                    '<div class=\'row\'><label>SUBE PUNTOS</label><span>' + subePuntosLabel + '</span></div>' +
-
-                    '<div class=\'divider\'></div>' +
-                    '<div class=\'section-title\'>CIERRE PUNTO</div>' +
-                    '<div class=\'row\'><label>VALOR PUNTO NOCHE</label><span>' + valorPuntoFmt + '</span></div>' +
-                    /* fila cierre punto total eliminada */ '' +
-
-                    '<div class=\'divider\'></div>' +
-                    '<div class=\'section-title\'>DETALLE</div>' +
-                    '<div class=\'row\'><label>BRUTO (Alcance Teórico)</label><span>' + alcance + '</span></div>' +
-                    '<div class=\'row\'><label>ANTICIPOS</label><span>' + totalPedido + '</span></div>' +
-                    '<div class=\'row\'><label>SALDO ANTERIOR</label><span>' + saldoAnt + '</span></div>' +
-                    '<div class=\'row bold\'><label>SALDO REAL</label><strong>' + saldoReal + '</strong></div>' +
-
-                    '<div class=\'divider\'></div>' +
-                    '<div class=\'row\'><label>REDONDEADO</label><span></span></div>' +
-                    '<div style=\'text-align:center;font-size:9px;font-weight:bold;letter-spacing:2px;margin-top:6px;color:#555;\'>TOTAL A COBRAR</div>' +
-                    '<div class=\'row big\'><span>$ ' + aPagar + '</span></div>' +
-                    '<div class=\'row\'><label>REMANENTE</label><span>' + remanente + '</span></div>' +
-
-                    '<div class=\'divider\'></div>' +
-                    '<div class=\'section-title\'>ANTICIPOS</div>' +
-                    '<table><thead><tr>' +
-                    '<th>#</th><th>Tipo</th><th>Fecha</th><th style=\'text-align:right\'>Monto</th>' +
-                    '</tr></thead><tbody>' + movHtml + '</tbody></table>' +
-
-                    '<div class=\'divider\'></div>' +
-                    '<div class=\'section-title\'>RESUMEN</div>' +
-                    '<div style=\'text-align:center;font-weight:bold;font-size:10px;margin:4px 0;\'>PERÍODO ' + periodoStr + '</div>' +
-
-                    '<div class=\'firmas\'>' +
-                    '  <div class=\'firma-box\'>' +
-                    '    <div class=\'firma-linea\'></div>' +
-                    '    <div class=\'firma-nombre\'>' + nombre + '</div>' +
-                    '    <div class=\'firma-label\'>FIRMA SOCIO</div>' +
-                    '  </div>' +
-                    '  <div class=\'firma-box\'>' +
-                    '    <div class=\'firma-linea\'></div>' +
-                    '    <div class=\'firma-nombre\'>&nbsp;</div>' +
-                    '    <div class=\'firma-label\'>FIRMA ADMINISTRADOR</div>' +
-                    '  </div>' +
-                    '</div>' +
-                    '<div class=\'footer\'>Emitido: ' + fechaHoy + ' &nbsp;|&nbsp; Sistema Fondo Solidario</div>'
-                );
+                    </div>
+                    <div class='footer'>Emitido: ${fechaHoyVis} | Sistema Fondo Solidario</div>`;
             }
 
-            const htmlBase =
-                '<!DOCTYPE html><html lang=\'es\'><head><meta charset=\'UTF-8\'>' +
-                '<title>Recibo - ' + nombre + '</title>' +
-                '<style>' +
-                '* { margin:0; padding:0; box-sizing:border-box; }' +
-                'body { font-family: Arial, sans-serif; font-size: 11px; color:#000; background:white; }' +
-                '.page { width:80mm; margin:0 auto; padding:8px; }' +
-                '.header { text-align:center; border:2px solid #000; padding:8px; margin-bottom:10px; }' +
-                '.header h1 { font-size:13px; font-weight:bold; letter-spacing:1px; }' +
-                '.header p { font-size:10px; margin-top:2px; }' +
-                '.section-title { text-align:center; font-weight:bold; font-size:11px; border-bottom:1px solid #000; padding-bottom:3px; margin:8px 0 5px; letter-spacing:1px; }' +
-                '.row { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid #eee; font-size:10px; }' +
-                '.row.bold { font-weight:bold; }' +
-                '.row.big { font-size:18px; font-weight:900; border-top:2px solid #000; border-bottom:2px solid #000; margin:6px 0; padding:6px 0; justify-content:center; letter-spacing:1px; }' +
-                '.row label { color:#555; }' +
-                'table { width:100%; border-collapse:collapse; margin:4px 0; }' +
-                'th { background:#f0f0f0; padding:3px 5px; font-size:9px; border-bottom:1px solid #ccc; }' +
-                '.divider { border-top:1px solid #000; margin:7px 0; }' +
-                '.copy-label { text-align:center; font-size:9px; font-weight:bold; background:#000; color:white; padding:3px; margin-bottom:8px; letter-spacing:2px; }' +
-                '.cut { border-top:2px dashed #000; margin:16px 0; text-align:center; font-size:9px; color:#aaa; padding-top:4px; }' +
-                '.firmas { display:flex; gap:12px; margin-top:16px; margin-bottom:8px; }' +
-                '.firma-box { flex:1; text-align:center; }' +
-                '.firma-linea { border-top:1px solid #000; margin-bottom:4px; margin-top:20px; }' +
-                '.firma-nombre { font-size:9px; font-weight:bold; }' +
-                '.firma-label { font-size:8px; color:#555; margin-top:1px; }' +
-                '.footer { text-align:center; font-size:8px; color:#888; border-top:1px dashed #ccc; padding-top:5px; margin-top:6px; }' +
-                '@media print { @page { margin:2mm; size:80mm auto; } .cut { page-break-after:always; } }' +
-                '@media screen { body { background:#ccc; padding:10px; } .page { background:white; box-shadow:0 2px 8px rgba(0,0,0,0.3); } }' +
-                '</style></head><body><div class=\'page\'>' +
-                ''; // contenido se construye después según opción elegida
+            const htmlBase = `
+                <html><head><title>${fileName}</title><style>
+                * { margin:0; padding:0; box-sizing:border-box; }
+                body { font-family: Arial, sans-serif; font-size: 10px; color:#000; background:white; }
+                .page { width:80mm; margin:0 auto; padding:8px; }
+                .header { text-align:center; border:2px solid #000; padding:8px; margin-bottom:10px; }
+                .header h1 { font-size:12px; font-weight:bold; letter-spacing:1px; }
+                .section-title { text-align:center; font-weight:bold; font-size:10px; border-bottom:1px solid #000; padding-bottom:2px; margin:8px 0 5px; letter-spacing:1px; }
+                .row { display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px solid #eee; }
+                .row.big { font-size:18px; font-weight:900; border-top:2px solid #000; border-bottom:2px solid #000; margin:5px 0; padding:5px 0; justify-content:center; }
+                table { width:100%; border-collapse:collapse; font-size:8px; }
+                th { background:#f0f0f0; padding:2px; border-bottom:1px solid #ccc; }
+                .divider { border-top:1px solid #000; margin:5px 0; }
+                .copy-label { text-align:center; font-size:8px; font-weight:bold; background:#000; color:white; padding:2px; margin-bottom:5px; }
+                .cut { border-top:2px dashed #000; margin:15px 0; text-align:center; font-size:8px; color:#aaa; padding-top:4px; }
+                .firmas { display:flex; gap:10px; margin-top:20px; }
+                .firma-box { flex:1; text-align:center; }
+                .firma-linea { border-top:1px solid #000; margin-bottom:4px; margin-top:15px; }
+                .firma-label { font-size:7px; color:#555; }
+                .footer { text-align:center; font-size:7px; color:#888; margin-top:5px; }
+                @media print { @page { margin:2mm; size:80mm auto; } .cut { page-break-after:always; } }
+                </style></head><body><div class='page'>`;
 
-            // Preguntar cuántas copias
-            const opcion = window.confirm(
-                '¿Cómo deseas imprimir?\n\n'
-                + 'OK  →  Una sola copia (tú decides si imprimes 2 veces)\n'
-                + 'Cancelar  →  Dos copias en una hoja (corte manual)'
-            );
+            const opcion = window.confirm('¿Cómo imprimir?\n\nOK → Copia a copia (seleccionar después)\nCANCELAR → Dos copias en una hoja');
 
             let contenido;
             if (opcion) {
-                // Una sola copia — el admin elige cuál (admin o socio)
-                const cual = window.confirm(
-                    '¿Qué copia imprimir ahora?\n\n'
-                    + 'OK  →  Copia Administrador\n'
-                    + 'Cancelar  →  Comprobante Socio'
-                );
-                const etiqueta = cual ? '★ COPIA ADMINISTRADOR ★' : '★ COMPROBANTE SOCIO ★';
-                contenido = htmlBase + bloqueRecibo(etiqueta) + '</div></body></html>';
+                const cual = window.confirm('¿Qué copia imprimir?\n\nOK → Administrador\nCANCELAR → Socio');
+                const label = cual ? '★ COPIA ADMINISTRADOR ★' : '★ COMPROBANTE SOCIO ★';
+                contenido = htmlBase + bloqueRecibo(label) + '</div></body></html>';
             } else {
-                // Dos copias en una hoja con línea de corte
-                contenido = htmlBase
-                    + bloqueRecibo('★ COPIA ADMINISTRADOR ★')
-                    + '<div class=\'cut\'>✂ &nbsp; CORTAR AQUÍ &nbsp; ✂</div>'
-                    + bloqueRecibo('★ COMPROBANTE SOCIO ★')
-                    + '</div></body></html>';
+                contenido = htmlBase + bloqueRecibo('★ COPIA ADMINISTRADOR ★') + 
+                              '<div class="cut">✂ CORTAR AQUÍ ✂</div>' + 
+                              bloqueRecibo('★ COMPROBANTE SOCIO ★') + '</div></body></html>';
             }
 
-            printHTML(contenido);
+            printHTML(contenido, fileName);
         }
 
         async function cerrarMesSocio() {
@@ -2932,7 +3114,6 @@
             try {
                 await callApiSocios('registrarSaldoAnterior', { id, nombre, monto: remanente });
                 showToast(`✅ Mes cerrado. Remanente ${new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP'}).format(remanente)} guardado como saldo anterior.`, 'success');
-                // Actualizar el valor visible del saldo anterior y recargar historial
                 document.getElementById('gestionSocioSaldoAnt').value = remanente;
                 cargarHistorialSocio(id);
             } catch(e) {
@@ -2963,17 +3144,12 @@
         }
 
         async function cargarRecaudaciones(silent = false) {
-            if(!URL_RECAUDACIONES || URL_RECAUDACIONES.includes("PEGA_AQUI")) { 
-                if(!silent) document.getElementById('contenedorFechas').innerHTML = '<div style="color:var(--danger); text-align:center;">Falta configurar URL</div>'; 
-                return; 
-            }
+            if(!URL_RECAUDACIONES || URL_RECAUDACIONES.includes("PEGA_AQUI")) return; 
 
-            // Mostrar cache inmediatamente si existe
             const cached = leerCache(CACHE_KEY_REC);
             if (cached) {
                 procesarDatosRecaudacion(cached, silent);
-                if (silent) return; // si es silencioso y hay cache, no hacer fetch
-                // Actualizar en segundo plano sin loader
+                if (silent) return;
                 fetch(`${URL_RECAUDACIONES}?action=get&t=${new Date().getTime()}`)
                     .then(r => r.json())
                     .then(result => {
@@ -2985,7 +3161,6 @@
                 return;
             }
 
-            // Sin overlay: el skeleton ya muestra el estado de carga
             try {
                 const response = await fetch(`${URL_RECAUDACIONES}?action=get&t=${new Date().getTime()}`);
                 const result = await response.json();
@@ -3013,7 +3188,9 @@
                     grupos[fecha].totalDia += monto; 
                     granTotal += monto;
                     
-                    const tipo = item.tipo || 'Sin Tipo'; 
+                    let tipo = item.tipo || 'Sin Tipo';
+                    if (tipo === 'Mesas') tipo = 'SalaDeJuegos';
+
                     if (!grupos[fecha].tipos[tipo]) grupos[fecha].tipos[tipo] = 0; 
                     grupos[fecha].tipos[tipo] += monto;
                     
@@ -3057,25 +3234,35 @@
                         const dia = grupos[fecha];
                         const partes = fecha.split('-');
                         const fechaVisual = `${partes[2]}/${partes[1]}/${partes[0]}`;
-                        // Nombre del día de la semana
                         const DIAS_SEMANA = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
                         const fechaObj = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
                         const nombreDia = DIAS_SEMANA[fechaObj.getDay()];
                         const divisor = parseFloat(dia.divisor) || 1;
                         const puntoNoche = dia.totalDia / divisor;
-                        // Filas por tipo con botones editar/borrar
                         let tiposHtml = '';
-                        for (const [nombreTipo, valorTipo] of Object.entries(dia.tipos)) {
-                            const reg = recDatosRaw.find(r => { let f = r.fecha; if(f && f.includes('T')) f = f.split('T')[0]; return f === fecha && (r.tipo || 'Sin Tipo') === nombreTipo; });
+                        
+                        const ordenCategorias = ['SalaDeJuegos', 'EfectivoMDA', 'TarjetaMDA', 'Boveda'];
+                        const categoriasPresentes = Object.keys(dia.tipos).sort((a,b) => {
+                            return (ordenCategorias.indexOf(a) === -1 ? 99 : ordenCategorias.indexOf(a)) - (ordenCategorias.indexOf(b) === -1 ? 99 : ordenCategorias.indexOf(b));
+                        });
+
+                        categoriasPresentes.forEach(nombreTipo => {
+                            const valorTipo = dia.tipos[nombreTipo];
+                            const reg = recDatosRaw.find(r => { 
+                                let f = r.fecha; if(f && f.includes('T')) f = f.split('T')[0]; 
+                                let tBuscado = nombreTipo; if(tBuscado==='SalaDeJuegos') tBuscado='Mesas';
+                                return f === fecha && (r.tipo === tBuscado || r.tipo === nombreTipo); 
+                            });
                             const idx = reg !== undefined ? reg.originalIndex : 'null';
-                            tiposHtml += `<div class="type-item" style="gap:6px;">`
+                            tiposHtml += `<div class="type-item">`
                                 + `<span class="type-name">${nombreTipo}</span>`
                                 + `<span class="type-value">${formatearMoneda(valorTipo)}</span>`
                                 + `<div style="display:flex;gap:3px;margin-left:auto;">`
                                 + `<button onclick="rec_abrirEditar('${fecha}','${nombreTipo}',${valorTipo},${idx})" style="background:none;border:1px solid var(--secondary);color:var(--secondary);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">✏️</button>`
                                 + `<button onclick="rec_borrarFila(${idx},'${nombreTipo}','${fecha}')" style="background:none;border:1px solid var(--danger);color:var(--danger);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">🗑️</button>`
                                 + `</div></div>`;
-                        }
+                        });
+
                         const card = document.createElement('div');
                         card.className = 'date-card';
                         card.setAttribute('data-search', `${fechaVisual} ${dia.totalDia} ${Object.keys(dia.tipos).join(' ')}`);
@@ -3107,10 +3294,6 @@
                 document.getElementById('recTotalPuntos').innerText = formatearMoneda(sumaPuntosGlobal);
         }
 
-        // ============================================================
-        // EDICION DE RECAUDACIONES - Editar, Borrar, Agregar, Divisor, Copiar
-        // ============================================================
-
         function rec_postRec(data) {
             return fetch(URL_RECAUDACIONES, {
                 method: 'POST',
@@ -3125,7 +3308,6 @@
             document.getElementById('recEditIdx').value = (idx !== null && idx !== undefined) ? idx : '';
             document.getElementById('recEditFechaHidden').value = fecha;
             document.getElementById('recEditFechaInput').value = fecha;
-            // Seleccionar tipo o agregar opcion dinamica
             const sel = document.getElementById('recEditTipo');
             let found = false;
             for (let i = 0; i < sel.options.length; i++) {
@@ -3157,11 +3339,14 @@
         async function rec_guardarCambio() {
             const modo  = document.getElementById('recBtnGuardar').dataset.modo;
             const idx   = document.getElementById('recEditIdx').value;
-            const tipo  = document.getElementById('recEditTipo').value;
+            let tipo  = document.getElementById('recEditTipo').value;
             const fecha = document.getElementById('recEditFechaInput').value;
             const raw   = document.getElementById('recEditMonto').value.replace(/\./g, '').replace(/,/g, '');
             const monto = parseInt(raw);
             if (!fecha || !monto || !tipo) return showToast('Completa todos los campos', 'error');
+            
+            if (tipo === 'SalaDeJuegos') tipo = 'Mesas';
+
             document.getElementById('modalRecEditar').style.display = 'none';
             toggleLoader(true, modo === 'editar' ? 'Actualizando...' : 'Guardando...');
             try {
@@ -3225,7 +3410,9 @@
             const fechaVis = partes[2] + '/' + partes[1] + '/' + partes[0];
             let txt = 'REPORTE: ' + fechaVis + '\n' + '-'.repeat(28) + '\n';
             registros.forEach(r => {
-                txt += '- ' + (r.tipo || 'Sin Tipo') + ': ' + formatearMoneda(r.monto) + '\n';
+                let t = r.tipo || 'Sin Tipo';
+                if(t === 'Mesas') t = 'SalaDeJuegos';
+                txt += '- ' + t + ': ' + formatearMoneda(r.monto) + '\n';
             });
             txt += '-'.repeat(28) + '\n';
             txt += 'TOTAL: ' + formatearMoneda(total) + '\n';
@@ -3245,6 +3432,7 @@
             });
         }
         function formatearMoneda(valor) { return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(valor); }
+        
         async function enviarAnticipo() {
             const id = document.getElementById('gestionSocioId').value;
             const nombre = document.getElementById('gestionSocioNombre').value;
@@ -3252,6 +3440,10 @@
             const rawMonto = campoMonto.value.replace(/\./g, '');
             const monto = parseInt(rawMonto);
             const fecha = document.getElementById('fechaAnticipo').value;
+            const respSel = document.getElementById('responsableAnticipo');
+            const respVal = respSel ? respSel.value : '';
+            const respIni  = respVal.split('|')[0] || '';
+            const respArea = respVal.split('|')[1] || '';
             if(!monto || !fecha) {
                 campoMonto.classList.add('input-error');
                 setTimeout(() => campoMonto.classList.remove('input-error'), 1500);
@@ -3260,11 +3452,10 @@
             campoMonto.classList.add('input-ok');
             toggleLoader(true);
             try { 
-                await callApiSocios('registrarBatchAnticipos', { detalleAnticipos: [{ id, nombre, fecha, monto: parseInt(monto) }] }); 
+                await callApiSocios('registrarBatchAnticipos', { detalleAnticipos: [{ id, nombre, fecha, monto: parseInt(monto), responsable: respIni, areaResponsable: respArea }] }); 
                 showToast('✅ Anticipo registrado correctamente', 'success'); 
                 campoMonto.value = ''; 
                 campoMonto.classList.remove('input-ok');
-                // Restaurar fecha a hoy
                 document.getElementById('fechaAnticipo').value = new Date().toISOString().split('T')[0];
                 campoMonto.focus();
                 cargarHistorialSocio(id); 
@@ -3289,14 +3480,12 @@
                 await callApiSocios('registrarBatchExtras', { detalleExtras: [{ id, nombre, fecha, tipo: 'ausencia', monto: 0, detalle: `Ausencia: ${motivo}` }] }); 
                 showToast('✅ Ausencia registrada correctamente', 'success'); 
                 campoMotivo.value = ''; 
-                // Restaurar fecha a hoy y limpiar botones activos
                 document.getElementById('fechaAusencia').value = new Date().toISOString().split('T')[0];
                 document.querySelectorAll('.btn-motivo').forEach(b => b.classList.remove('activo'));
                 cargarHistorialSocio(id); 
             } catch(e) { showToast('Error al registrar ausencia', 'error'); } finally { toggleLoader(false); }
         }
 
-        // Seleccionar motivo con botones predefinidos
         function seleccionarMotivo(motivo) {
             document.getElementById('motivoAusencia').value = motivo;
             document.querySelectorAll('.btn-motivo').forEach(b => {
@@ -3313,7 +3502,7 @@
         }
 
         // ============================================================
-        // ===== ARQUEO DE CAJA - Toda la lógica =====
+        // ===== ARQUEO DE CAJA (INTEGRO) =====
         // ============================================================
         let aq_iniciado = false;
 
@@ -3323,12 +3512,10 @@
             if(dot) dot.classList.add('aq-syncing');
             if(txt) txt.textContent = 'Actualizando...';
             try {
-                // Fetch paralelo: datos esperados + anticipos
                 const [resEsp, resAnt] = await Promise.all([
                     fetch(AQ_URL_GET).then(r => r.json()).catch(() => null),
                     fetch(URL_SOCIOS, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({action:'getAllDataDesdeSheets'}) }).then(r => r.json()).catch(() => null)
                 ]);
-                // Actualizar datos esperados
                 if(resEsp && resEsp.totalAcumulado !== undefined) {
                     const espVal = Math.round(resEsp.totalAcumulado / 100);
                     const totDay = Math.round(resEsp.totalLastDivisorDay / 100);
@@ -3343,7 +3530,6 @@
                     aq_desgloseEsperado.forEach(i => { h += '<tr><td>' + i.tipo + '</td><td>' + aq_fmt(i.monto/100) + '</td></tr>'; });
                     document.getElementById('aq-desglose-esperado').innerHTML = h + '</tbody></table>';
                 }
-                // Actualizar anticipos — solo del período actual (15→14)
                 if(resAnt) {
                     const objetoAnticipos = (resAnt.data && resAnt.data.anticipos) || resAnt.anticipos || (resAnt.result && resAnt.result.anticipos);
                     if(objetoAnticipos) {
@@ -3365,8 +3551,8 @@
         }
 
         function aq_arrancarSync() {
-            if(aq_syncInterval) return; // ya estaba corriendo
-            aq_sincronizarSilencioso(); // primera vez inmediata
+            if(aq_syncInterval) return;
+            aq_sincronizarSilencioso();
             aq_syncInterval = setInterval(aq_sincronizarSilencioso, 5000);
         }
 
@@ -3385,12 +3571,11 @@
             if(sr) aq_totalRetirado = parseInt(sr);
             aq_histStates = [{ c: JSON.parse(JSON.stringify(aq_conteo)), r: aq_totalRetirado, m: JSON.parse(JSON.stringify(aq_movi)) }];
             aq_histIdx = 0;
-            // Usar cache precargado si existe (cargado al login)
             const aqCached = localStorage.getItem('fondo_cache_aq_esperado');
             if (aqCached) {
                 try {
                     const obj = JSON.parse(aqCached);
-                    if (Date.now() - obj.ts < 10 * 60 * 1000) { // valido 10 min
+                    if (Date.now() - obj.ts < 10 * 60 * 1000) {
                         const data = obj.data;
                         document.getElementById('aq-esperadoDisplay').textContent = aq_fmt(Math.round(data.totalAcumulado / 100));
                         document.getElementById('aq-divisor-day-total').textContent = aq_fmt(Math.round(data.totalLastDivisorDay / 100));
@@ -3474,7 +3659,7 @@
                     <div class="aq-total-display">
                         <div style="display:flex; gap:5px; align-items:center;">
                             <input type="number" class="aq-cantidad-input" id="aq-cur-${val}" value="${aq_conteo[val]}" onchange="aq_manualEdit(${val})">
-                            <button onclick="aq_abrirModalEdicion(${val})" style="background:#64748b; border:none; color:white; width:28px; height:28px; border-radius:4px; cursor:pointer;"><i class="fas fa-pen" style="font-size:0.7em;"></i></button>
+                            <button onclick="aq_abrirModalEdicion(${val})" style="background:#64748b; border:none; color:white; width:28px; height:28px; border-radius:4px; cursor:pointer;"><i class="fas fa-pen" style="font-size:0.85em;"></i></button>
                         </div>
                         <div style="font-weight:bold; font-size:0.85em;">${aq_fmt(val * aq_conteo[val])}</div>
                     </div>
@@ -3571,7 +3756,6 @@
                 let h = '<table class="aq-table"><thead><tr><th>Tipo</th><th>Monto</th></tr></thead><tbody>';
                 aq_desgloseEsperado.forEach(i => { h += `<tr><td>${i.tipo}</td><td>${aq_fmt(i.monto/100)}</td></tr>`; });
                 document.getElementById('aq-desglose-esperado').innerHTML = h + '</tbody></table>';
-                // Actualizar total puntos desde historial
                 aq_fetchPuntosHistorial();
                 aq_realizarArqueo();
             } catch(e) { console.error('Arqueo esperado error:', e); }
@@ -3595,22 +3779,18 @@
 
 
         function aq_calcularPeriodoActual() {
-            // Período: del día 15 del mes pasado al día 14 del mes actual
             const hoy = new Date();
             const anio = hoy.getFullYear();
-            const mes  = hoy.getMonth(); // 0-11
+            const mes  = hoy.getMonth(); 
 
             let inicio, fin;
             if (hoy.getDate() >= 15) {
-                // Estamos en la segunda quincena: período es 15/mes_actual → 14/mes_siguiente
                 inicio = new Date(anio, mes, 15);
                 fin    = new Date(anio, mes + 1, 14);
             } else {
-                // Estamos en la primera quincena: período es 15/mes_anterior → 14/mes_actual
                 inicio = new Date(anio, mes - 1, 15);
                 fin    = new Date(anio, mes, 14);
             }
-            // Retornar como strings YYYY-MM-DD para comparar fácil
             const fmt = d => d.toISOString().split('T')[0];
             return { inicio: fmt(inicio), fin: fmt(fin) };
         }
@@ -3629,7 +3809,6 @@
                     let fechaSimple = item.fecha || '';
                     if (fechaSimple.includes('T')) fechaSimple = fechaSimple.split('T')[0];
 
-                    // Filtrar: solo anticipos dentro del período
                     if (fechaSimple < inicio || fechaSimple > fin) return;
 
                     const firma = idSocio + '|' + fechaSimple + '|' + monto;
@@ -3679,7 +3858,6 @@
 
         function aq_abrirModalConteo() {
             aq_generarCampos();
-            // Guardar snapshot del estado ANTES de hacer cambios
             aq_snapAlAbrir = {
                 conteo: JSON.parse(JSON.stringify(aq_conteo)),
                 totalRetirado: aq_totalRetirado
@@ -3694,7 +3872,6 @@
                 aq_realizarArqueo();
                 return;
             }
-            // Calcular diferencias vs snapshot al abrir
             let totalIngresado = 0;
             let totalRetirado  = 0;
             let hayMovimientos = false;
@@ -3721,7 +3898,6 @@
             });
 
             if (!hayMovimientos) {
-                // Sin cambios: cerrar directo
                 document.getElementById('aq-modalConteo').style.display = 'none';
                 aq_realizarArqueo();
                 return;
@@ -3850,177 +4026,12 @@
         }
 
         // ============================================================
-        // INFORME DE ANTICIPOS
-        // ============================================================
-        async function informeAnticipos() {
-            if (!cacheSocios.length) return showToast('No hay socios cargados', 'error');
-
-            toggleLoader(true, 'Generando informe...');
-            try {
-                // Período actual
-                const { inicio, fin } = aq_calcularPeriodoActual();
-                const fmtF = iso => { const p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
-                const periodoStr = fmtF(inicio) + ' AL ' + fmtF(fin);
-                const fechaHoy   = new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
-                const fmt = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v);
-
-                // Traer datos de TODOS los socios en paralelo
-                const resultados = await Promise.allSettled(
-                    cacheSocios.map(s =>
-                        fetch(URL_SOCIOS + '?action=getDatosSocio&socioId=' + s.id)
-                            .then(r => r.json())
-                            .then(res => ({ socio: s, data: res.data || {} }))
-                            .catch(() => ({ socio: s, data: {} }))
-                    )
-                );
-
-                // Filtrar solo los que tienen anticipos del período
-                const filas = [];
-                let totalGeneral = 0;
-                let numero = 1;
-
-                // Ordenar por área y nombre
-                const ordenAreas = ['mesas','mesasparttime','cambistas','maquinas','tecnicos','boveda','gastoscomision'];
-                const resultOk = resultados
-                    .filter(r => r.status === 'fulfilled')
-                    .map(r => r.value)
-                    .sort((a,b) => {
-                        const ia = ordenAreas.indexOf((a.socio.area||'').toLowerCase());
-                        const ib = ordenAreas.indexOf((b.socio.area||'').toLowerCase());
-                        const oa = ia === -1 ? 99 : ia;
-                        const ob = ib === -1 ? 99 : ib;
-                        if (oa !== ob) return oa - ob;
-                        return a.socio.nombre.localeCompare(b.socio.nombre);
-                    });
-
-                resultOk.forEach(({ socio, data }) => {
-                    const anticipos = (data.anticipos || []).filter(a => {
-                        let f = a.fecha || '';
-                        if (f.includes('T')) f = f.split('T')[0];
-                        return f >= inicio && f <= fin;
-                    });
-                    if (!anticipos.length) return;
-
-                    const totalSocio = anticipos.reduce((s,a) => s + (Number(a.cantidad||a.monto)||0), 0);
-                    totalGeneral += totalSocio;
-
-                    // Una fila por anticipo
-                    anticipos.forEach((ant, idx) => {
-                        let f = ant.fecha || '';
-                        if (f.includes('T')) f = f.split('T')[0];
-                        const p = f.split('-');
-                        const fechaVis = p.length === 3 ? p[2]+'-'+p[1]+'-'+p[0] : f;
-                        const areaNom = (socio.area||'').charAt(0).toUpperCase()+(socio.area||'').slice(1);
-                        const resp = socio.contrato === 'Part-Time' ? 'P.T' : 'P.M';
-                        filas.push({
-                            n: idx === 0 ? numero++ : '',
-                            nombre: idx === 0 ? (socio.nombre+' '+socio.apellido).toUpperCase() : '',
-                            area: idx === 0 ? areaNom.toUpperCase().slice(0,2) : '',
-                            resp,
-                            fecha: fechaVis,
-                            valor: Number(ant.cantidad||ant.monto)||0,
-                            totalSocio: idx === anticipos.length-1 ? totalSocio : null
-                        });
-                    });
-                });
-
-                if (!filas.length) {
-                    toggleLoader(false);
-                    return showToast('No hay anticipos en el período actual', 'error');
-                }
-
-                // ── Construir HTML del informe ────────────────────────
-                let tablaCuerpo = '';
-                filas.forEach((f, i) => {
-                    const bg = i % 2 === 0 ? '#fff' : '#f9f9f9';
-                    tablaCuerpo +=
-                        '<tr style="background:' + bg + '">'
-                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + (f.n||'') + '</td>'
-                        + '<td style="padding:5px 8px;border:1px solid #ddd;font-weight:' + (f.nombre?'700':'400') + ';">' + (f.nombre||'') + '</td>'
-                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:center;">' + f.area + '</td>'
-                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:center;">' + f.resp + '</td>'
-                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:center;">' + f.fecha + '</td>'
-                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:right;font-weight:700;">' + fmt(f.valor) + '</td>'
-                        + (f.totalSocio !== null
-                            ? '<td style="padding:5px 8px;border:1px solid #ddd;text-align:right;font-weight:900;color:#c0392b;">' + fmt(f.totalSocio) + '</td>'
-                            : '<td style="padding:5px 8px;border:1px solid #ddd;"></td>')
-                        + '</tr>';
-                });
-
-                const html =
-                    '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
-                    + '<title>Informe Anticipos ' + fechaHoy + '</title>'
-                    + '<style>'
-                    + '* { margin:0; padding:0; box-sizing:border-box; }'
-                    + 'body { font-family: Arial, sans-serif; font-size:11px; color:#000; padding:20px; }'
-                    + 'h1 { font-size:14px; text-align:center; font-weight:900; letter-spacing:1px; margin-bottom:4px; }'
-                    + '.subtitulo { text-align:center; font-size:11px; margin-bottom:16px; font-weight:600; }'
-                    + '.total-header { background:#c0392b; color:white; padding:8px 16px; font-size:14px; font-weight:900; display:flex; justify-content:space-between; margin-bottom:14px; border-radius:4px; }'
-                    + 'table { width:100%; border-collapse:collapse; margin-bottom:12px; }'
-                    + 'th { background:#2c3e50; color:white; padding:6px 8px; font-size:10px; text-align:left; border:1px solid #2c3e50; }'
-                    + 'th:last-child { text-align:right; }'
-                    + '.total-row td { background:#f0f0f0; font-weight:900; font-size:13px; padding:8px; border:2px solid #2c3e50; }'
-                    + '.firma-section { display:flex; gap:40px; margin-top:30px; justify-content:center; }'
-                    + '.firma-box { text-align:center; min-width:160px; }'
-                    + '.firma-linea { border-top:1px solid #000; margin-bottom:4px; margin-top:30px; }'
-                    + '.firma-label { font-size:10px; color:#555; }'
-                    + '.footer { text-align:center; font-size:9px; color:#aaa; margin-top:20px; border-top:1px dashed #ccc; padding-top:8px; }'
-                    + '@media print { @page { margin:15mm; size:A4; } body { padding:0; } }'
-                    + '@media screen { body { background:#ddd; } div.page { background:white; max-width:820px; margin:0 auto; padding:20px; box-shadow:0 2px 12px rgba(0,0,0,0.2); } }'
-                    + '</style></head><body><div class="page">'
-                    + '<h1>FONDO DE SOLIDARIDAD &mdash; CASINO DE PTO. VARAS</h1>'
-                    + '<div class="subtitulo">LEY 17312 DEL 29/07/70 &nbsp;&nbsp;|&nbsp;&nbsp; PUERTO VARAS</div>'
-                    + '<div class="total-header"><span>TOTAL EGRESOS</span><span>' + fmt(totalGeneral) + '</span></div>'
-                    + '<div class="subtitulo" style="margin-bottom:10px;">PERÍODO ' + periodoStr + '</div>'
-                    + '<table>'
-                    + '<thead><tr>'
-                    + '<th style="width:30px;text-align:center;">N°</th>'
-                    + '<th>NOMBRE</th>'
-                    + '<th style="width:40px;text-align:center;">ÁREA</th>'
-                    + '<th style="width:40px;text-align:center;">RESP</th>'
-                    + '<th style="width:80px;text-align:center;">FECHA</th>'
-                    + '<th style="width:90px;text-align:right;">VALOR</th>'
-                    + '<th style="width:90px;text-align:right;">TOTAL SOCIO</th>'
-                    + '</tr></thead>'
-                    + '<tbody>' + tablaCuerpo + '</tbody>'
-                    + '<tfoot><tr class="total-row">'
-                    + '<td colspan="5" style="text-align:right;">TOTAL GENERAL</td>'
-                    + '<td colspan="2" style="text-align:right;color:#c0392b;">' + fmt(totalGeneral) + '</td>'
-                    + '</tr></tfoot>'
-                    + '</table>'
-                    + '<div class="firma-section">'
-                    + '<div class="firma-box"><div class="firma-linea"></div><div class="firma-label">ADMINISTRADOR</div></div>'
-                    + '<div class="firma-box"><div class="firma-linea"></div><div class="firma-label">REVISADO POR</div></div>'
-                    + '</div>'
-                    + '<div class="footer">Emitido: ' + fechaHoy + ' &nbsp;|&nbsp; Sistema Fondo Solidario</div>'
-                    + '</div></body></html>';
-
-                // Guardar copia en localStorage
-                try {
-                    const histInf = JSON.parse(localStorage.getItem('fondo_informes_ant') || '[]');
-                    histInf.unshift({ fecha: fechaHoy, periodo: periodoStr, total: totalGeneral, filas: filas.length });
-                    if (histInf.length > 20) histInf.pop();
-                    localStorage.setItem('fondo_informes_ant', JSON.stringify(histInf));
-                } catch(e) {}
-
-                printHTML(html);
-
-            } catch(e) {
-                console.error(e);
-                showToast('Error generando informe', 'error');
-            } finally {
-                toggleLoader(false);
-            }
-        }
-
-        // ============================================================
         // NOTAS DE ADMINISTRACIÓN
         // ============================================================
 
         function notasCrearElemento(n, idx) {
             const fecha = new Date(n.fecha).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
             const autor = (n.autor||'Admin').toUpperCase();
-            // El script espera data.index = originalIndex (número de fila en Sheets)
             const rowIndex = n.originalIndex !== undefined ? n.originalIndex : idx;
             const div = document.createElement('div');
             div.className = 'nota-card';
@@ -4051,11 +4062,9 @@
 
         async function notasCargar() {
             const cont = document.getElementById('notasListaContainer');
-            // Mostrar cache inmediatamente si existe
             const cached = leerCache(CACHE_KEY_NOTAS);
             if (cached) {
                 notasRenderizar(cached);
-                // Actualizar en segundo plano
                 fetch(URL_RECAUDACIONES + '?action=getNotes&t=' + Date.now())
                     .then(r => r.json())
                     .then(json => {
@@ -4065,7 +4074,6 @@
                     }).catch(() => {});
                 return;
             }
-            // Sin cache: mostrar skeleton y cargar
             cont.innerHTML = Array(3).fill('<div class="sk-card" style="margin-bottom:10px;"><div class="sk sk-line" style="width:30%;height:9px;margin-bottom:10px;"></div><div class="sk sk-line" style="width:88%;height:12px;margin-bottom:6px;"></div><div class="sk sk-line" style="width:65%;height:12px;"></div></div>').join('');
             try {
                 const res = await fetch(URL_RECAUDACIONES + '?action=getNotes&t=' + Date.now());
@@ -4090,9 +4098,6 @@
                 const el = notasCrearElemento({fecha:new Date().toISOString(),autor:'Admin',mensaje:msg},-1);
                 cont.insertBefore(el,cont.firstChild);
                 try { localStorage.removeItem(CACHE_KEY_NOTAS); } catch(e) {}
-                // Invalidar cache — la próxima vez que entre a notas cargará fresco
-                try { localStorage.removeItem(CACHE_KEY_NOTAS); } catch(e) {}
-                // NO recargamos — la nota ya fue insertada visualmente arriba
             } catch(e) { showToast('Error al publicar nota','error'); }
             finally { if(btnPub){btnPub.disabled=false;btnPub.textContent='Publicar';} }
         }
@@ -4102,7 +4107,6 @@
             const card = btnEl ? btnEl.closest('.nota-card') : null;
             const rowIndex = card ? card.dataset.rowIndex : null;
             if (!rowIndex) return showToast('No se pudo identificar la nota','error');
-            // 1. Animar salida y remover del DOM — inmediato, sin recargar nada
             if (card) {
                 card.classList.add('saliendo');
                 await new Promise(r => setTimeout(r, 290));
@@ -4111,7 +4115,6 @@
                 if (cont && cont.querySelectorAll('.nota-card').length === 0)
                     cont.innerHTML = '<div style="text-align:center;padding:30px;color:#7f8c8d;">Sin notas guardadas.</div>';
             }
-            // 2. Llamar al servidor — script espera { action, index } donde index es fila en Sheets
             try {
                 await fetch(URL_RECAUDACIONES, {
                     method: 'POST',
@@ -4127,7 +4130,7 @@
         }
 
         // ============================================================
-        // CANJE
+        // CANJE (FORMATO RESTAURADO)
         // ============================================================
         const CANJE_DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10, 5, 1];
         let canjeConteo = {};
@@ -4136,7 +4139,6 @@
             canjeConteo = {};
             const form = document.getElementById('canje-form');
             form.innerHTML = '';
-            // Tabla igual a la foto
             let html = '<table style="width:100%;border-collapse:collapse;">';
             html += '<thead><tr>'
                 + '<th style="padding:8px;background:#f8f9fa;border:1px solid #dee2e6;text-align:center;font-weight:800;">CANTIDAD</th>'
@@ -4147,9 +4149,9 @@
                 const bg = i % 2 === 0 ? '#f0faf0' : 'white';
                 html += '<tr style="background:' + bg + '">'
                     + '<td style="padding:5px 8px;border:1px solid #dee2e6;text-align:center;">'
-                    + '<input type="number" min="0" value="" id="canje-inp-' + val + '"'
+                    + '<input type="number" min="0" value="0" id="canje-inp-' + val + '"'
                     + ' style="width:70px;padding:4px;text-align:center;border:1px solid #ccc;border-radius:5px;font-weight:700;"'
-                    + ' placeholder="0" oninput="canje_actualizar()" onchange="canje_actualizar()">'
+                    + ' oninput="canje_actualizar()" onchange="canje_actualizar()">'
                     + '</td>'
                     + '<td style="padding:5px 8px;border:1px solid #dee2e6;text-align:center;font-weight:700;">'
                     + new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(val)
@@ -4241,7 +4243,7 @@
                 + 'table { width:100%; border-collapse:collapse; margin:4px 0; }'
                 + 'th { background:#f0f0f0; padding:4px 8px; font-size:10px; border-bottom:1px solid #ccc; text-align:left; }'
                 + '.copy-label { text-align:center; font-size:9px; font-weight:bold; background:#000; color:white; padding:3px; margin-bottom:8px; letter-spacing:2px; }'
-                + '.cut { border-top:2px dashed #000; margin:14px 0; text-align:center; font-size:9px; color:#aaa; padding-top:4px; }'
+                + '.cut { border-top:2px dashed #000; margin:16px 0; text-align:center; font-size:9px; color:#aaa; padding-top:4px; }'
                 + '.firmas { display:flex; gap:12px; margin-top:16px; margin-bottom:8px; }'
                 + '.firma-box { flex:1; text-align:center; }'
                 + '.firma-linea { border-top:1px solid #000; margin-bottom:4px; margin-top:20px; }'
@@ -4263,7 +4265,6 @@
                     + '</div></body></html>';
             }
 
-            // Guardar en localStorage como respaldo
             try {
                 const histCanje = JSON.parse(localStorage.getItem('fondo_canjes') || '[]');
                 histCanje.unshift({ fecha: fechaHoy + ' ' + horaHoy, total, detalle: Object.fromEntries(CANJE_DENOMS.map(v => [v, parseInt(document.getElementById('canje-inp-' + v)?.value||0)||0])) });
@@ -4271,16 +4272,16 @@
                 localStorage.setItem('fondo_canjes', JSON.stringify(histCanje));
             } catch(e) {}
 
-            printHTML(contenido);
+            printHTML(contenido, "Solicitud Canje " + fechaHoy.replace(/\//g,'-'));
         }
 
-        // Cerrar modales del arqueo al clic fuera
         window.addEventListener('click', function(e) {
-            ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats','modalCanje'].forEach(id => {
+            ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats', 'modalCanje'].forEach(id => {
                 const el = document.getElementById(id);
                 if(el && e.target === el) el.style.display = 'none';
             });
         });
+
     </script>
 </body>
 </html>
