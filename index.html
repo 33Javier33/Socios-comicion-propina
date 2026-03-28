@@ -2375,6 +2375,8 @@
 
         let gestionFiltroActivo = 'todos';
         let gestionSociosConMovimientos = {};
+        let globalCacheAllData = null; // {anticipos:{id:[...]}, extras:{id:[...]}}
+        const CACHE_KEY_ALL_DATA = 'fondo_cache_all_data';
         let gestionCargandoFiltro = false;
 
         function filtrarSociosGestion() { renderizarListaBusqueda(); }
@@ -2417,22 +2419,17 @@
             const infoEl = document.getElementById('filtroGestionInfo');
             if (infoEl) infoEl.textContent = 'Consultando servidor...';
             try {
-                const resultados = await Promise.allSettled(
-                    cacheSocios.map(s =>
-                        fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${s.id}`)
-                            .then(r => r.json())
-                            .then(res => ({ id: s.id, data: res.data || {} }))
-                            .catch(() => ({ id: s.id, data: {} }))
-                    )
-                );
+                // Una sola llamada para todos los anticipos y extras
+                const allData = await fetchAllDataCached();
+                const todosAnticipos = allData.anticipos || {};
+                const todosExtras    = allData.extras    || {};
+
                 gestionSociosConMovimientos = {};
-                resultados.forEach(r => {
-                    if (r.status !== 'fulfilled') return;
-                    const { id, data } = r.value;
-                    const tieneAnticipos = Array.isArray(data.anticipos) && data.anticipos.length > 0;
-                    const tieneAusencias = Array.isArray(data.extras) &&
-                        data.extras.some(e => e.tipo && e.tipo.toLowerCase().includes('ausencia'));
-                    gestionSociosConMovimientos[id] = { anticipos: tieneAnticipos, ausencias: tieneAusencias };
+                cacheSocios.forEach(s => {
+                    const tieneAnticipos = Array.isArray(todosAnticipos[s.id]) && todosAnticipos[s.id].length > 0;
+                    const tieneAusencias = Array.isArray(todosExtras[s.id]) &&
+                        todosExtras[s.id].some(e => e.tipo && e.tipo.toLowerCase().includes('ausencia'));
+                    gestionSociosConMovimientos[s.id] = { anticipos: tieneAnticipos, ausencias: tieneAusencias };
                 });
                 if (infoEl) infoEl.textContent = '';
             } catch(e) {
@@ -2440,6 +2437,33 @@
             } finally {
                 gestionCargandoFiltro = false;
             }
+        }
+
+        // Trae todos los anticipos/extras en UNA llamada y los guarda en memoria
+        async function fetchAllDataCached(forzar = false) {
+            if (!forzar && globalCacheAllData) return globalCacheAllData;
+            // Intentar desde localStorage primero
+            if (!forzar) {
+                try {
+                    const stored = localStorage.getItem(CACHE_KEY_ALL_DATA);
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        // Caché válido por 5 minutos
+                        if (parsed.ts && (Date.now() - parsed.ts) < 5 * 60 * 1000) {
+                            globalCacheAllData = parsed.data;
+                            return globalCacheAllData;
+                        }
+                    }
+                } catch(e) {}
+            }
+            const res = await fetch(URL_SOCIOS, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'getAllDataDesdeSheets' })
+            }).then(r => r.json());
+            globalCacheAllData = { anticipos: res.anticipos || {}, extras: res.extras || {} };
+            try { localStorage.setItem(CACHE_KEY_ALL_DATA, JSON.stringify({ ts: Date.now(), data: globalCacheAllData })); } catch(e) {}
+            return globalCacheAllData;
         }
         function renderizarListaBusqueda() {
             const termino = document.getElementById('buscadorGestion').value.toLowerCase();
@@ -2720,18 +2744,13 @@
                 const fechaHoyVis = hoyDate.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
                 const fmt = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v);
 
-                const resultados = await Promise.allSettled(
-                    cacheSocios.map(s =>
-                        fetch(URL_SOCIOS + '?action=getDatosSocio&socioId=' + s.id)
-                            .then(r => r.json())
-                            .then(res => ({ socio: s, data: res.data || {} }))
-                            .catch(() => ({ socio: s, data: {} }))
-                    )
-                );
+                // Usar caché global — una sola llamada si ya está en memoria
+                const allData = await fetchAllDataCached();
+                const todosAnticipos = allData.anticipos || {};
 
                 const ordenAreas = ['mesas','mesasparttime','cambistas','maquinas','tecnicos','boveda','gastoscomision'];
-                const resultOk = resultados
-                    .filter(r => r.status === 'fulfilled').map(r => r.value)
+                const resultOk = cacheSocios
+                    .map(s => ({ socio: s, data: { anticipos: todosAnticipos[s.id] || [] } }))
                     .sort((a,b) => {
                         const ia = ordenAreas.indexOf((a.socio.area||'').toLowerCase());
                         const ib = ordenAreas.indexOf((b.socio.area||'').toLowerCase());
@@ -3698,7 +3717,10 @@
             toggleLoader(true);
             try { 
                 await callApiSocios('registrarBatchAnticipos', { detalleAnticipos: [{ id, nombre, fecha, monto: parseInt(monto), responsable: respIni, areaResponsable: respArea }] }); 
-                showToast('✅ Anticipo registrado correctamente', 'success'); 
+                showToast('✅ Anticipo registrado correctamente', 'success');
+                // Invalidar caché para que próxima consulta traiga datos frescos
+                globalCacheAllData = null;
+                try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
                 campoMonto.value = ''; 
                 campoMonto.classList.remove('input-ok');
                 document.getElementById('fechaAnticipo').value = new Date().toISOString().split('T')[0];
