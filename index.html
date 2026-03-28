@@ -447,6 +447,7 @@
             <button class="nav-btn" onclick="switchTab('recaudacion')">Montos Recaudados</button>
             <button class="nav-btn" onclick="switchTab('arqueo')">💰 Arqueo de Caja</button>
             <button class="nav-btn" onclick="switchTab('notas')">📝 Notas Admin</button>
+            <button class="nav-btn" onclick="switchTab('config')">⚙️ Configuración</button>
         </div>
         
         <!-- PESTAÑA 1: REGISTRO DE SOCIOS -->
@@ -699,6 +700,13 @@
                                 <span style="font-size:0.68em; color:#7f8c8d; text-transform:uppercase; font-weight:bold; display:block; margin-top:4px;">🔄 Remanente</span>
                             </div>
                         </div>
+                        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px 14px; margin-bottom:12px; text-align:left;">
+                            <div style="font-weight:800; color:#1e40af; font-size:0.82em; margin-bottom:5px;">📋 Recuerda antes de continuar:</div>
+                            <div style="font-size:0.8em; color:#1e3a8a; line-height:1.7;">
+                                ✅ <strong>Detalle de Anticipos</strong> — imprimido y guardado<br>
+                                ✅ <strong>Informe Montos Diarios</strong> — imprimido y guardado
+                            </div>
+                        </div>
                         <div style="display:flex; gap:8px; margin-bottom:0;">
                             <button onclick="cerrarMesSocio()" style="flex:1; background:linear-gradient(135deg, #8e44ad, #6c3483); color:white; border:none; border-radius:8px; padding:11px; font-weight:800; font-size:0.9em; cursor:pointer; transition:0.2s; display:flex; align-items:center; justify-content:center; gap:6px;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
                                 🔒 Cerrar Mes
@@ -742,13 +750,72 @@
                         </div>
                     </div>
 
-                    <h3 style="border-bottom:1px solid #ddd; padding-bottom:10px;">Historial <small style="color:#7f8c8d; font-weight:normal;">(Mantén presionado para borrar)</small></h3>
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:10px; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                        <h3 style="margin:0;">Historial <small style="color:#7f8c8d; font-weight:normal; font-size:0.75em;">(Mantén presionado para borrar)</small></h3>
+                        <button onclick="reiniciarAnticipos()" style="background:linear-gradient(135deg,#8e44ad,#6c3483); color:white; border:none; border-radius:8px; padding:8px 14px; font-size:0.8em; font-weight:700; cursor:pointer; white-space:nowrap;">🔄 Reinicio Mes</button>
+                    </div>
                     <table class="history-table">
                         <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Monto</th></tr></thead>
                         <tbody id="tablaHistorial"></tbody>
                     </table>
                 </div>
                 <div id="mensajeSeleccion" style="display:flex; justify-content:center; align-items:center; color:#7f8c8d; height:300px; background:white; border-radius:12px;">Selecciona un socio para gestionar.</div>
+            </div>
+        </div>
+
+        <!-- MODAL EDITAR ANTICIPO -->
+        <div id="modalEditarAnticipo" class="modal">
+            <div class="modal-content" style="max-width:420px; margin-top:15%;">
+                <div class="modal-header">
+                    <h2>✏️ Editar Anticipo</h2>
+                    <span class="close-modal" onclick="document.getElementById('modalEditarAnticipo').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editAnticipoUUID">
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label>Fecha</label>
+                        <input type="date" id="editAnticipoFecha">
+                    </div>
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label>Monto ($)</label>
+                        <input type="text" inputmode="numeric" id="editAnticipoMonto" placeholder="Ej: 50.000" oninput="formatearInputMonto(this)">
+                    </div>
+                    <div class="form-group" style="margin-bottom:18px;">
+                        <label>Responsable</label>
+                        <select id="editAnticipoResponsable" style="width:100%;padding:9px;border:1px solid #ddd;border-radius:8px;font-size:0.9em;">
+                            <option value="">Sin responsable</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-action" style="flex:1; background:#999;" onclick="document.getElementById('modalEditarAnticipo').style.display='none'">Cancelar</button>
+                        <button class="btn-action" style="flex:1; background:var(--warning);" onclick="confirmarEdicionAnticipo()">💾 Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL CONFIRMAR REINICIO MES -->
+        <div id="modalReinicioMes" class="modal">
+            <div class="modal-content" style="max-width:420px; margin-top:15%;">
+                <div class="modal-body" style="text-align:center; padding:28px;">
+                    <div style="font-size:2.5em; margin-bottom:10px;">🔄</div>
+                    <h3 style="color:#8e44ad; margin:0 0 10px;">Reinicio de Anticipos</h3>
+                    <p style="color:#7f8c8d; font-size:0.9em; margin-bottom:18px;">Esto archivará <strong>todos los anticipos del mes actual</strong> en una pestaña de respaldo y los borrará de la hoja activa.<br><br>El saldo anterior y remanentes <strong>no se modifican</strong>.</p>
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px 14px; margin-bottom:16px; text-align:left;">
+                        <div style="font-weight:800; color:#1e40af; font-size:0.85em; margin-bottom:6px;">📋 Recuerda antes de continuar:</div>
+                        <div style="font-size:0.82em; color:#1e3a8a; line-height:1.6;">
+                            ✅ <strong>Detalle de Anticipos</strong> — imprimido y guardado<br>
+                            ✅ <strong>Informe Montos Diarios</strong> — imprimido y guardado
+                        </div>
+                    </div>
+                    <div style="background:#fef3c7; border-radius:8px; padding:10px; margin-bottom:18px; font-size:0.82em; color:#92400e;">
+                        ⚠️ Esta acción es distinta al <strong>Cierre de Mes</strong>. Solo archiva anticipos.
+                    </div>
+                    <div style="display:flex; gap:10px; justify-content:center;">
+                        <button class="btn-action" style="background:#999;" onclick="document.getElementById('modalReinicioMes').style.display='none'">Cancelar</button>
+                        <button class="btn-action" style="background:#8e44ad;" onclick="ejecutarReinicioMes()">✅ Confirmar Reinicio</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -815,6 +882,13 @@
                         <div id="cierreTodosStatus" style="font-size:0.82em; color:#7f8c8d; text-align:center;">Iniciando...</div>
                     </div>
                     <div id="cierreTodosResultado" style="max-height:300px; overflow-y:auto; margin-bottom:15px;"></div>
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px 14px; margin-bottom:16px; text-align:left;">
+                        <div style="font-weight:800; color:#1e40af; font-size:0.85em; margin-bottom:6px;">📋 Recuerda antes de continuar:</div>
+                        <div style="font-size:0.82em; color:#1e3a8a; line-height:1.6;">
+                            ✅ <strong>Detalle de Anticipos</strong> — imprimido y guardado<br>
+                            ✅ <strong>Informe Montos Diarios</strong> — imprimido y guardado
+                        </div>
+                    </div>
                     <div style="display:flex; gap:10px;">
                         <button id="btnConfirmarCierreTodos" onclick="ejecutarCierreTodos()" class="btn-submit" style="flex:1; background:linear-gradient(135deg,#6c3483,#8e44ad); border:none;">✅ Confirmar y Ejecutar</button>
                         <button onclick="document.getElementById('modalCierreTodos').style.display='none'" class="btn-submit" style="flex:1; background:#999; border:none;">Cancelar</button>
@@ -1063,6 +1137,69 @@
             </div>
         </div>
 
+        <!-- PESTAÑA 6: CONFIGURACIÓN -->
+        <div id="tab-config" class="tab-content">
+            <div style="max-width:500px; margin:0 auto;">
+
+                <!-- Cambiar PIN -->
+                <div style="background:white; border-radius:14px; border:1px solid var(--border); padding:24px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px; border-bottom:1px solid #eee; padding-bottom:14px;">
+                        <span style="font-size:1.5em;">🔑</span>
+                        <div>
+                            <div style="font-weight:800; font-size:1em; color:var(--primary);">Cambiar PIN de ingreso</div>
+                            <div style="font-size:0.78em; color:#7f8c8d;">Requiere tu PIN actual</div>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label>PIN Actual</label>
+                        <input type="password" id="cfg-pin-actual" maxlength="4" inputmode="numeric" placeholder="••••"
+                            style="letter-spacing:6px; font-size:1.2em; text-align:center;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label>PIN Nuevo (4 dígitos)</label>
+                        <input type="password" id="cfg-pin-nuevo" maxlength="4" inputmode="numeric" placeholder="••••"
+                            style="letter-spacing:6px; font-size:1.2em; text-align:center;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label>Confirmar PIN Nuevo</label>
+                        <input type="password" id="cfg-pin-confirmar" maxlength="4" inputmode="numeric" placeholder="••••"
+                            style="letter-spacing:6px; font-size:1.2em; text-align:center;">
+                    </div>
+                    <div id="cfg-pin-msg" style="font-size:0.82em; min-height:18px; margin-bottom:10px;"></div>
+                    <button onclick="cfg_cambiarPin()" class="btn-submit" style="width:100%;">Guardar nuevo PIN</button>
+                </div>
+
+                <!-- Cambiar Clave de Recuperación -->
+                <div style="background:white; border-radius:14px; border:1px solid var(--border); padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px; border-bottom:1px solid #eee; padding-bottom:14px;">
+                        <span style="font-size:1.5em;">🛡️</span>
+                        <div>
+                            <div style="font-weight:800; font-size:1em; color:var(--primary);">Cambiar clave de recuperación</div>
+                            <div style="font-size:0.78em; color:#7f8c8d;">Usada cuando olvidas el PIN</div>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label>Clave actual de recuperación</label>
+                        <input type="password" id="cfg-clave-actual" placeholder="Clave actual"
+                            style="font-size:0.95em;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label>Nueva clave</label>
+                        <input type="text" id="cfg-clave-nueva" placeholder="Nueva clave de recuperación" autocomplete="off"
+                            style="font-size:0.95em;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label>Confirmar nueva clave</label>
+                        <input type="text" id="cfg-clave-confirmar" placeholder="Repite la nueva clave" autocomplete="off"
+                            style="font-size:0.95em;">
+                    </div>
+                    <div id="cfg-clave-msg" style="font-size:0.82em; min-height:18px; margin-bottom:10px;"></div>
+                    <button onclick="cfg_cambiarClave()" class="btn-submit" style="width:100%; background:var(--success);">Guardar nueva clave</button>
+                </div>
+
+            </div>
+        </div>
+
         <!-- MODAL CANJE -->
         <div id="modalCanje" class="modal">
             <div class="modal-content" style="max-width:480px;">
@@ -1071,7 +1208,14 @@
                     <span class="close-modal" onclick="canje_cerrarModal()" style="color:white;">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <p style="font-size:0.82em;color:#7f8c8d;margin-bottom:14px;">Ingresa las cantidades de billetes a canjear. Solo para referencia — no afecta el arqueo.</p>
+                    <p style="font-size:0.82em;color:#7f8c8d;margin-bottom:10px;">Ingresa las cantidades de billetes a canjear. Solo para referencia — no afecta el arqueo.</p>
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:0.78em;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:5px;">Nombre del documento</label>
+                        <input type="text" id="canje-nombre" placeholder="Canje" maxlength="40"
+                            style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;box-sizing:border-box;font-family:inherit;"
+                            oninput="document.getElementById('canje-nombre-preview').textContent = this.value.trim() || 'Canje';">
+                        <div style="font-size:0.75em;color:#7f8c8d;margin-top:3px;">El archivo se guardará como: <strong id="canje-nombre-preview">Canje</strong></div>
+                    </div>
                     <div id="canje-form"></div>
                     <div style="margin-top:16px;padding:12px;background:#fff8f0;border-radius:8px;border:1px solid #f0a070;">
                         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -1176,12 +1320,15 @@
         function responsables_guardar(lista) {
             try { localStorage.setItem(RESP_KEY, JSON.stringify(lista)); } catch(e) {}
         }
+        const LAST_RESP_KEY = 'fondo_ultimo_responsable';
+
         function responsables_poblarSelector() {
             const sel = document.getElementById('responsableAnticipo');
             if (!sel) return;
             const lista = responsables_cargar();
-            sel.innerHTML = lista.map(e =>
-                '<option value="' + e.ini + '|' + e.area + '">' + e.ini + ' (' + e.area + ')</option>'
+            const ultimo = localStorage.getItem(LAST_RESP_KEY) || '';
+            sel.innerHTML = '<option value="">Sin responsable</option>' + lista.map(e =>
+                '<option value="' + e.ini + '|' + e.area + '"' + (((e.ini + '|' + e.area) === ultimo) ? ' selected' : '') + '>' + e.ini + ' (' + e.area + ')</option>'
             ).join('');
         }
         function responsables_abrirConfig() {
@@ -1372,7 +1519,7 @@
         function recuperarPin() {
             const clave = document.getElementById('claveRecuperar').value.trim();
             const msg   = document.getElementById('recoverMsg');
-            if (clave === CLAVE_RECUP) {
+            if (clave === cfg_getClaveRecup()) {
                 const nuevo = prompt('Clave correcta. Ingresa tu nuevo PIN de 4 digitos:');
                 if (nuevo && /^[0-9]{4}$/.test(nuevo)) {
                     localStorage.setItem(PIN_KEY, nuevo);
@@ -1411,6 +1558,7 @@
                 renderizarListaBusqueda();
             }
             else if(tabName === 'recaudacion') { btns[2].classList.add('active'); fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones(); }
+            else if(tabName === 'config') { btns[5].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); cfg_limpiarCampos(); }
             else if(tabName === 'arqueo') { btns[3].classList.add('active'); fabRec.style.display = 'none'; aq_initSiNoIniciado(); aq_arrancarSync(); }
             else if(tabName === 'notas') { btns[4].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); notasCargar(); }
         }
@@ -1913,7 +2061,7 @@
                         const puntosDespues = calcularPuntosPorAnios(aniosCumplidos, socio.area);
                         if (puntosDespues > puntosAntes) {
                             if (socio.puntos >= puntosDespues) {
-                                subieronReciente.push({ ...socio, puntosNuevos: puntosDespues, puntosAntes, aniosCumplidos });
+                                // Ya tiene el escalamiento aplicado — no mostrar en ninguna lista
                             } else {
                                 subieronMesPasado.push({ ...socio, puntosNuevos: puntosDespues, puntosAntes, aniosCumplidos });
                             }
@@ -1929,7 +2077,7 @@
                         if (puntosDespues > puntosAntes) {
                             const yaOcurrio = diaActual >= diaIngreso;
                             if (yaOcurrio && socio.puntos >= puntosDespues) {
-                                subieronReciente.push({ ...socio, puntosNuevos: puntosDespues, puntosAntes, diaIngreso, aniosCumpleEsteMes, yaOcurrio: true });
+                                // Ya tiene el escalamiento aplicado — no mostrar en ninguna lista
                             } else {
                                 subenEsteMes.push({ ...socio, puntosNuevos: puntosDespues, puntosAntes, diaIngreso, aniosCumpleEsteMes, yaOcurrio });
                             }
@@ -2526,7 +2674,7 @@
                         
                         let pressTimer;
                         row.addEventListener('mousedown', () => { pressTimer = setTimeout(() => mostrarModalBorrar(item), 800); });
-                        row.addEventListener('touchstart', () => { pressTimer = setTimeout(() => mostrarModalBorrar(item), 800); });
+                        row.addEventListener('touchstart', () => { pressTimer = setTimeout(() => mostrarModalBorrar(item), 800); }, {passive:true});
                         row.addEventListener('mouseup', () => clearTimeout(pressTimer));
                         row.addEventListener('touchend', () => clearTimeout(pressTimer));
                         row.addEventListener('mouseleave', () => clearTimeout(pressTimer));
@@ -2534,10 +2682,14 @@
                         let fechaVis = item.fecha;
                         if(fechaVis.includes('-')) { const f = fechaVis.split('-'); if(f.length === 3) fechaVis = `${f[2]}/${f[1]}/${f[0]}`; }
                         const tiposArr = Array.from(item.tipos);
+                        const esAnticipo = tiposArr.includes('Anticipo');
                         let tipoHtml = tiposArr.includes('AUSENCIA') ? '<span class="tag-absent">AUSENCIA</span>' : `<span style="font-weight:bold; color:#7f8c8d;">${tiposArr.join(' + ')}</span>`;
                         const detalleHtml = [...new Set(item.detalles)].join(', ') || '-';
                         const montoHtml = item.montoTotal > 0 ? `<span class="amount-minus">-${formatearMoneda(item.montoTotal)}</span>` : '-';
-                        row.innerHTML = `<td>${fechaVis}</td><td>${tipoHtml}</td><td>${detalleHtml}</td><td>${montoHtml}</td>`;
+                        const editBtn = esAnticipo
+                            ? `<button onclick="event.stopPropagation(); mostrarModalEditar(${JSON.stringify({uuid:item.uuid, fecha:item.fecha, montoTotal:item.montoTotal, detalles:item.detalles})})" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);color:#b45309;border-radius:6px;padding:3px 8px;font-size:0.75em;cursor:pointer;font-weight:700;white-space:nowrap;">✏️</button>`
+                            : '';
+                        row.innerHTML = `<td>${fechaVis}</td><td>${tipoHtml}</td><td style="font-size:0.82em;">${detalleHtml}</td><td style="white-space:nowrap;">${montoHtml} ${editBtn}</td>`;
                         tbody.appendChild(row);
                     });
                 } else { 
@@ -3123,6 +3275,78 @@
             }
         }
 
+        function mostrarModalEditar(item) {
+            if(!Array.from(item.tipos).includes('Anticipo')) return;
+            document.getElementById('editAnticipoUUID').value = item.uuid || '';
+            document.getElementById('editAnticipoFecha').value = item.fecha || '';
+            // Monto: quitar formato y poner número
+            const montoNum = item.montoTotal || 0;
+            document.getElementById('editAnticipoMonto').value = montoNum > 0 ? new Intl.NumberFormat('es-CL').format(montoNum) : '';
+            // Poblar selector de responsables
+            const sel = document.getElementById('editAnticipoResponsable');
+            sel.innerHTML = '<option value="">Sin responsable</option>';
+            const lista = responsables_cargar();
+            lista.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.ini + '|' + r.area;
+                opt.textContent = r.ini + ' (' + r.area + ')';
+                // Pre-seleccionar si el detalle menciona al responsable
+                const detalle = item.detalles.join(' ');
+                if(detalle.includes(r.ini)) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            document.getElementById('modalEditarAnticipo').style.display = 'block';
+        }
+
+        async function confirmarEdicionAnticipo() {
+            const uuid = document.getElementById('editAnticipoUUID').value;
+            const fecha = document.getElementById('editAnticipoFecha').value;
+            const montoRaw = document.getElementById('editAnticipoMonto').value.replace(/\./g,'').replace(/[^0-9]/g,'');
+            const monto = parseInt(montoRaw) || 0;
+            const respVal = document.getElementById('editAnticipoResponsable').value;
+            const responsable = respVal ? respVal.split('|')[0] : '';
+            const areaResponsable = respVal ? respVal.split('|')[1] : '';
+            if(!uuid || !fecha || monto <= 0) return showToast('Completa fecha y monto', 'error');
+            toggleLoader(true, 'Actualizando...');
+            document.getElementById('modalEditarAnticipo').style.display = 'none';
+            try {
+                await callApiSocios('actualizarAnticipo', { uuid, fecha, monto, responsable, areaResponsable });
+                showToast('Anticipo actualizado', 'success');
+                const idSocio = document.getElementById('gestionSocioId').value;
+                cargarHistorialSocio(idSocio);
+            } catch(e) {
+                showToast('Error al actualizar', 'error');
+            } finally {
+                toggleLoader(false);
+            }
+        }
+
+        function reiniciarAnticipos() {
+            const id = document.getElementById('gestionSocioId').value;
+            if(!id) return showToast('Selecciona un socio primero', 'error');
+            document.getElementById('modalReinicioMes').style.display = 'block';
+        }
+
+        async function ejecutarReinicioMes() {
+            document.getElementById('modalReinicioMes').style.display = 'none';
+            toggleLoader(true, 'Archivando anticipos...');
+            try {
+                const hoy = new Date();
+                const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+                const mesNombre = MESES[hoy.getMonth()];
+                const anio = hoy.getFullYear();
+                const tabNombre = `Anticipos_${mesNombre}_${anio}`;
+                await callApiSocios('reiniciarAnticipos', { tabNombre });
+                showToast('✅ Anticipos archivados en ' + tabNombre, 'success');
+                const idSocio = document.getElementById('gestionSocioId').value;
+                if(idSocio) cargarHistorialSocio(idSocio);
+            } catch(e) {
+                showToast('Error al reiniciar', 'error');
+            } finally {
+                toggleLoader(false);
+            }
+        }
+
         async function borrarItemConfirmado() {
             const uuid = document.getElementById('borrarUUID').value;
             const tipo = document.getElementById('borrarTipo').value;
@@ -3449,6 +3673,27 @@
                 setTimeout(() => campoMonto.classList.remove('input-error'), 1500);
                 return showToast('Falta datos', 'error');
             }
+
+            // Guardar último responsable seleccionado
+            if(respVal) localStorage.setItem(LAST_RESP_KEY, respVal);
+
+            // Formatear fecha para mostrar
+            const fp = fecha.split('-');
+            const fechaVis = fp.length === 3 ? fp[2] + '/' + fp[1] + '/' + fp[0] : fecha;
+            const montoVis = new Intl.NumberFormat('es-CL', {style:'currency', currency:'CLP', maximumFractionDigits:0}).format(monto);
+            const respVis = respIni ? respIni + (respArea ? ' (' + respArea + ')' : '') : 'Sin responsable';
+
+            // Confirmación antes de guardar
+            const confirmar = window.confirm(
+                'ANTICIPO DE PROPINA\n\n' +
+                '👤 Socio: ' + nombre + '\n' +
+                '💰 Monto: ' + montoVis + '\n' +
+                '📅 Fecha: ' + fechaVis + '\n' +
+                '🔖 Encargado: ' + respVis + '\n\n' +
+                '¿Confirmar registro?'
+            );
+            if(!confirmar) return;
+
             campoMonto.classList.add('input-ok');
             toggleLoader(true);
             try { 
@@ -4135,10 +4380,97 @@
         const CANJE_DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10, 5, 1];
         let canjeConteo = {};
 
+        // ══════════════════════════════════════════════════════════
+        // CONFIGURACIÓN: CAMBIO DE PIN Y CLAVE DE RECUPERACIÓN
+        // ══════════════════════════════════════════════════════════
+        const CLAVE_RECUP_KEY = 'fs_clave_recup';
+
+        function cfg_getClaveRecup() {
+            return localStorage.getItem(CLAVE_RECUP_KEY) || CLAVE_RECUP;
+        }
+
+        function cfg_limpiarCampos() {
+            ['cfg-pin-actual','cfg-pin-nuevo','cfg-pin-confirmar',
+             'cfg-clave-actual','cfg-clave-nueva','cfg-clave-confirmar'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.value = '';
+            });
+            ['cfg-pin-msg','cfg-clave-msg'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.textContent = '';
+            });
+        }
+
+        function cfg_cambiarPin() {
+            const actual     = document.getElementById('cfg-pin-actual').value.trim();
+            const nuevo      = document.getElementById('cfg-pin-nuevo').value.trim();
+            const confirmar  = document.getElementById('cfg-pin-confirmar').value.trim();
+            const msg        = document.getElementById('cfg-pin-msg');
+            const pinGuardado = localStorage.getItem(PIN_KEY) || PIN_DEFAULT;
+
+            if (actual !== pinGuardado) {
+                msg.style.color = 'var(--danger)';
+                msg.textContent = '❌ El PIN actual no es correcto.';
+                return;
+            }
+            if (!/^[0-9]{4}$/.test(nuevo)) {
+                msg.style.color = 'var(--danger)';
+                msg.textContent = '❌ El PIN nuevo debe ser exactamente 4 dígitos numéricos.';
+                return;
+            }
+            if (nuevo !== confirmar) {
+                msg.style.color = 'var(--danger)';
+                msg.textContent = '❌ Los PINs nuevos no coinciden.';
+                return;
+            }
+            localStorage.setItem(PIN_KEY, nuevo);
+            msg.style.color = 'var(--success)';
+            msg.textContent = '✅ PIN actualizado correctamente.';
+            document.getElementById('cfg-pin-actual').value = '';
+            document.getElementById('cfg-pin-nuevo').value = '';
+            document.getElementById('cfg-pin-confirmar').value = '';
+            showToast('PIN cambiado exitosamente', 'success');
+        }
+
+        function cfg_cambiarClave() {
+            const actual    = document.getElementById('cfg-clave-actual').value.trim();
+            const nueva     = document.getElementById('cfg-clave-nueva').value.trim();
+            const confirmar = document.getElementById('cfg-clave-confirmar').value.trim();
+            const msg       = document.getElementById('cfg-clave-msg');
+            const claveActual = cfg_getClaveRecup();
+
+            if (actual !== claveActual) {
+                msg.style.color = 'var(--danger)';
+                msg.textContent = '❌ La clave actual no es correcta.';
+                return;
+            }
+            if (nueva.length < 4) {
+                msg.style.color = 'var(--danger)';
+                msg.textContent = '❌ La nueva clave debe tener al menos 4 caracteres.';
+                return;
+            }
+            if (nueva !== confirmar) {
+                msg.style.color = 'var(--danger)';
+                msg.textContent = '❌ Las claves nuevas no coinciden.';
+                return;
+            }
+            localStorage.setItem(CLAVE_RECUP_KEY, nueva);
+            msg.style.color = 'var(--success)';
+            msg.textContent = '✅ Clave de recuperación actualizada.';
+            document.getElementById('cfg-clave-actual').value = '';
+            document.getElementById('cfg-clave-nueva').value = '';
+            document.getElementById('cfg-clave-confirmar').value = '';
+            showToast('Clave de recuperación cambiada', 'success');
+        }
+
         function canje_abrirModal() {
             canjeConteo = {};
             const form = document.getElementById('canje-form');
             form.innerHTML = '';
+            const nomInp = document.getElementById('canje-nombre');
+            if(nomInp) { nomInp.value = ''; }
+            const prev = document.getElementById('canje-nombre-preview');
+            if(prev) prev.textContent = 'Canje';
             let html = '<table style="width:100%;border-collapse:collapse;">';
             html += '<thead><tr>'
                 + '<th style="padding:8px;background:#f8f9fa;border:1px solid #dee2e6;text-align:center;font-weight:800;">CANTIDAD</th>'
@@ -4149,7 +4481,7 @@
                 const bg = i % 2 === 0 ? '#f0faf0' : 'white';
                 html += '<tr style="background:' + bg + '">'
                     + '<td style="padding:5px 8px;border:1px solid #dee2e6;text-align:center;">'
-                    + '<input type="number" min="0" value="0" id="canje-inp-' + val + '"'
+                    + '<input type="number" min="0" placeholder="0" id="canje-inp-' + val + '"'
                     + ' style="width:70px;padding:4px;text-align:center;border:1px solid #ccc;border-radius:5px;font-weight:700;"'
                     + ' oninput="canje_actualizar()" onchange="canje_actualizar()">'
                     + '</td>'
@@ -4173,7 +4505,7 @@
             let total = 0;
             CANJE_DENOMS.forEach(val => {
                 const inp = document.getElementById('canje-inp-' + val);
-                const cant = parseInt(inp ? inp.value : 0) || 0;
+                const cant = parseInt(inp && inp.value !== '' ? inp.value : 0) || 0;
                 const sub = cant * val;
                 total += sub;
                 const subEl = document.getElementById('canje-sub-' + val);
@@ -4189,11 +4521,13 @@
             const fmt = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v);
             const fechaHoy = new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
             const horaHoy  = new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+            const nomInput = document.getElementById('canje-nombre');
+            const nombreDoc = (nomInput && nomInput.value.trim()) ? nomInput.value.trim() : 'Canje';
             let filas = '';
             let total = 0;
             CANJE_DENOMS.forEach((val, i) => {
                 const inp  = document.getElementById('canje-inp-' + val);
-                const cant = parseInt(inp ? inp.value : 0) || 0;
+                const cant = parseInt(inp && inp.value !== '' ? inp.value : 0) || 0;
                 const sub  = cant * val;
                 total += sub;
                 const bg = i % 2 === 0 ? '#f0faf0' : 'white';
@@ -4216,22 +4550,19 @@
                     + '<p>LEY 17312 DEL 29/07/70</p>'
                     + '<p><strong>PUERTO VARAS</strong></p>'
                     + '</div>'
-                    + '<div class="section-title">CANJE</div>'
+                    + '<div class="section-title">' + nombreDoc.toUpperCase() + '</div>'
                     + '<div style="text-align:center;font-size:9px;color:#888;margin-bottom:8px;">' + fechaHoy + ' ' + horaHoy + '</div>'
                     + '<table><thead><tr>'
                     + '<th>CANTIDAD</th><th>VALOR</th><th style="text-align:right">TOTAL</th>'
                     + '</tr></thead><tbody>' + filas + '</tbody></table>'
                     + '<div style="border-top:2px solid #000;margin-top:8px;padding-top:6px;display:flex;justify-content:space-between;font-size:13px;font-weight:900;">'
                     + '<span>TOTAL FINAL</span><span style="color:#d35400;">' + fmt(total) + '</span></div>'
-                    + '<div class="firmas">'
-                    + '<div class="firma-box"><div class="firma-linea"></div><div class="firma-nombre">&nbsp;</div><div class="firma-label">SOLICITANTE</div></div>'
-                    + '<div class="firma-box"><div class="firma-linea"></div><div class="firma-nombre">&nbsp;</div><div class="firma-label">BÓVEDA</div></div>'
-                    + '</div>'
+                    + ''
                     + '<div class="footer">Emitido: ' + fechaHoy + ' ' + horaHoy + ' | Sistema Fondo Solidario</div>';
             }
 
             const htmlBase = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
-                + '<title>Canje ' + fechaHoy + '</title>'
+                + '<title>' + nombreDoc + ' ' + fechaHoy + '</title>'
                 + '<style>'
                 + '* { margin:0; padding:0; box-sizing:border-box; }'
                 + 'body { font-family:Arial,sans-serif; font-size:11px; color:#000; background:white; }'
@@ -4256,12 +4587,12 @@
 
             let contenido;
             if (opcion) {
-                contenido = htmlBase + bloqueCanje('★ CANJE - BÓVEDA ★') + '</div></body></html>';
+                contenido = htmlBase + bloqueCanje('★ ' + nombreDoc.toUpperCase() + ' ★') + '</div></body></html>';
             } else {
                 contenido = htmlBase
-                    + bloqueCanje('★ COPIA ADMINISTRADOR ★')
+                    + bloqueCanje('★ ' + nombreDoc.toUpperCase() + ' ★')
                     + '<div class="cut">✂ &nbsp; CORTAR AQUÍ &nbsp; ✂</div>'
-                    + bloqueCanje('★ CANJE - BÓVEDA ★')
+                    + bloqueCanje('★ ' + nombreDoc.toUpperCase() + ' ★')
                     + '</div></body></html>';
             }
 
@@ -4272,11 +4603,11 @@
                 localStorage.setItem('fondo_canjes', JSON.stringify(histCanje));
             } catch(e) {}
 
-            printHTML(contenido, "Solicitud Canje " + fechaHoy.replace(/\//g,'-'));
+            printHTML(contenido, nombreDoc + ' ' + fechaHoy.replace(/\//g,'-'));
         }
 
         window.addEventListener('click', function(e) {
-            ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats', 'modalCanje'].forEach(id => {
+            ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats', 'modalCanje', 'modalEditarAnticipo', 'modalReinicioMes'].forEach(id => {
                 const el = document.getElementById(id);
                 if(el && e.target === el) el.style.display = 'none';
             });
