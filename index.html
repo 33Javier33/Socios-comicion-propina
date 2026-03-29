@@ -437,6 +437,7 @@
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <div class="fecha-badge" id="fechaHoyBadge"></div>
                 <div id="inactividadBadge" style="display:none; background:#fff3cd; color:#856404; border:1px solid #ffc107; border-radius:20px; padding:6px 12px; font-size:0.78em; font-weight:700;">⏱ <span id="inactividadTimer">15:00</span></div>
+                <button onclick="toggleAbout(true)" style="background:#2c3e50; color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">ℹ️ Acerca de</button>
                 <button onclick="cerrarSesion()" style="background:var(--danger); color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔒 Cerrar sesión</button>
             </div>
         </div>
@@ -4296,6 +4297,30 @@
         // NOTAS DE ADMINISTRACIÓN
         // ============================================================
 
+        function notasFormatearMensaje(texto) {
+            if (!texto) return '';
+            // Escapar HTML primero para seguridad
+            const escaped = texto.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            // Detectar URLs (http, https, ftp) y convertirlas en enlaces
+            const urlRegex = /(https?:\/\/[^\s<>"']+)/g;
+            return escaped.replace(urlRegex, function(url) {
+                // Limpiar puntuación al final que no forma parte de la URL
+                const clean = url.replace(/[.,;:!?)]+$/, '');
+                const trail = url.slice(clean.length);
+                let label = clean;
+                try {
+                    const u = new URL(clean);
+                    label = u.hostname + (u.pathname !== '/' ? u.pathname : '');
+                    if (label.length > 40) label = label.slice(0, 40) + '…';
+                } catch(e) { label = clean.length > 45 ? clean.slice(0,45)+'…' : clean; }
+                return '<a href="' + clean + '" target="_blank" rel="noopener noreferrer" '
+                    + 'style="color:var(--secondary);text-decoration:underline;word-break:break-all;display:inline-flex;align-items:center;gap:3px;" '
+                    + 'title="' + clean + '">'
+                    + '🔗 ' + label
+                    + '</a>' + trail;
+            });
+        }
+
         function notasCrearElemento(n, idx) {
             const fecha = new Date(n.fecha).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
             const autor = (n.autor||'Admin').toUpperCase();
@@ -4306,7 +4331,7 @@
             div.innerHTML =
                 '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
                 + '<div style="flex:1;"><div style="font-size:0.75em;color:#7f8c8d;margin-bottom:5px;font-weight:600;">'+autor+' &middot; '+fecha+'</div>'
-                + '<div style="font-size:0.95em;color:#333;line-height:1.5;white-space:pre-wrap;">'+(n.mensaje||'').replace(/</g,'&lt;')+'</div></div>'
+                + '<div style="font-size:0.95em;color:#333;line-height:1.5;white-space:pre-wrap;">'+notasFormatearMensaje(n.mensaje||'')+'</div></div>'
                 + '<button onclick="notasBorrar(this)" style="background:none;border:1px solid #fee2e2;color:#ef4444;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:0.8em;flex-shrink:0;" title="Eliminar">&#x1F5D1;</button>'
                 + '</div>';
             return div;
@@ -4628,13 +4653,139 @@
             printHTML(contenido, nombreDoc + ' ' + fechaHoy.replace(/\//g,'-'));
         }
 
+        function toggleAbout(show) {
+            const m = document.getElementById('about-modal');
+            if (show) { m.style.display = 'flex'; }
+            else       { m.style.display = 'none'; }
+        }
+
         window.addEventListener('click', function(e) {
             ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats', 'modalCanje', 'modalEditarAnticipo', 'modalReinicioMes'].forEach(id => {
                 const el = document.getElementById(id);
                 if(el && e.target === el) el.style.display = 'none';
             });
+            const am = document.getElementById('about-modal');
+            if (am && e.target === am) am.style.display = 'none';
         });
 
     </script>
+
+<!-- ══════════════════════════════════════════
+     MODAL: ACERCA DE / RESEÑA
+══════════════════════════════════════════ -->
+<div id="about-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); align-items:flex-end; justify-content:center;">
+    <div style="background:#fff; border-radius:24px 24px 0 0; width:100%; max-width:560px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 -16px 48px rgba(0,0,0,0.18); overflow:hidden; font-family:'DM Sans',sans-serif;">
+
+        <!-- Handle -->
+        <div style="width:36px; height:4px; background:#e2e8f0; border-radius:2px; margin:14px auto 0; flex-shrink:0;"></div>
+
+        <!-- Scrollable -->
+        <div style="flex:1; overflow-y:auto; padding:24px 24px 8px;">
+
+            <!-- Marca -->
+            <div style="text-align:center; margin-bottom:24px;">
+                <div style="width:68px; height:68px; border-radius:18px; background:linear-gradient(135deg,#2c3e50,#3498db); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; box-shadow:0 8px 20px rgba(44,62,80,0.25);">
+                    <span style="font-size:32px;">💻</span>
+                </div>
+                <div style="font-size:20px; font-weight:800; color:#2c3e50; letter-spacing:-0.01em;">CarlosPN Interactive<sup style="font-size:11px; font-weight:700;">®</sup></div>
+                <div style="font-size:11px; font-weight:700; color:#95a5a6; letter-spacing:0.12em; text-transform:uppercase; margin-top:4px;">Sistema Profesional de Gestión · 2026</div>
+            </div>
+
+            <!-- Divisor -->
+            <div style="height:1px; background:#f0f2f5; margin-bottom:22px;"></div>
+
+            <!-- Autor -->
+            <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px;">
+                <div style="width:54px; height:54px; border-radius:16px; background:linear-gradient(135deg,#2c3e50,#3498db); display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 12px rgba(44,62,80,0.2);">
+                    <span style="font-size:22px; font-weight:800; color:#fff; font-family:'DM Sans',sans-serif;">C</span>
+                </div>
+                <div>
+                    <div style="font-size:16px; font-weight:800; color:#2c3e50;">Carlos</div>
+                    <div style="font-size:12px; font-weight:700; color:#3498db; margin-top:2px;">Croupier · Casino de Puerto Varas</div>
+                    <div style="font-size:11px; color:#95a5a6; margin-top:1px;">Encargado — La Comisión Propina · Desde 2013</div>
+                </div>
+            </div>
+
+            <!-- Bio cards -->
+            <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+
+                <div style="background:#f8f9fa; border-radius:14px; padding:14px 16px; border:1px solid #e2e8f0;">
+                    <div style="font-size:10px; font-weight:800; color:#3498db; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">👤 El desarrollador</div>
+                    <p style="font-size:13px; line-height:1.75; color:#5d6d7e; margin:0;">
+                        Colaborador del <strong style="color:#2c3e50;">Casino de Puerto Varas desde 2013</strong>, actualmente ejerce como <strong style="color:#2c3e50;">Croupier</strong> y, paralelamente, cumple el rol de <strong style="color:#2c3e50;">Encargado del Fondo Solidario de Propina</strong> como parte de La Comisión Propina — el equipo que vela por los derechos económicos de todos los socios.
+                    </p>
+                </div>
+
+                <div style="background:#f8f9fa; border-radius:14px; padding:14px 16px; border:1px solid #e2e8f0;">
+                    <div style="font-size:10px; font-weight:800; color:#27ae60; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">💡 La motivación</div>
+                    <p style="font-size:13px; line-height:1.75; color:#5d6d7e; margin:0;">
+                        Con más de <strong style="color:#2c3e50;">5 años desarrollando aplicaciones</strong> movido por la pasión por la computación y la tecnología, siempre buscó soluciones reales para los problemas cotidianos de sus colegas. La gestión manual del fondo — con planillas difíciles de mantener y poco transparentes — fue el desafío que lo impulsó a crear este sistema desde cero, sin recursos externos ni capacitación formal.
+                    </p>
+                </div>
+
+                <!-- Historia principal -->
+                <div style="border-radius:14px; overflow:hidden; border:1px solid #d5e8f7;">
+                    <div style="background:linear-gradient(135deg,#2c3e50,#34495e); padding:14px 16px;">
+                        <div style="font-size:10px; font-weight:800; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px;">🏗️ La historia de este sistema</div>
+                        <p style="font-size:13px; line-height:1.7; color:rgba(255,255,255,0.8); margin:0;">
+                            El <strong style="color:#fff;">Sistema Integral del Fondo Solidario</strong> nació de una necesidad real: llevar un control claro, transparente y accesible de la propina colectiva del casino. Lo que comenzó como una idea para ordenar los datos creció hasta convertirse en una herramienta completa de gestión, construida iteración tras iteración con mucho entusiasmo y dedicación.
+                        </p>
+                    </div>
+                    <div style="background:#eaf4fb; padding:14px 16px;">
+                        <p style="font-size:13px; line-height:1.75; color:#2c3e50; margin:0;">
+                            Hoy permite gestionar <strong>socios, anticipos, ausencias, montos recaudados y arqueo de caja</strong> — todo conectado en tiempo real a Google Sheets vía Apps Script. Sin servidores, sin costos de infraestructura, accesible desde cualquier dispositivo con navegador.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Módulos -->
+                <div style="background:#f8f9fa; border-radius:14px; padding:14px 16px; border:1px solid #e2e8f0;">
+                    <div style="font-size:10px; font-weight:800; color:#9b59b6; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px;">📋 Módulos del sistema</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div style="background:#fff; border-radius:10px; padding:10px 12px; border:1px solid #e8d5f5;">
+                            <div style="font-size:11px; font-weight:800; color:#9b59b6; margin-bottom:3px;">👥 Gestión de Socios</div>
+                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Registro, puntos, contratos y saldos individuales.</div>
+                        </div>
+                        <div style="background:#fff; border-radius:10px; padding:10px 12px; border:1px solid #d5f0e0;">
+                            <div style="font-size:11px; font-weight:800; color:#27ae60; margin-bottom:3px;">📑 Anticipos y Ausencias</div>
+                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Control de movimientos por socio y período.</div>
+                        </div>
+                        <div style="background:#fff; border-radius:10px; padding:10px 12px; border:1px solid #d5e8f7;">
+                            <div style="font-size:11px; font-weight:800; color:#3498db; margin-bottom:3px;">💵 Montos Recaudados</div>
+                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Registro diario de mesas, efectivo y tarjeta.</div>
+                        </div>
+                        <div style="background:#fff; border-radius:10px; padding:10px 12px; border:1px solid #fdebd0;">
+                            <div style="font-size:11px; font-weight:800; color:#f39c12; margin-bottom:3px;">💰 Arqueo de Caja</div>
+                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Conteo físico, cuadre y emisión de reportes.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tecnología -->
+                <div style="background:linear-gradient(135deg,#eaf4fb,#e8f8f0); border-radius:14px; padding:14px 16px; border:1px solid #d5e8f7;">
+                    <div style="font-size:10px; font-weight:800; color:#17a2b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">⚡ Tecnología</div>
+                    <p style="font-size:13px; line-height:1.7; color:#2c3e50; margin:0;">
+                        Desarrollado en <strong>HTML, CSS y JavaScript puro</strong>, integrado con <strong>Google Apps Script</strong> como backend y <strong>Google Sheets</strong> como base de datos. Funciona desde cualquier navegador sin instalaciones, con carga paralela de datos y sincronización en tiempo real.
+                    </p>
+                </div>
+
+                <!-- Firma -->
+                <div style="text-align:center; padding:8px 0 4px;">
+                    <div style="font-size:11px; color:#bdc3c7;">Hecho con</div>
+                    <div style="font-size:13px; color:#95a5a6; font-weight:600; margin-top:2px;">❤️ pasión &amp; ☕ café</div>
+                    <div style="font-size:10px; color:#bdc3c7; margin-top:8px; font-style:italic;">CarlosPN Interactive® — Todos los derechos reservados</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botón cerrar -->
+        <div style="padding:16px 24px; padding-bottom:calc(16px + env(safe-area-inset-bottom)); border-top:1px solid #f0f2f5; flex-shrink:0;">
+            <button onclick="toggleAbout(false)" style="width:100%; padding:14px; border-radius:12px; background:#2c3e50; color:white; border:none; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:700; letter-spacing:0.04em; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
