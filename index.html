@@ -334,6 +334,17 @@
         .ayuda-resultado-body li { margin-bottom:6px; }
         .ayuda-resultado-body .nota { background:#e8f4fd; border-left:3px solid #3498db; padding:8px 10px; border-radius:0 6px 6px 0; margin-top:10px; }
         .ayuda-sin-result { text-align:center; color:#7f8c8d; padding:30px; }
+        .ayuda-rapida-btn { background:#e74c3c; color:white; border:none; border-radius:8px; width:30px; height:30px; font-size:0.9em; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; transition:0.2s; }
+        .ayuda-rapida-btn:hover { background:#c0392b; transform:scale(1.08); }
+        .ayuda-popover { display:none; position:fixed; z-index:9999; background:white; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.22); border:1px solid #e2e8f0; width:min(300px, calc(100vw - 24px)); padding:14px; animation:fadeIn 0.2s; max-height:80vh; overflow-y:auto; }
+        .ayuda-popover.visible { display:block; }
+        .ayuda-popover-titulo { font-weight:800; color:#2c3e50; font-size:0.9em; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+        .ayuda-popover-texto { font-size:0.82em; color:#555; line-height:1.5; margin-bottom:10px; }
+        .ayuda-popover-pasos { font-size:0.8em; color:#2c3e50; padding-left:16px; margin:0 0 10px; }
+        .ayuda-popover-pasos li { margin-bottom:4px; }
+        .ayuda-popover-footer { display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f0f0f0; padding-top:8px; }
+        .ayuda-popover-link { font-size:0.78em; color:#3498db; cursor:pointer; font-weight:700; text-decoration:underline; }
+        .ayuda-popover-cerrar { font-size:0.75em; color:#7f8c8d; cursor:pointer; }
         .ayuda-vista { background:#f0f4f8; border:1px solid #d0dde8; border-radius:10px; padding:12px; margin:12px 0; font-size:0.82em; }
         .ayuda-vista-titulo { font-size:0.72em; text-transform:uppercase; letter-spacing:0.06em; color:#7f8c8d; font-weight:700; margin-bottom:8px; }
         .ayuda-mini-card { background:white; border-radius:8px; padding:10px 12px; border:1px solid #e2e8f0; margin-bottom:6px; }
@@ -704,7 +715,7 @@
 
             <div class="gestion-layout">
                 <div class="search-panel">
-                    <h3>Buscar Socio</h3>
+                    <h3 style="display:flex;align-items:center;gap:8px;">Buscar Socio <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-buscar-socio',this)" title="Ayuda rápida">?</button><div id="pop-buscar-socio" class="ayuda-popover"><div class="ayuda-popover-titulo">🔍 Buscar Socio</div><div class="ayuda-popover-texto">Escribe el nombre o apellido del socio para ver su información, anticipos y saldos.</div><ol class="ayuda-popover-pasos"><li>Escribe al menos 2 letras del nombre</li><li>Haz clic en el socio para seleccionarlo</li><li>Sus datos cargarán en el panel derecho</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Debes seleccionar un socio antes de registrar un anticipo o ausencia.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaRapida_cerrarTodos();ayudaCompleta_abrir();setTimeout(()=>{const t=document.querySelector('.ayuda-tag[onclick*=anticipos]');if(t)ayudaCompleta_filtrar('anticipos',t);},300)">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-buscar-socio')">✕</span></div></div></div></h3>
                     <!-- Filtros rápidos -->
                     <div style="display:flex; gap:5px; margin-bottom:10px; flex-wrap:wrap;">
                         <button id="filtroGestionTodos" onclick="setFiltroGestion('todos')" style="flex:1; padding:6px 8px; border:1px solid var(--secondary); background:var(--secondary); color:white; border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">Todos</button>
@@ -795,7 +806,26 @@
 
                     <div class="action-grid">
                         <div class="action-card">
-                            <div class="action-title">💰 Anticipo de Propina</div>
+                            <div class="action-title" style="display:flex;justify-content:space-between;align-items:center;">
+                                <span>💰 Anticipo de Propina</span>
+                                <div style="position:relative;">
+                                    <button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('popover-anticipo',this)" title="Ayuda rápida">?</button>
+                                    <div id="popover-anticipo" class="ayuda-popover">
+                                        <div class="ayuda-popover-titulo">💰 ¿Cómo registro un anticipo?</div>
+                                        <div class="ayuda-popover-texto">Un anticipo es un <strong>adelanto de propina</strong> que el socio pide durante el mes. Se descuenta automáticamente al hacer el cierre.</div>
+                                        <ol class="ayuda-popover-pasos">
+                                            <li>Ingresa el <strong>monto</strong> en pesos</li>
+                                            <li>Selecciona la <strong>fecha</strong> del anticipo</li>
+                                            <li>Elige el <strong>responsable</strong> que autoriza</li>
+                                            <li>Presiona <strong>"Registrar Anticipo"</strong></li>
+                                        </ol>
+                                        <div class="ayuda-popover-footer">
+                                            <span class="ayuda-popover-link" onclick="ayudaRapida_cerrarTodos(); ayudaCompleta_abrir(); setTimeout(()=>ayudaCompleta_filtrar('anticipos',document.querySelector('.ayuda-tag[onclick*=anticipos]'))  ,300)">📖 Ver ayuda completa →</span>
+                                            <span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('popover-anticipo')">✕ Cerrar</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="numeric" id="montoAnticipo" placeholder="Ej: 50.000" oninput="formatearInputMonto(this)" onkeydown="if(event.key==='Enter') enviarAnticipo()"></div>
                             <div class="form-group" style="margin-top:10px;"><label>Fecha</label><input type="date" id="fechaAnticipo"></div>
                             <div class="form-group" style="margin-top:10px;">
@@ -808,7 +838,26 @@
                             <button class="btn-action" style="width:100%; margin-top:15px;" onclick="enviarAnticipo()">Registrar Anticipo</button>
                         </div>
                         <div class="action-card" id="cardAusencias" style="display:none;">
-                            <div class="action-title" style="color:var(--danger);">📅 Reportar Ausencia</div>
+                            <div class="action-title" style="color:var(--danger);display:flex;justify-content:space-between;align-items:center;">
+                                <span>📅 Reportar Ausencia</span>
+                                <div style="position:relative;">
+                                    <button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('popover-ausencia',this)" title="Ayuda rápida">?</button>
+                                    <div id="popover-ausencia" class="ayuda-popover">
+                                        <div class="ayuda-popover-titulo">📅 ¿Cómo reporto una ausencia?</div>
+                                        <div class="ayuda-popover-texto">Las ausencias aplican <strong>solo a socios Planta</strong>. Descuentan el valor del punto de esa noche del cálculo del socio.</div>
+                                        <ol class="ayuda-popover-pasos">
+                                            <li>Selecciona la <strong>fecha</strong> de la ausencia</li>
+                                            <li>Elige el <strong>motivo</strong> tocando uno de los botones</li>
+                                            <li>Presiona <strong>"Marcar Ausencia"</strong></li>
+                                        </ol>
+                                        <div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">⚠️ Socios Part-Time no tienen ausencias — su cálculo usa el calendario de días trabajados.</div>
+                                        <div class="ayuda-popover-footer">
+                                            <span class="ayuda-popover-link" onclick="ayudaRapida_cerrarTodos(); ayudaCompleta_abrir(); setTimeout(()=>ayudaCompleta_filtrar('anticipos',document.querySelector('.ayuda-tag[onclick*=anticipos]'))  ,300)">📖 Ver ayuda completa →</span>
+                                            <span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('popover-ausencia')">✕ Cerrar</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="form-group"><label>Fecha Ausencia</label><input type="date" id="fechaAusencia"></div>
                             <div class="form-group" style="margin-top:10px;">
                                 <label>Motivo</label>
@@ -826,7 +875,7 @@
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:10px; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-                        <h3 style="margin:0;">Historial <small style="color:#7f8c8d; font-weight:normal; font-size:0.75em;">(Mantén presionado para borrar)</small></h3>
+                        <h3 style="margin:0;display:flex;align-items:center;gap:8px;">Historial <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-historial',this)" title="Ayuda rápida">?</button><div id="pop-historial" class="ayuda-popover"><div class="ayuda-popover-titulo">📋 Historial de movimientos</div><div class="ayuda-popover-texto">Muestra todos los anticipos y ausencias del socio en el período actual.</div><ol class="ayuda-popover-pasos"><li>Los anticipos aparecen en azul con monto negativo</li><li>Las ausencias en rojo</li><li><strong>Mantén presionado 1 segundo</strong> sobre un registro para eliminarlo</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Solo aparecen los movimientos del período activo (15 del mes anterior al 14 del mes actual).</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaRapida_cerrarTodos();ayudaCompleta_abrir();setTimeout(()=>{const t=document.querySelector('.ayuda-tag[onclick*=anticipos]');if(t)ayudaCompleta_filtrar('anticipos',t);},300)">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-historial')">✕</span></div></div></div><small style="color:#7f8c8d;font-weight:normal;font-size:0.75em;">(Mantén presionado para borrar)</small></h3>
                         <button onclick="reiniciarAnticipos()" style="background:linear-gradient(135deg,#8e44ad,#6c3483); color:white; border:none; border-radius:8px; padding:8px 14px; font-size:0.8em; font-weight:700; cursor:pointer; white-space:nowrap;">🔄 Reinicio Mes</button>
                     </div>
                     <table class="history-table">
@@ -898,7 +947,7 @@
         <div id="modalSaldo" class="modal">
             <div class="modal-content" style="max-width:400px; margin-top:15%;">
                 <div class="modal-header">
-                    <h2>Saldo Mes Anterior</h2>
+                    <h2 style="display:flex;align-items:center;gap:8px;">Saldo Mes Anterior <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-saldo-anterior',this)" title="Ayuda rápida">?</button><div id="pop-saldo-anterior" class="ayuda-popover"><div class="ayuda-popover-titulo">💵 ¿Qué es el Saldo Anterior?</div><div class="ayuda-popover-texto">Es el <strong>remanente del mes pasado</strong> que no se pudo pagar exactamente por redondeo. Se suma al cálculo del mes actual.</div><ol class="ayuda-popover-pasos"><li>El sistema lo ingresa automáticamente al hacer "Cerrar Mes"</li><li>Si es el primer mes, el saldo anterior es $0</li><li>Se suma al Cierre de Punto antes de calcular el pago final</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Ejemplo: si el mes pasado el saldo real fue $34.643 → se pagaron $34.000 → el remanente $643 pasa a este mes.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaRapida_cerrarTodos();ayudaCompleta_abrir();setTimeout(()=>{const t=document.querySelector('.ayuda-tag[onclick*=puntos]');if(t)ayudaCompleta_filtrar('puntos',t);},300)">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-saldo-anterior')">✕</span></div></div></div></h2>
                     <span class="close-modal" onclick="cerrarModalSaldo()">&times;</span>
                 </div>
                 <div class="modal-body">
@@ -913,7 +962,7 @@
         <div id="modalCalendario" class="modal">
             <div class="modal-content" style="max-width:480px;">
                 <div class="modal-header">
-                    <h2 id="calTitulo">📅 Días Trabajados</h2>
+                    <h2 id="calTitulo" style="display:flex;align-items:center;gap:8px;">📅 Días Trabajados <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-dias-trabajados',this)" title="Ayuda rápida">?</button><div id="pop-dias-trabajados" class="ayuda-popover"><div class="ayuda-popover-titulo">📅 Días Trabajados (Part-Time)</div><div class="ayuda-popover-texto">Para socios <strong>Part-Time</strong>, debes marcar los días que efectivamente trabajaron en el mes. Solo esos días suman al cálculo de propina.</div><ol class="ayuda-popover-pasos"><li>Toca cada día en el calendario para marcarlo/desmarcarlo</li><li>Los días marcados en verde cuentan para el cálculo</li><li>Los fines de semana se muestran pero puedes marcarlos si trabajó</li><li>El sistema suma solo los puntos de las noches marcadas</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Los socios Planta no usan este calendario — ellos cobran todas las noches salvo ausencias registradas.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaRapida_cerrarTodos();ayudaCompleta_abrir();setTimeout(()=>{const t=document.querySelector('.ayuda-tag[onclick*=puntos]');if(t)ayudaCompleta_filtrar('puntos',t);},300)">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-dias-trabajados')">✕</span></div></div></div></h2>
                     <span class="close-modal" onclick="cerrarModalCalendario()">&times;</span>
                 </div>
                 <div class="modal-body">
@@ -1054,7 +1103,7 @@
             </div>
 
             <hr style="border:0; border-top:1px solid #ddd; margin:30px 0;">
-            <h3 style="color:var(--primary); margin-bottom:20px;">Historial Detallado por Fecha</h3>
+            <h3 style="color:var(--primary);margin-bottom:20px;display:flex;align-items:center;gap:8px;">Historial Detallado por Fecha <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-historial-rec',this)" title="Ayuda rápida">?</button><div id="pop-historial-rec" class="ayuda-popover"><div class="ayuda-popover-titulo">📊 Historial de Recaudación</div><div class="ayuda-popover-texto">Cada tarjeta representa una fecha con los montos recaudados por tipo (Mesas, MDA, Bóveda).</div><ol class="ayuda-popover-pasos"><li>El <strong>Punto Noche</strong> = Total ÷ Divisor</li><li>Si no hay divisor, aparece badge rojo ⚠️ y ese día no suma al total</li><li>Presiona ✏️ para editar un monto, 🗑️ para eliminar</li><li>Usa ➕ en cada tarjeta para agregar un tipo que falta</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Los días sin divisor no inflyen en el Cierre de Punto para proteger los cálculos.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaRapida_cerrarTodos();ayudaCompleta_abrir();setTimeout(()=>{const t=document.querySelector('.ayuda-tag[onclick*=recaudacion]');if(t)ayudaCompleta_filtrar('recaudacion',t);},300)">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-historial-rec')">✕</span></div></div></div></h3>
 
             <!-- Stats de recaudación -->
             <div class="stats-grid" style="margin-bottom:20px;">
@@ -1107,7 +1156,7 @@
                 <!-- IZQUIERDA: Datos Esperados -->
                 <div>
                     <div class="arqueo-card">
-                        <h2><i class="fas fa-bullseye"></i> Datos Esperados</h2>
+                        <h2 style="display:flex;align-items:center;gap:8px;"><i class="fas fa-bullseye"></i> Datos Esperados <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-datos-esperados',this)" title="Ayuda rápida">?</button><div id="pop-datos-esperados" class="ayuda-popover"><div class="ayuda-popover-titulo">🎯 ¿Qué son los Datos Esperados?</div><div class="ayuda-popover-texto">Es el <strong>monto que debería haber en caja</strong> según los registros del sistema: lo que entró menos lo que salió.</div><ol class="ayuda-popover-pasos"><li><strong>Recaudación Nube:</strong> total recaudado según Google Sheets</li><li><strong>Anticipos:</strong> dinero entregado a socios durante el mes</li><li><strong>Retiros:</strong> montos retirados oficialmente de la caja</li><li>Total Esperado = Recaudación − Anticipos − Retiros</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Si el total contado coincide con el esperado, el arqueo cuadra ✅.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaRapida_cerrarTodos();ayudaCompleta_abrir();setTimeout(()=>{const t=document.querySelector('.ayuda-tag[onclick*=arqueo]');if(t)ayudaCompleta_filtrar('arqueo',t);},300)">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-datos-esperados')">✕</span></div></div></div></h2>
                         <div id="aq-esperadoDisplay">Cargando...</div>
                         <div class="arqueo-info-box" style="margin-top:15px;">
                             <p style="margin:0; display:flex; justify-content:space-between;"><span>Recaudación Nube:</span><strong id="aq-divisor-day-total">$0</strong></p>
@@ -1162,7 +1211,7 @@
         <div id="aq-modalConteo" class="modal">
             <div class="modal-content">
                 <span class="close-modal" onclick="document.getElementById('aq-modalConteo').style.display='none'">&times;</span>
-                <h2>💸 Gestión de Efectivo</h2>
+                <h2 style="display:flex;align-items:center;gap:8px;">💸 Gestión de Efectivo <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-gestion-efectivo',this)" title="Ayuda rápida">?</button><div id="pop-gestion-efectivo" class="ayuda-popover"><div class="ayuda-popover-titulo">💸 Gestión de Efectivo</div><div class="ayuda-popover-texto">Aquí registras los <strong>movimientos de dinero</strong>: retiros de caja y el conteo físico de billetes.</div><ol class="ayuda-popover-pasos"><li><strong>💵 Conteo:</strong> cuenta los billetes por denominación para calcular el total en caja</li><li><strong>Retiro:</strong> registra cada vez que se retira dinero de la caja</li><li><strong>💱 Canje:</strong> solicita cambio de billetes a Bóveda con comprobante</li><li><strong>☁️ Guardar/Cargar:</strong> sincroniza el estado con la nube</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Guarda frecuentemente para no perder el progreso si el dispositivo se cierra.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaRapida_cerrarTodos();ayudaCompleta_abrir();setTimeout(()=>{const t=document.querySelector('.ayuda-tag[onclick*=arqueo]');if(t)ayudaCompleta_filtrar('arqueo',t);},300)">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-gestion-efectivo')">✕</span></div></div></div></h2>
                 <div style="margin-bottom:15px; display:flex; gap:10px;">
                     <button id="aq-undo-btn" onclick="aq_undoAction()" class="aq-btn aq-btn-warning" disabled><i class="fas fa-undo"></i> Deshacer</button>
                     <button id="aq-redo-btn" onclick="aq_redoAction()" class="aq-btn aq-btn-primary" disabled><i class="fas fa-redo"></i> Rehacer</button>
@@ -1177,7 +1226,7 @@
         <div id="aq-modalBackup" class="modal">
             <div class="modal-content" style="max-width:800px;">
                 <span class="close-modal" onclick="document.getElementById('aq-modalBackup').style.display='none'">&times;</span>
-                <h2 style="color:#8b5cf6; border-bottom:2px solid #8b5cf6; padding-bottom:10px;"><i class="fas fa-history"></i> Historial de Arqueos Archivados</h2>
+                <h2 style="color:#8b5cf6;border-bottom:2px solid #8b5cf6;padding-bottom:10px;display:flex;align-items:center;gap:8px;"><i class="fas fa-history"></i> Historial de Arqueos Archivados <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-historial-arqueos',this)" title="Ayuda rápida">?</button><div id="pop-historial-arqueos" class="ayuda-popover"><div class="ayuda-popover-titulo">📜 Historial de Arqueos</div><div class="ayuda-popover-texto">Registro de todos los arqueos anteriores guardados en la nube.</div><ol class="ayuda-popover-pasos"><li>Cada fila muestra: fecha, total contado, diferencia y estado</li><li>Presiona "Ver" para revisar el detalle de un arqueo anterior</li><li>Los arqueos se archivan al presionar ☁️ Guardar en el arqueo actual</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 El historial es de solo lectura — no puedes modificar arqueos anteriores.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaRapida_cerrarTodos();ayudaCompleta_abrir();setTimeout(()=>{const t=document.querySelector('.ayuda-tag[onclick*=arqueo]');if(t)ayudaCompleta_filtrar('arqueo',t);},300)">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-historial-arqueos')">✕</span></div></div></div></h2>
                 <div id="aq-backup-list" style="margin-top:15px;"></div>
                 <button onclick="document.getElementById('aq-modalBackup').style.display='none'" class="aq-btn aq-btn-primary" style="width:100%; margin-top:20px;">Cerrar</button>
             </div>
@@ -1216,7 +1265,11 @@
 
         <!-- PESTAÑA 5: NOTAS DE ADMINISTRACIÓN -->
         <div id="tab-notas" class="tab-content">
-            <div style="max-width:700px; margin:0 auto;">
+            <div style="max-width:700px;margin:0 auto;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                    <h3 style="margin:0;color:var(--primary);">📝 Notas de Administración</h3>
+                    <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-notas',this)" title="Ayuda rápida">?</button><div id="pop-notas" class="ayuda-popover"><div class="ayuda-popover-titulo">📝 Notas de Administración</div><div class="ayuda-popover-texto">Espacio compartido para dejar mensajes importantes visibles para todos los administradores.</div><ol class="ayuda-popover-pasos"><li>Presiona <strong>➕ Nueva nota</strong> para crear una</li><li>Las notas se sincronizan con la nube automáticamente</li><li><strong>Mantén presionada</strong> una nota para eliminarla</li><li>Útil para avisos de turno, novedades o instrucciones</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Las notas son compartidas — todos los usuarios del sistema pueden verlas.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaRapida_cerrarTodos();ayudaCompleta_abrir();setTimeout(()=>{const t=document.querySelector('.ayuda-tag[onclick*=config]');if(t)ayudaCompleta_filtrar('config',t);},300)">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-notas')">✕</span></div></div></div>
+                </div>
                 <!-- Formulario nueva nota -->
                 <div style="background:white; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border:1px solid #eee;">
                     <h3 style="margin:0 0 12px 0; color:var(--primary); font-size:1em;">✏️ Nueva Nota</h3>
@@ -1238,6 +1291,10 @@
 
         <!-- PESTAÑA 6: CONFIGURACIÓN -->
         <div id="tab-config" class="tab-content">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <h3 style="margin:0;color:var(--primary);">⚙️ Configuración del Sistema</h3>
+                <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-config',this)" title="Ayuda rápida">?</button><div id="pop-config" class="ayuda-popover"><div class="ayuda-popover-titulo">⚙️ Configuración del Sistema</div><div class="ayuda-popover-texto">Panel de administración del sistema. Controla seguridad, responsables y conexiones.</div><ol class="ayuda-popover-pasos"><li><strong>PIN:</strong> tu contraseña de acceso al sistema</li><li><strong>Clave de recuperación:</strong> úsala si olvidas el PIN</li><li><strong>Responsables:</strong> personas autorizadas para registrar anticipos</li><li><strong>URLs:</strong> conexiones a Google Sheets (no modificar sin asistencia técnica)</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Guarda la clave de recuperación en un lugar físico seguro, separado del dispositivo.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaRapida_cerrarTodos();ayudaCompleta_abrir();setTimeout(()=>{const t=document.querySelector('.ayuda-tag[onclick*=config]');if(t)ayudaCompleta_filtrar('config',t);},300)">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-config')">✕</span></div></div></div>
+            </div>
             <div style="max-width:500px; margin:0 auto;">
 
                 <!-- Cambiar PIN -->
@@ -5189,6 +5246,64 @@
 
         let ayudaFiltroActivo = '';
 
+        // ── Popovers de ayuda rápida ─────────────────────────────
+        function ayudaRapida_toggle(id, btn) {
+            const pop = document.getElementById(id);
+            if (!pop) return;
+            const estaVisible = pop.classList.contains('visible');
+            ayudaRapida_cerrarTodos();
+            if (!estaVisible) {
+                pop.classList.add('visible');
+                // Calcular posición inteligente con position:fixed
+                const rect = btn.getBoundingClientRect();
+                const vw   = window.innerWidth;
+                const vh   = window.innerHeight;
+                const pw   = Math.min(300, vw - 24); // ancho del popover
+                const margen = 8;
+
+                // Horizontal: preferir alinear a la derecha del botón,
+                // pero si se sale de pantalla, alinear a la izquierda
+                let left = rect.right - pw;
+                if (left < 12) left = 12;
+                if (left + pw > vw - 12) left = vw - pw - 12;
+
+                // Vertical: preferir abajo del botón,
+                // si no cabe, abrir hacia arriba
+                let top = rect.bottom + margen;
+                // Estimar altura aproximada del popover
+                pop.style.visibility = 'hidden';
+                pop.style.top = '0px';
+                pop.style.left = left + 'px';
+                const ph = Math.min(pop.offsetHeight || 320, vh * 0.8);
+                pop.style.visibility = '';
+                if (top + ph > vh - 16) {
+                    // No cabe abajo → abrir hacia arriba
+                    top = Math.max(16, rect.top - ph - margen);
+                }
+                // Asegurar que no se sale por arriba
+                if (top < 16) top = 16;
+
+                pop.style.top  = top + 'px';
+                pop.style.left = left + 'px';
+                // Quitar right/bottom que puedan haber quedado
+                pop.style.right  = 'auto';
+                pop.style.bottom = 'auto';
+            }
+        }
+        function ayudaRapida_cerrar(id) {
+            const pop = document.getElementById(id);
+            if (pop) pop.classList.remove('visible');
+        }
+        function ayudaRapida_cerrarTodos() {
+            document.querySelectorAll('.ayuda-popover.visible').forEach(p => p.classList.remove('visible'));
+        }
+        // Cerrar popovers al tocar fuera
+        document.addEventListener('click', function(ev) {
+            if (!ev.target.closest('.ayuda-rapida-btn') && !ev.target.closest('.ayuda-popover')) {
+                ayudaRapida_cerrarTodos();
+            }
+        });
+
         function ayudaCompleta_abrir() {
             document.getElementById('modalAyudaCompleta').style.display = 'block';
             document.getElementById('ayudaSearchInput').value = '';
@@ -5341,7 +5456,7 @@
                 <div style="background:#f8f9fa; border-radius:14px; padding:14px 16px; border:1px solid #e2e8f0;">
                     <div style="font-size:10px; font-weight:800; color:#3498db; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">👤 El desarrollador</div>
                     <p style="font-size:13px; line-height:1.75; color:#5d6d7e; margin:0;">
-                        Colaborador del <strong style="color:#2c3e50;">Casino de Puerto Varas desde 2013</strong>, actualmente ejerce como <strong style="color:#2c3e50;">Croupier</strong> y desde el <strong style="color:#2c3e50;">15 de noviembre de 2025</strong> cumple el rol de <strong style="color:#2c3e50;">Encargado del Fondo Solidario de Propina, Junto a dos integrantes más</strong> — velando por los derechos económicos de todos los socios.
+                        Colaborador del <strong style="color:#2c3e50;">Casino de Puerto Varas desde 2013</strong>, actualmente ejerce como <strong style="color:#2c3e50;">Croupier</strong> y desde el <strong style="color:#2c3e50;">15 de noviembre de 2025</strong> cumple el rol de <strong style="color:#2c3e50;">Encargado del Fondo Solidario de Propina</strong> — velando por los derechos económicos de todos los socios.
                     </p>
                 </div>
 
@@ -5357,7 +5472,7 @@
                     <div style="background:linear-gradient(135deg,#2c3e50,#34495e); padding:14px 16px;">
                         <div style="font-size:10px; font-weight:800; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px;">🏗️ La historia de este sistema</div>
                         <p style="font-size:13px; line-height:1.7; color:rgba(255,255,255,0.8); margin:0;">
-                            El <strong style="color:#fff;">Sistema Integral del Fondo Solidario</strong> nació de una necesidad real y urgente: terminar con las planillas Excel que se usaban mes a mes — donde cada período comenzaba con una hoja nueva, se perdían datos históricos, se agregaba información que no correspondía y durante todo el mes había que estar corrigiendo errores. Un ciclo interminable de parches sobre parches. 💥<br><br>                            Con este sistema, nada de eso ocurre. Los datos se ingresan una sola vez y correctamente — el sistema hace el resto: calcula, organiza, distribuye y registra con precisión milimétrica. Sin hojas perdidas. Sin correcciones manuales. Sin caos de fin de mes. 🎯<br><br>                            Lo que comenzó como una idea para ordenar el caos creció, iteración tras iteración, hasta convertirse en una herramienta completa de gestión: socios, anticipos, recaudaciones, arqueo... todo en un solo lugar, desde cualquier dispositivo, en tiempo real. Construido con mucho entusiasmo, dedicación — y más de unas cuantas noches largas. 🚀
+                            El <strong style="color:#fff;">Sistema Integral del Fondo Solidario</strong> nació de una necesidad real y urgente: terminar con las planillas Excel que se usaban mes a mes — donde cada período comenzaba con una hoja nueva, se perdían datos históricos, se agregaba información que no correspondía y durante todo el mes había que estar corrigiendo errores. Un ciclo interminable de parches sobre parches. 💥<br><br>                            Con este sistema, nada de eso ocurre. Los datos se ingresan una sola vez y correctamente — el sistema hace el resto: calcula, organiza, distribuye y registra con precisión milimétrica. Sin hojas perdidas. Sin correcciones manuales. Sin caos de fin de mes. 🎯<br><br>                            Lo que comenzó como una idea para ordenar el caos creció, iteración tras iteración, hasta convertirse en una herramienta completa de gestión: socios, anticipos, recaudaciones, arqueo, auditoría... todo en un solo lugar, desde cualquier dispositivo, en tiempo real. Construido con mucho entusiasmo, dedicación — y más de unas cuantas noches largas. 🚀
                         </p>
                     </div>
                     <div style="background:#eaf4fb; padding:14px 16px;">
