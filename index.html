@@ -625,6 +625,7 @@
                     <button onclick="informeAnticipos()" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.5); border-radius:8px; padding:9px 18px; font-weight:800; font-size:0.85em; cursor:pointer; white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
                         📋 Detalle Anticipos
                     </button>
+
                 </div>
             </div>
 
@@ -1253,6 +1254,7 @@
                 </div>
             </div>
         </div>
+
 
     <script>
         const URL_SOCIOS = "https://script.google.com/macros/s/AKfycbyr447pMQtsKoBfp8qTcB1uyE3rORhgPPmZM6Fgia3BgmIvtlZ_h04uGZrmx_HwubHQ/exec";
@@ -2978,7 +2980,8 @@
             status.textContent = `✅ Completado: ${exitosos} exitosos, ${errores} con error.`;
 
             btn.textContent = '✅ Completado';
-            showToast(`Cierre completado: ${exitosos}/${total} socios procesados`, exitosos === total ? 'success' : 'error');
+            showToast('Cierre completado: ' + exitosos + '/' + total + ' socios procesados', exitosos === total ? 'success' : 'error');
+
 
             const idActivo = document.getElementById('gestionSocioId').value;
             if (idActivo) cargarHistorialSocio(idActivo);
@@ -3077,6 +3080,10 @@
                     .promedio-title { background: #d9d9d9; padding: 2px 5px; border-bottom: 1px solid #000; font-weight: bold; font-size: 9px; }
                     .promedio-val { padding: 5px; font-size: 16px; font-weight: bold; }
                 </style></head><body>
+                    <div style="text-align:center; margin-bottom:10px;">
+                        <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#000;">MONTOS DIARIOS</div>
+                        <div style="font-size:9px; color:#555; margin-top:2px;">FONDO DE SOLIDARIDAD — CASINO DE PTO. VARAS</div>
+                    </div>
                     <div style="overflow: hidden;">
                         <div class="header-box">PERIODO ${periodoVis}</div>
                         <div class="promedio-box">
@@ -3163,17 +3170,23 @@
                     if (td.length < 4) return;
                     const fechaRow = td[0].textContent.trim();
                     const tipoRow  = td[1].textContent.trim();
-                    const detRow   = td[2].textContent.trim();
-                    const montoRow = td[3].textContent.trim();
+                    // Detalle: quitar info del encargado/responsable — no va en el recibo
+                    const detRaw   = td[2].textContent.trim();
+                    const detRow   = detRaw.replace(/\s*\(Resp:[^)]*\)/gi, '').replace(/\s*\(Enc:[^)]*\)/gi, '').trim();
+                    // Monto: usar solo el span.amount-minus, ignorar el botón ✏️
+                    const spanMonto = td[3].querySelector('span.amount-minus');
+                    const montoRow  = spanMonto
+                        ? spanMonto.textContent.trim()
+                        : td[3].textContent.replace(/✏️/g, '').trim();
                     const esAnticipo = tipoRow.toLowerCase().includes('anticipo');
                     const esAusencia = tipoRow.toLowerCase().includes('ausencia');
                     const color = esAusencia ? '#c0392b' : (esAnticipo ? '#2980b9' : '#555');
-                    
+
                     movHtml +=
                         '<tr>' +
                         '<td style="padding:3px 5px;border-bottom:1px solid #eee;text-align:center;color:#aaa;font-size:9px;">' + (esAnticipo ? numAnt++ : '—') + '</td>' +
                         '<td style="padding:3px 5px;border-bottom:1px solid #eee;color:' + color + ';font-weight:700;font-size:9px;">' + tipoRow + '</td>' +
-                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;font-size:9px;">' + fechaRow + (detRow && detRow!=='-' ? '<br><span style=\'color:#999;font-size:8px;\'>' + detRow + '</span>' : '') + '</td>' +
+                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;font-size:9px;">' + fechaRow + (detRow && detRow !== 'Adelanto' && detRow !== '-' ? '<br><span style=\'color:#999;font-size:8px;\'>' + detRow + '</span>' : '') + '</td>' +
                         '<td style="padding:3px 5px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;font-size:9px;">' + montoRow + '</td>' +
                         '</tr>';
                 });
@@ -4660,7 +4673,7 @@
         }
 
         window.addEventListener('click', function(e) {
-            ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats', 'modalCanje', 'modalEditarAnticipo', 'modalReinicioMes'].forEach(id => {
+            ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats','modalCanje','modalEditarAnticipo','modalReinicioMes'].forEach(id => {
                 const el = document.getElementById(id);
                 if(el && e.target === el) el.style.display = 'none';
             });
