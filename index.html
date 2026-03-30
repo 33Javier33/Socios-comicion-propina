@@ -317,6 +317,55 @@
         .toast.success { background-color: var(--success); }
         .toast.error { background-color: var(--danger); }
 
+        /* ── Modal Ayuda Completa ── */
+        #modalAyudaCompleta { z-index:3000; }
+        #modalAyudaCompleta .modal-content { max-width:720px; max-height:90vh; }
+        .ayuda-search { width:100%; padding:12px 16px; border:2px solid #3498db; border-radius:10px; font-size:1em; font-family:'DM Sans',sans-serif; box-sizing:border-box; outline:none; margin-bottom:16px; }
+        .ayuda-search:focus { box-shadow:0 0 0 3px rgba(52,152,219,0.15); }
+        .ayuda-tags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+        .ayuda-tag { background:#f0f4f8; border:1px solid #ddd; border-radius:20px; padding:5px 12px; font-size:0.78em; cursor:pointer; color:#2c3e50; font-weight:600; transition:0.15s; }
+        .ayuda-tag:hover, .ayuda-tag.activo { background:#3498db; color:white; border-color:#3498db; }
+        .ayuda-resultado { border:1px solid #eee; border-radius:10px; margin-bottom:10px; overflow:hidden; }
+        .ayuda-resultado-hdr { background:#f8f9fa; padding:10px 14px; font-weight:700; color:#2c3e50; display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+        .ayuda-resultado-hdr:hover { background:#e8f4fd; }
+        .ayuda-resultado-body { padding:12px 14px; font-size:0.88em; color:#2c3e50; line-height:1.6; display:none; border-top:1px solid #eee; }
+        .ayuda-resultado-body.abierto { display:block; }
+        .ayuda-resultado-body ol { padding-left:20px; margin:8px 0; }
+        .ayuda-resultado-body li { margin-bottom:6px; }
+        .ayuda-resultado-body .nota { background:#e8f4fd; border-left:3px solid #3498db; padding:8px 10px; border-radius:0 6px 6px 0; margin-top:10px; }
+        .ayuda-sin-result { text-align:center; color:#7f8c8d; padding:30px; }
+        .ayuda-vista { background:#f0f4f8; border:1px solid #d0dde8; border-radius:10px; padding:12px; margin:12px 0; font-size:0.82em; }
+        .ayuda-vista-titulo { font-size:0.72em; text-transform:uppercase; letter-spacing:0.06em; color:#7f8c8d; font-weight:700; margin-bottom:8px; }
+        .ayuda-mini-card { background:white; border-radius:8px; padding:10px 12px; border:1px solid #e2e8f0; margin-bottom:6px; }
+        .ayuda-mini-btn { display:inline-block; padding:4px 10px; border-radius:5px; font-size:0.8em; font-weight:700; border:none; cursor:default; }
+        .ayuda-mini-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #f0f0f0; font-size:0.85em; }
+        .ayuda-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:0.75em; font-weight:700; }
+        .ayuda-formula { background:#fff3cd; border-left:3px solid #f39c12; border-radius:0 6px 6px 0; padding:8px 12px; margin:8px 0; font-family:monospace; font-size:0.85em; }
+        .ayuda-highlight { background:#fff3cd; border-radius:2px; padding:0 2px; }
+
+        /* ── Filtros recaudación ── */
+        .rec-filtro-chip { padding:5px 11px; border:1px solid #ddd; border-radius:20px; background:white; color:#555; font-size:0.78em; font-weight:700; cursor:pointer; transition:0.15s; font-family:'DM Sans',sans-serif; }
+        .rec-filtro-chip:hover { border-color:#3498db; color:#3498db; }
+        .rec-filtro-chip.activo { background:#3498db; color:white; border-color:#3498db; }
+        .rec-filtro-chip.activo-warn { background:#e74c3c; color:white; border-color:#e74c3c; }
+        .rec-filtro-chip.activo-ok { background:#27ae60; color:white; border-color:#27ae60; }
+
+        /* ── Stats modal ── */
+        .stats-tab-btn { padding:6px 14px; border:none; border-radius:7px; background:#f0f4f8; color:#555; font-weight:700; font-size:0.82em; cursor:pointer; white-space:nowrap; transition:0.15s; font-family:'DM Sans',sans-serif; }
+        .stats-tab-btn.active { background:#2563eb; color:white; }
+        .stats-tab-btn:hover:not(.active) { background:#dbeafe; color:#2563eb; }
+        .bar-chart-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+        .bar-chart-row .bar-label { width:110px; font-size:0.82em; color:#555; font-weight:600; text-align:right; flex-shrink:0; }
+        .bar-chart-row .bar-track { flex:1; height:28px; background:#e8f0fe; border-radius:6px; overflow:hidden; }
+        .bar-chart-row .bar-fill { height:100%; border-radius:6px; display:flex; align-items:center; padding-left:8px; color:white; font-size:0.75em; font-weight:700; transition:width 0.6s ease; }
+        .bar-chart-row .bar-val { width:100px; text-align:right; font-size:0.82em; font-weight:700; color:#2c3e50; flex-shrink:0; }
+        .mini-kpi { background:#f8f9fa; border-radius:10px; padding:12px 14px; text-align:center; border:1px solid #eee; }
+        .mini-kpi .kpi-val { font-size:1.3em; font-weight:900; color:#1e3a5f; }
+        .mini-kpi .kpi-label { font-size:0.72em; color:#7f8c8d; text-transform:uppercase; font-weight:700; margin-top:3px; }
+        .proj-card { border-radius:10px; padding:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+        .proj-card .proj-label { font-size:0.85em; font-weight:700; }
+        .proj-card .proj-val { font-size:1.4em; font-weight:900; }
+
         /* ===== LOGIN ===== */
         #loginOverlay {
             position: fixed; inset: 0; z-index: 9999;
@@ -449,8 +498,33 @@
             <button class="nav-btn" onclick="switchTab('arqueo')">💰 Arqueo de Caja</button>
             <button class="nav-btn" onclick="switchTab('notas')">📝 Notas Admin</button>
             <button class="nav-btn" onclick="switchTab('config')">⚙️ Configuración</button>
+            <button onclick="ayudaCompleta_abrir()" style="background:#2c3e50;color:white;border:none;border-radius:20px;padding:6px 12px;font-size:0.78em;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto;">📖 Ayuda</button>
         </div>
         
+        <!-- MODAL AYUDA COMPLETA -->
+        <div id="modalAyudaCompleta" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>📖 Centro de Ayuda — Fondo Solidario</h2>
+                    <span class="close-modal" onclick="document.getElementById('modalAyudaCompleta').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <input class="ayuda-search" id="ayudaSearchInput" type="text" placeholder="🔍  Busca: anticipo, punto, arqueo, recibo, escalamiento..." oninput="ayudaCompleta_buscar(this.value)">
+                    <div class="ayuda-tags" id="ayudaTags">
+                        <span class="ayuda-tag activo" onclick="ayudaCompleta_filtrar('',this)">Todas</span>
+                        <span class="ayuda-tag" onclick="ayudaCompleta_filtrar('socios',this)">👥 Socios</span>
+                        <span class="ayuda-tag" onclick="ayudaCompleta_filtrar('anticipos',this)">💰 Anticipos</span>
+                        <span class="ayuda-tag" onclick="ayudaCompleta_filtrar('recaudacion',this)">📊 Recaudación</span>
+                        <span class="ayuda-tag" onclick="ayudaCompleta_filtrar('arqueo',this)">🔒 Arqueo</span>
+                        <span class="ayuda-tag" onclick="ayudaCompleta_filtrar('puntos',this)">⭐ Puntos</span>
+                        <span class="ayuda-tag" onclick="ayudaCompleta_filtrar('impresion',this)">🖨️ Impresión</span>
+                        <span class="ayuda-tag" onclick="ayudaCompleta_filtrar('config',this)">⚙️ Config</span>
+                    </div>
+                    <div id="ayudaResultados"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- PESTAÑA 1: REGISTRO DE SOCIOS -->
         <div id="tab-registro" class="tab-content active">
             <div class="dashboard-socios">
@@ -625,7 +699,6 @@
                     <button onclick="informeAnticipos()" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.5); border-radius:8px; padding:9px 18px; font-weight:800; font-size:0.85em; cursor:pointer; white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
                         📋 Detalle Anticipos
                     </button>
-
                 </div>
             </div>
 
@@ -955,15 +1028,36 @@
 
         <!-- PESTAÑA 3: RECAUDACIONES -->
         <div id="tab-recaudacion" class="tab-content">
-            <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                <input type="text" id="filtroRecaudacion" class="smart-search" placeholder="📅 Filtrar por fecha o monto..." onkeyup="filtrarRecaudacion()" style="width:40%; margin-bottom:0;">
-                <div style="display:flex; gap:8px;">
-                    <button onclick="informeMontosDiarios()" class="btn-action" style="background:var(--success); width:auto; padding:8px 16px; font-weight:800;" title="Generar Informe Excel de Montos Diarios">📊 Informe Montos Diarios</button>
-                    <button onclick="cargarRecaudaciones()" class="btn-action" style="background:#7f8c8d; width:auto; padding:8px 20px;">🔄 Actualizar Datos</button>
-                </div>
+            <!-- Acciones + Filtros Recaudación -->
+            <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                <button onclick="rec_abrirAgregar()" class="btn-action" style="background:var(--secondary);width:auto;padding:8px 18px;font-weight:800;">➕ Nueva Recaudación</button>
+                <button onclick="informeMontosDiarios()" class="btn-action" style="background:var(--success);width:auto;padding:8px 14px;font-weight:800;">📊 Informe Montos Diarios</button>
+                <button onclick="cargarRecaudaciones()" class="btn-action" style="background:#7f8c8d;width:auto;padding:8px 14px;">🔄 Actualizar</button>
             </div>
-            
-            <div class="stats-grid">
+            <div style="background:#f8f9fa;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:18px;">
+                <div style="display:flex;gap:8px;margin-bottom:10px;">
+                    <input type="text" id="filtroRecaudacion" placeholder="🔍 Buscar por fecha, día o monto..." oninput="filtrarRecaudacion()" onkeyup="filtrarRecaudacion()" style="flex:1;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.9em;font-family:'DM Sans',sans-serif;outline:none;">
+                    <button onclick="rec_limpiarFiltros()" style="background:none;border:1px solid #ddd;border-radius:8px;padding:7px 12px;font-size:0.8em;color:#7f8c8d;cursor:pointer;white-space:nowrap;">✕ Limpiar</button>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-size:0.75em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Tipo:</span>
+                    <button class="rec-filtro-chip activo" data-tipo="" onclick="rec_setTipo('',this)">Todos</button>
+                    <button class="rec-filtro-chip" data-tipo="SalaDeJuegos" onclick="rec_setTipo('SalaDeJuegos',this)">🎰 Sala de Juegos</button>
+                    <button class="rec-filtro-chip" data-tipo="EfectivoMDA" onclick="rec_setTipo('EfectivoMDA',this)">💵 Efectivo MDA</button>
+                    <button class="rec-filtro-chip" data-tipo="TarjetaMDA" onclick="rec_setTipo('TarjetaMDA',this)">💳 Tarjeta MDA</button>
+                    <button class="rec-filtro-chip" data-tipo="Boveda" onclick="rec_setTipo('Boveda',this)">🏦 Bóveda</button>
+                    <span style="margin-left:8px;font-size:0.75em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Divisor:</span>
+                    <button class="rec-filtro-chip" id="chipSinDivisor" onclick="rec_toggleSinDivisor(this)">⚠️ Sin divisor</button>
+                    <button class="rec-filtro-chip" id="chipConDivisor" onclick="rec_toggleConDivisor(this)">✅ Con divisor</button>
+                </div>
+                <div id="rec-filtro-info" style="font-size:0.78em;color:#7f8c8d;margin-top:8px;min-height:14px;"></div>
+            </div>
+
+            <hr style="border:0; border-top:1px solid #ddd; margin:30px 0;">
+            <h3 style="color:var(--primary); margin-bottom:20px;">Historial Detallado por Fecha</h3>
+
+            <!-- Stats de recaudación -->
+            <div class="stats-grid" style="margin-bottom:20px;">
                 <div class="stat-card info">
                     <div class="stat-label">Total Puntos</div>
                     <div class="stat-value" id="recTotalPuntos">$0</div>
@@ -981,13 +1075,10 @@
                 </div>
                 <div class="stat-card purple">
                     <div class="stat-label">Divisor Actual</div>
-                    <div class="stat-value" id="recDivisorActual">1.0</div>
+                    <div class="stat-value" id="recDivisorActual">--</div>
                     <div class="stat-sub">Según último registro</div>
                 </div>
             </div>
-
-            <hr style="border:0; border-top:1px solid #ddd; margin:30px 0;">
-            <h3 style="color:var(--primary); margin-bottom:20px;">Historial Detallado por Fecha</h3>
 
             <div id="contenedorFechas">
                 <div id="skRecaudaciones">
@@ -1027,12 +1118,8 @@
                             <div style="background:#dcfce7; padding:8px; border-radius:6px; margin-top:10px;">
                                 <p style="margin:0; font-size:0.9em; display:flex; justify-content:space-between;"><span>📊 TOTAL Puntos:</span><strong id="aq-suma-total-puntos">0</strong></p>
                             </div>
-                            <div style="margin-top:15px; border-top:1px solid #bfdbfe; padding-top:10px;">
-                                <label style="font-weight:600; font-size:0.85em;">Divisor Planta:</label>
-                                <input type="number" id="aq-divisor-planta" value="1.0" step="0.01" style="text-align:right; width:100%; margin-top:4px; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
-                                <label style="font-weight:600; font-size:0.85em; margin-top:10px; display:block;">Divisor Part-Time:</label>
-                                <input type="number" id="aq-divisor-part-time" value="1.0" step="0.01" style="text-align:right; width:100%; margin-top:4px; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
-                            </div>
+                            <input type="hidden" id="aq-divisor-planta" value="1.0">
+                            <input type="hidden" id="aq-divisor-part-time" value="1.0">
                         </div>
                         <div id="aq-desglose-esperado" style="margin-top:20px;"></div>
                     </div>
@@ -1108,10 +1195,20 @@
 
         <!-- MODAL ESTADÍSTICAS -->
         <div id="aq-modalStats" class="modal">
-            <div class="modal-content">
-                <span class="close-modal" onclick="document.getElementById('aq-modalStats').style.display='none'">&times;</span>
-                <h2>📊 Análisis por Tipo</h2>
-                <div id="aq-stats-content"></div>
+            <div class="modal-content" style="max-width:680px;">
+                <div class="modal-header" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);">
+                    <h2 style="color:white;margin:0;">📊 Estadísticas y Proyecciones</h2>
+                    <span class="close-modal" onclick="document.getElementById('aq-modalStats').style.display='none'" style="color:white;">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid #eee;padding-bottom:8px;overflow-x:auto;">
+                        <button class="stats-tab-btn active" onclick="statsTab('tipos',this)">📦 Por Tipo</button>
+                        <button class="stats-tab-btn" onclick="statsTab('diario',this)">📅 Diario</button>
+                        <button class="stats-tab-btn" onclick="statsTab('proyeccion',this)">🔮 Proyección</button>
+                        <button class="stats-tab-btn" onclick="statsTab('puntos',this)">⭐ Puntos</button>
+                    </div>
+                    <div id="aq-stats-content"></div>
+                </div>
             </div>
         </div>
 
@@ -1254,7 +1351,6 @@
                 </div>
             </div>
         </div>
-
 
     <script>
         const URL_SOCIOS = "https://script.google.com/macros/s/AKfycbyr447pMQtsKoBfp8qTcB1uyE3rORhgPPmZM6Fgia3BgmIvtlZ_h04uGZrmx_HwubHQ/exec";
@@ -1680,7 +1776,7 @@
                     } else {
                         let sumaValorTotal = 0;
                         for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
-                            if (!fechasAusencia.has(dia)) {
+                            if (!fechasAusencia.has(dia) && valor !== null) {
                                 sumaValorTotal += valor;
                             }
                         }
@@ -2650,7 +2746,7 @@
                     if (socio.contrato === 'Part-Time') {
                         let sumaValorPuntosPT = 0;
                         selectedDaysPT.forEach(dia => { 
-                            if(!fechasAusencia.has(dia) && globalMapaPuntosDia[dia]) {
+                            if(!fechasAusencia.has(dia) && globalMapaPuntosDia[dia] !== null && globalMapaPuntosDia[dia]) {
                                 sumaValorPuntosPT += globalMapaPuntosDia[dia]; 
                             }
                         });
@@ -2658,7 +2754,7 @@
                     } else {
                         let sumaValorTotal = 0;
                         for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
-                            if (!fechasAusencia.has(dia)) {
+                            if (!fechasAusencia.has(dia) && valor !== null) {
                                 sumaValorTotal += valor;
                             }
                         }
@@ -2980,8 +3076,7 @@
             status.textContent = `✅ Completado: ${exitosos} exitosos, ${errores} con error.`;
 
             btn.textContent = '✅ Completado';
-            showToast('Cierre completado: ' + exitosos + '/' + total + ' socios procesados', exitosos === total ? 'success' : 'error');
-
+            showToast(`Cierre completado: ${exitosos}/${total} socios procesados`, exitosos === total ? 'success' : 'error');
 
             const idActivo = document.getElementById('gestionSocioId').value;
             if (idActivo) cargarHistorialSocio(idActivo);
@@ -3080,10 +3175,6 @@
                     .promedio-title { background: #d9d9d9; padding: 2px 5px; border-bottom: 1px solid #000; font-weight: bold; font-size: 9px; }
                     .promedio-val { padding: 5px; font-size: 16px; font-weight: bold; }
                 </style></head><body>
-                    <div style="text-align:center; margin-bottom:10px;">
-                        <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#000;">MONTOS DIARIOS</div>
-                        <div style="font-size:9px; color:#555; margin-top:2px;">FONDO DE SOLIDARIDAD — CASINO DE PTO. VARAS</div>
-                    </div>
                     <div style="overflow: hidden;">
                         <div class="header-box">PERIODO ${periodoVis}</div>
                         <div class="promedio-box">
@@ -3170,23 +3261,19 @@
                     if (td.length < 4) return;
                     const fechaRow = td[0].textContent.trim();
                     const tipoRow  = td[1].textContent.trim();
-                    // Detalle: quitar info del encargado/responsable — no va en el recibo
                     const detRaw   = td[2].textContent.trim();
                     const detRow   = detRaw.replace(/\s*\(Resp:[^)]*\)/gi, '').replace(/\s*\(Enc:[^)]*\)/gi, '').trim();
-                    // Monto: usar solo el span.amount-minus, ignorar el botón ✏️
                     const spanMonto = td[3].querySelector('span.amount-minus');
-                    const montoRow  = spanMonto
-                        ? spanMonto.textContent.trim()
-                        : td[3].textContent.replace(/✏️/g, '').trim();
+                    const montoRow  = spanMonto ? spanMonto.textContent.trim() : td[3].textContent.replace(/✏️/g, '').trim();
                     const esAnticipo = tipoRow.toLowerCase().includes('anticipo');
                     const esAusencia = tipoRow.toLowerCase().includes('ausencia');
                     const color = esAusencia ? '#c0392b' : (esAnticipo ? '#2980b9' : '#555');
-
+                    
                     movHtml +=
                         '<tr>' +
                         '<td style="padding:3px 5px;border-bottom:1px solid #eee;text-align:center;color:#aaa;font-size:9px;">' + (esAnticipo ? numAnt++ : '—') + '</td>' +
                         '<td style="padding:3px 5px;border-bottom:1px solid #eee;color:' + color + ';font-weight:700;font-size:9px;">' + tipoRow + '</td>' +
-                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;font-size:9px;">' + fechaRow + (detRow && detRow !== 'Adelanto' && detRow !== '-' ? '<br><span style=\'color:#999;font-size:8px;\'>' + detRow + '</span>' : '') + '</td>' +
+                        '<td style="padding:3px 5px;border-bottom:1px solid #eee;font-size:9px;">' + fechaRow + (detRow && detRow!=='-' ? '<br><span style=\'color:#999;font-size:8px;\'>' + detRow + '</span>' : '') + '</td>' +
                         '<td style="padding:3px 5px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;font-size:9px;">' + montoRow + '</td>' +
                         '</tr>';
                 });
@@ -3439,7 +3526,7 @@
                     let fecha = item.fecha; if (!fecha) return;
                     if(fecha.includes('T')) fecha = fecha.split('T')[0];
                     
-                    if (!grupos[fecha]) grupos[fecha] = { fecha: fecha, divisor: 1.0, totalDia: 0, tipos: {} };
+                    if (!grupos[fecha]) grupos[fecha] = { fecha: fecha, divisor: null, totalDia: 0, tipos: {} };
                     
                     const monto = parseFloat(item.monto) || 0; 
                     grupos[fecha].totalDia += monto; 
@@ -3454,7 +3541,7 @@
                     if (item.divisor) {
                         let strDivisor = String(item.divisor).replace(',', '.');
                         let valDivisor = parseFloat(strDivisor);
-                        if (valDivisor > 0) grupos[fecha].divisor = Math.max(grupos[fecha].divisor, valDivisor);
+                        if (valDivisor > 1) { grupos[fecha].divisor = grupos[fecha].divisor === null ? valDivisor : Math.max(grupos[fecha].divisor, valDivisor); }
                     }
                 });
                 
@@ -3463,7 +3550,8 @@
                 let sumaPuntosGlobal = 0;
                 fechasOrdenadas.forEach(fecha => {
                     const dia = grupos[fecha];
-                    const divisor = parseFloat(dia.divisor) || 1;
+                    if (dia.divisor === null) { globalMapaPuntosDia[fecha] = null; return; }
+                    const divisor = parseFloat(dia.divisor);
                     const puntoNoche = dia.totalDia / divisor;
                     globalMapaPuntosDia[fecha] = puntoNoche;
                     sumaPuntosGlobal += puntoNoche;
@@ -3472,7 +3560,7 @@
 
                 if(silent) return;
 
-                document.getElementById('recGranTotal').innerText = formatearMoneda(granTotal);
+                (document.getElementById('recGranTotal')||{}).innerText = formatearMoneda(granTotal);
                 
                 const ultimaFechaReal = fechasOrdenadas[0];
                 
@@ -3480,9 +3568,9 @@
                     const ultDia = grupos[ultimaFechaReal]; 
                     const partes = ultimaFechaReal.split('-');
                     
-                    document.getElementById('recTotalUltimoDia').innerText = formatearMoneda(ultDia.totalDia);
-                    document.getElementById('recFechaUltimoDia').innerText = `${partes[2]}/${partes[1]}/${partes[0]}`;
-                    document.getElementById('recDivisorActual').innerText = ultDia.divisor;
+                    (document.getElementById('recTotalUltimoDia')||{}).innerText = formatearMoneda(ultDia.totalDia);
+                    (document.getElementById('recFechaUltimoDia')||{}).innerText = `${partes[2]}/${partes[1]}/${partes[0]}`;
+                    (document.getElementById('recDivisorActual')||{}).innerText = ultDia.divisor !== null ? ultDia.divisor : 'Sin divisor';
                 }
 
                 const container = document.getElementById('contenedorFechas'); container.innerHTML = '';
@@ -3511,7 +3599,7 @@
                                 return f === fecha && (r.tipo === tBuscado || r.tipo === nombreTipo); 
                             });
                             const idx = reg !== undefined ? reg.originalIndex : 'null';
-                            tiposHtml += `<div class="type-item">`
+                            tiposHtml += `<div class="type-item" data-tipo="${nombreTipo}">`
                                 + `<span class="type-name">${nombreTipo}</span>`
                                 + `<span class="type-value">${formatearMoneda(valorTipo)}</span>`
                                 + `<div style="display:flex;gap:3px;margin-left:auto;">`
@@ -3522,7 +3610,9 @@
 
                         const card = document.createElement('div');
                         card.className = 'date-card';
-                        card.setAttribute('data-search', `${fechaVisual} ${dia.totalDia} ${Object.keys(dia.tipos).join(' ')}`);
+                        card.setAttribute('data-search', `${fechaVisual} ${dia.totalDia} ${Object.keys(dia.tipos).join(' ')} ${nombreDia}`);
+                        card.setAttribute('data-tipos', Object.keys(dia.tipos).join(','));
+                        card.setAttribute('data-divisor', dia.divisor !== null ? 'si' : 'no');
                         card.innerHTML = `
                             <div class="date-header">
                                 <div>
@@ -3548,7 +3638,7 @@
                         container.appendChild(card);
                     });
                 }
-                document.getElementById('recTotalPuntos').innerText = formatearMoneda(sumaPuntosGlobal);
+                const elTP = document.getElementById('recTotalPuntos'); if(elTP) elTP.innerText = formatearMoneda(sumaPuntosGlobal);
         }
 
         function rec_postRec(data) {
@@ -4288,27 +4378,102 @@
             } catch(e) { showToast('Error al archivar', 'error'); } finally { toggleLoader(false); }
         }
 
-        function aq_openStatsModal() {
-            const container = document.getElementById('aq-stats-content');
-            if(!aq_desgloseEsperado.length) { container.innerHTML = '<p style="color:#7f8c8d;">No hay datos de desglose. Sincroniza primero.</p>'; document.getElementById('aq-modalStats').style.display='block'; return; }
-            let total = 0; aq_desgloseEsperado.forEach(i => total += i.monto);
-            const sorted = [...aq_desgloseEsperado].sort((a,b) => b.monto - a.monto);
-            const avg = total / aq_desgloseEsperado.length;
-            let h = `<div class="aq-stats-grid">
-                <div class="aq-stat-card"><h4>🏆 Top Fuente</h4><div style="font-weight:700; color:#2563eb;">${sorted[0].tipo}</div><div>${aq_fmt(sorted[0].monto/100)}</div></div>
-                <div class="aq-stat-card"><h4>📈 Promedio</h4><div style="font-weight:700;">${aq_fmt(avg/100)}</div><div>Total: ${aq_fmt(total/100)}</div></div>
-            </div><h3 style="font-size:1rem; border-bottom:1px solid #e2e8f0; padding-bottom:5px; margin-top:20px;">Distribución Porcentual</h3>`;
-            sorted.forEach(item => {
-                const p = ((item.monto/total)*100).toFixed(1);
-                h += `<div class="aq-chart-row"><div style="width:120px; font-size:0.8em; overflow:hidden">${item.tipo}</div><div class="aq-chart-bar-area"><div class="aq-chart-bar" style="width:${p}%">${p}%</div></div><div style="width:100px; text-align:right;">${aq_fmt(item.monto/100)}</div></div>`;
-            });
-            container.innerHTML = h;
-            document.getElementById('aq-modalStats').style.display = 'block';
+        function statsTab(nombre, btn) {
+            document.querySelectorAll('.stats-tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            aq_openStatsModal(nombre);
         }
 
-        // ============================================================
-        // NOTAS DE ADMINISTRACIÓN
-        // ============================================================
+        function aq_openStatsModal(tabActiva) {
+            tabActiva = tabActiva || 'tipos';
+            const container = document.getElementById('aq-stats-content');
+            if (!container) return;
+            const fmt = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
+            const grupos = {};
+            (recDatosRaw||[]).forEach(r => {
+                let f=r.fecha||''; if(f.includes('T')) f=f.split('T')[0]; if(!f) return;
+                if(!grupos[f]) grupos[f]={total:0,tipos:{},divisor:null};
+                const m=parseFloat(r.monto)||0; grupos[f].total+=m; const t=r.tipo||'Otro'; grupos[f].tipos[t]=(grupos[f].tipos[t]||0)+m;
+                if(r.divisor){const d=parseFloat(String(r.divisor).replace(',','.')); if(d>1) grupos[f].divisor=grupos[f].divisor?Math.max(grupos[f].divisor,d):d;}
+            });
+            const fechas=Object.keys(grupos).sort();
+            const totalGlobal=fechas.reduce((s,f)=>s+grupos[f].total,0);
+            const diasCount=fechas.length; const promDiario=diasCount?totalGlobal/diasCount:0;
+            const porSemana={};
+            fechas.forEach(f=>{const d=new Date(f+'T12:00:00');const wk=d.getFullYear()+'W'+String(Math.ceil((d-new Date(d.getFullYear(),0,1))/604800000)+1).padStart(2,'0');if(!porSemana[wk])porSemana[wk]={total:0,dias:0};porSemana[wk].total+=grupos[f].total;porSemana[wk].dias++;});
+            const semanas=Object.keys(porSemana).sort();
+            const tiposGlobal={};
+            fechas.forEach(f=>Object.entries(grupos[f].tipos).forEach(([t,v])=>{tiposGlobal[t]=(tiposGlobal[t]||0)+v;}));
+            const tiposOrdenados=Object.entries(tiposGlobal).sort((a,b)=>b[1]-a[1]);
+            const maxTipo=tiposOrdenados[0]?.[1]||1;
+            const COLORES={SalaDeJuegos:'#2563eb',Mesas:'#2563eb',EfectivoMDA:'#16a34a',TarjetaMDA:'#7c3aed',Boveda:'#d97706'};
+            const getColor=t=>COLORES[t]||'#64748b';
+            const ultimos14=fechas.slice(-14);
+            const maxLinea=Math.max(...ultimos14.map(f=>grupos[f].total),1);
+            const W=500,H=100,pad=10;
+            const pts=ultimos14.map((f,i)=>{const x=pad+(i/(ultimos14.length-1||1))*(W-pad*2);const y=H-pad-(grupos[f].total/maxLinea)*(H-pad*2);return{x,y,f,v:grupos[f].total};});
+            const pathD=pts.map((p,i)=>(i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');
+            const areaD=pathD+` L${pts[pts.length-1].x.toFixed(1)},${H-pad} L${pts[0].x.toFixed(1)},${H-pad} Z`;
+            const DS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+            const svgLinea='<svg viewBox="0 0 500 100" style="width:100%;height:auto;">'
+                +'<defs><linearGradient id="lg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2563eb" stop-opacity="0.3"/><stop offset="100%" stop-color="#2563eb" stop-opacity="0"/></linearGradient></defs>'
+                +'<path d="'+areaD+'" fill="url(#lg1)"/>'
+                +'<path d="'+pathD+'" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/>'
+                +pts.map(p=>'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3.5" fill="#2563eb" stroke="white" stroke-width="1.5"/>'
+                    +'<text x="'+p.x.toFixed(1)+'" y="98" text-anchor="middle" font-size="7" fill="#94a3b8">'+DS[new Date(p.f+'T12:00:00').getDay()]+'</text>').join('')
+                +'</svg>';
+            const hoy=new Date();
+            const diasMes=new Date(hoy.getFullYear(),hoy.getMonth()+1,0).getDate();
+            const diasRest=Math.max(0,diasMes-diasCount);
+            const proyMes=totalGlobal+(promDiario*diasRest);
+            const proySemana=promDiario*7;
+            const puntosTotal=globalValorPuntoTotal||0;
+            let html='';
+            if(tabActiva==='tipos'){
+                html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">'
+                    +'<div class="mini-kpi"><div class="kpi-val">'+diasCount+'</div><div class="kpi-label">Noches</div></div>'
+                    +'<div class="mini-kpi"><div class="kpi-val">'+fmt(promDiario)+'</div><div class="kpi-label">Prom. Diario</div></div>'
+                    +'<div class="mini-kpi"><div class="kpi-val">'+fmt(totalGlobal)+'</div><div class="kpi-label">Total Global</div></div>'
+                    +'</div>'
+                    +'<div style="font-weight:700;color:#1e3a5f;margin-bottom:10px;font-size:0.9em;">Distribución por tipo</div>'
+                    +tiposOrdenados.map(([t,v])=>{const p=Math.round(v/totalGlobal*100)||0;const a=Math.round(v/maxTipo*100);return'<div class="bar-chart-row"><div class="bar-label">'+t+'</div><div class="bar-track"><div class="bar-fill" style="width:'+a+'%;background:'+getColor(t)+'">'+p+'%</div></div><div class="bar-val">'+fmt(v)+'</div></div>';}).join('');
+            } else if(tabActiva==='diario'){
+                const maxDia=Math.max(...ultimos14.map(f=>grupos[f].total),1);
+                html='<div style="font-weight:700;color:#1e3a5f;margin-bottom:8px;font-size:0.9em;">Tendencia últimas 2 semanas</div>'
+                    +'<div style="margin-bottom:14px;">'+svgLinea+'</div>'
+                    +'<div style="font-weight:700;color:#1e3a5f;margin-bottom:8px;font-size:0.9em;">Detalle por día</div>'
+                    +ultimos14.slice().reverse().map(f=>{const dObj=new Date(f+'T12:00:00');const nd=DS[dObj.getDay()];const nf=dObj.getDate()+'/'+String(dObj.getMonth()+1).padStart(2,'0');const a=Math.round(grupos[f].total/maxDia*100);const es=dObj.getDay()===0||dObj.getDay()===6;return'<div class="bar-chart-row"><div class="bar-label" style="color:'+(es?'#d97706':'#555')+';">'+nd+' '+nf+'</div><div class="bar-track"><div class="bar-fill" style="width:'+a+'%;background:'+(es?'#d97706':'#2563eb')+'">'+fmt(grupos[f].total)+'</div></div><div class="bar-val" style="font-size:0.78em;">'+fmt(grupos[f].total)+'</div></div>';}).join('')
+                    +'<div style="font-weight:700;color:#1e3a5f;margin:14px 0 8px;font-size:0.9em;">Por semana</div>'
+                    +semanas.slice(-6).reverse().map((w,i)=>{const a=Math.round(porSemana[w].total/Math.max(...semanas.map(x=>porSemana[x].total),1)*100);return'<div class="bar-chart-row"><div class="bar-label">Sem. '+(semanas.length-i)+'</div><div class="bar-track"><div class="bar-fill" style="width:'+a+'%;background:#7c3aed">'+fmt(porSemana[w].total)+'</div></div><div class="bar-val" style="font-size:0.78em;">'+fmt(porSemana[w].total)+'</div></div>';}).join('');
+            } else if(tabActiva==='proyeccion'){
+                html='<div style="font-size:0.82em;color:#7f8c8d;margin-bottom:14px;">Proyecciones basadas en '+diasCount+' días. Promedio: <strong>'+fmt(promDiario)+'</strong></div>'
+                    +'<div class="proj-card" style="background:#eff6ff;border:1px solid #bfdbfe;"><div><div class="proj-label" style="color:#1e40af;">📅 Proyección Diaria</div><div style="font-size:0.78em;color:#7f8c8d;">Promedio por noche</div></div><div class="proj-val" style="color:#1e40af;">'+fmt(promDiario)+'</div></div>'
+                    +'<div class="proj-card" style="background:#f0fdf4;border:1px solid #bbf7d0;"><div><div class="proj-label" style="color:#15803d;">📆 Proyección Semanal</div><div style="font-size:0.78em;color:#7f8c8d;">7 noches al promedio</div></div><div class="proj-val" style="color:#15803d;">'+fmt(proySemana)+'</div></div>'
+                    +'<div class="proj-card" style="background:#fffbeb;border:1px solid #fde68a;"><div><div class="proj-label" style="color:#b45309;">🗓️ Proyección Mensual</div><div style="font-size:0.78em;color:#7f8c8d;">'+diasRest+' días restantes + acumulado</div></div><div class="proj-val" style="color:#b45309;">'+fmt(proyMes)+'</div></div>'
+                    +'<div style="margin-top:12px;background:#f8f9fa;border-radius:10px;padding:12px;"><div style="font-weight:700;color:#1e3a5f;margin-bottom:8px;font-size:0.88em;">📈 Curva de acumulado</div>'
+                    +'<svg viewBox="0 0 500 90" style="width:100%;height:auto;"><defs><linearGradient id="lg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#16a34a" stop-opacity="0.25"/><stop offset="100%" stop-color="#16a34a" stop-opacity="0"/></linearGradient></defs>'
+                    +(()=>{const acum=[];let suma=0;fechas.forEach((f,i)=>{suma+=grupos[f].total;acum.push({i,v:suma});});const mA=suma||1;const pA=acum.map(p=>{const x=10+(p.i/(acum.length-1||1))*480;const y=78-(p.v/mA)*68;return{x,y,v:p.v};});const dA=pA.map((p,i)=>(i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');const aA=dA+' L'+pA[pA.length-1].x.toFixed(1)+',78 L10,78 Z';return'<path d="'+aA+'" fill="url(#lg2)"/><path d="'+dA+'" fill="none" stroke="#16a34a" stroke-width="2" stroke-linejoin="round"/><text x="10" y="88" font-size="8" fill="#94a3b8">Inicio</text><text x="490" y="88" text-anchor="end" font-size="8" fill="#94a3b8">'+fmt(suma)+'</text>';})()
+                    +'</svg></div>';
+            } else if(tabActiva==='puntos'){
+                const dCP=Object.entries(globalMapaPuntosDia||{}).filter(([,v])=>v!==null).sort((a,b)=>a[0].localeCompare(b[0]));
+                const maxP=Math.max(...dCP.map(([,v])=>v),1);
+                const promP=dCP.length?dCP.reduce((s,[,v])=>s+v,0)/dCP.length:0;
+                html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">'
+                    +'<div class="mini-kpi"><div class="kpi-val">'+fmt(puntosTotal)+'</div><div class="kpi-label">Total Puntos Noche</div></div>'
+                    +'<div class="mini-kpi"><div class="kpi-val">'+fmt(promP)+'</div><div class="kpi-label">Prom. Pto/Noche</div></div>'
+                    +'<div class="mini-kpi"><div class="kpi-val">'+dCP.length+'</div><div class="kpi-label">Noches con divisor</div></div>'
+                    +'</div>'
+                    +'<div style="font-weight:700;color:#1e3a5f;margin-bottom:8px;font-size:0.9em;">Valor punto por noche</div>'
+                    +'<svg viewBox="0 0 500 100" style="width:100%;height:auto;margin-bottom:14px;"><defs><linearGradient id="lg3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7c3aed" stop-opacity="0.25"/><stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/></linearGradient></defs>'
+                    +(()=>{if(!dCP.length)return'<text x="250" y="50" text-anchor="middle" fill="#94a3b8" font-size="11">Sin datos con divisor aún</text>';const last=dCP.slice(-14);const mV=Math.max(...last.map(([,v])=>v),1);const p2=last.map(([,v],i)=>{const x=10+(i/(last.length-1||1))*480;const y=85-(v/mV)*75;return{x,y,v};});const d2=p2.map((p,i)=>(i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');const a2=d2+' L'+p2[p2.length-1].x.toFixed(1)+',85 L10,85 Z';return'<path d="'+a2+'" fill="url(#lg3)"/><path d="'+d2+'" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linejoin="round"/>'+p2.map(p=>'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3" fill="#7c3aed" stroke="white" stroke-width="1.5"/>').join('')+'<text x="10" y="97" font-size="7" fill="#94a3b8">'+dCP[Math.max(0,dCP.length-14)][0]+'</text><text x="490" y="97" text-anchor="end" font-size="7" fill="#94a3b8">'+dCP[dCP.length-1][0]+'</text>';})()
+                    +'</svg>'
+                    +'<div class="proj-card" style="background:#fdf4ff;border:1px solid #e9d5ff;"><div><div class="proj-label" style="color:#7c3aed;">⭐ Total Puntos Noche</div><div style="font-size:0.78em;color:#7f8c8d;">Suma de puntos noche con divisor</div></div><div class="proj-val" style="color:#7c3aed;">'+fmt(puntosTotal)+'</div></div>'
+                    +'<div class="proj-card" style="background:#f0fdf4;border:1px solid #bbf7d0;"><div><div class="proj-label" style="color:#15803d;">🔮 Proyección al cierre</div><div style="font-size:0.78em;color:#7f8c8d;">Promedio punto × '+diasMes+' días del mes</div></div><div class="proj-val" style="color:#15803d;">'+fmt(promP*diasMes)+'</div></div>';
+            }
+            container.innerHTML=html;
+            document.getElementById('aq-modalStats').style.display='block';
+        }
+
 
         function notasFormatearMensaje(texto) {
             if (!texto) return '';
@@ -4672,8 +4837,459 @@
             else       { m.style.display = 'none'; }
         }
 
+
+        // ════════════════════════════════════════════════════════════
+        // CENTRO DE AYUDA COMPLETA
+        // ════════════════════════════════════════════════════════════
+        const BASE_CONOCIMIENTO = [
+
+            // ═══════════════════════════════════════════════════════
+            // SOCIOS
+            // ═══════════════════════════════════════════════════════
+            { id:'s1', cat:'socios', titulo:'¿Qué es la sección Gestión de Socios?', tags:['socios','gestión','tarjetas','áreas','dashboard'],
+              resp:'Es el <strong>panel central</strong> del sistema. Aquí ves todos los socios del Fondo Solidario organizados por área, con sus puntos, contrato y estado.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">📊 Así se ve el dashboard de socios</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+                  <div style="background:white;border-radius:8px;padding:8px 12px;border-bottom:3px solid #3498db;text-align:center;flex:1;min-width:70px;">
+                    <div style="font-weight:900;font-size:1.1em;">42</div><div style="font-size:0.65em;color:#7f8c8d;">TOTAL SOCIOS</div>
+                  </div>
+                  <div style="background:white;border-radius:8px;padding:8px 12px;border-bottom:3px solid #27ae60;text-align:center;flex:1;min-width:70px;">
+                    <div style="font-weight:900;font-size:1.1em;">384</div><div style="font-size:0.65em;color:#7f8c8d;">TOTAL PUNTOS</div>
+                  </div>
+                  <div style="background:white;border-radius:8px;padding:8px 12px;border-bottom:3px solid #f39c12;text-align:center;flex:1;min-width:70px;">
+                    <div style="font-weight:900;font-size:1.1em;">28</div><div style="font-size:0.65em;color:#7f8c8d;">S. PLANTA</div>
+                  </div>
+                  <div style="background:white;border-radius:8px;padding:8px 12px;border-bottom:3px solid #9b59b6;text-align:center;flex:1;min-width:70px;">
+                    <div style="font-weight:900;font-size:1.1em;">14</div><div style="font-size:0.65em;color:#7f8c8d;">S. PART-TIME</div>
+                  </div>
+                </div>
+                <div style="background:white;border-radius:8px;padding:8px 12px;border:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span>▶</span>
+                    <strong style="font-size:0.9em;">Mesas Planta</strong>
+                  </div>
+                  <div style="display:flex;gap:6px;">
+                    <span class="ayuda-badge" style="background:#eee;color:#555;">18 Soc.</span>
+                    <span class="ayuda-badge" style="background:#dbeafe;color:#2563eb;">Pts: 180</span>
+                  </div>
+                </div>
+              </div>`,
+              pasos:['Los 6 números del dashboard (Total Socios, Total Puntos, Pts Planta, S. Planta, S. Part-Time, Escalamientos) se actualizan solos al cargar','Presiona el nombre de cada área para desplegar las tarjetas de sus socios','Cada tarjeta muestra nombre, contrato, puntos actuales y botones de acción','El botón 🏆 Escalamientos te avisa quién sube puntos este mes o el próximo'],
+              nota:'Los socios con fecha de inicio de puntos en el futuro aparecen en la lista pero NO suman al total de puntos.' },
+
+            { id:'s2', cat:'socios', titulo:'¿Cómo funciona el escalamiento de puntos?', tags:['escalamiento','puntos','años','tope','antigüedad'],
+              resp:'Cada año de antigüedad en el casino suma <strong>+2 puntos</strong> al socio, comenzando desde 4 puntos base. Cada área tiene un tope que no se puede superar.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">⭐ Topes por área</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                  <div class="ayuda-mini-card"><strong>🎰 Mesas</strong><div style="color:#2563eb;font-weight:900;">Máx 20 pts</div></div>
+                  <div class="ayuda-mini-card"><strong>🎮 Máquinas</strong><div style="color:#7c3aed;font-weight:900;">Máx 12 pts</div></div>
+                  <div class="ayuda-mini-card"><strong>🔧 Técnicos</strong><div style="color:#7f8c8d;font-weight:900;">Máx 12 pts</div></div>
+                  <div class="ayuda-mini-card"><strong>🏦 Bóveda</strong><div style="color:#27ae60;font-weight:900;">Máx 10 pts</div></div>
+                  <div class="ayuda-mini-card"><strong>💱 Cambistas</strong><div style="color:#9b59b6;font-weight:900;">Máx 8 pts</div></div>
+                  <div class="ayuda-mini-card"><strong>📋 G. Comisión</strong><div style="color:#607d8b;font-weight:900;">Máx 1 pt</div></div>
+                </div>
+                <div class="ayuda-formula" style="margin-top:8px;">Puntos = 4 + (años × 2) → hasta el tope del área</div>
+              </div>`,
+              pasos:['El sistema calcula los puntos automáticamente según la fecha de ingreso','Cuando un socio cumple años en el trabajo, aparece en el panel 🏆 Escalamientos','Si ya llegó al tope de su área, el recibo muestra "TOPE MÁXIMO"','La fecha de inicio de puntos puede ser diferente a la de ingreso (ej: si tuvo un período sin puntos)'],
+              nota:'El 🏆 en el dashboard muestra quiénes escalan este mes, el mes pasado y el próximo.' },
+
+            { id:'s3', cat:'socios', titulo:'¿Cómo agrego o edito un socio?', tags:['agregar','nuevo','socio','registrar','editar'],
+              resp:'Usa el botón <strong>➕ azul</strong> en la esquina inferior derecha para agregar. Para editar, abre la tarjeta del socio y usa el botón ✏️.',
+              pasos:['Presiona el botón ➕ flotante azul en Gestión de Socios','Completa: nombre, apellido, área, tipo de contrato, fecha de ingreso','Si la fecha de inicio de puntos es diferente a la de ingreso, indícala también','Presiona Guardar — el socio aparece en su área automáticamente'],
+              nota:'Los campos de fecha son importantes: determinan cuántos puntos tiene el socio y cuándo le toca subir.' },
+
+            // ═══════════════════════════════════════════════════════
+            // ANTICIPOS
+            // ═══════════════════════════════════════════════════════
+            { id:'a1', cat:'anticipos', titulo:'¿Cómo registro un anticipo de propina?', tags:['anticipo','registrar','adelanto','propina','monto'],
+              resp:'Un anticipo es un <strong>adelanto de propina</strong> que el socio pide durante el mes. Se descuenta automáticamente de su pago al hacer el cierre.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">💰 Formulario de anticipo</div>
+                <div class="ayuda-mini-card">
+                  <div style="font-size:0.8em;color:#7f8c8d;margin-bottom:4px;">Socio seleccionado:</div>
+                  <div style="font-weight:700;margin-bottom:10px;">Juan Pérez — Mesas Planta</div>
+                  <div style="display:grid;gap:6px;">
+                    <div><div style="font-size:0.7em;color:#7f8c8d;text-transform:uppercase;font-weight:700;">Monto ($)</div>
+                      <div style="border:1px solid #ddd;border-radius:6px;padding:6px 10px;margin-top:2px;font-weight:800;">50.000</div></div>
+                    <div><div style="font-size:0.7em;color:#7f8c8d;text-transform:uppercase;font-weight:700;">Fecha</div>
+                      <div style="border:1px solid #ddd;border-radius:6px;padding:6px 10px;margin-top:2px;">19/03/2026</div></div>
+                    <div><div style="font-size:0.7em;color:#7f8c8d;text-transform:uppercase;font-weight:700;">Responsable</div>
+                      <div style="border:1px solid #ddd;border-radius:6px;padding:6px 10px;margin-top:2px;">N.M (S.J)</div></div>
+                    <span class="ayuda-mini-btn" style="background:#3498db;color:white;width:100%;text-align:center;">Registrar Anticipo</span>
+                  </div>
+                </div>
+              </div>`,
+              pasos:['Ve a la pestaña <strong>"Anticipos y Ausencias"</strong>','En el panel izquierdo, escribe el nombre del socio y haz clic en él','Completa el monto (sin puntos ni comas, el sistema los formatea solo)','Selecciona la fecha y el responsable del movimiento','Presiona "Registrar Anticipo" — aparece confirmación verde'],
+              nota:'El monto queda en el historial del socio y se descuenta de su Saldo Real automáticamente.' },
+
+            { id:'a2', cat:'anticipos', titulo:'¿Cómo registro una ausencia?', tags:['ausencia','falta','descuento','planta','inasistencia'],
+              resp:'Las ausencias aplican <strong>solo a socios Planta</strong>. Cada ausencia descuenta el valor del punto de esa noche específica del cálculo del socio.',
+              pasos:['Selecciona un socio con contrato Planta (aparece la sección "Reportar Ausencia")','Selecciona el motivo: Enfermedad, Permiso, Falta injustificada u Otro','Indica la fecha de la ausencia','Presiona "Reportar Ausencia"'],
+              nota:'Los socios Part-Time NO tienen ausencias — su cálculo se basa en los días marcados en el calendario.' },
+
+            { id:'a3', cat:'anticipos', titulo:'¿Cómo elimino un anticipo por error?', tags:['eliminar','borrar','anticipo','error','corregir'],
+              resp:'En la tabla de historial del socio, <strong>mantén presionado</strong> el registro que quieres eliminar durante 1 segundo.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">🗑️ Eliminar un anticipo</div>
+                <div class="ayuda-mini-card">
+                  <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;font-size:0.82em;">
+                    <div>19/03</div><div style="color:#2980b9;font-weight:700;">Anticipo</div><div>Adelanto</div>
+                    <div style="color:#e74c3c;font-weight:700;">-$50.000</div>
+                  </div>
+                  <div style="margin-top:8px;padding:6px;background:#fff3cd;border-radius:6px;font-size:0.75em;text-align:center;">
+                    👆 Mantén presionado 1 seg → aparece confirmación
+                  </div>
+                </div>
+              </div>`,
+              pasos:['Selecciona el socio','En la tabla inferior, localiza el anticipo a eliminar','Mantén presionado por 1 segundo','Confirma la eliminación en el diálogo'],
+              nota:'⚠️ Esta acción no se puede deshacer. Asegúrate antes de confirmar.' },
+
+            { id:'a4', cat:'anticipos', titulo:'¿Qué es el Detalle de Anticipos (informe)?', tags:['detalle','informe','anticipos','reporte','imprimir','lista'],
+              resp:'El botón <strong>📋 Detalle Anticipos</strong> genera un informe A4 completo con todos los anticipos del período, listo para imprimir o guardar como PDF.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">📋 Vista del informe generado</div>
+                <div class="ayuda-mini-card" style="font-size:0.8em;">
+                  <div style="background:#c0392b;color:white;padding:4px 8px;border-radius:4px;font-weight:700;display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span>TOTAL EGRESOS</span><span>$ 1.529.000</span>
+                  </div>
+                  <div style="font-size:0.75em;text-align:center;color:#555;margin-bottom:6px;">PERÍODO 15/MAR/2026 AL 14/ABR/2026</div>
+                  <div style="display:grid;grid-template-columns:20px 1fr 30px 30px 60px 70px;gap:4px;font-size:0.7em;background:#2c3e50;color:white;padding:3px 4px;border-radius:3px;">
+                    <div>N°</div><div>NOMBRE</div><div>ÁREA</div><div>RESP</div><div>FECHA</div><div style="text-align:right;">VALOR</div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:20px 1fr 30px 30px 60px 70px;gap:4px;font-size:0.7em;padding:3px 4px;">
+                    <div>1</div><div>JOSE OYARZO</div><div>SJ</div><div>P.M</div><div>17/MAR</div><div style="text-align:right;">$5.000</div>
+                  </div>
+                </div>
+              </div>`,
+              pasos:['Presiona el botón "📋 Detalle Anticipos" en el banner morado de Anticipos y Ausencias','El sistema consulta automáticamente todos los socios (puede tardar unos segundos)','Se abre el informe en pantalla — presiona Imprimir en tu dispositivo','Para guardar como PDF: en el diálogo de impresión elige "Guardar como PDF"'],
+              nota:'El nombre del archivo incluye el mes y año automáticamente para no confundirlo con otros.' },
+
+            // ═══════════════════════════════════════════════════════
+            // PUNTOS Y CÁLCULOS
+            // ═══════════════════════════════════════════════════════
+            { id:'p1', cat:'puntos', titulo:'¿Qué es el Cierre de Punto y cómo se calcula?', tags:['cierre','punto','cálculo','propina','valor','formula'],
+              resp:'El Cierre de Punto es el <strong>total en dinero que le corresponde a cada socio</strong> según sus puntos. Depende de lo recaudado cada noche.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">📐 Fórmula paso a paso</div>
+                <div class="ayuda-formula">1. Punto Noche = Total Noche ÷ Divisor</div>
+                <div class="ayuda-formula">2. Suma Puntos Noche = Σ de todos los Puntos Noche del mes</div>
+                <div class="ayuda-formula">3. Cierre de Punto = Suma Puntos Noche × Puntos del Socio</div>
+                <div class="ayuda-mini-card" style="margin-top:6px;">
+                  <div style="font-size:0.8em;color:#555;">Ejemplo: Suma Puntos Noche = $16.591 · Socio con 8 puntos</div>
+                  <div style="font-weight:900;color:#27ae60;font-size:1.1em;margin-top:4px;">Cierre de Punto = $132.728</div>
+                </div>
+              </div>`,
+              pasos:['La Suma de Puntos Noche se ve en la sección "Montos Recaudados" → tarjeta "Total Puntos"','Si un día NO tiene divisor, no suma (evita inflación)','El Cierre de Punto aparece en el recibo impreso de cada socio'],
+              nota:'El divisor de cada noche lo define la comisión directiva. Es crucial ingresarlo correctamente.' },
+
+            { id:'p2', cat:'puntos', titulo:'¿Cómo se calcula el pago final de un socio?', tags:['saldo','cálculo','real','anticipo','remanente','pagar','cobrar'],
+              resp:'El sistema calcula automáticamente todo cuando seleccionas un socio:',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">💵 Panel de saldos del socio</div>
+                <div class="ayuda-mini-card">
+                  <div class="ayuda-mini-row"><span>Saldo Anterior</span><span>$643</span></div>
+                  <div class="ayuda-mini-row"><span>Alcance Teórico (Cierre de Punto)</span><span>$132.728</span></div>
+                  <div class="ayuda-mini-row"><span>Total Anticipos</span><span style="color:#e74c3c;">-$33.500</span></div>
+                  <div class="ayuda-mini-row" style="font-weight:700;"><span>Saldo Real</span><span>$99.871</span></div>
+                  <div style="margin-top:8px;padding:8px;background:#e8f8ee;border-radius:6px;text-align:center;">
+                    <div style="font-size:0.7em;color:#555;">TOTAL A COBRAR</div>
+                    <div style="font-size:1.4em;font-weight:900;color:#27ae60;">$ 99.000</div>
+                    <div style="font-size:0.75em;color:#9b59b6;">Remanente: $871 → pasa al próximo mes</div>
+                  </div>
+                </div>
+              </div>`,
+              pasos:['<strong>Saldo Real</strong> = Cierre de Punto + Saldo Anterior − Total Anticipos','<strong>A Pagar</strong> = Saldo Real redondeado hacia abajo al múltiplo de $1.000 más cercano','<strong>Remanente</strong> = Saldo Real − A Pagar → este monto queda como Saldo Anterior del próximo mes','El botón "Cerrar Mes" guarda el Remanente oficialmente'],
+              nota:'Siempre haz clic en "Cerrar Mes" al terminar el período para que el remanente pase correctamente al siguiente.' },
+
+            // ═══════════════════════════════════════════════════════
+            // RECAUDACIÓN
+            // ═══════════════════════════════════════════════════════
+            { id:'r1', cat:'recaudacion', titulo:'¿Cómo ingreso la recaudación de una noche?', tags:['recaudación','ingresar','noche','monto','nueva'],
+              resp:'Usa el botón <strong>➕ Nueva Recaudación</strong> que está en la parte superior de la sección Montos Recaudados.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">➕ Formulario Nueva Recaudación</div>
+                <div class="ayuda-mini-card" style="font-size:0.82em;">
+                  <div style="margin-bottom:6px;"><div style="color:#7f8c8d;font-size:0.75em;text-transform:uppercase;">Área / Tipo</div>
+                    <div style="border:1px solid #ddd;border-radius:5px;padding:5px 8px;margin-top:2px;">🎰 Sala de Juegos (Mesas)</div></div>
+                  <div style="margin-bottom:6px;"><div style="color:#7f8c8d;font-size:0.75em;text-transform:uppercase;">Fecha de la Noche</div>
+                    <div style="border:1px solid #ddd;border-radius:5px;padding:5px 8px;margin-top:2px;">29/03/2026</div></div>
+                  <div style="margin-bottom:6px;"><div style="color:#7f8c8d;font-size:0.75em;text-transform:uppercase;">Monto Recaudado ($)</div>
+                    <div style="border:2px solid #3498db;border-radius:5px;padding:5px 8px;margin-top:2px;font-weight:800;">837.000</div></div>
+                  <div><div style="color:#7f8c8d;font-size:0.75em;text-transform:uppercase;">Divisor <span style="font-style:italic;">(opcional)</span></div>
+                    <div style="border:1px solid #ddd;border-radius:5px;padding:5px 8px;margin-top:2px;color:#aaa;">Ej: 800 — dejar vacío si no se sabe</div></div>
+                </div>
+              </div>`,
+              pasos:['Presiona "➕ Nueva Recaudación" en la barra superior','Selecciona el tipo: Sala de Juegos, Efectivo MDA, Tarjeta MDA o Bóveda','Ingresa la fecha de la noche y el monto','El divisor es opcional — si no lo sabes, déjalo vacío y lo ingresas después desde la tarjeta del día','Presiona Guardar'],
+              nota:'Puedes ingresar varios tipos para el mismo día (ej: Mesas + Efectivo MDA + Bóveda). Cada uno va por separado.' },
+
+            { id:'r2', cat:'recaudacion', titulo:'¿Qué es el divisor y por qué es crítico?', tags:['divisor','punto noche','cálculo','inflación','sin divisor'],
+              resp:'El divisor define cuánto vale un punto esa noche. <strong>Sin divisor correcto, los cálculos se inflan</strong> y los socios recibirían montos incorrectos.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">⚠️ Comparación con y sin divisor</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                  <div class="ayuda-mini-card">
+                    <div style="color:#27ae60;font-weight:700;font-size:0.8em;">✅ CON divisor 800</div>
+                    <div class="ayuda-formula" style="margin:4px 0;">$837.000 ÷ 800</div>
+                    <div style="font-weight:900;color:#27ae60;">= $1.046 / pto</div>
+                  </div>
+                  <div class="ayuda-mini-card">
+                    <div style="color:#e74c3c;font-weight:700;font-size:0.8em;">❌ SIN divisor (usa 1)</div>
+                    <div class="ayuda-formula" style="margin:4px 0;">$837.000 ÷ 1</div>
+                    <div style="font-weight:900;color:#e74c3c;">= $837.000 / pto 💥</div>
+                  </div>
+                </div>
+                <div style="margin-top:6px;padding:6px;background:#fee2e2;border-radius:6px;font-size:0.78em;text-align:center;color:#c0392b;">
+                  ⚠️ Los días sin divisor muestran badge rojo y NO suman al total
+                </div>
+              </div>`,
+              pasos:['Si no ingresas divisor al crear, la tarjeta muestra ⚠️ badge rojo','Ese día no suma al Cierre de Punto (protección contra inflación)','Cuando conozcas el divisor, ingrésalo en el campo de la tarjeta del día','El sistema recalcula automáticamente al guardar'],
+              nota:'El divisor lo define la comisión directiva según el criterio de cada mes. Consúltalo siempre antes de cerrar.' },
+
+            { id:'r3', cat:'recaudacion', titulo:'¿Cómo uso los filtros de Montos Recaudados?', tags:['filtro','buscar','tipo','divisor','recaudación'],
+              resp:'Los filtros te permiten encontrar días específicos o ver solo un tipo de recaudación.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">🔍 Panel de filtros</div>
+                <div class="ayuda-mini-card" style="font-size:0.8em;">
+                  <div style="border:1px solid #3498db;border-radius:6px;padding:5px 8px;margin-bottom:6px;color:#aaa;">🔍 Buscar: "Lunes" o "15/03"...</div>
+                  <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                    <span style="padding:3px 8px;border-radius:12px;background:#3498db;color:white;font-size:0.75em;font-weight:700;">Todos</span>
+                    <span style="padding:3px 8px;border-radius:12px;border:1px solid #ddd;font-size:0.75em;">🎰 Sala de Juegos</span>
+                    <span style="padding:3px 8px;border-radius:12px;border:1px solid #ddd;font-size:0.75em;">💵 Efectivo MDA</span>
+                    <span style="padding:3px 8px;border-radius:12px;border:1px solid #e74c3c;color:#e74c3c;font-size:0.75em;">⚠️ Sin divisor</span>
+                    <span style="padding:3px 8px;border-radius:12px;border:1px solid #27ae60;color:#27ae60;font-size:0.75em;">✅ Con divisor</span>
+                  </div>
+                </div>
+              </div>`,
+              pasos:['<strong>Busca por texto:</strong> escribe "Viernes", "15/03" o un monto para filtrar tarjetas','<strong>Filtro por tipo:</strong> toca un chip (Sala de Juegos, MDA, Bóveda) para ver solo ese tipo dentro de cada tarjeta','<strong>⚠️ Sin divisor:</strong> muestra solo los días que aún necesitan divisor — ideal para revisión','<strong>✅ Con divisor:</strong> muestra solo los días ya completos','Puedes combinar búsqueda de texto + tipo al mismo tiempo','Presiona "✕ Limpiar" para restablecer todos los filtros'],
+              nota:'Cuando hay un filtro activo, un contador muestra cuántos días son visibles vs el total.' },
+
+            // ═══════════════════════════════════════════════════════
+            // ARQUEO
+            // ═══════════════════════════════════════════════════════
+            { id:'aq1', cat:'arqueo', titulo:'¿Qué es el Arqueo de Caja y cómo se hace?', tags:['arqueo','caja','conteo','efectivo','cuadrar','diferencia'],
+              resp:'El Arqueo es el <strong>conteo físico del efectivo</strong> en caja para verificar que el dinero real coincida con lo que el sistema espera.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">💰 Resultado del arqueo</div>
+                <div class="ayuda-mini-card">
+                  <div class="ayuda-mini-row"><span>Total Caja (contado)</span><span style="font-weight:700;">$1.250.000</span></div>
+                  <div class="ayuda-mini-row"><span>Total Esperado</span><span style="font-weight:700;">$1.250.000</span></div>
+                  <div class="ayuda-mini-row" style="font-weight:700;"><span>Diferencia</span><span>$0</span></div>
+                  <div style="margin-top:8px;padding:6px 10px;background:#d1fae5;border:1px solid #34d399;border-radius:6px;text-align:center;font-weight:700;color:#065f46;">
+                    ✅ CUADRADO
+                  </div>
+                </div>
+              </div>`,
+              pasos:['Presiona "💵 Conteo" en la barra del arqueo','Ingresa cuántos billetes/monedas hay de cada denominación ($20.000, $10.000, etc.)','El total se calcula automáticamente','Presiona "✅ Realizar Arqueo" para ver si cuadra','Si hay diferencia: revisa retiros y anticipos ingresados antes de cerrar'],
+              nota:'Verde = cuadrado. Amarillo = sobrante. Rojo = faltante. Guarda con ☁️ Guardar para no perder el progreso.' },
+
+            { id:'aq2', cat:'arqueo', titulo:'¿Cómo funciona el Canje a Bóveda?', tags:['canje','bóveda','cambio','billetes','comprobante'],
+              resp:'El <strong>💱 Canje</strong> se usa cuando necesitas cambiar billetes de una denominación a otra, solicitándolo a Bóveda. Genera un comprobante oficial.',
+              pasos:['Presiona "💱 Canje" en la barra del arqueo','Ingresa cuántos billetes de cada denominación necesitas (sin 0 al inicio — deja el campo vacío si no aplica)','El total se calcula automáticamente','Presiona "Imprimir Canje" — elige 1 copia o 2 (con corte)','El comprobante tiene firmas: Solicitante y Bóveda'],
+              nota:'El canje NO afecta los cálculos del arqueo ni la caja. Es solo informativo para Bóveda.' },
+
+            // ═══════════════════════════════════════════════════════
+            // IMPRESIÓN
+            // ═══════════════════════════════════════════════════════
+            { id:'i1', cat:'impresion', titulo:'¿Cómo imprimo el recibo de un socio?', tags:['imprimir','recibo','socio','térmica','comprobante','papel'],
+              resp:'Con el socio seleccionado en Anticipos y Ausencias, presiona el botón <strong>🖨️ Imprimir Recibo</strong>. Genera un recibo para impresora térmica de 80mm.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">🖨️ Contenido del recibo</div>
+                <div class="ayuda-mini-card" style="font-size:0.78em;font-family:monospace;">
+                  <div style="text-align:center;border:1px solid #000;padding:4px;margin-bottom:4px;">
+                    <div style="font-weight:700;">FONDO DE SOLIDARIDAD</div>
+                    <div>CASINO DE PTO. VARAS</div>
+                    <div style="font-size:0.8em;">LEY 17312 DEL 29/07/70</div>
+                  </div>
+                  <div style="font-weight:700;text-align:center;border-bottom:1px solid #000;padding-bottom:2px;margin-bottom:4px;">DATOS</div>
+                  <div>NOMBRE: Juan Pérez</div>
+                  <div>ÁREA: Mesas · PLANTA</div>
+                  <div>PUNTOS: 8 · SUBE: 15 DE MAR</div>
+                  <div style="font-weight:700;text-align:center;border-bottom:1px solid #000;padding:2px 0;margin:4px 0;">CIERRE PUNTO</div>
+                  <div>VALOR PUNTO: $16.591</div>
+                  <div style="font-weight:700;text-align:center;font-size:1.1em;border:2px solid #000;padding:4px;margin-top:4px;">TOTAL A COBRAR<br/>$ 99.000</div>
+                </div>
+              </div>`,
+              pasos:['Ve a "Anticipos y Ausencias" y selecciona el socio','Espera que carguen todos sus datos (saldos, historial)','Presiona "🖨️ Imprimir Recibo"','Elige: <strong>OK</strong> → una copia | <strong>Cancelar</strong> → dos copias con línea de corte','Si eliges una copia, indica si es para Admin o para el Socio','Se abre el diálogo de impresión de tu dispositivo'],
+              nota:'Impresora recomendada: térmica de 80mm (tickets). También puedes "Guardar como PDF" desde el diálogo de impresión.' },
+
+            // ═══════════════════════════════════════════════════════
+            // CONFIGURACIÓN — SECCIÓN COMPLETA Y DETALLADA
+            // ═══════════════════════════════════════════════════════
+            { id:'c1', cat:'config', titulo:'¿Para qué sirve la sección Configuración?', tags:['configuración','config','ajustes','opciones'],
+              resp:'La sección <strong>⚙️ Configuración</strong> es el panel de administración del sistema. Desde aquí controlas la seguridad, los responsables autorizados y las URLs de conexión.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">⚙️ Lo que puedes configurar</div>
+                <div style="display:grid;gap:5px;">
+                  <div class="ayuda-mini-card" style="display:flex;align-items:center;gap:8px;"><span style="font-size:1.2em;">🔐</span><div><strong style="font-size:0.85em;">Seguridad</strong><div style="font-size:0.75em;color:#7f8c8d;">PIN de acceso y clave de recuperación</div></div></div>
+                  <div class="ayuda-mini-card" style="display:flex;align-items:center;gap:8px;"><span style="font-size:1.2em;">👤</span><div><strong style="font-size:0.85em;">Responsables</strong><div style="font-size:0.75em;color:#7f8c8d;">Encargados autorizados para registrar anticipos</div></div></div>
+                  <div class="ayuda-mini-card" style="display:flex;align-items:center;gap:8px;"><span style="font-size:1.2em;">🌐</span><div><strong style="font-size:0.85em;">URLs de conexión</strong><div style="font-size:0.75em;color:#7f8c8d;">Scripts de Google que alimentan el sistema</div></div></div>
+                </div>
+              </div>`,
+              pasos:['Presiona la pestaña "⚙️ Configuración" en la barra superior','Encuentra las tres secciones: Seguridad, Responsables y Conexión','Cada sección tiene sus propios botones de acción'],
+              nota:'Solo el administrador debe acceder a esta sección. Guarda siempre los cambios.' },
+
+            { id:'c2', cat:'config', titulo:'¿Cómo cambio el PIN y qué es la clave de recuperación?', tags:['PIN','contraseña','clave','cambiar','acceso','seguridad','recuperar','olvidé'],
+              resp:'El <strong>PIN</strong> es tu contraseña de acceso al sistema. La <strong>Clave de Recuperación</strong> es un código alternativo para entrar si olvidas el PIN.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">🔐 Sección de seguridad</div>
+                <div class="ayuda-mini-card" style="font-size:0.82em;">
+                  <div style="font-weight:700;margin-bottom:6px;">Cambiar PIN</div>
+                  <div style="border:1px solid #ddd;border-radius:5px;padding:5px 8px;margin-bottom:4px;color:#aaa;letter-spacing:6px;">● ● ● ●</div>
+                  <div style="border:1px solid #ddd;border-radius:5px;padding:5px 8px;margin-bottom:4px;color:#aaa;letter-spacing:6px;">● ● ● ●</div>
+                  <div style="border:1px solid #ddd;border-radius:5px;padding:5px 8px;margin-bottom:8px;color:#aaa;letter-spacing:6px;">● ● ● ●</div>
+                  <span class="ayuda-mini-btn" style="background:#3498db;color:white;">Actualizar PIN</span>
+                </div>
+              </div>`,
+              pasos:['En Configuración, localiza la sección "Seguridad" o "PIN"','Ingresa tu PIN actual (para verificar que eres tú)','Escribe el nuevo PIN (mínimo 4 dígitos)','Confírmalo escribiéndolo de nuevo','Presiona "Actualizar PIN"'],
+              nota:'⚠️ <strong>MUY IMPORTANTE:</strong> La Clave de Recuperación te permite entrar si olvidas el PIN. Guárdala en un papel o lugar seguro, separado del dispositivo. Sin ella, no podrás acceder si olvidas el PIN.' },
+
+            { id:'c3', cat:'config', titulo:'¿Cómo gestiono los responsables de anticipos?', tags:['responsable','encargado','iniciales','área','autorizar','agregar','eliminar'],
+              resp:'Los <strong>Responsables</strong> son las personas autorizadas para registrar anticipos. Se identifican con sus iniciales y área (ej: N.M · S.J). Esta lista aparece como selector al registrar cada anticipo.',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">👤 Lista de responsables</div>
+                <div class="ayuda-mini-card" style="font-size:0.82em;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #eee;">
+                    <span style="font-weight:700;">N.M</span><span style="color:#7f8c8d;">S.J</span>
+                    <span class="ayuda-mini-btn" style="background:#fee2e2;color:#e74c3c;border:1px solid #fca5a5;padding:2px 6px;font-size:0.75em;">✕</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #eee;">
+                    <span style="font-weight:700;">P.M</span><span style="color:#7f8c8d;">S.J</span>
+                    <span class="ayuda-mini-btn" style="background:#fee2e2;color:#e74c3c;border:1px solid #fca5a5;padding:2px 6px;font-size:0.75em;">✕</span>
+                  </div>
+                  <div style="display:flex;gap:6px;margin-top:8px;">
+                    <div style="flex:1;border:1px solid #ddd;border-radius:5px;padding:4px 8px;color:#aaa;font-size:0.85em;">Iniciales</div>
+                    <div style="flex:1;border:1px solid #ddd;border-radius:5px;padding:4px 8px;color:#aaa;font-size:0.85em;">Área</div>
+                    <span class="ayuda-mini-btn" style="background:#27ae60;color:white;font-size:0.8em;">+ Agregar</span>
+                  </div>
+                </div>
+              </div>`,
+              pasos:['En Configuración, localiza "Responsables" o presiona el ⚙️ junto al selector de Responsable al registrar un anticipo','Para <strong>agregar</strong>: escribe las iniciales (ej: C.P) y el área (ej: S.J) y presiona "+ Agregar"','Para <strong>eliminar</strong>: presiona la ✕ del responsable que ya no está activo','Los cambios se guardan en este dispositivo y persisten entre sesiones','Si cambias de dispositivo, deberás configurarlos nuevamente'],
+              nota:'Las iniciales son solo informativas — aparecen en los informes de anticipos como referencia del encargado que autorizó cada movimiento.' },
+
+            { id:'c4', cat:'config', titulo:'¿Qué son las URLs de conexión y puedo cambiarlas?', tags:['URL','script','google','conexión','sheets','configurar'],
+              resp:'Las <strong>URLs de conexión</strong> son los enlaces a los scripts de Google que guardan todos los datos del sistema (socios, anticipos, recaudaciones, arqueo).',
+              vista:`<div class="ayuda-vista">
+                <div class="ayuda-vista-titulo">🌐 Conexiones del sistema</div>
+                <div style="display:grid;gap:4px;font-size:0.78em;">
+                  <div class="ayuda-mini-card"><div style="color:#7f8c8d;font-size:0.7em;">URL SOCIOS (datos de socios y anticipos)</div><div style="font-family:monospace;color:#2563eb;word-break:break-all;">https://script.google.com/...</div></div>
+                  <div class="ayuda-mini-card"><div style="color:#7f8c8d;font-size:0.7em;">URL RECAUDACIONES (montos diarios)</div><div style="font-family:monospace;color:#27ae60;word-break:break-all;">https://script.google.com/...</div></div>
+                  <div class="ayuda-mini-card"><div style="color:#7f8c8d;font-size:0.7em;">URL ARQUEO (estado del arqueo de caja)</div><div style="font-family:monospace;color:#e67e22;word-break:break-all;">https://script.google.com/...</div></div>
+                </div>
+              </div>`,
+              pasos:['Las URLs vienen preconfiguradas por el administrador del sistema','<strong>NO las cambies</strong> a menos que el sistema indique que hay un error de conexión','Si hay un error de "script no encontrado", contacta al administrador técnico','Las URLs están dentro del código HTML del archivo — editarlas requiere un editor de texto'],
+              nota:'Si el sistema dice "Error al cargar datos" o "CORS", generalmente es un problema con los scripts de Google, no con las URLs en sí.' },
+
+            { id:'c5', cat:'config', titulo:'¿Qué hago si olvidé el PIN de acceso?', tags:['olvidé','PIN','recuperar','clave','acceso','bloqueado'],
+              resp:'En la pantalla de login hay un enlace <strong>"¿Olvidaste el PIN?"</strong>. Al presionarlo, puedes ingresar la Clave de Recuperación para restablecer el acceso.',
+              pasos:['En la pantalla de ingreso de PIN, presiona "¿Olvidaste el PIN?" (enlace pequeño bajo el campo)','Ingresa la Clave de Recuperación que configuraste','Si es correcta, podrás establecer un nuevo PIN','Si tampoco recuerdas la Clave de Recuperación, deberás editar el archivo HTML directamente'],
+              nota:'⚠️ Si pierdes tanto el PIN como la Clave de Recuperación, contacta al administrador técnico del sistema. Por eso es vital guardar la clave en un lugar seguro.' },
+        ];
+
+        let ayudaFiltroActivo = '';
+
+        function ayudaCompleta_abrir() {
+            document.getElementById('modalAyudaCompleta').style.display = 'block';
+            document.getElementById('ayudaSearchInput').value = '';
+            ayudaCompleta_renderizar(BASE_CONOCIMIENTO);
+            setTimeout(() => document.getElementById('ayudaSearchInput').focus(), 200);
+        }
+
+        function ayudaCompleta_buscar(termino) {
+            const t = termino.toLowerCase().trim();
+            document.querySelectorAll('.ayuda-tag').forEach(el => el.classList.remove('activo'));
+            document.querySelectorAll('.ayuda-tag')[0].classList.add('activo');
+            ayudaFiltroActivo = '';
+            if (!t) { ayudaCompleta_renderizar(BASE_CONOCIMIENTO); return; }
+            const results = BASE_CONOCIMIENTO.filter(item =>
+                item.titulo.toLowerCase().includes(t) ||
+                item.tags.some(tag => tag.toLowerCase().includes(t)) ||
+                item.resp.toLowerCase().includes(t) ||
+                (item.pasos && item.pasos.some(p => p.toLowerCase().includes(t)))
+            );
+            ayudaCompleta_renderizar(results, t);
+        }
+
+        function ayudaCompleta_filtrar(cat, btn) {
+            document.querySelectorAll('.ayuda-tag').forEach(el => el.classList.remove('activo'));
+            btn.classList.add('activo');
+            ayudaFiltroActivo = cat;
+            document.getElementById('ayudaSearchInput').value = '';
+            ayudaCompleta_renderizar(cat ? BASE_CONOCIMIENTO.filter(i => i.cat === cat) : BASE_CONOCIMIENTO);
+        }
+
+        function ayudaCompleta_renderizar(items, resaltar) {
+            const cont = document.getElementById('ayudaResultados');
+            if (!items.length) { cont.innerHTML = '<div class="ayuda-sin-result">😕 No encontramos respuesta.<br><small>Intenta: anticipo, punto, arqueo, recibo, divisor...</small></div>'; return; }
+            const catIcon = {socios:'👥',anticipos:'💰',recaudacion:'📊',arqueo:'🔒',puntos:'⭐',impresion:'🖨️',config:'⚙️'};
+            cont.innerHTML = items.map((item, idx) => {
+                let titulo = item.titulo;
+                if (resaltar) { const re = new RegExp('('+resaltar.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'); titulo = titulo.replace(re,'<span class="ayuda-highlight">$1</span>'); }
+                const pasosHtml = item.pasos ? '<ol>'+item.pasos.map(p=>'<li>'+p+'</li>').join('')+'</ol>' : '';
+                const notaHtml  = item.nota ? '<div class="nota">💡 '+item.nota+'</div>' : '';
+                return '<div class="ayuda-resultado">'
+                    + '<div class="ayuda-resultado-hdr" onclick="ayudaCompleta_toggle('+idx+')">'
+                    + (catIcon[item.cat]||'❓')+' '+titulo
+                    + '<span style="margin-left:auto;color:#7f8c8d;font-size:0.85em;">▼</span>'
+                    + '</div>'
+                    + '<div class="ayuda-resultado-body" id="ayudaBody_'+idx+'">'
+                    + '<p>'+item.resp+'</p>'
+                    + (item.vista ? item.vista : '')
+                    + pasosHtml+notaHtml
+                    + '</div></div>';
+            }).join('');
+            if (resaltar && items.length) ayudaCompleta_toggle(0);
+        }
+
+        function ayudaCompleta_toggle(idx) {
+            const b = document.getElementById('ayudaBody_'+idx);
+            if (b) b.classList.toggle('abierto');
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // FILTROS RECAUDACIÓN
+        // ════════════════════════════════════════════════════════════
+        let recFiltroTipo   = '';
+        let recFiltroSinDiv = false;
+        let recFiltroConDiv = false;
+
+        function filtrarRecaudacion() {
+            const texto = (document.getElementById('filtroRecaudacion')||{}).value||'';
+            const t = texto.toLowerCase().trim();
+            const cards = document.querySelectorAll('.date-card');
+            let visibles = 0;
+            cards.forEach(card => {
+                let ok = true;
+                if (t) { const s=(card.getAttribute('data-search')||'').toLowerCase(); if(!s.includes(t)) ok=false; }
+                if (ok && recFiltroSinDiv && card.getAttribute('data-divisor')!=='no') ok=false;
+                if (ok && recFiltroConDiv && card.getAttribute('data-divisor')!=='si') ok=false;
+                if (ok && recFiltroTipo) {
+                    const filas = card.querySelectorAll('.type-item');
+                    let hay=false;
+                    filas.forEach(f=>{
+                        const tf=(f.getAttribute('data-tipo')||'').toLowerCase();
+                        const fl=recFiltroTipo.toLowerCase();
+                        const match=tf===fl||(fl==='saladeJuegos'.toLowerCase()&&tf==='mesas')||(fl==='mesas'&&tf==='saladeJuegos'.toLowerCase());
+                        f.style.display=match?'':'none';
+                        if(match) hay=true;
+                    });
+                    if(!hay) ok=false;
+                } else { card.querySelectorAll('.type-item').forEach(f=>f.style.display=''); }
+                card.style.display=ok?'block':'none';
+                if(ok) visibles++;
+            });
+            const info=document.getElementById('rec-filtro-info');
+            if(info){ const total=cards.length; info.textContent=(visibles<total||recFiltroTipo||t)?'Mostrando '+visibles+' de '+total+' días'+(recFiltroTipo?' · Tipo: '+recFiltroTipo:''):''; }
+        }
+
+        function rec_setTipo(tipo,btn) { recFiltroTipo=tipo; document.querySelectorAll('.rec-filtro-chip[data-tipo]').forEach(b=>b.classList.remove('activo')); btn.classList.add('activo'); filtrarRecaudacion(); }
+        function rec_toggleSinDivisor(btn) { recFiltroSinDiv=!recFiltroSinDiv; recFiltroConDiv=false; btn.classList.toggle('activo-warn',recFiltroSinDiv); const c2=document.getElementById('chipConDivisor'); if(c2){c2.classList.remove('activo-ok','activo');} filtrarRecaudacion(); }
+        function rec_toggleConDivisor(btn) { recFiltroConDiv=!recFiltroConDiv; recFiltroSinDiv=false; btn.classList.toggle('activo-ok',recFiltroConDiv); const c2=document.getElementById('chipSinDivisor'); if(c2){c2.classList.remove('activo-warn','activo');} filtrarRecaudacion(); }
+        function rec_limpiarFiltros() { recFiltroTipo=''; recFiltroSinDiv=false; recFiltroConDiv=false; const inp=document.getElementById('filtroRecaudacion'); if(inp) inp.value=''; document.querySelectorAll('.rec-filtro-chip[data-tipo]').forEach(b=>b.classList.remove('activo')); const p=document.querySelector('.rec-filtro-chip[data-tipo=""]'); if(p) p.classList.add('activo'); const s=document.getElementById('chipSinDivisor'); const cv=document.getElementById('chipConDivisor'); if(s){s.classList.remove('activo-warn','activo');} if(cv){cv.classList.remove('activo-ok','activo');} document.querySelectorAll('.date-card').forEach(card=>{card.style.display='block'; card.querySelectorAll('.type-item').forEach(f=>f.style.display='');}); const info=document.getElementById('rec-filtro-info'); if(info) info.textContent=''; }
+
         window.addEventListener('click', function(e) {
-            ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats','modalCanje','modalEditarAnticipo','modalReinicioMes'].forEach(id => {
+            ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats','modalCanje','modalEditarAnticipo','modalReinicioMes','modalAyudaCompleta'].forEach(id => {
                 const el = document.getElementById(id);
                 if(el && e.target === el) el.style.display = 'none';
             });
@@ -4725,7 +5341,7 @@
                 <div style="background:#f8f9fa; border-radius:14px; padding:14px 16px; border:1px solid #e2e8f0;">
                     <div style="font-size:10px; font-weight:800; color:#3498db; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">👤 El desarrollador</div>
                     <p style="font-size:13px; line-height:1.75; color:#5d6d7e; margin:0;">
-                        Colaborador del <strong style="color:#2c3e50;">Casino de Puerto Varas desde 2013</strong>, actualmente ejerce como <strong style="color:#2c3e50;">Croupier</strong> y desde el <strong style="color:#2c3e50;">15 de noviembre de 2025</strong> cumple el rol de <strong style="color:#2c3e50;">Encargado del Fondo Solidario de Propina</strong> — velando por los derechos económicos de todos los socios.
+                        Colaborador del <strong style="color:#2c3e50;">Casino de Puerto Varas desde 2013</strong>, actualmente ejerce como <strong style="color:#2c3e50;">Croupier</strong> y desde el <strong style="color:#2c3e50;">15 de noviembre de 2025</strong> cumple el rol de <strong style="color:#2c3e50;">Encargado del Fondo Solidario de Propina, Junto a dos integrantes más</strong> — velando por los derechos económicos de todos los socios.
                     </p>
                 </div>
 
@@ -4741,7 +5357,7 @@
                     <div style="background:linear-gradient(135deg,#2c3e50,#34495e); padding:14px 16px;">
                         <div style="font-size:10px; font-weight:800; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px;">🏗️ La historia de este sistema</div>
                         <p style="font-size:13px; line-height:1.7; color:rgba(255,255,255,0.8); margin:0;">
-                            El <strong style="color:#fff;">Sistema Integral del Fondo Solidario</strong> nació de una necesidad real: llevar un control claro, transparente y accesible de la propina colectiva del casino. Lo que comenzó como una idea para ordenar los datos creció hasta convertirse en una herramienta completa de gestión, construida iteración tras iteración con mucho entusiasmo y dedicación.
+                            El <strong style="color:#fff;">Sistema Integral del Fondo Solidario</strong> nació de una necesidad real y urgente: terminar con las planillas Excel que se usaban mes a mes — donde cada período comenzaba con una hoja nueva, se perdían datos históricos, se agregaba información que no correspondía y durante todo el mes había que estar corrigiendo errores. Un ciclo interminable de parches sobre parches. 💥<br><br>                            Con este sistema, nada de eso ocurre. Los datos se ingresan una sola vez y correctamente — el sistema hace el resto: calcula, organiza, distribuye y registra con precisión milimétrica. Sin hojas perdidas. Sin correcciones manuales. Sin caos de fin de mes. 🎯<br><br>                            Lo que comenzó como una idea para ordenar el caos creció, iteración tras iteración, hasta convertirse en una herramienta completa de gestión: socios, anticipos, recaudaciones, arqueo... todo en un solo lugar, desde cualquier dispositivo, en tiempo real. Construido con mucho entusiasmo, dedicación — y más de unas cuantas noches largas. 🚀
                         </p>
                     </div>
                     <div style="background:#eaf4fb; padding:14px 16px;">
