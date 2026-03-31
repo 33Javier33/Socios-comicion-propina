@@ -334,6 +334,21 @@
         .ayuda-resultado-body li { margin-bottom:6px; }
         .ayuda-resultado-body .nota { background:#e8f4fd; border-left:3px solid #3498db; padding:8px 10px; border-radius:0 6px 6px 0; margin-top:10px; }
         .ayuda-sin-result { text-align:center; color:#7f8c8d; padding:30px; }
+        .id-card { background:#f8f9fa; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px; transition:0.15s; }
+        .id-card:hover { border-color:#2563eb; background:#eff6ff; }
+        .id-card-info { display:flex; align-items:center; gap:10px; overflow:hidden; }
+        .id-card-avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#1e3a5f,#2563eb); color:white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.95em; flex-shrink:0; }
+        .id-card-nombre { font-weight:700; font-size:0.88em; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .id-card-area { font-size:0.75em; color:#7f8c8d; }
+        .id-copy-btn { background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:6px 10px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s; flex-shrink:0; }
+        .id-copy-btn:hover { background:#2563eb; border-color:#2563eb; }
+        .id-copy-btn:hover .id-code { color:white; }
+        .id-copy-btn:hover .id-copy-icon { color:white; }
+        .id-code { font-family:'Courier New',monospace; font-size:0.75em; font-weight:700; color:#2563eb; letter-spacing:0.5px; }
+        .id-copy-icon { font-size:0.85em; color:#2563eb; }
+        .id-copiado { background:#dcfce7; border-color:#86efac; }
+        .id-copiado .id-code { color:#16a34a; }
+        .id-copiado .id-copy-icon { color:#16a34a; }
         .ayuda-rapida-btn { background:#e74c3c; color:white; border:none; border-radius:8px; width:30px; height:30px; font-size:0.9em; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; transition:0.2s; }
         .ayuda-rapida-btn:hover { background:#c0392b; transform:scale(1.08); }
         .ayuda-popover { display:none; position:fixed; z-index:9999; background:white; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.22); border:1px solid #e2e8f0; width:min(300px, calc(100vw - 24px)); padding:14px; animation:fadeIn 0.2s; max-height:80vh; overflow-y:auto; }
@@ -581,12 +596,40 @@
                 </div>
             </div>
 
-            <input type="text" id="filtroRegistro" class="smart-search" placeholder="🔍 Buscar socio por nombre, área..." onkeyup="filtrarSociosRegistro()">
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:0;">
+                <input type="text" id="filtroRegistro" class="smart-search" placeholder="🔍 Buscar socio por nombre, área..." onkeyup="filtrarSociosRegistro()" style="margin-bottom:0;flex:1;">
+                <button onclick="ids_abrirModal()" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:white;border:none;border-radius:10px;padding:10px 14px;font-weight:800;font-size:0.85em;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;box-shadow:0 3px 10px rgba(37,99,235,0.3);transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" title="Buscar y copiar ID de socio">
+                    🪪 IDs
+                </button>
+            </div>
             <button class="fab-btn" onclick="abrirModalRegistro()">+</button>
             <!-- FAB agregar recaudación (solo visible en pestaña recaudacion) -->
             <button id="fabRecAgregar" class="fab-btn" onclick="rec_abrirAgregar()" style="display:none; background:var(--success); box-shadow:0 4px 15px rgba(39,174,96,0.4); font-size:22px; font-weight:800;" title="Agregar registro de recaudación">➕</button>
 
-            <!-- MODAL REGISTRO -->
+            <!-- MODAL BUSCADOR DE IDs -->
+        <div id="modalBuscadorIDs" class="modal">
+            <div class="modal-content" style="max-width:480px;">
+                <div class="modal-header" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);">
+                    <h2 style="color:white;margin:0;">🪪 Buscador de IDs</h2>
+                    <span class="close-modal" onclick="document.getElementById('modalBuscadorIDs').style.display='none'" style="color:white;">&times;</span>
+                </div>
+                <div class="modal-body" style="padding:16px;">
+                    <p style="font-size:0.82em;color:#7f8c8d;margin:0 0 12px;">Busca un socio para ver y copiar su ID de acceso.</p>
+                    <div style="position:relative;margin-bottom:14px;">
+                        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#7f8c8d;">🔍</span>
+                        <input type="text" id="ids-search-input" placeholder="Escribe el nombre del socio..."
+                            oninput="ids_buscar(this.value)"
+                            style="width:100%;padding:10px 12px 10px 36px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.9em;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;transition:0.2s;"
+                            onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'">
+                    </div>
+                    <div id="ids-resultados" style="max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">
+                        <div style="text-align:center;color:#7f8c8d;padding:30px;font-size:0.85em;">Escribe un nombre para buscar</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL REGISTRO -->
             <div id="modalRegistro" class="modal">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -5246,6 +5289,85 @@
 
         let ayudaFiltroActivo = '';
 
+        // ══════════════════════════════════════════════════════════
+        // BUSCADOR DE IDs
+        // ══════════════════════════════════════════════════════════
+        function ids_abrirModal() {
+            document.getElementById('modalBuscadorIDs').style.display = 'block';
+            document.getElementById('ids-search-input').value = '';
+            document.getElementById('ids-resultados').innerHTML =
+                '<div style="text-align:center;color:#7f8c8d;padding:30px;font-size:0.85em;">Escribe un nombre para buscar</div>';
+            setTimeout(() => document.getElementById('ids-search-input').focus(), 200);
+        }
+
+        function ids_buscar(q) {
+            const cont = document.getElementById('ids-resultados');
+            const texto = q.trim().toLowerCase();
+            if (!texto) {
+                cont.innerHTML = '<div style="text-align:center;color:#7f8c8d;padding:30px;font-size:0.85em;">Escribe un nombre para buscar</div>';
+                return;
+            }
+            // Usar cacheSocios ya cargado — sin llamadas al servidor
+            const matches = (cacheSocios || []).filter(s =>
+                (s.nombre + ' ' + s.apellido).toLowerCase().includes(texto)
+                || (s.area || '').toLowerCase().includes(texto)
+            );
+            if (!matches.length) {
+                cont.innerHTML = '<div style="text-align:center;color:#7f8c8d;padding:24px;font-size:0.85em;">😕 No se encontraron socios con ese nombre</div>';
+                return;
+            }
+            cont.innerHTML = matches.map(s => {
+                const inicial = (s.nombre || '?').charAt(0).toUpperCase();
+                const nombre  = (s.nombre + ' ' + s.apellido).trim();
+                const area    = s.area || '';
+                const id      = s.id || 'Sin ID';
+                return (
+                    '<div class="id-card">'
+                    + '<div class="id-card-info">'
+                    + '<div class="id-card-avatar">' + inicial + '</div>'
+                    + '<div style="overflow:hidden;">'
+                    + '<div class="id-card-nombre">' + nombre + '</div>'
+                    + '<div class="id-card-area">' + area + '</div>'
+                    + '</div></div>'
+                    + '<button class="id-copy-btn" onclick="ids_copiar(this,\'' + id + '\')" title="Copiar ID">'
+                    + '<span class="id-code">' + id + '</span>'
+                    + '<span class="id-copy-icon">📋</span>'
+                    + '</button>'
+                    + '</div>'
+                );
+            }).join('');
+        }
+
+        function ids_copiar(btn, id) {
+            // Copiar al portapapeles
+            const copia = () => {
+                btn.classList.add('id-copiado');
+                btn.querySelector('.id-copy-icon').textContent = '✅';
+                btn.querySelector('.id-code').textContent = '¡Copiado!';
+                setTimeout(() => {
+                    btn.classList.remove('id-copiado');
+                    btn.querySelector('.id-copy-icon').textContent = '📋';
+                    btn.querySelector('.id-code').textContent = id;
+                }, 2000);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(id).then(copia).catch(() => ids_copiarFallback(id, copia));
+            } else {
+                ids_copiarFallback(id, copia);
+            }
+        }
+
+        function ids_copiarFallback(texto, callback) {
+            const ta = document.createElement('textarea');
+            ta.value = texto;
+            ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            try { document.execCommand('copy'); } catch(e) {}
+            document.body.removeChild(ta);
+            if (callback) callback();
+        }
+
         // ── Popovers de ayuda rápida ─────────────────────────────
         function ayudaRapida_toggle(id, btn) {
             const pop = document.getElementById(id);
@@ -5404,7 +5526,7 @@
         function rec_limpiarFiltros() { recFiltroTipo=''; recFiltroSinDiv=false; recFiltroConDiv=false; const inp=document.getElementById('filtroRecaudacion'); if(inp) inp.value=''; document.querySelectorAll('.rec-filtro-chip[data-tipo]').forEach(b=>b.classList.remove('activo')); const p=document.querySelector('.rec-filtro-chip[data-tipo=""]'); if(p) p.classList.add('activo'); const s=document.getElementById('chipSinDivisor'); const cv=document.getElementById('chipConDivisor'); if(s){s.classList.remove('activo-warn','activo');} if(cv){cv.classList.remove('activo-ok','activo');} document.querySelectorAll('.date-card').forEach(card=>{card.style.display='block'; card.querySelectorAll('.type-item').forEach(f=>f.style.display='');}); const info=document.getElementById('rec-filtro-info'); if(info) info.textContent=''; }
 
         window.addEventListener('click', function(e) {
-            ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats','modalCanje','modalEditarAnticipo','modalReinicioMes','modalAyudaCompleta'].forEach(id => {
+            ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats','modalCanje','modalEditarAnticipo','modalReinicioMes','modalAyudaCompleta','modalBuscadorIDs'].forEach(id => {
                 const el = document.getElementById(id);
                 if(el && e.target === el) el.style.display = 'none';
             });
