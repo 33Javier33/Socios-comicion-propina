@@ -1475,29 +1475,28 @@
         let globalDiasPT = {};
 
         function printHTML(htmlContent, filename) {
-            // Reemplazamos el <title> para que Android use ese nombre al guardar como PDF
-            // e inyectamos window.print() automático dentro del documento
             const printScript = '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},400);}</scr'+'ipt>';
             let fullHtml = htmlContent.replace(/<title>[^<]*<\/title>/i, '<title>' + filename + '<\/title>');
-            // Insertamos el script de impresión antes del cierre de </head>
             if (fullHtml.indexOf('</head>') !== -1) {
                 fullHtml = fullHtml.replace('</head>', printScript + '</head>');
             } else {
                 fullHtml = printScript + fullHtml;
             }
-
             const blob = new Blob([fullHtml], {type: 'text/html; charset=utf-8'});
             const url  = URL.createObjectURL(blob);
-            const win  = window.open(url, '_blank');
-
+            // Intentar abrir en nueva ventana (muestra previsualización + imprime)
+            const win = window.open(url, '_blank');
             if (win) {
+                // Ventana abierta correctamente — revocar URL después de 2 minutos
                 setTimeout(() => URL.revokeObjectURL(url), 120000);
             } else {
-                // Bloqueador de popups: descarga directa
+                // Bloqueador de popups activo — descargar como archivo
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = filename + '.html';
+                a.download = (filename || 'informe') + '.html';
+                document.body.appendChild(a);
                 a.click();
+                document.body.removeChild(a);
                 setTimeout(() => URL.revokeObjectURL(url), 5000);
             }
         }
@@ -3231,8 +3230,7 @@
                         return f === fecha;
                     });
 
-                    // MAPEADO: Mesas -> Sala de Juegos
-                    const sj   = registros.filter(r => (r.tipo === 'Mesas' || r.tipo === 'SalaDeJuegos')).reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
+                    const sj   = registros.filter(r => r.tipo === 'SalaDeJuegos').reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
                     const mdae = registros.filter(r => (r.tipo === 'EfectivoMDA' || r.tipo === 'MDA (EFECTIVO)')).reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
                     const mdat = registros.filter(r => (r.tipo === 'TarjetaMDA' || r.tipo === 'MDA (TARJETA)')).reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
                     const bov  = registros.filter(r => r.tipo === 'Boveda').reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
@@ -3637,7 +3635,6 @@
                     granTotal += monto;
                     
                     let tipo = item.tipo || 'Sin Tipo';
-                    if (tipo === 'Mesas') tipo = 'SalaDeJuegos';
 
                     if (!grupos[fecha].tipos[tipo]) grupos[fecha].tipos[tipo] = 0; 
                     grupos[fecha].tipos[tipo] += monto;
@@ -3699,8 +3696,7 @@
                             const valorTipo = dia.tipos[nombreTipo];
                             const reg = recDatosRaw.find(r => { 
                                 let f = r.fecha; if(f && f.includes('T')) f = f.split('T')[0]; 
-                                let tBuscado = nombreTipo; if(tBuscado==='SalaDeJuegos') tBuscado='Mesas';
-                                return f === fecha && (r.tipo === tBuscado || r.tipo === nombreTipo); 
+                                return f === fecha && r.tipo === nombreTipo; 
                             });
                             const idx = reg !== undefined ? reg.originalIndex : 'null';
                             tiposHtml += `<div class="type-item" data-tipo="${nombreTipo}">`
@@ -3729,7 +3725,7 @@
                             <div style="background:#f8fafc;border-top:1px solid #eee;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
                                 <div style="display:flex;align-items:center;gap:8px;">
                                     <span style="font-size:0.78em;font-weight:700;color:#7f8c8d;">Divisor:</span>
-                                    <input type="number" step="0.01" min="0.01" value="${dia.divisor}"
+                                    <input type="number" step="0.01" min="0.01" value="${dia.divisor !== null ? dia.divisor : ''}"
                                         style="width:72px;padding:5px 6px;border:2px solid var(--secondary);border-radius:7px;font-weight:800;text-align:center;font-size:0.9em;"
                                         onchange="rec_actualizarDivisor('${fecha}', this.value)">
                                     <span style="font-size:0.78em;color:var(--success);font-weight:700;">${formatearMoneda(puntoNoche)} / pto</span>
@@ -3796,7 +3792,6 @@
             const monto = parseInt(raw);
             if (!fecha || !monto || !tipo) return showToast('Completa todos los campos', 'error');
             
-            if (tipo === 'SalaDeJuegos') tipo = 'Mesas';
 
             document.getElementById('modalRecEditar').style.display = 'none';
             toggleLoader(true, modo === 'editar' ? 'Actualizando...' : 'Guardando...');
@@ -3862,7 +3857,6 @@
             let txt = 'REPORTE: ' + fechaVis + '\n' + '-'.repeat(28) + '\n';
             registros.forEach(r => {
                 let t = r.tipo || 'Sin Tipo';
-                if(t === 'Mesas') t = 'SalaDeJuegos';
                 txt += '- ' + t + ': ' + formatearMoneda(r.monto) + '\n';
             });
             txt += '-'.repeat(28) + '\n';
@@ -4510,7 +4504,7 @@
             fechas.forEach(f=>Object.entries(grupos[f].tipos).forEach(([t,v])=>{tiposGlobal[t]=(tiposGlobal[t]||0)+v;}));
             const tiposOrdenados=Object.entries(tiposGlobal).sort((a,b)=>b[1]-a[1]);
             const maxTipo=tiposOrdenados[0]?.[1]||1;
-            const COLORES={SalaDeJuegos:'#2563eb',Mesas:'#2563eb',EfectivoMDA:'#16a34a',TarjetaMDA:'#7c3aed',Boveda:'#d97706'};
+            const COLORES={SalaDeJuegos:'#2563eb',EfectivoMDA:'#16a34a',TarjetaMDA:'#7c3aed',Boveda:'#d97706'};
             const getColor=t=>COLORES[t]||'#64748b';
             const ultimos14=fechas.slice(-14);
             const maxLinea=Math.max(...ultimos14.map(f=>grupos[f].total),1);
