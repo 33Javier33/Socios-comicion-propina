@@ -1163,31 +1163,34 @@
 
         <!-- MODAL EDITAR ANTICIPO -->
         <div id="modalEditarAnticipo" class="modal">
-            <div class="modal-content" style="max-width:420px; margin-top:15%;">
+            <div class="modal-content" style="max-width:420px; margin-top:10%;">
                 <div class="modal-header">
                     <h2>✏️ Editar Anticipo</h2>
-                    <span class="close-modal" onclick="document.getElementById('modalEditarAnticipo').style.display='none'">&times;</span>
+                    <span class="close-modal" onclick="document.getElementById('modalEditarAnticipo').style.display='none'">×</span>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="editAnticipoUUID">
-                    <div class="form-group" style="margin-bottom:14px;">
+                    
+                    <div class="form-group">
                         <label>Fecha</label>
                         <input type="date" id="editAnticipoFecha">
                     </div>
-                    <div class="form-group" style="margin-bottom:14px;">
+                    
+                    <div class="form-group">
                         <label>Monto ($)</label>
-                        <input type="text" inputmode="numeric" id="editAnticipoMonto" placeholder="Ej: 50.000" oninput="formatearInputMonto(this)">
+                        <input type="text" id="editAnticipoMonto" placeholder="Ej: 50000" oninput="formatearInputMonto(this)">
                     </div>
-                    <div class="form-group" style="margin-bottom:18px;">
+                    
+                    <div class="form-group">
                         <label>Responsable</label>
-                        <select id="editAnticipoResponsable" style="width:100%;padding:9px;border:1px solid #ddd;border-radius:8px;font-size:0.9em;">
-                            <option value="">Sin responsable</option>
+                        <select id="editAnticipoResponsable" style="width:100%;padding:9px;border:1px solid #ddd;border-radius:8px;">
+                            <!-- Se llena automáticamente -->
                         </select>
                     </div>
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn-action" style="flex:1; background:#999;" onclick="document.getElementById('modalEditarAnticipo').style.display='none'">Cancelar</button>
-                        <button class="btn-action" style="flex:1; background:var(--warning);" onclick="confirmarEdicionAnticipo()">💾 Guardar</button>
-                    </div>
+                    
+                    <button onclick="guardarEdicionAnticipo()" class="btn-action" style="width:100%;margin-top:20px;background:#27ae60;color:white;padding:14px;border:none;border-radius:8px;font-weight:700;cursor:pointer;">
+                        💾 Guardar Cambios
+                    </button>
                 </div>
             </div>
         </div>
@@ -1649,7 +1652,6 @@
             </div>
         </div>
 
-        <!-- MODAL CANJE -->
         <div id="modalCanje" class="modal">
             <div class="modal-content" style="max-width:480px;">
                 <div class="modal-header" style="background:linear-gradient(135deg,#e67e22,#d35400);">
@@ -1658,6 +1660,24 @@
                 </div>
                 <div class="modal-body">
                     <p style="font-size:0.82em;color:#7f8c8d;margin-bottom:10px;">Ingresa las cantidades de billetes a canjear. Solo para referencia — no afecta el arqueo.</p>
+                    
+                    <!-- CAMPOS AÑADIDOS: FECHA Y RESPONSABLES -->
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                        <div>
+                            <label style="font-size:0.78em;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:5px;">Fecha</label>
+                            <input type="date" id="canje-fecha" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.78em;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:5px;">Responsable</label>
+                            <input type="text" id="canje-responsable" placeholder="Nombre / Iniciales" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;box-sizing:border-box;">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:0.78em;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:5px;">Resp. Corrección <span style="font-size:0.85em;text-transform:none;font-weight:normal;">(Opcional)</span></label>
+                        <input type="text" id="canje-correccion" placeholder="Solo si aplica corrección" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;box-sizing:border-box;">
+                    </div>
+
                     <div style="margin-bottom:12px;">
                         <label style="font-size:0.78em;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:5px;">Nombre del documento</label>
                         <input type="text" id="canje-nombre" placeholder="Canje" maxlength="40"
@@ -1665,6 +1685,7 @@
                             oninput="document.getElementById('canje-nombre-preview').textContent = this.value.trim() || 'Canje';">
                         <div style="font-size:0.75em;color:#7f8c8d;margin-top:3px;">El archivo se guardará como: <strong id="canje-nombre-preview">Canje</strong></div>
                     </div>
+                    
                     <div id="canje-form"></div>
                     <div style="margin-top:16px;padding:12px;background:#fff8f0;border-radius:8px;border:1px solid #f0a070;">
                         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -2712,7 +2733,7 @@
                 html += '</div>';
             }
 
-            lista.innerHTML = html;
+            lista.innerHTML= html;
         }
 
         async function subirPuntosSocio(id, nombre, puntosNuevos) {
@@ -3198,9 +3219,19 @@
                         let tipoHtml = tiposArr.includes('AUSENCIA') ? '<span class="tag-absent">AUSENCIA</span>' : `<span style="font-weight:bold; color:#7f8c8d;">${tiposArr.join(' + ')}</span>`;
                         const detalleHtml = [...new Set(item.detalles)].join(', ') || '-';
                         const montoHtml = item.montoTotal > 0 ? `<span class="amount-minus">-${formatearMoneda(item.montoTotal)}</span>` : '-';
+                        
+                        const itemDataStr = JSON.stringify({
+                            uuid: item.uuid, 
+                            fecha: item.fecha, 
+                            montoTotal: item.montoTotal, 
+                            detalles: item.detalles,
+                            tipos: tiposArr
+                        }).replace(/"/g, '&quot;');
+
                         const editBtn = esAnticipo
-                            ? `<button onclick="event.stopPropagation(); mostrarModalEditar(${JSON.stringify({uuid:item.uuid, fecha:item.fecha, montoTotal:item.montoTotal, detalles:item.detalles})})" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);color:#b45309;border-radius:6px;padding:3px 8px;font-size:0.75em;cursor:pointer;font-weight:700;white-space:nowrap;">✏️</button>`
+                            ? `<button onclick="event.stopPropagation(); mostrarModalEditar(${itemDataStr})" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);color:#b45309;border-radius:6px;padding:3px 8px;font-size:0.75em;cursor:pointer;font-weight:700;white-space:nowrap;">✏️</button>`
                             : '';
+                        
                         row.innerHTML = `<td>${fechaVis}</td><td>${tipoHtml}</td><td style="font-size:0.82em;">${detalleHtml}</td><td style="white-space:nowrap;">${montoHtml} ${editBtn}</td>`;
                         tbody.appendChild(row);
                     });
@@ -3564,6 +3595,9 @@
                     .promedio-title { background: #d9d9d9; padding: 2px 5px; border-bottom: 1px solid #000; font-weight: bold; font-size: 9px; }
                     .promedio-val { padding: 5px; font-size: 16px; font-weight: bold; }
                 </style></head><body>
+                    <!-- TÍTULO AÑADIDO AQUÍ -->
+                    <h2 style="text-align:center; font-size:18px; font-weight:bold; letter-spacing:2px; margin-bottom:15px; margin-top:0;">MONTOS DIARIOS</h2>
+                    
                     <div style="overflow: hidden;">
                         <div class="header-box">PERIODO ${periodoVis}</div>
                         <div class="promedio-box">
@@ -3793,36 +3827,45 @@
             document.getElementById('editAnticipoMonto').value = montoNum > 0 ? new Intl.NumberFormat('es-CL').format(montoNum) : '';
             // Poblar selector de responsables
             const sel = document.getElementById('editAnticipoResponsable');
-            sel.innerHTML = '<option value="">Sin responsable</option>';
-            const lista = responsables_cargar();
-            lista.forEach(r => {
-                const opt = document.createElement('option');
-                opt.value = r.ini + '|' + r.area;
-                opt.textContent = r.ini + ' (' + r.area + ')';
-                // Pre-seleccionar si el detalle menciona al responsable
-                const detalle = item.detalles.join(' ');
-                if(detalle.includes(r.ini)) opt.selected = true;
-                sel.appendChild(opt);
-            });
+            if(sel) {
+                sel.innerHTML = '<option value="">Sin responsable</option>';
+                const lista = responsables_cargar();
+                lista.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.ini + '|' + r.area;
+                    opt.textContent = r.ini + ' (' + r.area + ')';
+                    // Pre-seleccionar si el detalle menciona al responsable
+                    const detalle = item.detalles.join(' ');
+                    if(detalle.includes(r.ini)) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            }
             document.getElementById('modalEditarAnticipo').style.display = 'block';
         }
 
-        async function confirmarEdicionAnticipo() {
+        async function guardarEdicionAnticipo() {
             const uuid = document.getElementById('editAnticipoUUID').value;
             const fecha = document.getElementById('editAnticipoFecha').value;
             const montoRaw = document.getElementById('editAnticipoMonto').value.replace(/\./g,'').replace(/[^0-9]/g,'');
             const monto = parseInt(montoRaw) || 0;
-            const respVal = document.getElementById('editAnticipoResponsable').value;
+            const respSel = document.getElementById('editAnticipoResponsable');
+            const respVal = respSel ? respSel.value : '';
             const responsable = respVal ? respVal.split('|')[0] : '';
             const areaResponsable = respVal ? respVal.split('|')[1] : '';
+            
             if(!uuid || !fecha || monto <= 0) return showToast('Completa fecha y monto', 'error');
             toggleLoader(true, 'Actualizando...');
             document.getElementById('modalEditarAnticipo').style.display = 'none';
             try {
                 await callApiSocios('actualizarAnticipo', { uuid, fecha, monto, responsable, areaResponsable });
                 showToast('Anticipo actualizado', 'success');
+                
+                // Invalidar caché de datos para forzar refresco real
+                globalCacheAllData = null;
+                try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
+
                 const idSocio = document.getElementById('gestionSocioId').value;
-                cargarHistorialSocio(idSocio);
+                if (idSocio) cargarHistorialSocio(idSocio);
             } catch(e) {
                 showToast('Error al actualizar', 'error');
             } finally {
@@ -4841,7 +4884,7 @@
                     +'<div class="proj-card" style="background:#fffbeb;border:1px solid #fde68a;"><div><div class="proj-label" style="color:#b45309;">🗓️ Proyección Mensual</div><div style="font-size:0.78em;color:#7f8c8d;">'+diasRest+' días restantes + acumulado</div></div><div class="proj-val" style="color:#b45309;">'+fmt(proyMes)+'</div></div>'
                     +'<div style="margin-top:12px;background:#f8f9fa;border-radius:10px;padding:12px;"><div style="font-weight:700;color:#1e3a5f;margin-bottom:8px;font-size:0.88em;">📈 Curva de acumulado</div>'
                     +'<svg viewBox="0 0 500 90" style="width:100%;height:auto;"><defs><linearGradient id="lg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#16a34a" stop-opacity="0.25"/><stop offset="100%" stop-color="#16a34a" stop-opacity="0"/></linearGradient></defs>'
-                    +(()=>{const acum=[];let suma=0;fechas.forEach((f,i)=>{suma+=grupos[f].total;acum.push({i,v:suma});});const mA=suma||1;const pA=acum.map(p=>{const x=10+(p.i/(acum.length-1||1))*480;const y=78-(p.v/mA)*68;return{x,y,v:p.v};});const dA=pA.map((p,i)=>(i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');const aA=dA+' L'+pA[pA.length-1].x.toFixed(1)+',78 L10,78 Z';return'<path d="'+aA+'" fill="url(#lg2)"/><path d="'+dA+'" fill="none" stroke="#16a34a" stroke-width="2" stroke-linejoin="round"/><text x="10" y="88" font-size="8" fill="#94a3b8">Inicio</text><text x="490" y="88" text-anchor="end" font-size="8" fill="#94a3b8">'+fmt(suma)+'</text>';})()
+                    +(()=>{const acum=[];let suma=0;fechas.forEach((f,i)=>{suma+=grupos[f].total;acum.push({i,v:suma});});const mA=suma||1;const pA=acum.map(p=>{const x=10+(p.i/(acum.length-1||1))*480;const y=78-(p.v/mA)*68;return{x,y,v:p.v};});const dA=pA.map((p,i)=>(i===0?'M':'L')+p.x.toFixed(1)+p.y.toFixed(1)).join(' ');const aA=dA+' L'+pA[pA.length-1].x.toFixed(1)+',78 L10,78 Z';return'<path d="'+aA+'" fill="url(#lg2)"/><path d="'+dA+'" fill="none" stroke="#16a34a" stroke-width="2" stroke-linejoin="round"/><text x="10" y="88" font-size="8" fill="#94a3b8">Inicio</text><text x="490" y="88" text-anchor="end" font-size="8" fill="#94a3b8">'+fmt(suma)+'</text>';})()
                     +'</svg></div>';
             } else if(tabActiva==='puntos'){
                 const dCP=Object.entries(globalMapaPuntosDia||{}).filter(([,v])=>v!==null).sort((a,b)=>a[0].localeCompare(b[0]));
@@ -5079,12 +5122,27 @@
 
         function canje_abrirModal() {
             canjeConteo = {};
+            
+            // Autocompletar la fecha de hoy
+            const hoy = new Date().toISOString().split('T')[0];
+            const inpFecha = document.getElementById('canje-fecha');
+            if (inpFecha) inpFecha.value = hoy;
+            
+            // Autocompletar el responsable según sesión actual
+            const inpResp = document.getElementById('canje-responsable');
+            const objResp = getSesionResponsableObj();
+            if (inpResp) {
+                if (objResp.ini) inpResp.value = objResp.ini + (objResp.area ? ' (' + objResp.area + ')' : '');
+                else inpResp.value = '';
+            }
+
             const form = document.getElementById('canje-form');
             form.innerHTML = '';
             const nomInp = document.getElementById('canje-nombre');
             if(nomInp) { nomInp.value = ''; }
             const prev = document.getElementById('canje-nombre-preview');
             if(prev) prev.textContent = 'Canje';
+            
             let html = '<table style="width:100%;border-collapse:collapse;">';
             html += '<thead><tr>'
                 + '<th style="padding:8px;background:#f8f9fa;border:1px solid #dee2e6;text-align:center;font-weight:800;">CANTIDAD</th>'
@@ -5133,10 +5191,20 @@
 
         function canje_imprimir() {
             const fmt = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v);
-            const fechaHoy = new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
+            
+            // Extraer los datos de los nuevos campos
+            const fechaInput = document.getElementById('canje-fecha').value;
+            let fechaVis = new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
+            if (fechaInput) {
+                const fp = fechaInput.split('-');
+                if (fp.length === 3) fechaVis = `${fp[2]}/${fp[1]}/${fp[0]}`;
+            }
+            
             const horaHoy  = new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
-            const nomInput = document.getElementById('canje-nombre');
-            const nombreDoc = (nomInput && nomInput.value.trim()) ? nomInput.value.trim() : 'Canje';
+            const nomInput = document.getElementById('canje-nombre').value.trim() || 'Canje';
+            const firmaResp = document.getElementById('canje-responsable').value.trim() || '—';
+            const firmaError = document.getElementById('canje-correccion').value.trim();
+
             let filas = '';
             let total = 0;
             CANJE_DENOMS.forEach((val, i) => {
@@ -5146,86 +5214,41 @@
                 total += sub;
                 const bg = i % 2 === 0 ? '#f0faf0' : 'white';
                 filas += '<tr style="background:' + bg + '">'
-                    + '<td style="padding:4px 8px;border:1px solid #ccc;text-align:center;">' + (cant || 0) + '</td>'
+                    + '<td style="padding:4px 8px;border:1px solid #ccc;text-align:center;">' + cant + '</td>'
                     + '<td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:700;">' + fmt(val) + '</td>'
                     + '<td style="padding:4px 8px;border:1px solid #ccc;text-align:right;font-weight:700;">' + (sub > 0 ? fmt(sub) : '0') + '</td>'
                     + '</tr>';
             });
 
-            const opcion = window.confirm(
-                '¿Cómo imprimir?\n\nOK → Una copia\nCancelar → Dos copias (corte manual)'
-            );
+            const opcion = window.confirm('¿Cómo imprimir?\n\nOK → Una copia\nCancelar → Dos copias (corte manual)');
 
             function bloqueCanje(etiqueta) {
                 return '<div class="copy-label">' + etiqueta + '</div>'
-                    + '<div class="header">'
-                    + '<h1>FONDO DE SOLIDARIDAD</h1>'
-                    + '<p>CASINO DE PTO. VARAS</p>'
-                    + '<p>LEY 17312 DEL 29/07/70</p>'
-                    + '<p><strong>PUERTO VARAS</strong></p>'
-                    + '</div>'
-                    + '<div class="section-title">' + nombreDoc.toUpperCase() + '</div>'
-                    + '<div style="text-align:center;font-size:9px;color:#888;margin-bottom:8px;">' + fechaHoy + ' ' + horaHoy + '</div>'
-                    + '<table><thead><tr>'
-                    + '<th>CANTIDAD</th><th>VALOR</th><th style="text-align:right">TOTAL</th>'
-                    + '</tr></thead><tbody>' + filas + '</tbody></table>'
+                    + '<div class="header"><h1>FONDO DE SOLIDARIDAD</h1><p>CASINO DE PTO. VARAS</p><p>LEY 17312 DEL 29/07/70</p><p><strong>PUERTO VARAS</strong></p></div>'
+                    + '<div class="section-title">' + nomInput.toUpperCase() + '</div>'
+                    + '<div style="text-align:center;font-size:9px;color:#888;margin-bottom:8px;">' + fechaVis + ' ' + horaHoy + '</div>'
+                    + '<table><thead><tr><th>CANTIDAD</th><th>VALOR</th><th style="text-align:right">TOTAL</th></tr></thead><tbody>' + filas + '</tbody></table>'
                     + '<div style="border-top:2px solid #000;margin-top:8px;padding-top:6px;display:flex;justify-content:space-between;font-size:13px;font-weight:900;">'
                     + '<span>TOTAL FINAL</span><span style="color:#d35400;">' + fmt(total) + '</span></div>'
-                    + ''
-                    + '<div class="footer">Emitido: ' + fechaHoy + ' ' + horaHoy + ' | Sistema Fondo Solidario</div>';
+                    + '<div style="margin-top:12px;font-size:9px;line-height:1.4;">'
+                    + '<strong>Responsable:</strong> ' + firmaResp + '<br>'
+                    + (firmaError ? '<small>Corrección registrada por: ' + firmaError + '</small>' : '')
+                    + '</div>'
+                    + '<div class="footer">Emitido: ' + fechaVis + ' ' + horaHoy + ' | Sistema Fondo Solidario</div>';
             }
 
-            const htmlBase = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
-                + '<title>' + nombreDoc + ' ' + fechaHoy + '</title>'
-                + '<style>'
-                + '* { margin:0; padding:0; box-sizing:border-box; }'
-                + 'body { font-family:Arial,sans-serif; font-size:11px; color:#000; background:white; }'
-                + '.page { width:80mm; margin:0 auto; padding:8px; }'
-                + '.header { text-align:center; border:2px solid #000; padding:8px; margin-bottom:10px; }'
-                + '.header h1 { font-size:13px; font-weight:bold; letter-spacing:1px; }'
-                + '.header p { font-size:10px; margin-top:2px; }'
-                + '.section-title { text-align:center; font-weight:bold; font-size:12px; border-bottom:1px solid #000; padding-bottom:3px; margin:8px 0 6px; letter-spacing:1px; }'
-                + 'table { width:100%; border-collapse:collapse; margin:4px 0; }'
-                + 'th { background:#f0f0f0; padding:4px 8px; font-size:10px; border-bottom:1px solid #ccc; text-align:left; }'
-                + '.copy-label { text-align:center; font-size:9px; font-weight:bold; background:#000; color:white; padding:3px; margin-bottom:8px; letter-spacing:2px; }'
-                + '.cut { border-top:2px dashed #000; margin:16px 0; text-align:center; font-size:9px; color:#aaa; padding-top:4px; }'
-                + '.firmas { display:flex; gap:12px; margin-top:16px; margin-bottom:8px; }'
-                + '.firma-box { flex:1; text-align:center; }'
-                + '.firma-linea { border-top:1px solid #000; margin-bottom:4px; margin-top:20px; }'
-                + '.firma-nombre { font-size:9px; font-weight:bold; }'
-                + '.firma-label { font-size:8px; color:#555; margin-top:1px; }'
-                + '.footer { text-align:center; font-size:8px; color:#888; border-top:1px dashed #ccc; padding-top:5px; margin-top:6px; }'
-                + '@media print { @page { margin:2mm; size:80mm auto; } .cut { page-break-after:always; } }'
-                + '@media screen { body { background:#ccc; padding:10px; } .page { background:white; box-shadow:0 2px 8px rgba(0,0,0,0.3); } }'
-                + '</style></head><body><div class="page">';
+            const htmlBase = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + nomInput + '</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;font-size:11px;} .page{width:80mm;margin:0 auto;padding:8px;} .header{text-align:center;border:2px solid #000;padding:8px;margin-bottom:10px;} .header h1{font-size:13px;font-weight:bold;} table{width:100%;border-collapse:collapse;margin:4px 0;} th{background:#f0f0f0;padding:4px 8px;} .copy-label{text-align:center;font-size:9px;font-weight:bold;background:#000;color:white;padding:3px;margin-bottom:8px;letter-spacing:2px;} .cut{border-top:2px dashed #000;margin:16px 0;text-align:center;font-size:9px;color:#aaa;padding-top:4px;} .footer{text-align:center;font-size:8px;color:#888;border-top:1px dashed #ccc;padding-top:5px;margin-top:6px;}</style></head><body><div class="page">';
 
             let contenido;
             if (opcion) {
-                contenido = htmlBase + bloqueCanje('★ ' + nombreDoc.toUpperCase() + ' ★') + '</div></body></html>';
+                contenido = htmlBase + bloqueCanje('★ ' + nomInput.toUpperCase() + ' ★') + '</div></body></html>';
             } else {
-                contenido = htmlBase
-                    + bloqueCanje('★ ' + nombreDoc.toUpperCase() + ' ★')
-                    + '<div class="cut">✂ &nbsp; CORTAR AQUÍ &nbsp; ✂</div>'
-                    + bloqueCanje('★ ' + nombreDoc.toUpperCase() + ' ★')
-                    + '</div></body></html>';
+                contenido = htmlBase + bloqueCanje('★ ' + nomInput.toUpperCase() + ' ★') + '<div class="cut">✂ &nbsp; CORTAR AQUÍ &nbsp; ✂</div>' + bloqueCanje('★ ' + nomInput.toUpperCase() + ' ★') + '</div></body></html>';
             }
 
-            try {
-                const histCanje = JSON.parse(localStorage.getItem('fondo_canjes') || '[]');
-                histCanje.unshift({ fecha: fechaHoy + ' ' + horaHoy, total, detalle: Object.fromEntries(CANJE_DENOMS.map(v => [v, parseInt(document.getElementById('canje-inp-' + v)?.value||0)||0])) });
-                if (histCanje.length > 50) histCanje.pop();
-                localStorage.setItem('fondo_canjes', JSON.stringify(histCanje));
-            } catch(e) {}
-
-            printHTML(contenido, nombreDoc + ' ' + fechaHoy.replace(/\//g,'-'));
+            printHTML(contenido, nomInput + ' ' + fechaVis.replace(/\//g,'-'));
+            canje_cerrarModal();
         }
-
-        function toggleAbout(show) {
-            const m = document.getElementById('about-modal');
-            if (show) { m.style.display = 'flex'; }
-            else       { m.style.display = 'none'; }
-        }
-
 
         // ════════════════════════════════════════════════════════════
         // CENTRO DE AYUDA COMPLETA
@@ -5658,6 +5681,15 @@
         }
 
         // ── Popovers de ayuda rápida ─────────────────────────────
+        function ayudaIrA(cat) {
+            ayudaRapida_cerrarTodos();
+            ayudaCompleta_abrir();
+            setTimeout(function() {
+                var t = document.querySelector('.ayuda-tag[onclick*=' + cat + ']');
+                if (t) ayudaCompleta_filtrar(cat, t);
+            }, 300);
+        }
+
         function ayudaRapida_toggle(id, btn) {
             const pop = document.getElementById(id);
             if (!pop) return;
@@ -5947,7 +5979,10 @@
             if (am && e.target === am) am.style.display = 'none';
         });
 
-    
+        function toggleAbout(show) {
+            document.getElementById('about-modal').style.display = show ? 'flex' : 'none';
+        }
+
     </script>
 
 <!-- ══════════════════════════════════════════
@@ -6068,4 +6103,4 @@
 </div>
 
 </body>
-</html>
+</html> 
