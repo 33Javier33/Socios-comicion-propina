@@ -3345,64 +3345,64 @@
 
                 if (!filas.length) { toggleLoader(false); return showToast('No hay anticipos en el período actual', 'error'); }
 
-                let tablaCuerpo = '';
-                filas.forEach((f, i) => {
-                    const bg = i%2===0 ? '#fff' : '#f9f9f9';
-                    tablaCuerpo +=
-                        '<tr style="background:'+bg+'">'
-                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:center;font-weight:bold;">'+( f.n||'')+'</td>'
-                        + '<td style="padding:5px 8px;border:1px solid #ddd;font-weight:'+(f.nombre?'700':'400')+';">'+( f.nombre||'')+'</td>'
-                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:center;">'+f.area+'</td>'
-                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:center;">'+f.fecha+'</td>'
-                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:right;font-weight:700;">'+fmt(f.valor)+'</td>'
-                        + '<td style="padding:5px 8px;border:1px solid #ddd;text-align:center;font-weight:700;color:#2980b9;">'+( f.responsable||'')+(f.respArea?' <span style="color:#888;font-size:9px;">('+f.respArea+')</span>':'')+'</td>'
-                        + (f.totalSocio!==null
-                            ? '<td style="padding:5px 8px;border:1px solid #ddd;text-align:right;font-weight:900;color:#c0392b;">'+fmt(f.totalSocio)+'</td>'
-                            : '<td style="padding:5px 8px;border:1px solid #ddd;"></td>')
-                        + '</tr>';
-                });
+                // ── DOS COLUMNAS LADO A LADO (como el Excel) ─────────
+                const mitad = Math.ceil(filas.length / 2);
+                const col1  = filas.slice(0, mitad);
+                const col2  = filas.slice(mitad);
 
-                const htmlInforme =
+                const ths = 'background:#2c3e50;color:white;padding:3px 4px;font-size:8px;border:1px solid #1a252f;text-align:center;';
+                const thead2 = '<thead><tr>'
+                    + '<th style="'+ths+'width:18px;">N°</th>'
+                    + '<th style="'+ths+'text-align:left;min-width:80px;">NOMBRE</th>'
+                    + '<th style="'+ths+'width:24px;">ÁREA</th>'
+                    + '<th style="'+ths+'width:24px;">RESP</th>'
+                    + '<th style="'+ths+'width:55px;">FECHA</th>'
+                    + '<th style="'+ths+'width:60px;text-align:right;">VALOR</th>'
+                    + '</tr></thead>';
+
+                function buildCol2(rows) {
+                    return rows.map(function(f, i) {
+                        var bg = i%2===0 ? '#fff' : '#f5f5f5';
+                        return '<tr style="background:'+bg+'">'
+                            + '<td style="padding:2px 4px;border:1px solid #ccc;text-align:center;font-weight:bold;font-size:8px;">'+(f.n||'')+'</td>'
+                            + '<td style="padding:2px 4px;border:1px solid #ccc;font-size:8px;font-weight:'+(f.nombre?'700':'400')+';">'+(f.nombre||'')+'</td>'
+                            + '<td style="padding:2px 4px;border:1px solid #ccc;text-align:center;font-size:8px;">'+f.area+'</td>'
+                            + '<td style="padding:2px 4px;border:1px solid #ccc;text-align:center;font-size:8px;">'+f.resp+'</td>'
+                            + '<td style="padding:2px 4px;border:1px solid #ccc;text-align:center;font-size:8px;">'+f.fecha+'</td>'
+                            + '<td style="padding:2px 4px;border:1px solid #ccc;text-align:right;font-weight:700;font-size:8px;">'+fmt(f.valor)+'</td>'
+                            + '</tr>';
+                    }).join('');
+                }
+
+                var htmlInforme =
                     '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
                     + '<title>'+fileName+'</title>'
                     + '<style>'
                     + '* { margin:0; padding:0; box-sizing:border-box; }'
-                    + 'body { font-family:Arial,sans-serif; font-size:11px; color:#000; padding:20px; }'
-                    + 'h1 { font-size:14px; text-align:center; font-weight:900; letter-spacing:1px; margin-bottom:4px; }'
-                    + '.subtitulo { text-align:center; font-size:11px; margin-bottom:16px; font-weight:600; }'
-                    + '.total-header { background:#c0392b; color:white; padding:8px 16px; font-size:14px; font-weight:900; display:flex; justify-content:space-between; margin-bottom:14px; border-radius:4px; }'
-                    + 'table { width:100%; border-collapse:collapse; margin-bottom:12px; }'
-                    + 'th { background:#2c3e50; color:white; padding:6px 8px; font-size:10px; text-align:left; border:1px solid #2c3e50; }'
-                    + '.total-row td { background:#f0f0f0; font-weight:900; font-size:13px; padding:8px; border:2px solid #2c3e50; }'
-                    + '.firma-section { display:flex; gap:40px; margin-top:30px; justify-content:center; }'
-                    + '.firma-box { text-align:center; min-width:160px; }'
-                    + '.firma-linea { border-top:1px solid #000; margin-bottom:4px; margin-top:30px; }'
-                    + '.firma-label { font-size:10px; color:#555; }'
-                    + '.footer { text-align:center; font-size:9px; color:#aaa; margin-top:20px; border-top:1px dashed #ccc; padding-top:8px; }'
-                    + '@media print { @page { margin:15mm; size:A4; } body { padding:0; } }'
-                    + '@media screen { body { background:#ddd; } .page { background:white; max-width:900px; margin:0 auto; padding:20px; box-shadow:0 2px 12px rgba(0,0,0,0.2); } }'
-                    + '</style><script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script></head><body><div class="page">'
-                    + '<h1>FONDO DE SOLIDARIDAD &mdash; CASINO DE PTO. VARAS</h1>'
-                    + '<div class="subtitulo">LEY 17312 DEL 29/07/70 &nbsp;&nbsp;|&nbsp;&nbsp; PUERTO VARAS</div>'
-                    + '<div class="total-header"><span>TOTAL EGRESOS</span><span>'+fmt(totalGeneral)+'</span></div>'
-                    + '<div class="subtitulo" style="margin-bottom:10px;">PERÍODO '+periodoStr+'</div>'
-                    + '<table><thead><tr>'
-                    + '<th style="width:30px;text-align:center;">N°</th>'
-                    + '<th>NOMBRE</th>'
-                    + '<th style="width:40px;text-align:center;">ÁREA</th>'
-                    + '<th style="width:90px;text-align:center;">FECHA</th>'
-                    + '<th style="width:90px;text-align:right;">VALOR</th>'
-                    + '<th style="width:80px;text-align:center;">RESPONSABLE</th>'
-                    + '<th style="width:90px;text-align:right;">TOTAL SOCIO</th>'
-                    + '</tr></thead>'
-                    + '<tbody>'+tablaCuerpo+'</tbody>'
-                    + '<tfoot><tr class="total-row">'
-                    + '<td colspan="5" style="text-align:right;">TOTAL GENERAL</td>'
-                    + '<td colspan="2" style="text-align:right;color:#c0392b;">'+fmt(totalGeneral)+'</td>'
-                    + '</tr></tfoot></table>'
-                    + ''
-                    + '<div class="footer">Emitido: '+fechaHoyVis+' &nbsp;|&nbsp; Sistema Fondo Solidario</div>'
+                    + 'body { font-family:Arial,sans-serif; font-size:9px; color:#000; padding:10px; }'
+                    + 'h1 { font-size:13px; text-align:center; font-weight:900; letter-spacing:1px; margin-bottom:2px; }'
+                    + '.sub { text-align:center; font-size:9px; margin-bottom:5px; font-weight:600; }'
+                    + '.tothead { background:#c0392b; color:white; padding:5px 10px; font-size:11px; font-weight:900; display:flex; justify-content:space-between; margin-bottom:7px; border-radius:3px; }'
+                    + '.dos-cols { display:grid; grid-template-columns:1fr 1fr; gap:6px; }'
+                    + 'table { width:100%; border-collapse:collapse; }'
+                    + '.totfinal { background:#2c3e50; color:white; padding:4px 8px; font-weight:900; font-size:10px; text-align:right; margin-top:7px; border-radius:2px; }'
+                    + '.footer { text-align:center; font-size:8px; color:#aaa; margin-top:8px; border-top:1px dashed #ccc; padding-top:4px; }'
+                    + '@media print { @page { margin:8mm; size:A4 landscape; } body { padding:0; } }'
+                    + '@media screen { body { background:#ddd; } .page { background:white; max-width:1050px; margin:0 auto; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,0.2); } }'
+                    + '<\/style>'
+                    + '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},400);}<\/scr'+'ipt>'
+                    + '</head><body><div class="page">'
+                    + '<h1>DETALLE DE ANTICIPOS</h1>'
+                    + '<div class="sub">FONDO DE SOLIDARIDAD &mdash; CASINO DE PUERTO VARAS &nbsp;|&nbsp; LEY 17312 DEL 29/07/70</div>'
+                    + '<div class="tothead"><span>TOTAL EGRESOS &mdash; PERÍODO '+periodoStr+'</span><span>'+fmt(totalGeneral)+'</span></div>'
+                    + '<div class="dos-cols">'
+                    + '<table>'+thead2+'<tbody>'+buildCol2(col1)+'</tbody></table>'
+                    + '<table>'+thead2+'<tbody>'+buildCol2(col2)+'</tbody></table>'
+                    + '</div>'
+                    + '<div class="totfinal">TOTAL GENERAL: '+fmt(totalGeneral)+'</div>'
+                    + '<div class="footer">Emitido: '+fechaHoyVis+' &nbsp;|&nbsp; Sistema Fondo Solidario &mdash; Casino de Puerto Varas</div>'
                     + '</div></body></html>';
+
 
                 printHTML(htmlInforme, fileName);
 
@@ -6138,4 +6138,4 @@
 </div>
 
 </body>
-</html> 
+</html>
