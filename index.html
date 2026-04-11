@@ -844,10 +844,31 @@
                     <span class="ms-val" id="contadorEscalamientos">🏆</span>
                     <span class="ms-label">Escalamientos</span>
                 </div>
+                <div class="mini-stat purple clickable" id="statPendientes" onclick="pendientes_mostrarPanel()" title="Socios pendientes de activación" style="display:none;">
+                    <span class="ms-val" id="contadorPendientes">⏳</span>
+                    <span class="ms-label">Pendientes</span>
+                </div>
             </div>
 
 
             <!-- PANEL AVISOS ESCALAMIENTO DE PUNTOS -->
+            <!-- PANEL SOCIOS PENDIENTES DE ACTIVACIÓN -->
+            <div id="panelPendientes" style="display:none; margin-bottom:20px;">
+                <div style="background:linear-gradient(135deg,#fff7ed,#ffedd5); border:1px solid #fb923c; border-radius:12px; padding:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:1.3em;">⏳</span>
+                            <div>
+                                <strong style="color:#ea580c; font-size:1em;">Socios Pendientes de Activación</strong>
+                                <div style="font-size:0.75em; color:#9a3412; margin-top:2px;">Ingresados pero aún no activos — no aparecen en los paneles</div>
+                            </div>
+                        </div>
+                        <button onclick="document.getElementById('panelPendientes').style.display='none'" style="background:none;border:none;color:#7f8c8d;font-size:1.3em;cursor:pointer;line-height:1;">✕</button>
+                    </div>
+                    <div id="listaPendientes"></div>
+                </div>
+            </div>
+
             <div id="panelEscalamientos" style="display:none; margin-bottom:20px;">
                 <div style="background:linear-gradient(135deg,#fff8e1,#fffde7); border:1px solid #f39c12; border-radius:12px; padding:16px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
@@ -2494,18 +2515,38 @@
 
         function procesarSocioDesdeGoogle(s) {
             const fechaStr = s.FechaIngreso;
-            if(!fechaStr) return { ...s, anios: 0, puntos: 0 };
-            const fechaPuntosStr = (s.FechaInicioPuntos && s.FechaInicioPuntos.trim()) ? s.FechaInicioPuntos.trim() : fechaStr;
-            const partesPuntos = fechaPuntosStr.split('-');
-            const fechaParaPuntos = new Date(parseInt(partesPuntos[0]), parseInt(partesPuntos[1]) - 1, parseInt(partesPuntos[2]));
+            if(!fechaStr) return { ...s, anios: 0, puntos: 0, puntosActivos: false, visible: false };
+
+            // ── Obtener fecha_inicio_puntos y normalizarla al día 15 ──
+            const fechaPuntosRaw = (s.FechaInicioPuntos && s.FechaInicioPuntos.trim()) ? s.FechaInicioPuntos.trim() : fechaStr;
+            const partesPuntosRaw = fechaPuntosRaw.split('-');
+            // Forzar día 15 (regla del día 15)
+            const año15  = parseInt(partesPuntosRaw[0]);
+            const mes15  = parseInt(partesPuntosRaw[1]) - 1; // 0-indexed
+            const fechaPuntosStr = año15 + '-' + String(parseInt(partesPuntosRaw[1])).padStart(2,'0') + '-15';
+
+            // Construir fecha de inicio de puntos siempre en día 15
+            const fechaParaPuntos = new Date(año15, mes15, 15);
             const fechaActual = new Date();
-            let anios = fechaActual.getFullYear() - fechaParaPuntos.getFullYear();
-            if (fechaActual.getMonth() < fechaParaPuntos.getMonth() || (fechaActual.getMonth() === fechaParaPuntos.getMonth() && fechaActual.getDate() < fechaParaPuntos.getDate())) { anios--; }
+
+            // ── Regla 2: visible solo si hoy >= día 15 del mes de inicio ──
+            const visible = fechaActual >= fechaParaPuntos;
+
+            // ── Regla 3: años = ciclos completos de 12 meses desde el día 15 ──
+            // El aumento ocurre exactamente el día 15 de cada año aniversario
+            let anios = fechaActual.getFullYear() - año15;
+            // Retroceder 1 año si aún no llegó el día 15 de este año
+            if (
+                fechaActual.getMonth() < mes15 ||
+                (fechaActual.getMonth() === mes15 && fechaActual.getDate() < 15)
+            ) { anios--; }
             if (anios < 0) anios = 0;
-            const puntosActivos = fechaParaPuntos <= fechaActual;
+
+            const puntosActivos = visible; // puntos activos solo si ya pasó el día 15
             const areaNorm = (s.Area || '').toLowerCase().trim();
+
             if (areaNorm === 'gastoscomision' || areaNorm.includes('gastos')) {
-                return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: 'GastosComision', contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios: 0, puntos: puntosActivos ? 1 : 0, puntosActivos };
+                return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: 'GastosComision', contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios: 0, puntos: puntosActivos ? 1 : 0, puntosActivos, visible };
             }
             let puntosMaximos = 10;
             if (areaNorm === 'mesas') puntosMaximos = 20;
@@ -2514,14 +2555,26 @@
             else if (areaNorm === 'boveda') puntosMaximos = 10;
             else if (areaNorm.includes('cambista')) puntosMaximos = 8;
             const puntosBase = 4;
+            // Puntos = base + (años completos de ciclo × 2), nunca supera el máximo
             let puntosCalculados = puntosBase + (anios * 2);
             let puntosFinales = puntosActivos ? Math.min(puntosCalculados, puntosMaximos) : 0;
-            return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: areaNorm, contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios: anios, puntos: puntosFinales, puntosActivos };
+            return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: areaNorm, contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios, puntos: puntosFinales, puntosActivos, visible };
+        }
+
+        // ── Normaliza fecha_inicio_puntos al día 15 del mes ingresado ──
+        function normalizarFechaInicioPuntos(fechaISO) {
+            if (!fechaISO) return '';
+            const partes = fechaISO.split('-'); // YYYY-MM-DD
+            if (partes.length !== 3) return fechaISO;
+            // Forzar día al 15, conservar año y mes
+            return partes[0] + '-' + partes[1] + '-15';
         }
 
         document.getElementById('registroForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const fechaInicioVal = document.getElementById('fechaInicioPuntos').value;
+            const fechaInicioRaw = document.getElementById('fechaInicioPuntos').value;
+            // Regla del día 15: siempre guardar el día 15 del mes seleccionado
+            const fechaInicioVal = normalizarFechaInicioPuntos(fechaInicioRaw);
             const d = { Nombre: document.getElementById('nombre').value, Apellido: document.getElementById('apellido').value, FechaIngreso: document.getElementById('fechaIngreso').value, Area: document.getElementById('area').value, TipoContrato: document.getElementById('contrato').value, FechaInicioPuntos: fechaInicioVal || '' };
             const idEdit = document.getElementById('editId').value;
             toggleLoader(true, isEditing ? "Actualizando..." : "Guardando...");
@@ -2789,13 +2842,16 @@
         function renderizarCards() {
             const container = document.getElementById('mainSociosContainer');
             container.innerHTML = '';
-            let totalSocios = cacheSocios.length;
-            const sociosActivos = cacheSocios.filter(s => s.puntosActivos !== false);
-            let totalPuntos = sociosActivos.reduce((a,b) => a + b.puntos, 0);
-            let totalPlanta = sociosActivos.filter(s => s.contrato === 'Planta').length;
-            let totalPart   = sociosActivos.filter(s => s.contrato === 'Part-Time').length;
+            // ── Regla 2: solo contar socios visibles (fecha_inicio_puntos <= hoy) ──
+            const sociosVisibles   = cacheSocios.filter(s => s.visible !== false);
+            const sociosPendientes = cacheSocios.filter(s => s.visible === false);
+            // Los paneles del dashboard solo reflejan socios visibles
+            let totalSocios  = sociosVisibles.length;
+            const sociosActivos = sociosVisibles.filter(s => s.puntosActivos !== false);
+            let totalPuntos  = sociosActivos.reduce((a,b) => a + b.puntos, 0);
+            let totalPlanta  = sociosActivos.filter(s => s.contrato === 'Planta').length;
+            let totalPart    = sociosActivos.filter(s => s.contrato === 'Part-Time').length;
             let puntosPlanta = sociosActivos.filter(s => s.contrato === 'Planta').reduce((a,b) => a + b.puntos, 0);
-            const sociosPendientes = cacheSocios.filter(s => s.puntosActivos === false);
             document.getElementById('totalSociosDash').innerText = totalSocios;
             document.getElementById('totalPuntosDash').innerText = totalPuntos;
             document.getElementById('totalPlantaDash').innerText = totalPlanta;
@@ -2811,12 +2867,15 @@
             const grupos = { 'mesas': [], 'mesasPartTime': [], 'cambistas': [], 'maquinas': [], 'tecnicos': [], 'boveda': [], 'GastosComision': [] };
             const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasPartTime': 'Mesas (Part-Time)', 'cambistas': 'Mesas (Cambistas)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'GastosComision': 'Gastos Comisión' };
 
-            cacheSocios.forEach(socio => {
+            // Solo renderizar socios visibles en las tarjetas de área
+            sociosVisibles.forEach(socio => {
                 let key = socio.area.toLowerCase().replace(/\s/g, '');
                 if (key.includes('cambista')) key = 'cambistas'; else if (key.includes('gastos')) key = 'GastosComision';
                 if (key === 'mesas') { if (socio.contrato === 'Part-Time') key = 'mesasPartTime'; else key = 'mesas'; }
                 if (grupos[key]) grupos[key].push(socio); else { if(!grupos['otros']) grupos['otros'] = []; grupos['otros'].push(socio); nombresArea['otros'] = 'Otros / Sin Clasificar'; }
             });
+            // Actualizar panel y stat de socios pendientes
+            pendientes_actualizar(sociosPendientes);
 
             for (const [key, listaSocios] of Object.entries(grupos)) {
                 if (!listaSocios || listaSocios.length === 0) continue;
@@ -3365,36 +3424,45 @@
                         { bg:'#ffffff', borde:'#ccc', txt:'#1a1a1a', totalBg:'#f0f0f0', totalTxt:'#c0392b' },
                         { bg:'#e8f4fd', borde:'#aed6f1', txt:'#0d3a6e', totalBg:'#aed6f1', totalTxt:'#0d3a6e' },
                     ];
-                    var html = '';
+                    // Agrupar filas por socio para evitar cortes de página
+                    var grupos = [];
+                    var grupoActual = null;
                     var colorIdx = 0;
-                    var socioActual = '';
                     rows.forEach(function(f) {
-                        if (f.nombre && f.nombre !== socioActual) {
-                            socioActual = f.nombre;
+                        if (f.nombre && (!grupoActual || f.nombre !== grupoActual.nombre)) {
                             colorIdx = (colorIdx + 1) % paleta.length;
+                            grupoActual = { nombre: f.nombre, col: paleta[colorIdx], filas: [] };
+                            grupos.push(grupoActual);
                         }
-                        var col = paleta[colorIdx];
-                        var isNombreRow = !!f.nombre;
-                        // Fila de dato individual
-                        html += '<tr style="background:'+col.bg+'">'
-                            + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:center;font-weight:bold;font-size:8px;color:'+col.txt+';">'+(f.n||'')+'</td>'
-                            + '<td style="padding:2px 4px;border:1px solid '+col.borde+';font-size:8px;font-weight:'+(isNombreRow?'800':'400')+';color:'+col.txt+';">'+(f.nombre||'')+'</td>'
-                            + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:center;font-size:8px;color:'+col.txt+';">'+f.area+'</td>'
-                            + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:center;font-size:8px;color:'+col.txt+';">'+f.fecha+'</td>'
-                            + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:right;font-weight:700;font-size:8px;color:'+col.txt+';">'+fmt(f.valor)+'</td>'
-                            + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:center;font-size:7px;color:'+col.txt+';">'+(f.responsable ? f.responsable+(f.respArea ? ' '+f.respArea : '') : '')+'</td>'
-                            + '</tr>';
-                        // Si es la última fila del socio → agregar fila de TOTAL
-                        if (f.totalSocio !== null) {
-                            html += '<tr style="background:'+col.totalBg+';border-top:2px solid '+col.totalTxt+';">'
-                                + '<td style="padding:2px 4px;border:1px solid '+col.borde+';font-size:8px;" colspan="3"></td>'
-                                + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:right;font-size:8px;font-weight:700;color:'+col.totalTxt+';">TOTAL:</td>'
-                                + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:right;font-weight:900;font-size:9px;color:'+col.totalTxt+';">'+fmt(f.totalSocio)+'</td>'
-                                + '<td style="padding:2px 4px;border:1px solid '+col.borde+';"></td>'
-                                + '</tr>';
-                        }
+                        if (grupoActual) grupoActual.filas.push(f);
                     });
-                    return html;
+                    // Cada grupo va en su propio <tbody> con page-break-inside:avoid
+                    return grupos.map(function(g) {
+                        var col = g.col;
+                        var filasHtml = g.filas.map(function(f) {
+                            var isNombreRow = !!f.nombre;
+                            var filaHtml = '<tr style="background:'+col.bg+'">'
+                                + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:center;font-weight:bold;font-size:8px;color:'+col.txt+';">'+(f.n||'')+'</td>'
+                                + '<td style="padding:2px 4px;border:1px solid '+col.borde+';font-size:8px;font-weight:'+(isNombreRow?'800':'400')+';color:'+col.txt+';">'+(f.nombre||'')+'</td>'
+                                + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:center;font-size:8px;color:'+col.txt+';">'+f.area+'</td>'
+                                + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:center;font-size:8px;color:'+col.txt+';">'+f.fecha+'</td>'
+                                + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:right;font-weight:700;font-size:8px;color:'+col.txt+';">'+fmt(f.valor)+'</td>'
+                                + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:center;font-size:7px;color:'+col.txt+';">'+(f.responsable ? f.responsable+(f.respArea ? ' '+f.respArea : '') : '')+'</td>'
+                                + '</tr>';
+                            // Fila de TOTAL al final del grupo
+                            if (f.totalSocio !== null) {
+                                filaHtml += '<tr style="background:'+col.totalBg+';">'
+                                    + '<td style="padding:2px 4px;border:1px solid '+col.borde+';font-size:8px;border-top:2px solid '+col.totalTxt+';" colspan="3"></td>'
+                                    + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:right;font-size:8px;font-weight:700;color:'+col.totalTxt+';border-top:2px solid '+col.totalTxt+';">TOTAL:</td>'
+                                    + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:right;font-weight:900;font-size:9px;color:'+col.totalTxt+';border-top:2px solid '+col.totalTxt+';">'+fmt(f.totalSocio)+'</td>'
+                                    + '<td style="padding:2px 4px;border:1px solid '+col.borde+';border-top:2px solid '+col.totalTxt+';"></td>'
+                                    + '</tr>';
+                            }
+                            return filaHtml;
+                        }).join('');
+                        // tbody con page-break-inside:avoid — no corta al imprimir
+                        return '<tbody style="page-break-inside:avoid;break-inside:avoid;">' + filasHtml + '</tbody>';
+                    }).join('');
                 }
 
                 var htmlInforme =
@@ -3410,7 +3478,7 @@
                     + 'table { width:100%; border-collapse:collapse; }'
                     + '.totfinal { background:#2c3e50; color:white; padding:4px 8px; font-weight:900; font-size:10px; text-align:right; margin-top:7px; border-radius:2px; }'
                     + '.footer { text-align:center; font-size:8px; color:#aaa; margin-top:8px; border-top:1px dashed #ccc; padding-top:4px; }'
-                    + '@media print { @page { margin:8mm; size:A4 landscape; } body { padding:0; } }'
+                    + '@media print { @page { margin:8mm; size:A4 landscape; } body { padding:0; } tbody { page-break-inside:avoid; break-inside:avoid; } tr { page-break-inside:avoid; break-inside:avoid; } }'
                     + '@media screen { body { background:#ddd; } .page { background:white; max-width:1050px; margin:0 auto; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,0.2); } }'
                     + '<\/style>'
                     + '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},400);}<\/scr'+'ipt>'
@@ -3419,8 +3487,8 @@
                     + '<div class="sub">FONDO DE SOLIDARIDAD &mdash; CASINO DE PUERTO VARAS &nbsp;|&nbsp; LEY 17312 DEL 29/07/70</div>'
                     + '<div class="tothead"><span>TOTAL EGRESOS &mdash; PERÍODO '+periodoStr+'</span><span>'+fmt(totalGeneral)+'</span></div>'
                     + '<div class="dos-cols">'
-                    + '<table>'+thead2+'<tbody>'+buildCol2(col1)+'</tbody></table>'
-                    + '<table>'+thead2+'<tbody>'+buildCol2(col2)+'</tbody></table>'
+                    + '<table>'+thead2+buildCol2(col1)+'</table>'
+                    + '<table>'+thead2+buildCol2(col2)+'</table>'
                     + '</div>'
                     + '<div class="totfinal">TOTAL GENERAL: '+fmt(totalGeneral)+'</div>'
                     + '<div class="footer">Emitido: '+fechaHoyVis+' &nbsp;|&nbsp; Sistema Fondo Solidario &mdash; Casino de Puerto Varas</div>'
@@ -5949,6 +6017,68 @@
         }
 
         // ── Notificación escalamientos del mes ────────────────────
+        // ══════════════════════════════════════════════════════════
+        // GESTIÓN DE SOCIOS PENDIENTES DE ACTIVACIÓN
+        // ══════════════════════════════════════════════════════════
+        function pendientes_actualizar(listaPend) {
+            const stat = document.getElementById('statPendientes');
+            const contador = document.getElementById('contadorPendientes');
+            if (!listaPend || listaPend.length === 0) {
+                if (stat) stat.style.display = 'none';
+                document.getElementById('panelPendientes').style.display = 'none';
+                return;
+            }
+            if (stat) { stat.style.display = ''; contador.textContent = listaPend.length; }
+            // Renderizar tarjetas en el panel
+            const lista = document.getElementById('listaPendientes');
+            lista.innerHTML = listaPend.map(s => {
+                const hoy = new Date();
+                const partes = (s.fechaInicioPuntos || '').split('-');
+                const fechaActivacion = partes.length === 3
+                    ? new Date(parseInt(partes[0]), parseInt(partes[1])-1, 15) : null;
+                const diasRestantes = fechaActivacion
+                    ? Math.ceil((fechaActivacion - hoy) / (1000*60*60*24)) : '?';
+                const fechaVis = partes.length === 3
+                    ? '15/' + partes[1].padStart(2,'0') + '/' + partes[0] : '?';
+                return '<div style="background:white;border-radius:10px;padding:10px 14px;margin-bottom:8px;border:1px solid #fed7aa;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">'
+                    + '<div>'
+                    + '<div style="font-weight:800;font-size:0.9em;color:#1e293b;">' + s.nombre + ' ' + s.apellido + '</div>'
+                    + '<div style="font-size:0.75em;color:#7f8c8d;margin-top:2px;">'
+                    + (s.contrato||'') + ' · ' + (s.area||'') 
+                    + '</div>'
+                    + '<div style="font-size:0.75em;color:#ea580c;font-weight:700;margin-top:3px;">'
+                    + '📅 Activa el: ' + fechaVis
+                    + (typeof diasRestantes === 'number' ? ' <span style="background:#ffedd5;padding:1px 6px;border-radius:8px;">en ' + diasRestantes + ' días</span>' : '')
+                    + '</div>'
+                    + '</div>'
+                    + '<div style="display:flex;gap:6px;">'
+                    + '<button onclick="pendientes_editar(\'' + s.id + '\')" style="background:#e0f2fe;border:1px solid #7dd3fc;color:#0369a1;border-radius:7px;padding:6px 10px;font-size:0.8em;font-weight:700;cursor:pointer;">✏️ Editar</button>'
+                    + '<button onclick="pendientes_eliminar(\'' + s.id + '\',\'' + s.nombre + ' ' + s.apellido + '\')" style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;border-radius:7px;padding:6px 10px;font-size:0.8em;font-weight:700;cursor:pointer;">🗑️ Eliminar</button>'
+                    + '</div>'
+                    + '</div>';
+            }).join('');
+        }
+
+        function pendientes_mostrarPanel() {
+            const panel = document.getElementById('panelPendientes');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            if (panel.style.display === 'block') panel.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function pendientes_editar(id) {
+            document.getElementById('panelPendientes').style.display = 'none';
+            prepararEdicion(id);
+        }
+
+        function pendientes_eliminar(id, nombre) {
+            if (!confirm('¿Eliminar a ' + nombre + '?\nEsta acción no se puede deshacer.')) return;
+            toggleLoader(true, 'Eliminando...');
+            callApiSocios('deleteSocio', { socioId: id })
+                .then(() => { showToast('Socio eliminado', 'success'); fetchSociosDeGoogle(); })
+                .catch(() => showToast('Error al eliminar', 'error'))
+                .finally(() => toggleLoader(false));
+        }
+
         function notificarEscalamientosMes() {
             const hoy = new Date();
             const mes = hoy.getMonth(), anio = hoy.getFullYear();
