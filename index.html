@@ -221,6 +221,7 @@
         .row-deletable:active { background: rgba(239,68,68,0.08); transform: scale(0.995); }
 
         .amount-minus { color: var(--danger); font-weight: 700; }
+        .amount-anticipo { color: var(--secondary); font-weight: 700; } /* Anticipos en azul */
         .tag-absent { background: rgba(239,68,68,0.15); color: #fca5a5; padding: 2px 8px; border-radius: 5px; font-size: 0.78em; font-weight: 700; border: 1px solid rgba(239,68,68,0.3); }
 
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px; }
@@ -570,6 +571,7 @@
         body.dark-mode .detail-panel { background:#1e293b !important; box-shadow:0 5px 15px rgba(0,0,0,0.3) !important; }
         body.dark-mode .detail-panel * { color:#e2e8f0; }
         body.dark-mode .detail-panel .amount-minus { color:#f87171 !important; }
+        body.dark-mode .detail-panel .amount-anticipo { color:#93c5fd !important; }
         body.dark-mode .detail-panel .card-contract { background:#243040; border-color:#334155; color:#94a3b8; }
         body.dark-mode .detail-panel .detail-header { border-bottom-color:#334155 !important; }
         body.dark-mode #mensajeSeleccion { background:#1e293b !important; color:#94a3b8 !important; }
@@ -3312,7 +3314,10 @@
                         const esAnticipo = tiposArr.includes('Anticipo');
                         let tipoHtml = tiposArr.includes('AUSENCIA') ? '<span class="tag-absent">AUSENCIA</span>' : `<span style="font-weight:bold; color:#7f8c8d;">${tiposArr.join(' + ')}</span>`;
                         const detalleHtml = [...new Set(item.detalles)].join(', ') || '-';
-                        const montoHtml = item.montoTotal > 0 ? `<span class="amount-minus">-${formatearMoneda(item.montoTotal)}</span>` : '-';
+                        // Anticipos en azul, ausencias en rojo
+                        const esAusencia = Array.from(item.tipos).includes('AUSENCIA');
+                        const claseColor = esAusencia ? 'amount-minus' : 'amount-anticipo';
+                        const montoHtml = item.montoTotal > 0 ? `<span class="${claseColor}">-${formatearMoneda(item.montoTotal)}</span>` : '-';
                         
                         const itemDataStr = JSON.stringify({
                             uuid: item.uuid, 
