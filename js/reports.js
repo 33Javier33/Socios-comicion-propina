@@ -297,7 +297,7 @@ async function informeMontosDiarios() {
 // ============================================================
 // IMPRIMIR RECIBO INDIVIDUAL (CON NOMBRE DINÁMICO)
 // ============================================================
-function imprimirReciboSocio() {
+async function imprimirReciboSocio() {
     const id     = document.getElementById('gestionSocioId').value;
     const socio  = cacheSocios.find(s => s.id === id);
     if (!socio) return showToast('Selecciona un socio primero', 'error');
@@ -330,6 +330,12 @@ function imprimirReciboSocio() {
     const fmtF = iso => { const p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
     const periodoStr = fmtF(inicio) + ' AL ' + fmtF(fin);
     const fechaHoyVis   = hoy.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+    // Folio único: REC-AAAAMMDD-HHMMSS-INI
+    const _resp = getSesionResponsableObj();
+    const _pad  = n => String(n).padStart(2, '0');
+    const folio = `REC-${hoy.getFullYear()}${_pad(hoy.getMonth()+1)}${_pad(hoy.getDate())}-${_pad(hoy.getHours())}${_pad(hoy.getMinutes())}${_pad(hoy.getSeconds())}-${(_resp.ini||'SYS').replace(/[^A-Za-z0-9]/g,'')}`;
+
 
     const filas = document.getElementById('tablaHistorial');
     let movHtml = '';
@@ -370,6 +376,7 @@ function imprimirReciboSocio() {
     function bloqueRecibo(etiqueta) {
         return `
             <div class='copy-label'>${etiqueta}</div>
+            <div class='folio-badge'>N° FOLIO: ${folio}</div>
             <div class='header'>
               <h1>FONDO DE SOLIDARIDAD</h1>
               <p>CASINO DE PTO. VARAS</p>
@@ -407,6 +414,7 @@ function imprimirReciboSocio() {
               <div class='firma-box'><div class='firma-linea'></div><div class='firma-nombre'>${nombreSocio.toUpperCase()}</div><div class='firma-label'>FIRMA SOCIO</div></div>
 
             </div>
+            <div style='text-align:center;font-family:monospace;font-size:7px;color:#aaa;margin-top:3px;'>FOLIO: ${folio}</div>
             <div class='footer'>Emitido: ${fechaHoyVis} | Sistema Fondo Solidario</div>`;
     }
 
@@ -430,6 +438,7 @@ function imprimirReciboSocio() {
         .firma-linea { border-top:1px solid #000; margin-bottom:4px; margin-top:15px; }
         .firma-label { font-size:7px; color:#555; }
         .footer { text-align:center; font-size:7px; color:#888; margin-top:5px; }
+        .folio-badge { text-align:center; font-size:8px; font-family:monospace; background:#f4f6f7; border:1px dashed #aaa; padding:3px 6px; margin-bottom:6px; letter-spacing:0.5px; border-radius:3px; }
         @media print { @page { margin:2mm; size:80mm auto; } .cut { page-break-after:always; } }
         </style></head><body><div class='page'>`;
 
@@ -446,5 +455,23 @@ function imprimirReciboSocio() {
                       bloqueRecibo('★ COMPROBANTE SOCIO ★') + '</div></body></html>';
     }
 
+    // Snapshot completo para auditoría y reimpresión
+    const reciboSnapshot = {
+        folio, socioId: id, nombre: nombreSocio, area, contrato,
+        anioIngreso, puntos, subePuntosLabel, fipLabel: fipLabel || null,
+        periodo: periodoStr, valorPuntoFmt,
+        saldoAnt, alcance, totalPedido, saldoReal, aPagar, remanente,
+        fechaEmision: fechaHoyVis, movHtml
+    };
+
     printHTML(contenido, fileName);
+
+    // Registrar en auditoría (no bloquea la impresión)
+    const _audUsuario = (_resp.ini || '') + (_resp.area ? ' (' + _resp.area + ')' : '');
+    callApiSocios('logAccionAuditoria', {
+        usuario: _audUsuario,
+        accion: 'Imprimir Recibo',
+        detalle: JSON.stringify(reciboSnapshot),
+        idAfectado: folio
+    }).catch(() => {});
 }

@@ -8,6 +8,7 @@ let audFiltroAccion  = '';
 let audFiltroDesde   = '';
 let audFiltroHasta   = '';
 let audFiltroTexto   = '';
+let auditoriaSnapshots = {};
 
 async function auditoria_cargar() {
     toggleLoader(true, 'Cargando auditoría...');
@@ -46,6 +47,7 @@ const AUD_COLORES = {
     'Actualizar':{ bg:'#e8f8f5', txt:'#148f77' },
     'Cierre':    { bg:'#f5eef8', txt:'#7d3c98' },
     'Reiniciar': { bg:'#fef0e7', txt:'#a04000' },
+    'Imprimir':  { bg:'#eaf0fb', txt:'#1a3a8a' },
 };
 
 function auditoria_colorAccion(accion) {
@@ -68,15 +70,32 @@ function auditoria_renderizar(datos) {
     tbody.innerHTML = datos.map(r => {
         const c = auditoria_colorAccion(r.accion);
         const fechaVis = r.fecha ? r.fecha.replace('T',' ').substring(0,16) : '';
-        const idCorto  = (r.idAfectado||'').substring(0,22);
+        const isRecibo = r.accion === 'Imprimir Recibo';
+        const idFull   = r.idAfectado || '';
+        const idCorto  = isRecibo ? idFull : idFull.substring(0,22);
+
+        let detalleHtml = r.detalle || '';
+        let reimpBtn    = '';
+        if (isRecibo) {
+            try {
+                const snap = JSON.parse(r.detalle);
+                auditoriaSnapshots[snap.folio] = snap;
+                detalleHtml = `<strong style="font-size:0.9em;">${snap.nombre||''}</strong><br>
+                    <span style="font-size:0.78em;color:#555;">Período: ${snap.periodo||''}</span><br>
+                    <span style="font-size:0.78em;">A Pagar: <b>${snap.aPagar||''}</b> &nbsp;|&nbsp; Puntos: ${snap.puntos||''}</span>`;
+                reimpBtn = `<button onclick="auditoria_reimprimirRecibo('${snap.folio}')"
+                    style="margin-top:4px;background:#1a3a8a;color:white;border:none;border-radius:5px;padding:3px 10px;font-size:0.76em;cursor:pointer;">🖨 Reimprimir</button>`;
+            } catch(e) { /* deja detalle crudo */ }
+        }
+
         return `<tr class="aud-row">
             <td style="padding:9px 10px;font-size:0.8em;color:#7f8c8d;white-space:nowrap;">${fechaVis}</td>
             <td style="padding:9px 10px;font-weight:700;font-size:0.87em;">${r.usuario||''}</td>
             <td style="padding:9px 10px;">
                 <span style="background:${c.bg};color:${c.txt};border-radius:6px;padding:3px 9px;font-size:0.78em;font-weight:700;white-space:nowrap;">${r.accion||''}</span>
             </td>
-            <td style="padding:9px 10px;font-size:0.82em;color:#444;line-height:1.4;">${r.detalle||''}</td>
-            <td style="padding:9px 10px;font-size:0.72em;color:#aaa;font-family:monospace;" title="${r.idAfectado||''}">${idCorto}</td>
+            <td style="padding:9px 10px;font-size:0.82em;color:#444;line-height:1.5;">${detalleHtml}${reimpBtn}</td>
+            <td style="padding:9px 10px;font-size:0.72em;color:#aaa;font-family:monospace;word-break:break-all;" title="${idFull}">${idCorto}</td>
         </tr>`;
     }).join('');
 }
@@ -211,4 +230,86 @@ tr:nth-child(even) td { background:#f8f9fa; }
 
     const fileName = `Auditoria ${mesNom} ${hoy.replace(/\//g,'-')}`;
     printHTML(html, fileName);
+}
+
+function auditoria_reimprimirRecibo(folio) {
+    const snap = auditoriaSnapshots[folio];
+    if (!snap) return showToast('Recibo no disponible en esta sesión. Recarga auditoría.', 'error');
+
+    const fileName = `Recibo ${snap.nombre||''} REIMP ${snap.folio||''}`;
+
+    function bloqueRecibo(etiqueta) {
+        return `
+            <div class='copy-label'>${etiqueta}</div>
+            <div class='folio-badge'>N° FOLIO: ${snap.folio} &nbsp;★&nbsp; REIMPRESIÓN</div>
+            <div class='header'>
+              <h1>FONDO DE SOLIDARIDAD</h1>
+              <p>CASINO DE PTO. VARAS</p>
+              <p>LEY 17312 DEL 29/07/70</p>
+              <p><strong>PUERTO VARAS</strong></p>
+            </div>
+            <div class='section-title'>DATOS</div>
+            <div class='row'><label>NOMBRE</label><strong>${(snap.nombre||'').toUpperCase()}</strong></div>
+            <div class='row'><label>ÁREA</label><span>${snap.area||''}</span></div>
+            <div class='row'><label>CONTRATO</label><span>${snap.contrato||''}</span></div>
+            <div class='row'><label>AÑO INGRESO</label><span>${snap.anioIngreso||''}</span></div>
+            ${snap.fipLabel ? `<div class='row'><label>INICIO PUNTOS</label><span>${snap.fipLabel}</span></div>` : ''}
+            <div class='row'><label>PUNTOS</label><span>${snap.puntos||''}</span></div>
+            <div class='row'><label>SUBE PUNTOS</label><span>${snap.subePuntosLabel||''}</span></div>
+            <div class='divider'></div>
+            <div class='section-title'>CIERRE PUNTO</div>
+            <div class='row'><label>VALOR PUNTO NOCHE</label><span>${snap.valorPuntoFmt||''}</span></div>
+            <div class='divider'></div>
+            <div class='section-title'>DETALLE</div>
+            <div class='row'><label>BRUTO (Alcance)</label><span>${snap.alcance||''}</span></div>
+            <div class='row'><label>ANTICIPOS</label><span>${snap.totalPedido||''}</span></div>
+            <div class='row'><label>SALDO ANTERIOR</label><span>${snap.saldoAnt||''}</span></div>
+            <div class='row bold'><label>SALDO REAL</label><strong>${snap.saldoReal||''}</strong></div>
+            <div class='divider'></div>
+            <div style='text-align:center;font-size:9px;font-weight:bold;margin-top:6px;letter-spacing:1px;'>TOTAL A COBRAR</div>
+            <div class='row big'><span>$ ${snap.aPagar||''}</span></div>
+            <div class='row'><label>REMANENTE</label><span>${snap.remanente||''}</span></div>
+            <div class='divider'></div>
+            <div class='section-title'>MOVIMIENTOS / RESPONSABLES</div>
+            <table><thead><tr><th>#</th><th>Tipo</th><th>Detalle</th><th>Monto</th></tr></thead>
+            <tbody>${snap.movHtml||''}</tbody></table>
+            <div class='divider'></div>
+            <div style='text-align:center;font-weight:bold;font-size:10px;margin:4px 0;'>PERÍODO ${snap.periodo||''}</div>
+            <div class='firmas'>
+              <div class='firma-box'><div class='firma-linea'></div><div class='firma-nombre'>${(snap.nombre||'').toUpperCase()}</div><div class='firma-label'>FIRMA SOCIO</div></div>
+            </div>
+            <div style='text-align:center;font-family:monospace;font-size:7px;color:#aaa;margin-top:3px;'>FOLIO: ${snap.folio}</div>
+            <div class='footer'>Emitido: ${snap.fechaEmision||''} &nbsp;|&nbsp; REIMPRESIÓN &nbsp;|&nbsp; Sistema Fondo Solidario</div>`;
+    }
+
+    const htmlBase = `<html><head><title>${fileName}</title><style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:Arial,sans-serif; font-size:10px; color:#000; background:white; }
+        .page { width:80mm; margin:0 auto; padding:8px; }
+        .header { text-align:center; border:2px solid #000; padding:8px; margin-bottom:10px; }
+        .header h1 { font-size:12px; font-weight:bold; letter-spacing:1px; }
+        .section-title { text-align:center; font-weight:bold; font-size:10px; border-bottom:1px solid #000; padding-bottom:2px; margin:8px 0 5px; letter-spacing:1px; }
+        .row { display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px solid #eee; }
+        .row.big { font-size:18px; font-weight:900; border-top:2px solid #000; border-bottom:2px solid #000; margin:5px 0; padding:5px 0; justify-content:center; }
+        table { width:100%; border-collapse:collapse; font-size:8px; }
+        th { background:#f0f0f0; padding:2px; border-bottom:1px solid #ccc; }
+        .divider { border-top:1px solid #000; margin:5px 0; }
+        .copy-label { text-align:center; font-size:8px; font-weight:bold; background:#1a3a8a; color:white; padding:2px; margin-bottom:5px; }
+        .folio-badge { text-align:center; font-size:8px; font-family:monospace; background:#f4f6f7; border:1px dashed #aaa; padding:3px 6px; margin-bottom:6px; letter-spacing:0.5px; border-radius:3px; }
+        .cut { border-top:2px dashed #000; margin:15px 0; text-align:center; font-size:8px; color:#aaa; padding-top:4px; }
+        .firmas { display:flex; gap:10px; margin-top:20px; }
+        .firma-box { flex:1; text-align:center; }
+        .firma-linea { border-top:1px solid #000; margin-bottom:4px; margin-top:15px; }
+        .firma-label { font-size:7px; color:#555; }
+        .footer { text-align:center; font-size:7px; color:#888; margin-top:5px; }
+        @media print { @page { margin:2mm; size:80mm auto; } .cut { page-break-after:always; } }
+        </style></head><body><div class='page'>`;
+
+    const contenido = htmlBase
+        + bloqueRecibo('★ REIMPRESIÓN — ADMINISTRADOR ★')
+        + '<div class="cut">✂ CORTAR AQUÍ ✂</div>'
+        + bloqueRecibo('★ REIMPRESIÓN — COMPROBANTE SOCIO ★')
+        + '</div></body></html>';
+
+    printHTML(contenido, fileName);
 }
