@@ -83,6 +83,7 @@ function switchTab(tabName) {
     else if(tabName === 'config') { btns[5].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); cfg_limpiarCampos(); }
     else if(tabName === 'arqueo') { btns[3].classList.add('active'); fabRec.style.display = 'none'; aq_initSiNoIniciado(); aq_arrancarSync(); }
     else if(tabName === 'notas') { btns[4].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); notasCargar(); }
+    else if(tabName === 'auditoria') { btns[6].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); auditoria_cargar(); }
 }
 
 function abrirModalRegistro() { document.getElementById('modalRegistro').style.display = 'block'; if(!isEditing) { document.getElementById('registroForm').reset(); document.getElementById('editId').value = ''; document.getElementById('modalTitle').innerText = 'Nuevo Socio'; document.getElementById('btnSubmit').innerText = 'Registrar Socio'; } }

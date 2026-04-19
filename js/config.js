@@ -151,16 +151,78 @@ function cfg_renderResponsables() {
         cont.innerHTML = '<div style="color:#7f8c8d;font-size:0.85em;text-align:center;padding:10px;">No hay responsables configurados</div>';
         return;
     }
-    cont.innerHTML = lista.map((r, i) =>
-        '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px;">'
-        + '<div style="display:flex;align-items:center;gap:10px;">'
-        + '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85em;">' + r.ini.charAt(0) + '</div>'
-        + '<div><div style="font-weight:700;font-size:0.9em;">' + r.ini + '</div><div style="font-size:0.75em;color:#7f8c8d;">' + r.area + '</div></div>'
-        + '</div>'
-        + '<button onclick="cfg_eliminarResponsable(' + i + ')" style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:0.8em;font-weight:700;">✕ Quitar</button>'
-        + '</div>'
-    ).join('');
+    cont.innerHTML = lista.map((r, i) => {
+        const tienePinPropio = !!r.pin;
+        const pinBadge = tienePinPropio
+            ? '<span style="background:#eafaf1;color:#1e8449;border-radius:5px;padding:2px 8px;font-size:0.72em;font-weight:700;white-space:nowrap;">🔐 PIN propio</span>'
+            : '<span style="background:#fff3cd;color:#856404;border-radius:5px;padding:2px 8px;font-size:0.72em;font-weight:700;white-space:nowrap;">🔓 PIN global</span>';
+        return `<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85em;flex-shrink:0;">${r.ini.charAt(0)}</div>
+                    <div>
+                        <div style="font-weight:700;font-size:0.9em;">${r.ini}</div>
+                        <div style="font-size:0.75em;color:#7f8c8d;">${r.area}</div>
+                    </div>
+                    ${pinBadge}
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0;">
+                    <button onclick="cfg_toggleFormPin(${i})" style="background:#eaf4fb;border:1px solid #aed6f1;color:#1a6fa0;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:0.78em;font-weight:700;">🔑 PIN</button>
+                    <button onclick="cfg_eliminarResponsable(${i})" style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:0.8em;font-weight:700;">✕</button>
+                </div>
+            </div>
+            <div id="cfg-pin-form-${i}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+                <div style="font-size:0.78em;font-weight:700;color:#7f8c8d;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em;">PIN personal de ${r.ini}</div>
+                <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <input type="password" id="cfg-rpin-${i}" maxlength="4" inputmode="numeric" placeholder="Nuevo PIN (4 dig.)"
+                        style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.9em;letter-spacing:4px;text-align:center;box-sizing:border-box;">
+                    <input type="password" id="cfg-rpin-confirm-${i}" maxlength="4" inputmode="numeric" placeholder="Confirmar"
+                        style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.9em;letter-spacing:4px;text-align:center;box-sizing:border-box;">
+                </div>
+                <div style="display:flex;gap:6px;">
+                    <button onclick="cfg_guardarRespPin(${i})" class="btn-submit" style="flex:1;padding:8px;font-size:0.82em;">✅ Guardar</button>
+                    ${tienePinPropio ? `<button onclick="cfg_quitarRespPin(${i})" style="background:#fff3cd;border:1px solid #ffc107;color:#856404;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:0.78em;font-weight:700;">🗑 Quitar PIN propio</button>` : ''}
+                </div>
+                <div id="cfg-rpin-msg-${i}" style="font-size:0.78em;min-height:16px;margin-top:6px;"></div>
+            </div>
+        </div>`;
+    }).join('');
 }
+
+function cfg_toggleFormPin(idx) {
+    document.querySelectorAll('[id^="cfg-pin-form-"]').forEach(el => {
+        if (el.id !== 'cfg-pin-form-' + idx) el.style.display = 'none';
+    });
+    const form = document.getElementById('cfg-pin-form-' + idx);
+    if (form) form.style.display = (form.style.display === 'none' ? 'block' : 'none');
+}
+
+function cfg_guardarRespPin(idx) {
+    const pin1  = (document.getElementById('cfg-rpin-' + idx)?.value || '').trim();
+    const pin2  = (document.getElementById('cfg-rpin-confirm-' + idx)?.value || '').trim();
+    const msgEl = document.getElementById('cfg-rpin-msg-' + idx);
+    const setMsg = (color, txt) => { if (msgEl) { msgEl.style.color = color; msgEl.textContent = txt; } };
+    if (!/^[0-9]{4}$/.test(pin1)) return setMsg('var(--danger)', '❌ El PIN debe ser exactamente 4 dígitos numéricos.');
+    if (pin1 !== pin2)            return setMsg('var(--danger)', '❌ Los PINs no coinciden.');
+    const lista = responsables_cargar();
+    lista[idx].pin = pin1;
+    responsables_guardar(lista);
+    cfg_renderResponsables();
+    responsables_poblarLoginSelector();
+    showToast('✅ PIN personal de ' + lista[idx].ini + ' guardado', 'success');
+}
+
+function cfg_quitarRespPin(idx) {
+    const lista = responsables_cargar();
+    const nombre = lista[idx].ini;
+    if (!confirm('¿Quitar el PIN personal de ' + nombre + '? Volverá a usar el PIN del sistema.')) return;
+    delete lista[idx].pin;
+    responsables_guardar(lista);
+    cfg_renderResponsables();
+    responsables_poblarLoginSelector();
+    showToast('PIN personal de ' + nombre + ' eliminado. Usará el PIN del sistema.', 'info');
+}
+
 function cfg_agregarResponsable() {
     const ini  = (document.getElementById('cfg-resp-ini').value || '').trim().toUpperCase();
     const area = (document.getElementById('cfg-resp-area').value || '').trim().toUpperCase();

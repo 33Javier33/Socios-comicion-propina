@@ -7,10 +7,13 @@ async function callApiSocios(action, payload = null) {
         const response = await fetch(`${URL_SOCIOS}?action=${action}`);
         return await response.json();
     }
+    // Inyectar responsable de sesión para trazabilidad en auditoría
+    const rObj = getSesionResponsableObj();
+    const responsableAudit = rObj.ini ? (rObj.ini + (rObj.area ? ' ' + rObj.area : '')) : undefined;
     const opts = {
         method: 'POST',
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action, ...payload })
+        body: JSON.stringify({ action, ...(responsableAudit && !payload.responsable ? { responsable: responsableAudit } : {}), ...payload })
     };
     const response = await fetch(URL_SOCIOS, opts);
     return await response.json();

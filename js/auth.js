@@ -18,9 +18,8 @@ function toggleDarkMode() {
 })();
 
 function intentarLogin() {
-    const pin = document.getElementById('pinInput').value.trim();
-    const pinGuardado = localStorage.getItem(PIN_KEY) || PIN_DEFAULT;
-    const errEl = document.getElementById('loginError');
+    const pin    = document.getElementById('pinInput').value.trim();
+    const errEl  = document.getElementById('loginError');
     const respSel = document.getElementById('loginResponsable');
     const respVal = respSel ? respSel.value : '';
     if (!respVal) {
@@ -29,7 +28,13 @@ function intentarLogin() {
         if (respSel) { respSel.style.borderColor = 'var(--danger)'; setTimeout(()=>respSel.style.borderColor='',1500); }
         return;
     }
-    if (pin === pinGuardado) {
+    // Determinar qué PIN validar: personal del responsable o el global del sistema
+    const parts      = respVal.split('|');
+    const listaResp  = responsables_cargar();
+    const respObj    = listaResp.find(r => r.ini === parts[0] && r.area === parts[1]);
+    const pinEsperado = (respObj && respObj.pin) ? respObj.pin : (localStorage.getItem(PIN_KEY) || PIN_DEFAULT);
+
+    if (pin === pinEsperado) {
         errEl.style.display = 'none';
         errEl.textContent = 'PIN incorrecto. Inténtalo de nuevo.';
         sessionStorage.setItem(SESSION_KEY, 'ok');
@@ -47,6 +52,20 @@ function intentarLogin() {
         inp.style.animation = 'shake 0.4s';
         setTimeout(() => { inp.style.borderColor = ''; inp.style.animation = ''; }, 500);
     }
+}
+
+// Actualiza el hint del PIN según si el responsable tiene PIN personal o usa el global
+function actualizarHintPin() {
+    const respVal = document.getElementById('loginResponsable').value;
+    const hint    = document.getElementById('pinHint');
+    if (!hint) return;
+    if (!respVal) { hint.innerHTML = ''; return; }
+    const parts     = respVal.split('|');
+    const listaResp = responsables_cargar();
+    const resp      = listaResp.find(r => r.ini === parts[0] && r.area === parts[1]);
+    hint.innerHTML = (resp && resp.pin)
+        ? '<span style="color:var(--success);font-size:0.78em;font-weight:700;">🔐 Usa tu PIN personal</span>'
+        : '<span style="color:var(--warning);font-size:0.78em;font-weight:700;">🔓 Usa el PIN del sistema</span>';
 }
 
 function togglePinVista() {

@@ -345,6 +345,57 @@ const BASE_CONOCIMIENTO = [
       resp:'En la pantalla de login hay un enlace <strong>"¿Olvidaste el PIN?"</strong>. Al presionarlo, puedes ingresar la Clave de Recuperación para restablecer el acceso.',
       pasos:['En la pantalla de ingreso de PIN, presiona "¿Olvidaste el PIN?" (enlace pequeño bajo el campo)','Ingresa la Clave de Recuperación que configuraste','Si es correcta, podrás establecer un nuevo PIN','Si tampoco recuerdas la Clave de Recuperación, deberás editar el archivo HTML directamente'],
       nota:'⚠️ Si pierdes tanto el PIN como la Clave de Recuperación, contacta al administrador técnico del sistema. Por eso es vital guardar la clave en un lugar seguro.' },
+
+    // ═══════════════════════════════════════════════════════
+    // SEGURIDAD
+    // ═══════════════════════════════════════════════════════
+    { id:'seg1', cat:'seguridad', titulo:'¿Cómo asigno un PIN personal a cada responsable?', tags:['PIN personal','responsable','contraseña propia','seguridad','acceso','auditoría'],
+      resp:'Cada responsable puede tener su <strong>propio PIN de 4 dígitos</strong> en lugar de compartir el PIN general del sistema. Esto permite identificar exactamente quién realizó cada acción.',
+      vista:`<div class="ayuda-vista">
+        <div class="ayuda-vista-titulo">🔐 Sistema de PINs personales</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
+          <div style="background:white;border-radius:8px;padding:8px 12px;border:1px solid #d5f0e0;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-weight:700;">N.M (S.J)</span>
+            <span style="background:#eafaf1;color:#1e8449;border-radius:5px;padding:2px 8px;font-size:0.78em;font-weight:700;">🔐 PIN propio</span>
+          </div>
+          <div style="background:white;border-radius:8px;padding:8px 12px;border:1px solid #fdebd0;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-weight:700;">P.M (S.J)</span>
+            <span style="background:#fff3cd;color:#856404;border-radius:5px;padding:2px 8px;font-size:0.78em;font-weight:700;">🔓 PIN global</span>
+          </div>
+        </div>
+        <div class="ayuda-formula">Al seleccionar el nombre → el login muestra si usa PIN propio o global</div>
+      </div>`,
+      pasos:['Ve a <strong>⚙️ Configuración → Responsables autorizados</strong>','Cada responsable tiene un botón <strong>🔑 PIN</strong>','Presiona ese botón para desplegar el formulario de PIN personal','Escribe un PIN de 4 dígitos y confírmalo → presiona <strong>Guardar</strong>','El badge cambia de "🔓 PIN global" a "🔐 PIN propio"','Al ingresar al sistema, el usuario verá una indicación del tipo de PIN que debe usar'],
+      nota:'Los PINs personales se guardan en este dispositivo (localStorage). Si el responsable trabaja desde otro dispositivo, deberás configurar su PIN allí también.' },
+
+    { id:'seg2', cat:'seguridad', titulo:'¿Qué es el Historial de Auditoría y para qué sirve?', tags:['auditoría','historial','logs','quién','eliminó','seguridad','registro','robo'],
+      resp:'La pestaña <strong>🔍 Auditoría</strong> registra en Google Sheets <strong>quién hizo qué y cuándo</strong>: anticipos registrados, borrados, cierres de mes, cambios en socios y saldos.',
+      vista:`<div class="ayuda-vista">
+        <div class="ayuda-vista-titulo">🔍 Ejemplo de registro de auditoría</div>
+        <div style="background:white;border-radius:8px;overflow:hidden;border:1px solid #eee;">
+          <div style="display:grid;grid-template-columns:100px 60px 100px 1fr;gap:0;font-size:0.7em;">
+            <div style="background:#2c3e50;color:white;padding:4px 6px;font-weight:700;">Fecha/Hora</div>
+            <div style="background:#2c3e50;color:white;padding:4px 6px;font-weight:700;">Usuario</div>
+            <div style="background:#2c3e50;color:white;padding:4px 6px;font-weight:700;">Acción</div>
+            <div style="background:#2c3e50;color:white;padding:4px 6px;font-weight:700;">Detalle</div>
+            <div style="padding:4px 6px;border-bottom:1px solid #f0f0f0;">14/04 14:32</div>
+            <div style="padding:4px 6px;border-bottom:1px solid #f0f0f0;font-weight:700;">N.M</div>
+            <div style="padding:4px 6px;border-bottom:1px solid #f0f0f0;"><span style="background:#fdecea;color:#c0392b;border-radius:4px;padding:1px 5px;font-weight:700;">Eliminar</span></div>
+            <div style="padding:4px 6px;border-bottom:1px solid #f0f0f0;">Socio: Juan P. | $50.000</div>
+            <div style="padding:4px 6px;">14/04 09:10</div>
+            <div style="padding:4px 6px;font-weight:700;">P.M</div>
+            <div style="padding:4px 6px;"><span style="background:#eafaf1;color:#1e8449;border-radius:4px;padding:1px 5px;font-weight:700;">Registrar</span></div>
+            <div style="padding:4px 6px;">Socio: María G. | $30.000</div>
+          </div>
+        </div>
+      </div>`,
+      pasos:['Cada acción crítica queda registrada automáticamente (no requiere intervención manual)','Ve a la pestaña <strong>🔍 Auditoría</strong> → presiona <strong>🔄 Actualizar</strong>','Usa los filtros para buscar por usuario, tipo de acción, fechas o texto libre','Presiona <strong>🖨️ Imprimir informe</strong> para generar un PDF con todos los registros filtrados','El informe incluye un resumen por usuario y por tipo de acción'],
+      nota:'Las acciones registradas son: Registrar Anticipo, Eliminar, Editar, Agregar/Editar/Eliminar Socio, Actualizar Saldo, Reiniciar Anticipos, Cierre de Mes. Los accesos al sistema (login/logout) se registran en la hoja HistorialConexiones de Google Sheets.' },
+
+    { id:'seg3', cat:'seguridad', titulo:'¿Cómo evito que alguien borre anticipos sin dejar rastro?', tags:['borrar','eliminar','rastro','seguridad','robo','fraude','control'],
+      resp:'El sistema tiene <strong>tres capas de protección</strong>: PIN personalizado por usuario, Historial de Auditoría que registra cada borrado, y el Historial en Google Sheets que no se puede borrar desde la aplicación.',
+      pasos:['<strong>PIN personal:</strong> cada responsable usa su propia contraseña — si alguien borra algo, queda identificado','<strong>Auditoría:</strong> cada borrado registra quién lo hizo, qué monto, de qué socio y en qué fecha','<strong>Historial en Sheets:</strong> los datos van a la hoja AuditoriaLogs directamente — solo accesible por el administrador de la planilla','<strong>Informe periódico:</strong> imprime el informe de Auditoría una vez por semana para revisión externa al sistema'],
+      nota:'⚠️ Para máxima seguridad: asegúrate de que TODOS los responsables tengan su PIN personal configurado y que nadie comparta sus credenciales.' },
 ];
 
 // ══════════════════════════════════════════════════════════
@@ -526,7 +577,7 @@ function ayudaCompleta_filtrar(cat, btn) {
 function ayudaCompleta_renderizar(items, resaltar) {
     const cont = document.getElementById('ayudaResultados');
     if (!items.length) { cont.innerHTML = '<div class="ayuda-sin-result">😕 No encontramos respuesta.<br><small>Intenta: anticipo, punto, arqueo, recibo, divisor...</small></div>'; return; }
-    const catIcon = {socios:'👥',anticipos:'💰',recaudacion:'📊',arqueo:'🔒',puntos:'⭐',impresion:'🖨️',config:'⚙️'};
+    const catIcon = {socios:'👥',anticipos:'💰',recaudacion:'📊',arqueo:'🔒',puntos:'⭐',impresion:'🖨️',config:'⚙️',seguridad:'🔐'};
     cont.innerHTML = items.map((item, idx) => {
         let titulo = item.titulo;
         if (resaltar) { const re = new RegExp('('+resaltar.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'); titulo = titulo.replace(re,'<span class="ayuda-highlight">$1</span>'); }

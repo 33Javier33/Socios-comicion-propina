@@ -21,6 +21,15 @@
                 👤 &nbsp; <strong>comision propina</strong>
             </div>
 
+            <div style="margin-bottom:10px;">
+                <label style="font-size:0.78em;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">¿Quién ingresa?</label>
+                <select id="loginResponsable" onchange="actualizarHintPin()"
+                    style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font-size:0.95em;font-family:'DM Sans',sans-serif;color:#2c3e50;background:white;cursor:pointer;">
+                    <option value="">— Selecciona tu nombre —</option>
+                </select>
+                <div id="pinHint" style="min-height:18px;margin-top:5px;text-align:center;"></div>
+            </div>
+
             <div class="pin-wrapper">
                 <input type="password" id="pinInput" class="pin-input"
                     maxlength="4" inputmode="numeric" placeholder="● ● ● ●"
@@ -29,13 +38,6 @@
                 <span class="pin-eye" id="pinEye" onclick="togglePinVista()">👁</span>
             </div>
             <div class="login-error" id="loginError">PIN incorrecto. Inténtalo de nuevo.</div>
-
-            <div style="margin-bottom:14px;">
-                <label style="font-size:0.78em;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">¿Quién ingresa?</label>
-                <select id="loginResponsable" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font-size:0.95em;font-family:'DM Sans',sans-serif;color:#2c3e50;background:white;cursor:pointer;">
-                    <option value="">— Selecciona tu nombre —</option>
-                </select>
-            </div>
             <button class="btn-login" onclick="intentarLogin()">Ingresar →</button>
 
             <div class="login-recover" onclick="toggleRecuperar()">¿Olvidaste el PIN?</div>
@@ -76,6 +78,7 @@
             <button class="nav-btn" onclick="switchTab('arqueo')">💰 Arqueo de Caja</button>
             <button class="nav-btn" onclick="switchTab('notas')">📝 Notas Admin</button>
             <button class="nav-btn" onclick="switchTab('config')">⚙️ Configuración</button>
+            <button class="nav-btn" onclick="switchTab('auditoria')">🔍 Auditoría</button>
             <button onclick="ayudaCompleta_abrir()" style="background:#2c3e50;color:white;border:none;border-radius:20px;padding:6px 12px;font-size:0.78em;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto;">📖 Ayuda</button>
         </div>
         
@@ -97,6 +100,7 @@
                         <span class="ayuda-tag" onclick="ayudaCompleta_filtrar('puntos',this)">⭐ Puntos</span>
                         <span class="ayuda-tag" onclick="ayudaCompleta_filtrar('impresion',this)">🖨️ Impresión</span>
                         <span class="ayuda-tag" onclick="ayudaCompleta_filtrar('config',this)">⚙️ Config</span>
+                        <span class="ayuda-tag" onclick="ayudaCompleta_filtrar('seguridad',this)">🔐 Seguridad</span>
                     </div>
                     <div id="ayudaResultados"></div>
                 </div>
@@ -994,6 +998,102 @@
             </div>
         </div>
 
+        <!-- PESTAÑA 7: AUDITORÍA -->
+        <div id="tab-auditoria" class="tab-content">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+                <h3 style="margin:0;color:var(--primary);">🔍 Historial de Auditoría</h3>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button onclick="auditoria_cargar()" class="btn-submit" style="padding:8px 16px;font-size:0.85em;">🔄 Actualizar</button>
+                    <button onclick="auditoria_informe()" class="btn-submit" style="padding:8px 16px;font-size:0.85em;background:var(--primary);">🖨️ Imprimir informe</button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+                <div style="background:white;border-radius:12px;padding:14px;text-align:center;border:1px solid var(--border);box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                    <div style="font-size:1.6em;font-weight:900;color:var(--secondary);" id="aud-stat-total">—</div>
+                    <div style="font-size:0.72em;color:#7f8c8d;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Total eventos</div>
+                </div>
+                <div style="background:white;border-radius:12px;padding:14px;text-align:center;border:1px solid var(--border);box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                    <div style="font-size:1.6em;font-weight:900;color:var(--success);" id="aud-stat-hoy">—</div>
+                    <div style="font-size:0.72em;color:#7f8c8d;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Hoy</div>
+                </div>
+                <div style="background:white;border-radius:12px;padding:14px;text-align:center;border:1px solid var(--border);box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                    <div style="font-size:1.6em;font-weight:900;color:var(--danger);" id="aud-stat-eliminar">—</div>
+                    <div style="font-size:0.72em;color:#7f8c8d;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Eliminaciones</div>
+                </div>
+                <div style="background:white;border-radius:12px;padding:14px;text-align:center;border:1px solid var(--border);box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                    <div style="font-size:1.6em;font-weight:900;color:var(--purple);" id="aud-stat-usuarios">—</div>
+                    <div style="font-size:0.72em;color:#7f8c8d;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Usuarios activos</div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div style="background:white;border-radius:14px;border:1px solid var(--border);padding:16px;margin-bottom:14px;box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                <div style="font-size:0.75em;font-weight:800;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">🔎 Filtros</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:10px;">
+                    <div>
+                        <label style="font-size:0.75em;font-weight:700;color:#7f8c8d;display:block;margin-bottom:4px;">Usuario</label>
+                        <input type="text" id="aud-filtro-usuario" placeholder="Ej: N.M" oninput="auditoria_aplicarFiltros()"
+                            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88em;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.75em;font-weight:700;color:#7f8c8d;display:block;margin-bottom:4px;">Acción</label>
+                        <select id="aud-filtro-accion" onchange="auditoria_aplicarFiltros()"
+                            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88em;background:white;box-sizing:border-box;">
+                            <option value="">— Todas —</option>
+                            <option value="Eliminar">🗑 Eliminar</option>
+                            <option value="Registrar">➕ Registrar</option>
+                            <option value="Agregar">🆕 Agregar Socio</option>
+                            <option value="Editar">✏️ Editar</option>
+                            <option value="Actualizar">🔄 Actualizar Saldo</option>
+                            <option value="Cierre">🔒 Cierre de Mes</option>
+                            <option value="Reiniciar">⚠️ Reiniciar</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.75em;font-weight:700;color:#7f8c8d;display:block;margin-bottom:4px;">Desde</label>
+                        <input type="date" id="aud-filtro-desde" onchange="auditoria_aplicarFiltros()"
+                            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88em;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.75em;font-weight:700;color:#7f8c8d;display:block;margin-bottom:4px;">Hasta</label>
+                        <input type="date" id="aud-filtro-hasta" onchange="auditoria_aplicarFiltros()"
+                            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88em;box-sizing:border-box;">
+                    </div>
+                    <div style="grid-column:1/-1;">
+                        <label style="font-size:0.75em;font-weight:700;color:#7f8c8d;display:block;margin-bottom:4px;">Buscar en detalle</label>
+                        <input type="text" id="aud-filtro-texto" placeholder="Ej: Juan Pérez, $50.000, SOC-..." oninput="auditoria_aplicarFiltros()"
+                            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88em;box-sizing:border-box;">
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <span id="auditoria-count" style="font-size:0.8em;color:#7f8c8d;font-weight:600;">— registros</span>
+                    <button onclick="auditoria_limpiarFiltros()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:0.8em;cursor:pointer;color:#7f8c8d;">✕ Limpiar filtros</button>
+                </div>
+            </div>
+
+            <!-- Tabla -->
+            <div style="background:white;border-radius:14px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#2c3e50;color:white;">
+                                <th style="padding:10px 10px;font-size:0.78em;font-weight:700;text-align:left;white-space:nowrap;">Fecha/Hora</th>
+                                <th style="padding:10px 10px;font-size:0.78em;font-weight:700;text-align:left;">Usuario</th>
+                                <th style="padding:10px 10px;font-size:0.78em;font-weight:700;text-align:left;">Acción</th>
+                                <th style="padding:10px 10px;font-size:0.78em;font-weight:700;text-align:left;">Detalle</th>
+                                <th style="padding:10px 10px;font-size:0.78em;font-weight:700;text-align:left;">ID Afectado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditoria-tabla-body">
+                            <tr><td colspan="5" style="text-align:center;padding:40px;color:#7f8c8d;">Abre esta pestaña para cargar el historial</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div id="modalCanje" class="modal">
             <div class="modal-content" style="max-width:480px;">
                 <div class="modal-header" style="background:linear-gradient(135deg,#e67e22,#d35400);">
@@ -1080,6 +1180,7 @@
     <script src="js/notas.js"></script>
     <script src="js/reports.js"></script>
     <script src="js/help.js"></script>
+    <script src="js/auditoria.js"></script>
     <script src="js/app-init.js"></script>
 
 <!-- ══════════════════════════════════════════
