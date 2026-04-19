@@ -144,11 +144,108 @@ function auditoria_limpiarFiltros() {
     auditoria_renderizar(auditoriaCache);
 }
 
-function auditoria_informe() {
-    const datos = auditoria_filtrarDatos();
+function auditoria_abrirFiltroImpresion() {
+    const base = auditoria_filtrarDatos();
+    if (!base.length) return showToast('No hay registros para imprimir', 'error');
+
+    // Recolectar tipos de acción únicos presentes en los datos actuales
+    const accionesUnicas = [...new Set(base.map(r => r.accion).filter(Boolean))].sort();
+    const usuariosUnicos = [...new Set(base.map(r => r.usuario).filter(Boolean))].sort();
+
+    // Destruir modal anterior si existe
+    const prev = document.getElementById('_audFiltroModal');
+    if (prev) prev.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = '_audFiltroModal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+    const CPRINT_COL = {
+        'Eliminar':'#c0392b','Registrar':'#1a8a44','Agregar':'#1a6fa0',
+        'Editar':'#b7770d','Actualizar':'#148f77','Cierre':'#7d3c98','Reiniciar':'#a04000',
+        'Imprimir':'#1a3a8a','Canje':'#1b5e20',
+    };
+
+    const checkboxes = accionesUnicas.map(a => {
+        const entry = Object.entries(CPRINT_COL).find(([k]) => a.includes(k));
+        const col = entry ? entry[1] : '#555';
+        return `<label style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:5px;background:${col}18;margin:3px 0;cursor:pointer;">
+            <input type="checkbox" name="aud-accion-chk" value="${a}" checked style="width:14px;height:14px;cursor:pointer;">
+            <span style="color:${col};font-weight:700;font-size:0.88em;">${a}</span>
+        </label>`;
+    }).join('');
+
+    const usuariosOptions = '<option value="">Todos los usuarios</option>'
+        + usuariosUnicos.map(u => `<option value="${u}">${u}</option>`).join('');
+
+    overlay.innerHTML = `
+    <div style="background:white;border-radius:12px;padding:24px;max-width:500px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+        <h3 style="margin:0 0 4px;font-size:1.05em;color:#2c3e50;">🖨️ Filtrar informe de auditoría</h3>
+        <p style="font-size:0.8em;color:#888;margin-bottom:14px;">Selecciona qué incluir en el informe impreso.</p>
+
+        <div style="margin-bottom:14px;">
+            <div style="font-size:0.8em;font-weight:700;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Tipos de acción</div>
+            <div style="display:flex;gap:6px;margin-bottom:6px;">
+                <button onclick="document.querySelectorAll('[name=aud-accion-chk]').forEach(c=>c.checked=true)" style="font-size:0.75em;padding:3px 10px;border:1px solid #ccc;border-radius:5px;cursor:pointer;background:#f8f9fa;">✔ Todo</button>
+                <button onclick="document.querySelectorAll('[name=aud-accion-chk]').forEach(c=>c.checked=false)" style="font-size:0.75em;padding:3px 10px;border:1px solid #ccc;border-radius:5px;cursor:pointer;background:#f8f9fa;">✗ Ninguno</button>
+            </div>
+            ${checkboxes}
+        </div>
+
+        <div style="margin-bottom:14px;">
+            <div style="font-size:0.8em;font-weight:700;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Usuario</div>
+            <select id="_aud-filtro-usr-imp" style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:6px;font-size:0.85em;">
+                ${usuariosOptions}
+            </select>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+            <div style="flex:1;">
+                <div style="font-size:0.8em;font-weight:700;color:#555;margin-bottom:4px;">Desde</div>
+                <input type="date" id="_aud-filtro-desde-imp" value="${audFiltroDesde}" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:0.85em;">
+            </div>
+            <div style="flex:1;">
+                <div style="font-size:0.8em;font-weight:700;color:#555;margin-bottom:4px;">Hasta</div>
+                <input type="date" id="_aud-filtro-hasta-imp" value="${audFiltroHasta}" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:0.85em;">
+            </div>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+            <button onclick="document.getElementById('_audFiltroModal').remove()" style="padding:8px 18px;border:1px solid #ccc;border-radius:7px;cursor:pointer;font-size:0.88em;background:#f8f9fa;">Cancelar</button>
+            <button onclick="_audFiltroImprimirConfirmar()" style="padding:8px 22px;border:none;border-radius:7px;cursor:pointer;font-size:0.88em;background:#2c3e50;color:white;font-weight:700;">🖨️ Imprimir</button>
+        </div>
+    </div>`;
+
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+function _audFiltroImprimirConfirmar() {
+    const checkedAcciones = [...document.querySelectorAll('[name=aud-accion-chk]:checked')].map(c => c.value);
+    const usrFiltro  = document.getElementById('_aud-filtro-usr-imp')?.value  || '';
+    const desdeFiltro = document.getElementById('_aud-filtro-desde-imp')?.value || '';
+    const hastaFiltro = document.getElementById('_aud-filtro-hasta-imp')?.value || '';
+
+    const datos = auditoriaCache.filter(r => {
+        if (checkedAcciones.length && !checkedAcciones.includes(r.accion)) return false;
+        if (usrFiltro && (r.usuario||'') !== usrFiltro) return false;
+        if (desdeFiltro && r.fecha.substring(0,10) < desdeFiltro) return false;
+        if (hastaFiltro && r.fecha.substring(0,10) > hastaFiltro) return false;
+        return true;
+    });
+
+    document.getElementById('_audFiltroModal')?.remove();
+
+    if (!datos.length) return showToast('No hay registros con esos filtros', 'error');
+    auditoria_informe(datos, { acciones: checkedAcciones, usuario: usrFiltro, desde: desdeFiltro, hasta: hastaFiltro });
+}
+
+function auditoria_informe(datosOverride, filtrosUsados) {
+    const datos = datosOverride || auditoria_filtrarDatos();
     if (!datos.length) return showToast('No hay registros para imprimir', 'error');
 
     const fmt  = f => f ? f.replace('T',' ').substring(0,16) : '';
+    const fmtM = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
     const hoy  = new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
     const MESES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
     const mesNom = MESES[new Date().getMonth()];
@@ -162,11 +259,25 @@ function auditoria_informe() {
     const filas = datos.map(r => {
         const entry = Object.entries(CPRINT).find(([k]) => (r.accion||'').includes(k));
         const color = entry ? entry[1] : '#555';
+
+        let detalleVis = r.detalle || '';
+        if (r.accion === 'Imprimir Recibo') {
+            try {
+                const snap = JSON.parse(r.detalle);
+                detalleVis = `Socio: ${snap.nombre||''} | Período: ${snap.periodo||''} | A Pagar: ${snap.aPagar||''} | Puntos: ${snap.puntos||''}`;
+            } catch(e) {}
+        } else if (r.accion === 'Canje') {
+            try {
+                const snap = JSON.parse(r.detalle);
+                detalleVis = `${snap.nombre||''} | ${snap.fecha||''} ${snap.hora||''} | Resp: ${snap.responsable||''} | Total: ${fmtM(snap.total)}`;
+            } catch(e) {}
+        }
+
         return `<tr>
             <td>${fmt(r.fecha)}</td>
             <td style="font-weight:700;">${r.usuario||''}</td>
             <td style="color:${color};font-weight:700;">${r.accion||''}</td>
-            <td>${r.detalle||''}</td>
+            <td>${detalleVis}</td>
             <td style="font-family:monospace;font-size:7.5px;">${(r.idAfectado||'').substring(0,22)}</td>
         </tr>`;
     }).join('');
@@ -191,13 +302,23 @@ function auditoria_informe() {
         }).join('');
 
     // Filtros aplicados
-    const filtrosStr = [
-        audFiltroUsuario && 'Usuario: ' + audFiltroUsuario,
-        audFiltroAccion  && 'Acción: '  + audFiltroAccion,
-        audFiltroDesde   && 'Desde: '   + audFiltroDesde,
-        audFiltroHasta   && 'Hasta: '   + audFiltroHasta,
-        audFiltroTexto   && 'Texto: '   + audFiltroTexto,
-    ].filter(Boolean).join(' | ') || 'Sin filtros (todos los registros)';
+    let filtrosStr;
+    if (filtrosUsados) {
+        filtrosStr = [
+            filtrosUsados.acciones?.length && 'Acciones: ' + filtrosUsados.acciones.join(', '),
+            filtrosUsados.usuario  && 'Usuario: ' + filtrosUsados.usuario,
+            filtrosUsados.desde    && 'Desde: '   + filtrosUsados.desde,
+            filtrosUsados.hasta    && 'Hasta: '   + filtrosUsados.hasta,
+        ].filter(Boolean).join(' | ') || 'Sin filtros (todos los registros)';
+    } else {
+        filtrosStr = [
+            audFiltroUsuario && 'Usuario: ' + audFiltroUsuario,
+            audFiltroAccion  && 'Acción: '  + audFiltroAccion,
+            audFiltroDesde   && 'Desde: '   + audFiltroDesde,
+            audFiltroHasta   && 'Hasta: '   + audFiltroHasta,
+            audFiltroTexto   && 'Texto: '   + audFiltroTexto,
+        ].filter(Boolean).join(' | ') || 'Sin filtros (todos los registros)';
+    }
 
     const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
 <title>Auditoria ${mesNom} ${hoy}</title>
