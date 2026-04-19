@@ -42,10 +42,11 @@ function _sincronizarPinsLocales() {
     const lista = responsables_cargar();
     let cambios = false;
     lista.forEach(r => {
-        const key    = r.ini + '|' + r.area;
+        const key     = r.ini + '|' + r.area;
         const pinNube = credencialesCache[key];
-        if (pinNube && r.pin !== pinNube)  { r.pin = pinNube;  cambios = true; }
-        if (!pinNube && r.pin)             { delete r.pin;     cambios = true; }
+        // Solo actualiza local si la nube tiene un PIN para este usuario
+        // NUNCA borra pines locales desde aquí — eso solo lo hace cfg_quitarRespPin
+        if (pinNube && r.pin !== pinNube) { r.pin = pinNube; cambios = true; }
     });
     if (cambios) responsables_guardar(lista);
 }
