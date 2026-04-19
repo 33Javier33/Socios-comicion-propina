@@ -28,11 +28,16 @@ function intentarLogin() {
         if (respSel) { respSel.style.borderColor = 'var(--danger)'; setTimeout(()=>respSel.style.borderColor='',1500); }
         return;
     }
-    // Determinar qué PIN validar: personal del responsable o el global del sistema
-    const parts      = respVal.split('|');
-    const listaResp  = responsables_cargar();
-    const respObj    = listaResp.find(r => r.ini === parts[0] && r.area === parts[1]);
-    const pinEsperado = (respObj && respObj.pin) ? respObj.pin : (localStorage.getItem(PIN_KEY) || PIN_DEFAULT);
+    // Determinar qué PIN validar:
+    // 1° PIN personal en la nube (credencialesCache cargado al iniciar)
+    // 2° PIN personal en localStorage (fallback sin red)
+    // 3° PIN global del sistema
+    const parts     = respVal.split('|');
+    const listaResp = responsables_cargar();
+    const respObj   = listaResp.find(r => r.ini === parts[0] && r.area === parts[1]);
+    const pinNube   = credencialesCache[respVal];
+    const pinLocal  = respObj?.pin;
+    const pinEsperado = pinNube || pinLocal || (localStorage.getItem(PIN_KEY) || PIN_DEFAULT);
 
     if (pin === pinEsperado) {
         errEl.style.display = 'none';
@@ -63,7 +68,9 @@ function actualizarHintPin() {
     const parts     = respVal.split('|');
     const listaResp = responsables_cargar();
     const resp      = listaResp.find(r => r.ini === parts[0] && r.area === parts[1]);
-    hint.innerHTML = (resp && resp.pin)
+    const tienePinNube  = !!credencialesCache[respVal];
+    const tienePinLocal = !!(resp && resp.pin);
+    hint.innerHTML = (tienePinNube || tienePinLocal)
         ? '<span style="color:var(--success);font-size:0.78em;font-weight:700;">🔐 Usa tu PIN personal</span>'
         : '<span style="color:var(--warning);font-size:0.78em;font-weight:700;">🔓 Usa el PIN del sistema</span>';
 }

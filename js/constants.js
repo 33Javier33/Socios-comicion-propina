@@ -38,6 +38,10 @@ const CACHE_KEY_NOTAS   = 'fondo_cache_notas';
 const CACHE_SOCIO_TTL   = 5 * 60 * 1000;
 const CACHE_TTL = 30 * 60 * 1000;
 
+// ===== CREDENCIALES (PINs personales — sincronizados con Google Sheets) =====
+// Clave: "N.M|S.J"  →  valor: PIN de 4 dígitos
+let credencialesCache = {};
+
 // ===== CANJE =====
 const CANJE_DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10, 5, 1];
 

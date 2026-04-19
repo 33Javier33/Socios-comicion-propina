@@ -40,6 +40,7 @@ function iniciarApp() {
 async function precargarTodo() {
     fetchSociosDeGoogle();
     cargarRecaudaciones(true);
+    cargarCredenciales(); // PINs personales desde Google Sheets
 
     await Promise.allSettled([
         fetch(URL_RECAUDACIONES + '?action=getNotes&t=' + Date.now())

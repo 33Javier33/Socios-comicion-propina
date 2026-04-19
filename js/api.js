@@ -19,6 +19,37 @@ async function callApiSocios(action, payload = null) {
     return await response.json();
 }
 
+// ── Credenciales (PINs personales desde Google Sheets) ───
+async function cargarCredenciales() {
+    try {
+        const res = await callApiSocios('getCredenciales');
+        if (res.status === 'success') {
+            credencialesCache = {};
+            (res.data || []).forEach(c => {
+                if (c.ini && c.area && c.pin) {
+                    credencialesCache[c.ini + '|' + c.area] = c.pin;
+                }
+            });
+            // Sincronizar badges locales (🔐/🔓) con lo que hay en la nube
+            _sincronizarPinsLocales();
+        }
+    } catch(e) {
+        // Silencioso — si falla la red, se usa lo que haya en localStorage
+    }
+}
+
+function _sincronizarPinsLocales() {
+    const lista = responsables_cargar();
+    let cambios = false;
+    lista.forEach(r => {
+        const key    = r.ini + '|' + r.area;
+        const pinNube = credencialesCache[key];
+        if (pinNube && r.pin !== pinNube)  { r.pin = pinNube;  cambios = true; }
+        if (!pinNube && r.pin)             { delete r.pin;     cambios = true; }
+    });
+    if (cambios) responsables_guardar(lista);
+}
+
 async function fetchSociosDeGoogle() {
     const cachedSocios = leerCache(CACHE_KEY_SOCIOS);
     const cachedDias = leerCache(CACHE_KEY_DIAS);
