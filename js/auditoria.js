@@ -48,6 +48,7 @@ const AUD_COLORES = {
     'Cierre':    { bg:'#f5eef8', txt:'#7d3c98' },
     'Reiniciar': { bg:'#fef0e7', txt:'#a04000' },
     'Imprimir':  { bg:'#eaf0fb', txt:'#1a3a8a' },
+    'Canje':     { bg:'#e8f5e9', txt:'#1b5e20' },
 };
 
 function auditoria_colorAccion(accion) {
@@ -72,8 +73,9 @@ function auditoria_renderizar(datos) {
         const fechaVis = r.fecha ? r.fecha.replace('T',' ').substring(0,16) : '';
         const isRecibo = r.accion === 'Imprimir Recibo';
         const idFull   = r.idAfectado || '';
-        const idCorto  = isRecibo ? idFull : idFull.substring(0,22);
+        const idCorto  = (isRecibo || r.accion === 'Canje') ? idFull : idFull.substring(0,22);
 
+        const isCanje  = r.accion === 'Canje';
         let detalleHtml = r.detalle || '';
         let reimpBtn    = '';
         if (isRecibo) {
@@ -85,6 +87,17 @@ function auditoria_renderizar(datos) {
                     <span style="font-size:0.78em;">A Pagar: <b>${snap.aPagar||''}</b> &nbsp;|&nbsp; Puntos: ${snap.puntos||''}</span>`;
                 reimpBtn = `<button onclick="auditoria_reimprimirRecibo('${snap.folio}')"
                     style="margin-top:4px;background:#1a3a8a;color:white;border:none;border-radius:5px;padding:3px 10px;font-size:0.76em;cursor:pointer;">🖨 Reimprimir</button>`;
+            } catch(e) { /* deja detalle crudo */ }
+        } else if (isCanje) {
+            try {
+                const snap = JSON.parse(r.detalle);
+                auditoriaSnapshots[snap.folio] = snap;
+                const fmtM = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
+                detalleHtml = `<strong style="font-size:0.9em;">${snap.nombre||''}</strong><br>
+                    <span style="font-size:0.78em;color:#555;">${snap.fecha||''} ${snap.hora||''} &nbsp;|&nbsp; Resp: ${snap.responsable||''}</span><br>
+                    <span style="font-size:0.78em;">Total: <b>${fmtM(snap.total)}</b></span>`;
+                reimpBtn = `<button onclick="auditoria_reimprimirCanje('${snap.folio}')"
+                    style="margin-top:4px;background:#1b5e20;color:white;border:none;border-radius:5px;padding:3px 10px;font-size:0.76em;cursor:pointer;">🖨 Reimprimir</button>`;
             } catch(e) { /* deja detalle crudo */ }
         }
 
@@ -143,6 +156,7 @@ function auditoria_informe() {
     const CPRINT = {
         'Eliminar':'#c0392b','Registrar':'#1a8a44','Agregar':'#1a6fa0',
         'Editar':'#b7770d','Actualizar':'#148f77','Cierre':'#7d3c98','Reiniciar':'#a04000',
+        'Imprimir':'#1a3a8a','Canje':'#1b5e20',
     };
 
     const filas = datos.map(r => {
@@ -309,6 +323,51 @@ function auditoria_reimprimirRecibo(folio) {
         + bloqueRecibo('★ REIMPRESIÓN — ADMINISTRADOR ★')
         + '<div class="cut">✂ CORTAR AQUÍ ✂</div>'
         + bloqueRecibo('★ REIMPRESIÓN — COMPROBANTE SOCIO ★')
+        + '</div></body></html>';
+
+    printHTML(contenido, fileName);
+}
+
+function auditoria_reimprimirCanje(folio) {
+    const snap = auditoriaSnapshots[folio];
+    if (!snap) return showToast('Canje no disponible en esta sesión. Recarga auditoría.', 'error');
+
+    const fmt = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
+    const fileName = `Canje ${snap.nombre||''} REIMP ${snap.folio||''}`;
+
+    let filas = '';
+    (snap.desglose || []).forEach((d, i) => {
+        const bg = i % 2 === 0 ? '#f0faf0' : 'white';
+        filas += '<tr style="background:' + bg + '">'
+            + '<td style="padding:4px 8px;border:1px solid #ccc;text-align:center;">' + d.cant + '</td>'
+            + '<td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:700;">' + fmt(d.val) + '</td>'
+            + '<td style="padding:4px 8px;border:1px solid #ccc;text-align:right;font-weight:700;">' + (d.sub > 0 ? fmt(d.sub) : '0') + '</td>'
+            + '</tr>';
+    });
+
+    function bloqueCanje(etiqueta) {
+        return '<div class="copy-label">' + etiqueta + '</div>'
+            + '<div class="folio-badge">N° FOLIO: ' + snap.folio + ' &nbsp;★&nbsp; REIMPRESIÓN</div>'
+            + '<div class="header"><h1>FONDO DE SOLIDARIDAD</h1><p>CASINO DE PTO. VARAS</p><p>LEY 17312 DEL 29/07/70</p><p><strong>PUERTO VARAS</strong></p></div>'
+            + '<div class="section-title">' + (snap.nombre||'').toUpperCase() + '</div>'
+            + '<div style="text-align:center;font-size:9px;color:#888;margin-bottom:8px;">' + (snap.fecha||'') + ' ' + (snap.hora||'') + '</div>'
+            + '<table><thead><tr><th>CANTIDAD</th><th>VALOR</th><th style="text-align:right">TOTAL</th></tr></thead><tbody>' + filas + '</tbody></table>'
+            + '<div style="border-top:2px solid #000;margin-top:8px;padding-top:6px;display:flex;justify-content:space-between;font-size:13px;font-weight:900;">'
+            + '<span>TOTAL FINAL</span><span style="color:#d35400;">' + fmt(snap.total) + '</span></div>'
+            + '<div style="margin-top:12px;font-size:9px;line-height:1.4;">'
+            + '<strong>Responsable:</strong> ' + (snap.responsable||'—') + '<br>'
+            + (snap.correccion ? '<small>Corrección registrada por: ' + snap.correccion + '</small>' : '')
+            + '</div>'
+            + '<div style="text-align:center;font-family:monospace;font-size:7px;color:#aaa;margin-top:3px;">FOLIO: ' + snap.folio + '</div>'
+            + '<div class="footer">REIMPRESIÓN &nbsp;|&nbsp; Emitido orig.: ' + (snap.fecha||'') + ' | Sistema Fondo Solidario</div>';
+    }
+
+    const htmlBase = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + fileName + '</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;font-size:11px;} .page{width:80mm;margin:0 auto;padding:8px;} .header{text-align:center;border:2px solid #000;padding:8px;margin-bottom:10px;} .header h1{font-size:13px;font-weight:bold;} table{width:100%;border-collapse:collapse;margin:4px 0;} th{background:#f0f0f0;padding:4px 8px;} .copy-label{text-align:center;font-size:9px;font-weight:bold;background:#1b5e20;color:white;padding:3px;margin-bottom:8px;letter-spacing:2px;} .folio-badge{text-align:center;font-size:8px;font-family:monospace;background:#f4f6f7;border:1px dashed #aaa;padding:3px 6px;margin-bottom:6px;letter-spacing:0.5px;border-radius:3px;} .cut{border-top:2px dashed #000;margin:16px 0;text-align:center;font-size:9px;color:#aaa;padding-top:4px;} .footer{text-align:center;font-size:8px;color:#888;border-top:1px dashed #ccc;padding-top:5px;margin-top:6px;}</style></head><body><div class="page">';
+
+    const contenido = htmlBase
+        + bloqueCanje('★ REIMPRESIÓN — CANJE ★')
+        + '<div class="cut">✂ &nbsp; CORTAR AQUÍ &nbsp; ✂</div>'
+        + bloqueCanje('★ REIMPRESIÓN — CANJE ★')
         + '</div></body></html>';
 
     printHTML(contenido, fileName);
