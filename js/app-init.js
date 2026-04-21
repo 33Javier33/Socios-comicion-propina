@@ -79,6 +79,7 @@ function switchTab(tabName) {
             if(btn) { btn.style.background = i===0 ? colores[i] : 'white'; btn.style.color = i===0 ? 'white' : colores[i]; }
         });
         renderizarListaBusqueda();
+        gestion_cargarTotalAnticipos();
     }
     else if(tabName === 'recaudacion') { btns[2].classList.add('active'); fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones(); }
     else if(tabName === 'config') { btns[5].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); cfg_limpiarCampos(); }

@@ -519,6 +519,11 @@ function handleRequest(e, method) {
         responseData = { status: 'success', data: getAuditoria() };
         break;
 
+      case 'logAccionAuditoria':
+        registrarAuditoria(payload.usuario, payload.accion, payload.detalle, payload.idAfectado);
+        responseData = { status: 'success', message: 'Registrado' };
+        break;
+
       case 'getCredenciales':
         responseData = { status: 'success', data: getCredenciales() };
         break;

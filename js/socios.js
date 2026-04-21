@@ -141,6 +141,11 @@ async function eliminarSocio(id) {
 }
 
 async function subirPuntosSocio(id, nombre, puntosNuevos) {
+    const periodoKey = calcularPeriodoClave();
+    if (!localStorage.getItem('fondo_cierre_todos_' + periodoKey)) {
+        alert('⚠️ Debes ejecutar "Cerrar Mes TODOS" en Anticipos y Ausencias antes de aplicar escalamientos.\n\nEso garantiza que los anticipos y ausencias del período ya están cerrados.');
+        return;
+    }
     if (!confirm(`Subir puntos de ${nombre} a ${puntosNuevos}?`)) return;
     toggleLoader(true, 'Actualizando puntos...');
     try {

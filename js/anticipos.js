@@ -683,8 +683,26 @@ async function ejecutarCierreTodos() {
     btn.textContent = '✅ Completado';
     showToast(`Cierre completado: ${exitosos}/${total} socios procesados`, exitosos === total ? 'success' : 'error');
 
+    // Guardar flag para que los escalamientos sepan que el cierre ya fue ejecutado
+    if (exitosos > 0) {
+        localStorage.setItem('fondo_cierre_todos_' + calcularPeriodoClave(), '1');
+    }
+
     const idActivo = document.getElementById('gestionSocioId').value;
     if (idActivo) cargarHistorialSocio(idActivo);
+}
+
+async function gestion_cargarTotalAnticipos() {
+    const el = document.getElementById('gestionTotalAnticipos');
+    if (!el) return;
+    el.textContent = '...';
+    try {
+        const allData = await fetchAllDataCached();
+        const total = aq_filtrarAnticiposPeriodo(allData.anticipos || {});
+        el.textContent = formatearMoneda(total);
+    } catch(e) {
+        el.textContent = 'Error';
+    }
 }
 
 function seleccionarSocio(id) {
