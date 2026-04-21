@@ -207,8 +207,6 @@ async function rec_guardarCambio() {
     const monto = parseInt(raw);
     if (!fecha || !monto || !tipo) return showToast('Completa todos los campos', 'error');
 
-    if (tipo === 'SalaDeJuegos') tipo = 'Mesas';
-
     document.getElementById('modalRecEditar').style.display = 'none';
     toggleLoader(true, modo === 'editar' ? 'Actualizando...' : 'Guardando...');
     try {
