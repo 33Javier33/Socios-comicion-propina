@@ -235,7 +235,10 @@ async function batchPT_guardarDias() {
 
         if (res.status === 'success') {
             showToast(`✅ ${res.message}`, 'success');
-            sociosGuardados.forEach(id => { globalDiasPT[id] = diasGuardados; });
+            sociosGuardados.forEach(id => {
+                const existentes = globalDiasPT[id] || [];
+                globalDiasPT[id] = [...new Set([...existentes, ...diasGuardados])].sort();
+            });
             batchPTSociosSeleccionados = [];
             batchPTDiasSeleccionados = [];
             if (idActivo && sociosGuardados.includes(idActivo)) {

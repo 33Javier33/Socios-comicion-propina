@@ -1096,31 +1096,30 @@ function guardarBatchDiasPartTime(payload) {
 
   const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA_DIAS_PT);
   const data = s.getDataRange().getValues();
-  const json = JSON.stringify(dias);
   const sosNoActualizados = [];
   const tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
 
-  // Procesar cada socio
+  // Procesar cada socio haciendo merge (sin borrar días previos)
   socios.forEach(socioInfo => {
     const id = socioInfo.id || socioInfo;
     const nombre = socioInfo.nombre || '';
     let found = false;
 
-    // Buscar y actualizar
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]) === String(id)) {
-        s.getRange(i + 1, 3).setValue(json);
+        // Leer días existentes y hacer merge con los nuevos
+        let existentes = [];
+        try { existentes = JSON.parse(data[i][2] || '[]'); } catch(e) { existentes = []; }
+        const merged = [...new Set([...existentes, ...dias])].sort();
+        s.getRange(i + 1, 3).setValue(JSON.stringify(merged));
         found = true;
         break;
       }
     }
 
-    // Si no existe, crear nueva fila
+    // Si no existe, crear nueva fila con solo los días nuevos
     if (!found) {
-      s.appendRow([id, nombre, json]);
-    } else {
-      // Recargar data para próxima iteración si es necesario
-      // (En Google Sheets las escrituras son más lentas, por eso lo hacemos al final)
+      s.appendRow([id, nombre, JSON.stringify([...new Set(dias)].sort())]);
     }
   });
 
