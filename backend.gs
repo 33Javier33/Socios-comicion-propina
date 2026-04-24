@@ -346,9 +346,9 @@ const HOJA_AUDITORIA            = "AuditoriaLogs";   // ← historial de auditor
 const HOJA_CREDENCIALES         = "Credenciales";    // ← PINs personales por responsable
 
 // ==============================================================================
-// FUNCIÓN DE AUDITORÍA — registra quién hizo qué y cuándo
+// FUNCIÓN DE AUDITORÍA — registra quién hizo qué, dónde y cuándo
 // ==============================================================================
-function registrarAuditoria(usuario, accion, detalle, idAfectado) {
+function registrarAuditoria(usuario, accion, detalle, idAfectado, geoLat, geoLng, deviceID, ip, userAgent) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const s = ss.getSheetByName(HOJA_AUDITORIA);
@@ -358,7 +358,12 @@ function registrarAuditoria(usuario, accion, detalle, idAfectado) {
       usuario || 'Sistema',       // Usuario/Responsable
       accion   || '',             // Accion (ej: "Borrar Anticipo")
       detalle  || '',             // Detalle (ej: "Monto $50.000 socio Juan Pérez")
-      idAfectado || ''            // ID del registro afectado (UUID o ID socio)
+      idAfectado || '',           // ID del registro afectado (UUID o ID socio)
+      geoLat || '',               // Geolocalización - Latitud (solo si permitido)
+      geoLng || '',               // Geolocalización - Longitud (solo si permitido)
+      deviceID || '',             // ID único del dispositivo (fingerprint)
+      ip || '',                   // IP del cliente
+      userAgent || ''             // Información del navegador/app
     ]);
   } catch(e) {
     console.log('Auditoria error: ' + e.toString());
@@ -490,6 +495,10 @@ function handleRequest(e, method) {
         responseData = { status: 'success', message: 'Días actualizados' };
         break;
 
+      case 'guardarBatchDiasPartTime':
+        responseData = guardarBatchDiasPartTime(payload);
+        break;
+
       case 'guardarCierreIndividual':
         registrarCierreManual(payload.id, payload.nombre, payload.monto);
         archivarAnticiposSocio(payload.id);
@@ -570,7 +579,7 @@ function setupSheets() {
     [HOJA_ANTICIPOS_HISTORIAL]:  ['ID Socio', 'Nombre', 'Fecha Original', 'Monto', 'Fecha de Cierre', 'UUID'],
     [HOJA_HISTORIAL_CONEXIONES]: ['ID Socio', 'Nombre', 'Area', 'FechaEntrada', 'Tipo', 'FechaSalida'],
     // ── Historial de Auditoría ───────────────────────────────────────────────
-    [HOJA_AUDITORIA]:            ['Timestamp', 'Usuario', 'Accion', 'Detalle', 'ID_Afectado'],
+    [HOJA_AUDITORIA]:            ['Timestamp', 'Usuario', 'Accion', 'Detalle', 'ID_Afectado', 'GeoLat', 'GeoLng', 'DeviceID', 'IP', 'UserAgent'],
     // ── PINs personales por responsable ─────────────────────────────────────
     [HOJA_CREDENCIALES]:         ['Ini', 'Area', 'PIN', 'UltimaActualizacion']
   };
@@ -1073,6 +1082,69 @@ function guardarDiasPT(id, nombre, diasArray) {
   if (!f) s.appendRow([id, nombre, json]);
 }
 
+// ============================================================================
+// GUARDAR BATCH DE DÍAS PARA MÚLTIPLES SOCIOS PART-TIME
+// ============================================================================
+function guardarBatchDiasPartTime(payload) {
+  const { socios, dias, usuario, geoLat, geoLng, deviceID, ip, userAgent } = payload;
+  if (!socios || !Array.isArray(socios) || socios.length === 0) {
+    return { status: 'error', message: 'No hay socios para procesar' };
+  }
+  if (!dias || !Array.isArray(dias)) {
+    return { status: 'error', message: 'Días inválidos' };
+  }
+
+  const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA_DIAS_PT);
+  const data = s.getDataRange().getValues();
+  const json = JSON.stringify(dias);
+  const sosNoActualizados = [];
+  const tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+
+  // Procesar cada socio
+  socios.forEach(socioInfo => {
+    const id = socioInfo.id || socioInfo;
+    const nombre = socioInfo.nombre || '';
+    let found = false;
+
+    // Buscar y actualizar
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(id)) {
+        s.getRange(i + 1, 3).setValue(json);
+        found = true;
+        break;
+      }
+    }
+
+    // Si no existe, crear nueva fila
+    if (!found) {
+      s.appendRow([id, nombre, json]);
+    } else {
+      // Recargar data para próxima iteración si es necesario
+      // (En Google Sheets las escrituras son más lentas, por eso lo hacemos al final)
+    }
+  });
+
+  // Registrar en auditoría el batch
+  const detalleAuditoria = `Batch: Agregó ${dias.length} día(s) a ${socios.length} socio(s) Part-Time`;
+  registrarAuditoria(
+    usuario || 'Sistema',
+    'Agregar Batch Días PT',
+    detalleAuditoria,
+    socios.map(s => (typeof s === 'object' ? s.id : s)).join(','),
+    geoLat || '',
+    geoLng || '',
+    deviceID || '',
+    ip || '',
+    userAgent || ''
+  );
+
+  return { 
+    status: 'success', 
+    message: `Días agregados exitosamente a ${socios.length} socio(s)`,
+    cantidad: socios.length
+  };
+}
+
 function getChatMessages() {
   const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA_CHAT_SOCIAL);
   if (!s || s.getLastRow() <= 1) return [];
@@ -1196,7 +1268,12 @@ function getAuditoria() {
     usuario:    r[1] || '',
     accion:     r[2] || '',
     detalle:    r[3] || '',
-    idAfectado: r[4] || ''
+    idAfectado: r[4] || '',
+    geoLat:     r[5] || '',
+    geoLng:     r[6] || '',
+    deviceID:   r[7] || '',
+    ip:         r[8] || '',
+    userAgent:  r[9] || ''
   })).reverse(); // más reciente primero
 }
 

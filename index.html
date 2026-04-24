@@ -345,6 +345,7 @@
                         <button id="filtroGestionTodos" onclick="setFiltroGestion('todos')" style="flex:1; padding:6px 8px; border:1px solid var(--secondary); background:var(--secondary); color:white; border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">Todos</button>
                         <button id="filtroGestionAnticipos" onclick="setFiltroGestion('anticipos')" style="flex:1; padding:6px 8px; border:1px solid var(--warning); background:white; color:var(--warning); border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">💰 Anticipos</button>
                         <button id="filtroGestionAusencias" onclick="setFiltroGestion('ausencias')" style="flex:1; padding:6px 8px; border:1px solid var(--danger); background:white; color:var(--danger); border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">📅 Ausencias</button>
+                        <button onclick="abrirModalBatchDiasPartTime()" style="flex:1; padding:6px 8px; border:1px solid #7c3aed; background:#7c3aed; color:white; border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s; white-space:nowrap;">➕ Batch PT</button>
                     </div>
                     <div id="filtroGestionInfo" style="font-size:0.75em; color:#7f8c8d; margin-bottom:6px; min-height:16px;"></div>
                     <input type="text" id="buscadorGestion" placeholder="Escribe nombre o apellido..." onkeyup="filtrarSociosGestion()" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ddd; border-radius:8px;">
@@ -673,6 +674,48 @@
                     <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
                         <button class="btn-action" style="background:#999;" onclick="document.getElementById('modalConfirmarBorrar').style.display='none'">Cancelar</button>
                         <button class="btn-action" style="background:var(--danger);" onclick="borrarItemConfirmado()">Confirmar Borrado</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 1: SELECCIONAR MÚLTIPLES SOCIOS PART-TIME -->
+        <div id="modalBatchDiasPartTime" class="modal">
+            <div class="modal-content" style="max-width:520px;">
+                <div class="modal-header" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);">
+                    <h2 style="color:white; margin:0; display:flex; align-items:center; gap:8px;">➕ Agregar Días a Múltiples Part-Time</h2>
+                    <span class="close-modal" onclick="cerrarModalBatchDiasPartTime()" style="color:white;">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p style="color:#7f8c8d; font-size:0.85em; margin-bottom:14px;">Paso 1: Selecciona los socios Part-Time que recibirán los días trabajados.</p>
+                    <div id="batchPT-lista-socios" style="min-height:150px;"></div>
+                    <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:0.78em; color:#166534;">
+                        <strong>📝 Nota:</strong> En el siguiente paso seleccionarás los días a agregar a todos estos socios simultáneamente.
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="batchPT_continuarADias()" class="btn-submit" style="flex:1; background:linear-gradient(135deg,#7c3aed,#6d28d9); border:none;">Siguiente → Seleccionar Días</button>
+                        <button onclick="cerrarModalBatchDiasPartTime()" class="btn-submit" style="flex:1; background:#999; border:none;">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 2: SELECCIONAR DÍAS PARA BATCH -->
+        <div id="modalBatchDiasPartTime-Dias" class="modal">
+            <div class="modal-content" style="max-width:520px;">
+                <div class="modal-header" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);">
+                    <h2 id="batchPT-dia-titulo" style="color:white; margin:0; display:flex; align-items:center; gap:8px;">📅 Selecciona Días</h2>
+                    <span class="close-modal" onclick="cerrarModalBatchDiasPartTime_Dias()" style="color:white;">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p style="color:#7f8c8d; font-size:0.85em; margin-bottom:14px;">Paso 2: Selecciona los días a agregar (solo se muestran los que tienen recaudación).</p>
+                    <div id="batchPT-calendario" style="min-height:250px; margin-bottom:14px;"></div>
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:0.78em; color:#1e40af;">
+                        <strong>💡 Consejo:</strong> Los días sin recaudación registrada no pueden seleccionarse. Si necesitas agregar días adicionales, regresa y selecciona en el calendario del socio individual.
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="batchPT_guardarDias()" class="btn-submit" style="flex:1; background:linear-gradient(135deg,#10b981,#059669); border:none;">✅ Guardar Cambios</button>
+                        <button onclick="cerrarModalBatchDiasPartTime_Dias()" class="btn-submit" style="flex:1; background:#999; border:none;">Cancelar</button>
                     </div>
                 </div>
             </div>
@@ -1219,6 +1262,7 @@
     <script src="js/socios.js"></script>
     <script src="js/puntos.js"></script>
     <script src="js/anticipos.js"></script>
+    <script src="js/batch-dias-pt.js"></script>
     <script src="js/recaudacion.js"></script>
     <script src="js/arqueo.js"></script>
     <script src="js/canje.js"></script>

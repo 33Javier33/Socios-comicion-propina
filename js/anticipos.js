@@ -2,6 +2,67 @@
 // ANTICIPOS, AUSENCIAS, GESTIÓN DE SOCIOS Y CIERRE DE MES
 // ============================================================
 
+// ============================================================
+// CAPTURA DE DATOS DE DISPOSITIVO PARA AUDITORÍA
+// ============================================================
+let globalDeviceID = '';
+let globalGeoLocation = { lat: null, lng: null };
+
+// Generar ID único del dispositivo (fingerprint)
+function generarDeviceID() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillText(navigator.userAgent + new Date().getTime(), 2, 2);
+    return canvas.toDataURL().split(',')[1].substring(0, 32);
+}
+
+// Capturar geolocalización (solo si el usuario lo permite)
+function capturarGeolocation() {
+    if (navigator.geolocation && navigator.geolocation.getCurrentPosition) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                globalGeoLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                console.log('Geolocalización capturada:', globalGeoLocation);
+            },
+            function(error) {
+                console.log('Geolocalización no disponible:', error.message);
+            }
+        );
+    }
+}
+
+// Inicializar captura de dispositivo
+function inicializarCapturaDispositivo() {
+    globalDeviceID = generarDeviceID();
+    capturarGeolocation();
+    console.log('Device ID:', globalDeviceID);
+}
+
+// Llamar al cargar la app
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarCapturaDispositivo);
+} else {
+    inicializarCapturaDispositivo();
+}
+
+// ============================================================
+// FUNCIÓN AUXILIAR: Obtener información del dispositivo
+// ============================================================
+function obtenerInfoDispositivo() {
+    return {
+        deviceID: globalDeviceID,
+        geoLat: globalGeoLocation.lat || '',
+        geoLng: globalGeoLocation.lng || '',
+        userAgent: navigator.userAgent || '',
+        ip: '' // Se captura en servidor si es posible
+    };
+}
+
 async function verEstadoFinanciero(id) {
     const socio = cacheSocios.find(s => s.id === id);
     if(!socio) return;
