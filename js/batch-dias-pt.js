@@ -177,6 +177,8 @@ function renderCalendarGridBatch() {
     `;
 
     container.innerHTML = html;
+    const counter = document.getElementById('batchPT-contador-dias');
+    if (counter) counter.textContent = batchPTDiasSeleccionados.length;
 }
 
 function batchPT_toggleDia(fecha) {
@@ -185,7 +187,6 @@ function batchPT_toggleDia(fecha) {
     } else {
         batchPTDiasSeleccionados.push(fecha);
     }
-    document.getElementById('batchPT-contador-dias').textContent = batchPTDiasSeleccionados.length;
     renderCalendarGridBatch();
 }
 
@@ -206,6 +207,10 @@ async function batchPT_guardarDias() {
     const msg = `Agregar ${batchPTDiasSeleccionados.length} día(s) a ${batchPTSociosSeleccionados.length} socio(s)?`;
     if (!confirm(msg)) return;
 
+    const idActivo = document.getElementById('gestionSocioId')?.value;
+    const sociosGuardados = [...batchPTSociosSeleccionados];
+    const diasGuardados = [...batchPTDiasSeleccionados];
+
     toggleLoader(true, 'Guardando días...');
     document.getElementById('modalBatchDiasPartTime-Dias').style.display = 'none';
 
@@ -214,11 +219,11 @@ async function batchPT_guardarDias() {
         const usuarioActual = document.getElementById('sesionRespNombre')?.textContent || 'Sistema';
 
         const payload = {
-            socios: batchPTSociosSeleccionados.map(id => ({
+            socios: sociosGuardados.map(id => ({
                 id: id,
                 nombre: cacheSocios.find(s => s.id === id)?.nombre || ''
             })),
-            dias: batchPTDiasSeleccionados,
+            dias: diasGuardados,
             usuario: usuarioActual,
             geoLat: infoDispositivo.geoLat,
             geoLng: infoDispositivo.geoLng,
@@ -226,32 +231,14 @@ async function batchPT_guardarDias() {
             userAgent: infoDispositivo.userAgent
         };
 
-        const response = await fetch(URL_SOCIOS, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                action: 'guardarBatchDiasPartTime',
-                payload: JSON.stringify(payload)
-            })
-        });
-
-        const res = await response.json();
+        const res = await callApiSocios('guardarBatchDiasPartTime', payload);
 
         if (res.status === 'success') {
             showToast(`✅ ${res.message}`, 'success');
-
-            // Actualizar cache global
-            batchPTSociosSeleccionados.forEach(id => {
-                globalDiasPT[id] = batchPTDiasSeleccionados;
-            });
-
-            // Limpiar estado
+            sociosGuardados.forEach(id => { globalDiasPT[id] = diasGuardados; });
             batchPTSociosSeleccionados = [];
             batchPTDiasSeleccionados = [];
-
-            // Si había un socio individual abierto, refrescar su historial
-            const idActivo = document.getElementById('gestionSocioId')?.value;
-            if (idActivo && batchPTSociosSeleccionados.includes(idActivo)) {
+            if (idActivo && sociosGuardados.includes(idActivo)) {
                 cargarHistorialSocio(idActivo);
             }
         } else {
