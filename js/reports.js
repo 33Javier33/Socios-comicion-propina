@@ -226,10 +226,10 @@ async function informeMontosDiarios() {
                     <td style="border:1px solid #000; text-align:center; background:#f2f2f2; font-weight:bold; color:red;">${numDia}</td>
                     <td style="border:1px solid #000; text-align:center; background:#ffffcc;">${nomDia}</td>
                     <td style="border:1px solid #000; text-align:center;">${divisor > 1 ? fmt(divisor) : (registros[0]?.divisor || '-')}</td>
-                    <td style="border:1px solid #000; text-align:right;">${sj > 0 ? fmt(sj) : ''}</td>
-                    <td style="border:1px solid #000; text-align:right;">${mdae > 0 ? fmt(mdae) : ''}</td>
-                    <td style="border:1px solid #000; text-align:right;">${mdat > 0 ? fmt(mdat) : ''}</td>
-                    <td style="border:1px solid #000; text-align:right;">${bov > 0 ? fmt(bov) : ''}</td>
+                    <td style="border:1px solid #000; text-align:right;">${fmt(sj)}</td>
+                    <td style="border:1px solid #000; text-align:right;">${fmt(mdae)}</td>
+                    <td style="border:1px solid #000; text-align:right;">${fmt(mdat)}</td>
+                    <td style="border:1px solid #000; text-align:right;">${fmt(bov)}</td>
                     <td style="border:1px solid #000; text-align:right; font-weight:bold;">${totalDia > 0 ? fmt(totalDia) : '0'}</td>
                     <td style="border:1px solid #000; text-align:right;">${acumulado > 0 ? fmt(acumulado) : '0'}</td>
                     <td style="border:1px solid #000; text-align:right; background:#e2f0d9;">${puntoNoche > 0 ? fmt(puntoNoche) : '0'}</td>
