@@ -298,9 +298,11 @@ async function cargarHistorialSocio(id) {
                     procesarEntrada(a.fecha, 'Anticipo', 'Adelanto' + respInfo, Number(a.cantidad || a.monto || 0), a.uuid);
                 });
             }
-            // Actualizar fechas de anticipos del socio activo para detección de duplicados
+            // Actualizar anticipos del socio activo para detección de duplicados
             gestionSocioAnticiposActuales = (data.anticipos || []).map(a => {
-                let f = a.fecha; if (f && f.includes('T')) f = f.split('T')[0]; return f;
+                let f = a.fecha; if (f && f.includes('T')) f = f.split('T')[0];
+                const respInfo = a.responsable ? ` (Resp: ${a.responsable} ${a.areaResponsable||''})` : '';
+                return { fecha: f, monto: Number(a.cantidad || a.monto || 0), uuid: a.uuid, detalles: ['Adelanto' + respInfo] };
             });
             if(data.extras && Array.isArray(data.extras)) {
                 data.extras.forEach(e => {
@@ -435,14 +437,27 @@ async function enviarAnticipo() {
     const respVis = respIni ? respIni + (respArea ? ' (' + respArea + ')' : '') : 'Sin responsable';
 
     // Verificar anticipo duplicado en la misma fecha
-    if (gestionSocioAnticiposActuales.includes(fecha)) {
-        const continuar = window.confirm(
-            '⚠️ AVISO: Anticipo duplicado\n\n' +
-            'Ya existe un anticipo registrado para el ' + fechaVis + '.\n' +
-            'Registrar dos anticipos el mismo día es inusual.\n\n' +
-            '¿Deseas agregarlo de todas formas?'
+    const anticipoDuplicado = gestionSocioAnticiposActuales.find(a => a.fecha === fecha);
+    if (anticipoDuplicado) {
+        const montoExisVis = new Intl.NumberFormat('es-CL', {style:'currency', currency:'CLP', maximumFractionDigits:0}).format(anticipoDuplicado.monto);
+        const querreEditar = window.confirm(
+            '⚠️ ANTICIPO DUPLICADO — ' + fechaVis + '\n\n' +
+            'Este socio ya tiene un anticipo de ' + montoExisVis + ' ese día.\n\n' +
+            '✏️  ACEPTAR  →  Editar el anticipo existente (' + montoExisVis + ')\n' +
+            '➕  CANCELAR →  Agregar un nuevo anticipo de ' + montoVis + ' (inusual)'
         );
-        if (!continuar) return;
+        if (querreEditar) {
+            // Abrir modal de edición con el anticipo existente pre-cargado
+            mostrarModalEditar({
+                uuid: anticipoDuplicado.uuid,
+                fecha: anticipoDuplicado.fecha,
+                montoTotal: anticipoDuplicado.monto,
+                detalles: anticipoDuplicado.detalles,
+                tipos: ['Anticipo']
+            });
+            return;
+        }
+        // Si cancela: continúa el flujo normal para agregar uno nuevo
     }
 
     // Confirmación antes de guardar
