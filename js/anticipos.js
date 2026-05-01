@@ -298,14 +298,23 @@ async function cargarHistorialSocio(id) {
                     procesarEntrada(a.fecha, 'Anticipo', 'Adelanto' + respInfo, Number(a.cantidad || a.monto || 0), a.uuid);
                 });
             }
+            // Actualizar fechas de anticipos del socio activo para detección de duplicados
+            gestionSocioAnticiposActuales = (data.anticipos || []).map(a => {
+                let f = a.fecha; if (f && f.includes('T')) f = f.split('T')[0]; return f;
+            });
             if(data.extras && Array.isArray(data.extras)) {
                 data.extras.forEach(e => {
-                    procesarEntrada(e.fecha, (e.tipo || 'Extra').toUpperCase(), e.detalle, 0, e.uuid);
+                    // Ausencias muestran su monto real (punto_noche × puntos) como referencia informativa
+                    const esAus = e.tipo && e.tipo.toLowerCase().includes('ausencia');
+                    procesarEntrada(e.fecha, (e.tipo || 'Extra').toUpperCase(), e.detalle, esAus ? (parseFloat(e.monto)||0) : 0, e.uuid);
                 });
             }
 
             const listaFinal = Object.values(agrupados);
-            listaFinal.forEach(item => { sumaTotalPedido += item.montoTotal; });
+            // Ausencias NO suman a pedidos: su impacto ya está en la reducción del alcance
+            listaFinal.forEach(item => {
+                if (!Array.from(item.tipos).includes('AUSENCIA')) sumaTotalPedido += item.montoTotal;
+            });
 
             const ptsSocio = parseFloat(document.getElementById('gestionSocioPuntos').value) || 0;
             let alcance = 0;
@@ -425,6 +434,17 @@ async function enviarAnticipo() {
     const montoVis = new Intl.NumberFormat('es-CL', {style:'currency', currency:'CLP', maximumFractionDigits:0}).format(monto);
     const respVis = respIni ? respIni + (respArea ? ' (' + respArea + ')' : '') : 'Sin responsable';
 
+    // Verificar anticipo duplicado en la misma fecha
+    if (gestionSocioAnticiposActuales.includes(fecha)) {
+        const continuar = window.confirm(
+            '⚠️ AVISO: Anticipo duplicado\n\n' +
+            'Ya existe un anticipo registrado para el ' + fechaVis + '.\n' +
+            'Registrar dos anticipos el mismo día es inusual.\n\n' +
+            '¿Deseas agregarlo de todas formas?'
+        );
+        if (!continuar) return;
+    }
+
     // Confirmación antes de guardar
     const confirmar = window.confirm(
         'ANTICIPO DE PROPINA\n\n' +
@@ -466,9 +486,16 @@ async function enviarAusencia() {
         setTimeout(() => campoMotivo.classList.remove('input-error'), 1500);
         return showToast('Falta datos', 'error');
     }
+
+    // Calcular monto de la ausencia: punto_noche del día × puntos del socio
+    const puntosDia = globalMapaPuntosDia[fecha];
+    const socioActivo = cacheSocios.find(s => s.id === id);
+    const puntosSocio = socioActivo ? (parseFloat(socioActivo.puntos) || 0) : (parseFloat(document.getElementById('gestionSocioPuntos')?.value) || 0);
+    const montoAusencia = (puntosDia !== null && puntosDia !== undefined) ? Math.round(puntosDia * puntosSocio) : 0;
+
     toggleLoader(true);
     try {
-        await callApiSocios('registrarBatchExtras', { detalleExtras: [{ id, nombre, fecha, tipo: 'ausencia', monto: 0, detalle: `Ausencia: ${motivo}` }] });
+        await callApiSocios('registrarBatchExtras', { detalleExtras: [{ id, nombre, fecha, tipo: 'ausencia', monto: montoAusencia, detalle: `Ausencia: ${motivo}` }] });
         showToast('✅ Ausencia registrada correctamente', 'success');
         campoMotivo.value = '';
         document.getElementById('fechaAusencia').value = new Date().toISOString().split('T')[0];

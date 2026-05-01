@@ -86,6 +86,7 @@ let gestionCargandoFiltro = false;
 
 // Cache individual de socios
 const cacheSocioIndividual = {};
+let gestionSocioAnticiposActuales = []; // fechas ISO de anticipos del socio activo en pantalla
 
 // Filtros recaudación
 let recFiltroTipo   = '';
