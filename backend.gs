@@ -815,16 +815,36 @@ function registrarBatchExtras(lista, usuario) {
   });
   sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, 8).setValues(newRows);
 
-  lista.forEach(item => {
-    if (item.tipo && item.tipo.toLowerCase().includes('ausencia')) {
-      telegramEnviar(
-        '📅 <b>Ausencia registrada</b>\n' +
-        '👤 ' + item.nombre + '\n' +
-        '📋 ' + (item.detalle || item.tipo) + '\n' +
-        '📅 ' + item.fecha
-      );
-    }
-  });
+  // Agrupar ausencias por nombre+detalle para evitar spam en Telegram
+  const ausencias = lista.filter(item => item.tipo && item.tipo.toLowerCase().includes('ausencia'));
+  if (ausencias.length > 0) {
+    const grupos = {};
+    ausencias.forEach(item => {
+      const key = item.nombre + '|' + (item.detalle || item.tipo);
+      if (!grupos[key]) grupos[key] = { nombre: item.nombre, detalle: item.detalle || item.tipo, fechas: [] };
+      grupos[key].fechas.push(item.fecha);
+    });
+    Object.values(grupos).forEach(g => {
+      const fechasOrdenadas = g.fechas.sort();
+      if (fechasOrdenadas.length === 1) {
+        telegramEnviar(
+          '📅 <b>Ausencia registrada</b>\n' +
+          '👤 ' + g.nombre + '\n' +
+          '📋 ' + g.detalle + '\n' +
+          '📅 ' + fechasOrdenadas[0]
+        );
+      } else {
+        telegramEnviar(
+          '🔴 <b>Ausencia múltiple registrada</b>\n' +
+          '👤 ' + g.nombre + '\n' +
+          '📋 ' + g.detalle + '\n' +
+          '📅 Desde: ' + fechasOrdenadas[0] + '\n' +
+          '📅 Hasta: ' + fechasOrdenadas[fechasOrdenadas.length - 1] + '\n' +
+          '📆 Total: ' + fechasOrdenadas.length + ' días'
+        );
+      }
+    });
+  }
 }
 
 function actualizarAnticipo(uuid, fecha, monto, responsable, areaResponsable) {

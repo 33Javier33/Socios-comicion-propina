@@ -3,14 +3,8 @@
 // ============================================================
 
 function renderCalendarGrid() {
-    const fechasConRec = Object.keys(globalMapaPuntosDia).sort();
-    if (fechasConRec.length > 0) {
-        const ultima = fechasConRec[fechasConRec.length - 1].split('-');
-        ptCalFecha = new Date(parseInt(ultima[0]), parseInt(ultima[1]) - 1, 1);
-    } else {
-        ptCalFecha = new Date();
-        ptCalFecha.setDate(1);
-    }
+    ptCalFecha = new Date();
+    ptCalFecha.setDate(1);
     ptCalRenderMes();
 }
 

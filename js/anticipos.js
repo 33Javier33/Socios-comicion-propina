@@ -298,14 +298,25 @@ async function cargarHistorialSocio(id) {
                     procesarEntrada(a.fecha, 'Anticipo', 'Adelanto' + respInfo, Number(a.cantidad || a.monto || 0), a.uuid);
                 });
             }
+            // Actualizar anticipos del socio activo para detección de duplicados
+            gestionSocioAnticiposActuales = (data.anticipos || []).map(a => {
+                let f = a.fecha; if (f && f.includes('T')) f = f.split('T')[0];
+                const respInfo = a.responsable ? ` (Resp: ${a.responsable} ${a.areaResponsable||''})` : '';
+                return { fecha: f, monto: Number(a.cantidad || a.monto || 0), uuid: a.uuid, detalles: ['Adelanto' + respInfo] };
+            });
             if(data.extras && Array.isArray(data.extras)) {
                 data.extras.forEach(e => {
-                    procesarEntrada(e.fecha, (e.tipo || 'Extra').toUpperCase(), e.detalle, 0, e.uuid);
+                    // Ausencias muestran su monto real (punto_noche × puntos) como referencia informativa
+                    const esAus = e.tipo && e.tipo.toLowerCase().includes('ausencia');
+                    procesarEntrada(e.fecha, (e.tipo || 'Extra').toUpperCase(), e.detalle, esAus ? (parseFloat(e.monto)||0) : 0, e.uuid);
                 });
             }
 
             const listaFinal = Object.values(agrupados);
-            listaFinal.forEach(item => { sumaTotalPedido += item.montoTotal; });
+            // Ausencias NO suman a pedidos: su impacto ya está en la reducción del alcance
+            listaFinal.forEach(item => {
+                if (!Array.from(item.tipos).includes('AUSENCIA')) sumaTotalPedido += item.montoTotal;
+            });
 
             const ptsSocio = parseFloat(document.getElementById('gestionSocioPuntos').value) || 0;
             let alcance = 0;
@@ -425,6 +436,30 @@ async function enviarAnticipo() {
     const montoVis = new Intl.NumberFormat('es-CL', {style:'currency', currency:'CLP', maximumFractionDigits:0}).format(monto);
     const respVis = respIni ? respIni + (respArea ? ' (' + respArea + ')' : '') : 'Sin responsable';
 
+    // Verificar anticipo duplicado en la misma fecha
+    const anticipoDuplicado = gestionSocioAnticiposActuales.find(a => a.fecha === fecha);
+    if (anticipoDuplicado) {
+        const montoExisVis = new Intl.NumberFormat('es-CL', {style:'currency', currency:'CLP', maximumFractionDigits:0}).format(anticipoDuplicado.monto);
+        const querreEditar = window.confirm(
+            '⚠️ ANTICIPO DUPLICADO — ' + fechaVis + '\n\n' +
+            'Este socio ya tiene un anticipo de ' + montoExisVis + ' ese día.\n\n' +
+            '✏️  ACEPTAR  →  Editar el anticipo existente (' + montoExisVis + ')\n' +
+            '➕  CANCELAR →  Agregar un nuevo anticipo de ' + montoVis + ' (inusual)'
+        );
+        if (querreEditar) {
+            // Abrir modal de edición con el anticipo existente pre-cargado
+            mostrarModalEditar({
+                uuid: anticipoDuplicado.uuid,
+                fecha: anticipoDuplicado.fecha,
+                montoTotal: anticipoDuplicado.monto,
+                detalles: anticipoDuplicado.detalles,
+                tipos: ['Anticipo']
+            });
+            return;
+        }
+        // Si cancela: continúa el flujo normal para agregar uno nuevo
+    }
+
     // Confirmación antes de guardar
     const confirmar = window.confirm(
         'ANTICIPO DE PROPINA\n\n' +
@@ -455,6 +490,42 @@ async function enviarAnticipo() {
     } finally { toggleLoader(false); }
 }
 
+// Devuelve el último día disponible en globalMapaPuntosDia (fin del período activo)
+function obtenerFinPeriodo() {
+    const dias = Object.keys(globalMapaPuntosDia || {});
+    if (dias.length > 0) return dias.sort().pop();
+    const hoy = new Date();
+    const fin = hoy.getDate() < 15
+        ? new Date(hoy.getFullYear(), hoy.getMonth(), 14)
+        : new Date(hoy.getFullYear(), hoy.getMonth() + 1, 14);
+    return fin.toISOString().split('T')[0];
+}
+
+// Genera un array con todas las fechas YYYY-MM-DD entre fechaDesde y fechaHasta (inclusive)
+function obtenerDiasRango(fechaDesde, fechaHasta) {
+    const dias = [];
+    const inicio = new Date(fechaDesde + 'T12:00:00');
+    const fin = new Date(fechaHasta + 'T12:00:00');
+    for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
+        dias.push(d.toISOString().split('T')[0]);
+    }
+    return dias;
+}
+
+// Actualiza el resumen de días congelados cuando cambian las fechas de rango
+function actualizarInfoTerminoContrato() {
+    const fechaDesde = document.getElementById('fechaAusencia')?.value;
+    const fechaHasta = document.getElementById('fechaHastaAusencia')?.value;
+    const diasInfo = document.getElementById('infoRangoAusencia');
+    if (!diasInfo) return;
+    if (!fechaDesde || !fechaHasta) { diasInfo.innerText = ''; return; }
+    if (fechaHasta < fechaDesde) { diasInfo.innerText = '⚠️ La fecha fin debe ser igual o posterior a la fecha inicio.'; return; }
+    const diasRango = obtenerDiasRango(fechaDesde, fechaHasta);
+    const diasEnPeriodo = diasRango.filter(d => globalMapaPuntosDia && d in globalMapaPuntosDia);
+    const fmt = f => { const p = f.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
+    diasInfo.innerText = `⚠️ ${diasEnPeriodo.length} día${diasEnPeriodo.length !== 1 ? 's' : ''} congelado${diasEnPeriodo.length !== 1 ? 's' : ''} (${fmt(fechaDesde)} al ${fmt(fechaHasta)})`;
+}
+
 async function enviarAusencia() {
     const id = document.getElementById('gestionSocioId').value;
     const nombre = document.getElementById('gestionSocioNombre').value;
@@ -466,13 +537,43 @@ async function enviarAusencia() {
         setTimeout(() => campoMotivo.classList.remove('input-error'), 1500);
         return showToast('Falta datos', 'error');
     }
+
+    const esTermino = motivo === 'Término de Contrato';
+    const fechaHastaInput = document.getElementById('fechaHastaAusencia');
+    const fechaHasta = fechaHastaInput ? fechaHastaInput.value : '';
+
+    const socioActivo = cacheSocios.find(s => s.id === id);
+    const puntosSocio = socioActivo ? (parseFloat(socioActivo.puntos) || 0) : (parseFloat(document.getElementById('gestionSocioPuntos')?.value) || 0);
+
+    let detalleExtras = [];
+
+    if (esTermino && fechaHasta) {
+        if (fechaHasta < fecha) return showToast('La fecha fin debe ser posterior al inicio', 'error');
+        const diasRango = obtenerDiasRango(fecha, fechaHasta);
+        detalleExtras = diasRango.map(dia => {
+            const puntosDia = globalMapaPuntosDia[dia];
+            const montoAusencia = (puntosDia !== null && puntosDia !== undefined) ? Math.round(puntosDia * puntosSocio) : 0;
+            return { id, nombre, fecha: dia, tipo: 'ausencia', monto: montoAusencia, detalle: 'Término de Contrato' };
+        });
+    } else {
+        const puntosDia = globalMapaPuntosDia[fecha];
+        const montoAusencia = (puntosDia !== null && puntosDia !== undefined) ? Math.round(puntosDia * puntosSocio) : 0;
+        detalleExtras = [{ id, nombre, fecha, tipo: 'ausencia', monto: montoAusencia, detalle: `Ausencia: ${motivo}` }];
+    }
+
     toggleLoader(true);
     try {
-        await callApiSocios('registrarBatchExtras', { detalleExtras: [{ id, nombre, fecha, tipo: 'ausencia', monto: 0, detalle: `Ausencia: ${motivo}` }] });
-        showToast('✅ Ausencia registrada correctamente', 'success');
+        await callApiSocios('registrarBatchExtras', { detalleExtras });
+        const msg = esTermino
+            ? `✅ Término de contrato: ${detalleExtras.length} día${detalleExtras.length !== 1 ? 's' : ''} congelado${detalleExtras.length !== 1 ? 's' : ''}`
+            : '✅ Ausencia registrada correctamente';
+        showToast(msg, 'success');
         campoMotivo.value = '';
         document.getElementById('fechaAusencia').value = new Date().toISOString().split('T')[0];
         document.querySelectorAll('.btn-motivo').forEach(b => b.classList.remove('activo'));
+        if (fechaHastaInput) fechaHastaInput.value = '';
+        const rangoContainer = document.getElementById('rangoAusenciaContainer');
+        if (rangoContainer) rangoContainer.style.display = 'none';
         cargarHistorialSocio(id);
     } catch(e) { showToast('Error al registrar ausencia', 'error'); } finally { toggleLoader(false); }
 }
@@ -485,6 +586,18 @@ function seleccionarMotivo(motivo) {
     if (motivo === 'Otro') {
         document.getElementById('motivoAusencia').value = '';
         document.getElementById('motivoAusencia').focus();
+    }
+    const esTermino = motivo === 'Término de Contrato';
+    const rangoContainer = document.getElementById('rangoAusenciaContainer');
+    if (rangoContainer) {
+        rangoContainer.style.display = esTermino ? 'block' : 'none';
+        if (esTermino) {
+            const fechaHastaInput = document.getElementById('fechaHastaAusencia');
+            if (fechaHastaInput) {
+                fechaHastaInput.value = obtenerFinPeriodo();
+                actualizarInfoTerminoContrato();
+            }
+        }
     }
 }
 

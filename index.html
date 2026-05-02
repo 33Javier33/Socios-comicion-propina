@@ -475,6 +475,7 @@
                                             <li>Elige el <strong>motivo</strong> tocando uno de los botones</li>
                                             <li>Presiona <strong>"Marcar Ausencia"</strong></li>
                                         </ol>
+                                        <div style="background:#fef2f2;border-left:3px solid #dc2626;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#991b1b;margin-bottom:8px;">🔴 <strong>Término de Contrato</strong>: congela los ingresos del socio desde la fecha seleccionada hasta el cierre del período. Se registran ausencias para todos los días del rango.</div>
                                         <div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">⚠️ Socios Part-Time no tienen ausencias — su cálculo usa el calendario de días trabajados.</div>
                                         <div class="ayuda-popover-footer">
                                             <span class="ayuda-popover-link" onclick="ayudaIrA('anticipos')">📖 Ver ayuda completa →</span>
@@ -483,7 +484,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group"><label>Fecha Ausencia</label><input type="date" id="fechaAusencia"></div>
+                            <div class="form-group"><label>Fecha Ausencia</label><input type="date" id="fechaAusencia" onchange="actualizarInfoTerminoContrato()"></div>
                             <div class="form-group" style="margin-top:10px;">
                                 <label>Motivo</label>
                                 <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;" id="botonesMotivo">
@@ -492,8 +493,19 @@
                                     <button type="button" class="btn-motivo" onclick="seleccionarMotivo('Vacaciones')">🌴 Vacaciones</button>
                                     <button type="button" class="btn-motivo" onclick="seleccionarMotivo('Permiso Personal')">📋 Permiso Personal</button>
                                     <button type="button" class="btn-motivo" onclick="seleccionarMotivo('Otro')">✏️ Otro</button>
+                                    <button type="button" class="btn-motivo btn-motivo-termino" onclick="seleccionarMotivo('Término de Contrato')">🔴 Término de Contrato</button>
                                 </div>
                                 <input type="text" id="motivoAusencia" placeholder="Selecciona o escribe motivo..." style="width:100%; box-sizing:border-box;">
+                            </div>
+                            <!-- Panel de congelamiento por Término de Contrato / rango multi-día -->
+                            <div id="rangoAusenciaContainer" style="display:none; margin-top:12px; background:#fef2f2; border-radius:10px; padding:12px 14px; border:1.5px solid #fca5a5;">
+                                <div style="font-weight:700; color:#dc2626; margin-bottom:6px; font-size:0.88em; display:flex; align-items:center; gap:6px;">🔴 Congelamiento de Ingresos</div>
+                                <div style="font-size:0.78em; color:#7f8c8d; margin-bottom:10px;">Los ingresos del socio serán congelados desde la fecha inicio hasta la fecha fin. Se registrará una ausencia por cada día del rango.</div>
+                                <div class="form-group" style="margin-top:0;">
+                                    <label style="font-size:0.85em; font-weight:600; color:#991b1b;">Fecha Hasta (cierre)</label>
+                                    <input type="date" id="fechaHastaAusencia" onchange="actualizarInfoTerminoContrato()" style="width:100%; box-sizing:border-box; border-color:#fca5a5;">
+                                </div>
+                                <div id="infoRangoAusencia" style="margin-top:8px; font-size:0.82em; color:#991b1b; background:#fee2e2; border-radius:6px; padding:7px 10px; font-weight:600; min-height:28px;"></div>
                             </div>
                             <button class="btn-action" style="background-color:var(--danger); width:100%; margin-top:15px;" onclick="enviarAusencia()">Marcar Ausencia</button>
                         </div>

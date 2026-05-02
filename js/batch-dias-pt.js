@@ -4,6 +4,7 @@
 
 let batchPTSociosSeleccionados = [];
 let batchPTDiasSeleccionados = [];
+let batchPTCalFecha = null;
 
 // ============================================================
 // ABRIR MODAL PARA SELECCIONAR MÚLTIPLES PART-TIME
@@ -95,6 +96,8 @@ function batchPT_continuarADias() {
 
     // Renderizar calendario
     batchPTDiasSeleccionados = [];
+    batchPTCalFecha = new Date();
+    batchPTCalFecha.setDate(1);
     renderCalendarGridBatch();
 
     modal2.style.display = 'block';
@@ -104,6 +107,12 @@ function cerrarModalBatchDiasPartTime_Dias() {
     document.getElementById('modalBatchDiasPartTime-Dias').style.display = 'none';
 }
 
+function batchPT_cambiarMes(delta) {
+    if (!batchPTCalFecha) { batchPTCalFecha = new Date(); batchPTCalFecha.setDate(1); }
+    batchPTCalFecha.setMonth(batchPTCalFecha.getMonth() + delta);
+    renderCalendarGridBatch();
+}
+
 // ============================================================
 // RENDERIZAR CALENDARIO PARA SELECCIÓN BATCH
 // ============================================================
@@ -111,74 +120,85 @@ function renderCalendarGridBatch() {
     const container = document.getElementById('batchPT-calendario');
     if (!container) return;
 
-    const hoy = new Date();
-    const year = hoy.getFullYear();
-    const month = hoy.getMonth();
+    if (!batchPTCalFecha) { batchPTCalFecha = new Date(); batchPTCalFecha.setDate(1); }
 
-    const firstDay = new Date(year, month, 1).getDay();
+    const year  = batchPTCalFecha.getFullYear();
+    const month = batchPTCalFecha.getMonth();
+    const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+    // Recolectar todos los días ya marcados en los socios seleccionados
+    const diasExistentes = new Set();
+    batchPTSociosSeleccionados.forEach(id => {
+        (globalDiasPT[id] || []).forEach(d => diasExistentes.add(d));
+    });
+
+    const firstDay   = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    let html = `<div style="margin-bottom:12px;"><strong>${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][month]} ${year}</strong></div>`;
-    html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px;">';
+    // Cabecera con navegación
+    let html = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;background:#f8fafc;padding:8px 12px;border-radius:8px;border:1px solid #e5e7eb;">
+            <button onclick="batchPT_cambiarMes(-1)" style="background:none;border:1px solid #d1d5db;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:1em;font-weight:700;color:#374151;">&#8592;</button>
+            <strong style="font-size:0.92em;color:#111827;">${MESES[month]} ${year}</strong>
+            <button onclick="batchPT_cambiarMes(1)" style="background:none;border:1px solid #d1d5db;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:1em;font-weight:700;color:#374151;">&#8594;</button>
+        </div>`;
 
-    const dayLabels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    dayLabels.forEach(label => {
+    html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px;">';
+
+    ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].forEach(label => {
         html += `<div style="text-align:center;font-size:0.7em;font-weight:700;color:#7f8c8d;padding:4px;">${label}</div>`;
     });
 
-    // Días vacíos antes del 1
-    for (let i = 0; i < firstDay; i++) {
-        html += '<div></div>';
-    }
+    for (let i = 0; i < firstDay; i++) html += '<div></div>';
 
-    // Días del mes
     for (let d = 1; d <= daysInMonth; d++) {
         const fecha = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        const esSelec = batchPTDiasSeleccionados.includes(fecha);
-        const tieneRecaudacion = globalMapaPuntosDia[fecha] ? true : false;
+        const esSelec     = batchPTDiasSeleccionados.includes(fecha);
+        const tieneRec    = globalMapaPuntosDia[fecha] !== undefined && globalMapaPuntosDia[fecha] !== null;
+        const esExistente = diasExistentes.has(fecha);
 
-        let bg = '#f3f4f6';
-        let color = '#9ca3af';
-        let cursor = 'default';
-
-        if (tieneRecaudacion) {
-            bg = esSelec ? '#2563eb' : '#e0e7ff';
-            color = esSelec ? 'white' : '#2563eb';
-            cursor = 'pointer';
+        let bg, color, border;
+        if (tieneRec) {
+            if (esSelec) { bg = '#2563eb'; color = 'white'; border = '2px solid #1e40af'; }
+            else         { bg = '#e0e7ff'; color = '#2563eb'; border = '1px solid #93c5fd'; }
+        } else {
+            bg = '#f3f4f6'; color = '#9ca3af'; border = '1px solid transparent';
         }
 
-        const onClick = tieneRecaudacion ? `onclick="batchPT_toggleDia('${fecha}')"` : '';
+        const marcaBadge = esExistente
+            ? `<span style="position:absolute;top:1px;right:2px;font-size:0.58em;color:${esSelec ? '#bfdbfe' : '#059669'};font-weight:900;">✓</span>`
+            : '';
+
+        const onClick = tieneRec ? `onclick="batchPT_toggleDia('${fecha}')"` : '';
 
         html += `
             <button ${onClick} style="
-                padding:8px;
-                border:none;
-                border-radius:6px;
-                background:${bg};
-                color:${color};
-                font-weight:${esSelec ? '700' : '600'};
-                font-size:0.85em;
-                cursor:${cursor};
-                transition:0.2s;
-                border:${esSelec ? '2px solid #1e40af' : '1px solid transparent'};
-            ">
-                ${d}
-            </button>
-        `;
+                position:relative;padding:7px 2px;border:${border};border-radius:6px;
+                background:${bg};color:${color};font-weight:${esSelec ? '700' : '600'};
+                font-size:0.85em;cursor:${tieneRec ? 'pointer' : 'default'};transition:0.15s;
+            ">${d}${marcaBadge}</button>`;
     }
 
     html += '</div>';
 
+    // Leyenda
+    html += `
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;font-size:0.71em;color:#374151;">
+            <span style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:12px;height:12px;background:#e0e7ff;border:1px solid #93c5fd;border-radius:3px;"></span>Con recaudación</span>
+            <span style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:12px;height:12px;background:#2563eb;border-radius:3px;"></span>Seleccionado</span>
+            <span style="display:flex;align-items:center;gap:4px;color:#059669;font-weight:700;">✓ Ya marcado</span>
+        </div>`;
+
     // Resumen
+    const infoExistentes = diasExistentes.size > 0
+        ? ` &nbsp;·&nbsp; <span style="color:#059669;"><strong>${diasExistentes.size}</strong> día(s) ya marcados en socios seleccionados</span>`
+        : '';
     html += `
         <div style="padding:10px;background:#f0fdf4;border-radius:8px;border:1px solid #86efac;font-size:0.78em;color:#166534;margin-bottom:12px;">
-            <strong>Días seleccionados:</strong> <span id="batchPT-contador-dias">0</span>
-        </div>
-    `;
+            <strong>Días a agregar:</strong> <span id="batchPT-contador-dias">${batchPTDiasSeleccionados.length}</span>${infoExistentes}
+        </div>`;
 
     container.innerHTML = html;
-    const counter = document.getElementById('batchPT-contador-dias');
-    if (counter) counter.textContent = batchPTDiasSeleccionados.length;
 }
 
 function batchPT_toggleDia(fecha) {

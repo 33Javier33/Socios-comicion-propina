@@ -182,6 +182,7 @@ async function carpetas_vaciarYArchivar() {
 
     toggleLoader(true, 'Archivando...');
     try {
+        // ── PASO 1: construir el archivo ──────────────────────────────
         const fechas = recDatosRaw
             .map(d => { let f = d.fecha; if (f && f.includes('T')) f = f.split('T')[0]; return f; })
             .filter(Boolean).sort();
@@ -211,6 +212,7 @@ async function carpetas_vaciarYArchivar() {
             notes = resN.data || [];
         } catch(e) {}
 
+        // ── PASO 2: guardar en archivero local PRIMERO ────────────────
         recArchivero.push({
             rango,
             totalRec: formatearMoneda(totalR),
@@ -220,7 +222,9 @@ async function carpetas_vaciarYArchivar() {
             fechaArchivo: new Date().toISOString()
         });
         localStorage.setItem(CARPETAS_SK, JSON.stringify(recArchivero));
+        carpetas_renderArchivero(); // actualizar UI antes de tocar la nube
 
+        // ── PASO 3: vaciar la nube ────────────────────────────────────
         await fetch(URL_RECAUDACIONES, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -228,11 +232,15 @@ async function carpetas_vaciarYArchivar() {
         });
 
         try { localStorage.removeItem(CACHE_KEY_REC); } catch(e) {}
-        await cargarRecaudaciones();
-        carpetas_renderArchivero();
+
+        // ── PASO 4: recargar vista de recaudación (no crítico) ────────
+        try { await cargarRecaudaciones(); } catch(e) {}
+
         showToast('✅ Archivado y nube vaciada correctamente', 'success');
     } catch(e) {
-        showToast('Error al archivar: ' + e.toString(), 'error');
+        carpetas_renderArchivero(); // garantizar que la UI muestre el archivo si ya se guardó
+        showToast('Error al vaciar nube (datos archivados localmente)', 'error');
+        console.error('carpetas_vaciarYArchivar:', e);
     } finally {
         toggleLoader(false);
     }
