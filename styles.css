@@ -241,6 +241,8 @@
         /* Botones motivo ausencia */
         .btn-motivo { padding: 5px 11px; border: 1px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); color: #fca5a5; border-radius: 20px; cursor: pointer; font-size: 0.76em; font-weight: 600; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
         .btn-motivo:hover, .btn-motivo.activo { background: var(--danger); color: white; border-color: var(--danger); }
+        .btn-motivo-termino { border-color: #dc2626 !important; background: rgba(220,38,38,0.12) !important; color: #dc2626 !important; font-weight: 700 !important; }
+        .btn-motivo-termino:hover, .btn-motivo-termino.activo { background: #dc2626 !important; color: white !important; border-color: #b91c1c !important; }
 
         /* Socio seleccionado en lista */
         .result-item.seleccionado { background: rgba(59,130,246,0.1); border-left: 3px solid var(--secondary); padding-left: 16px; font-weight: 700; color: var(--secondary); }
