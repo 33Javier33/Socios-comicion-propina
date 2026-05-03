@@ -266,6 +266,8 @@ async function cargarHistorialSocio(id) {
                 document.getElementById('socioDiasCount').innerText = selectedDaysPT.length;
             }
 
+            globalFechasAusenciaSocioActual = new Set();
+            globalTieneTerminoContrato = false;
             const fechasAusencia = new Set();
             if(data.extras) {
                 data.extras.forEach(e => {
@@ -273,9 +275,11 @@ async function cargarHistorialSocio(id) {
                         let f = e.fecha;
                         if(f.includes('T')) f = f.split('T')[0];
                         fechasAusencia.add(f);
+                        if(e.detalle === 'Término de Contrato') globalTieneTerminoContrato = true;
                     }
                 });
             }
+            globalFechasAusenciaSocioActual = new Set(fechasAusencia);
 
             const procesarEntrada = (fechaRaw, tipo, detalle, monto, uuid) => {
                 let fecha = fechaRaw || "";

@@ -66,6 +66,8 @@ let isEditing = false;
 let recDatosRaw = [];
 let globalValorPuntoTotal = 0;
 let globalMapaPuntosDia = {};
+let globalFechasAusenciaSocioActual = new Set();
+let globalTieneTerminoContrato = false;
 let selectedDaysPT = [];
 let globalDiasPT = {};
 

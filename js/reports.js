@@ -323,8 +323,19 @@ async function imprimirReciboSocio() {
     const aPagar      = document.getElementById('socioAPagar').innerText || '$0';
     const remanente   = document.getElementById('socioRemanente').innerText || '$0';
 
-    const valorPuntoNoche = globalValorPuntoTotal || 0;
-    const valorPuntoFmt   = formatearMoneda(Math.round(valorPuntoNoche));
+    // Si el socio tiene Término de Contrato, calcular valor punto solo para los días trabajados
+    let valorPuntoNoche = globalValorPuntoTotal || 0;
+    let fechaInicioTermino = null;
+    if (globalTieneTerminoContrato && globalFechasAusenciaSocioActual.size > 0 && globalMapaPuntosDia) {
+        let sumaAjustada = 0;
+        for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
+            if (!globalFechasAusenciaSocioActual.has(dia) && valor !== null) sumaAjustada += valor;
+        }
+        valorPuntoNoche = sumaAjustada;
+        // Obtener la fecha de inicio del congelamiento (primer día ausente por Término)
+        fechaInicioTermino = Array.from(globalFechasAusenciaSocioActual).sort()[0] || null;
+    }
+    const valorPuntoFmt = formatearMoneda(Math.round(valorPuntoNoche));
 
     const { inicio, fin } = aq_calcularPeriodoActual();
     const fmtF = iso => { const p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
@@ -393,7 +404,8 @@ async function imprimirReciboSocio() {
             <div class='row'><label>SUBE PUNTOS</label><span>${subePuntosLabel}</span></div>
             <div class='divider'></div>
             <div class='section-title'>CIERRE PUNTO</div>
-            <div class='row'><label>VALOR PUNTO NOCHE</label><span>${valorPuntoFmt}</span></div>
+            <div class='row'><label>${fechaInicioTermino ? 'VALOR PUNTO (HASTA ' + fmtF(fechaInicioTermino.substring(0,10)) + ')' : 'VALOR PUNTO NOCHE'}</label><span>${valorPuntoFmt}</span></div>
+            ${fechaInicioTermino ? `<div class='row' style='color:#dc2626;font-size:8px;'><label style='color:#dc2626;'>🔴 TÉRMINO CONTRATO DESDE</label><span style='font-weight:bold;color:#dc2626;'>${fmtF(fechaInicioTermino.substring(0,10))}</span></div>` : ''}
             <div class='divider'></div>
             <div class='section-title'>DETALLE</div>
             <div class='row'><label>BRUTO (Alcance)</label><span>${alcance}</span></div>
