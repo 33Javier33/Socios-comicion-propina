@@ -236,6 +236,14 @@ function aq_realizarArqueo() {
     let any = false;
     AQ_DENOMINACIONES.forEach(v => { if(aq_conteo[v] > 0) { any = true; h += `<tr><td>${aq_fmt(v)}</td><td>${aq_conteo[v]}</td><td>${aq_fmt(v*aq_conteo[v])}</td></tr>`; } });
     document.getElementById('aq-desglose-contado').innerHTML = any ? h + '</tbody></table>' : '<p style="color:#7f8c8d; text-align:center;">Sin ingresos.</p>';
+
+    // Indicador de anticipos sin cuadre de retiro
+    const _regAnt = aq_getRetirosAnticiposRegistrados();
+    const _pendTotal = aqAnticiposListaPeriodo.filter(a => !_regAnt[a.firma]).reduce((s, a) => s + a.monto, 0);
+    const elPend = document.getElementById('aq-pendiente-retiro');
+    const elPendVal = document.getElementById('aq-pendiente-retiro-val');
+    if (elPend) elPend.style.display = _pendTotal > 0 ? 'flex' : 'none';
+    if (elPendVal) elPendVal.textContent = aq_fmt(_pendTotal);
 }
 
 async function aq_fetchEsperadoData() {
@@ -324,15 +332,122 @@ async function aq_fetchAnticipos(silent = false) {
         const json = await response.json();
         const objetoAnticipos = json.data?.anticipos || json.anticipos || json.result?.anticipos;
         if (objetoAnticipos) {
-            aq_totalAnticipos = aq_filtrarAnticiposPeriodo(objetoAnticipos);
             const { inicio, fin } = aq_calcularPeriodoActual();
+            const procesados = new Set();
+            aqAnticiposListaPeriodo = [];
+            Object.entries(objetoAnticipos).forEach(([idSocio, lista]) => {
+                if (!Array.isArray(lista)) return;
+                lista.forEach(item => {
+                    const monto = parseFloat(item.cantidad) || 0;
+                    if (monto === 0) return;
+                    let fechaSimple = item.fecha || '';
+                    if (fechaSimple.includes('T')) fechaSimple = fechaSimple.split('T')[0];
+                    if (fechaSimple < inicio || fechaSimple > fin) return;
+                    const firma = idSocio + '|' + fechaSimple + '|' + monto;
+                    if (procesados.has(firma)) return;
+                    procesados.add(firma);
+                    aqAnticiposListaPeriodo.push({ firma, idSocio, nombre: item.nombre || idSocio, fecha: fechaSimple, monto });
+                });
+            });
+            aq_totalAnticipos = Math.round(aqAnticiposListaPeriodo.reduce((s, a) => s + a.monto, 0));
             const inicioVis = inicio.split('-').reverse().join('/');
             const finVis   = fin.split('-').reverse().join('/');
             document.getElementById('aq-total-anticipos').textContent =
                 aq_fmt(aq_totalAnticipos) + ' (' + inicioVis + ' → ' + finVis + ')';
+            aq_renderPendientesAnticipo();
         }
     } catch(e) {}
     finally { if(!silent) aq_realizarArqueo(); }
+}
+
+function aq_getRetirosAnticiposRegistrados() {
+    try { return JSON.parse(localStorage.getItem(AQ_SK_RETIROS_ANTICIPOS)) || {}; } catch(e) { return {}; }
+}
+
+function aq_renderPendientesAnticipo() {
+    const container = document.getElementById('aq-anticipos-pendientes');
+    if (!container) return;
+    const registrados = aq_getRetirosAnticiposRegistrados();
+    const pendientes = aqAnticiposListaPeriodo.filter(a => !registrados[a.firma]);
+    if (pendientes.length === 0) { container.style.display = 'none'; return; }
+    const totalPend = pendientes.reduce((s, a) => s + a.monto, 0);
+    let html = `<div style="font-weight:800;color:#dc2626;font-size:0.88em;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+        <span>⚠️ Anticipos sin retiro de caja (${pendientes.length})</span>
+        <span style="font-size:1em;">${aq_fmt(totalPend)}</span>
+    </div><div style="display:flex;flex-direction:column;gap:7px;">`;
+    pendientes.forEach(a => {
+        const fp = a.fecha.split('-'); const fechaVis = `${fp[2]}/${fp[1]}`;
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;background:white;border-radius:8px;padding:9px 12px;border:1px solid #fca5a5;">
+            <div>
+                <div style="font-weight:700;font-size:0.88em;color:#1e293b;">${a.nombre}</div>
+                <div style="font-size:0.75em;color:#7f8c8d;">${fechaVis} · ${aq_fmt(a.monto)}</div>
+            </div>
+            <button onclick='aq_abrirRetiroAnticipo(${JSON.stringify(a).replace(/'/g,"&#39;")})' style="background:#dc2626;color:white;border:none;border-radius:6px;padding:6px 12px;font-size:0.78em;font-weight:700;cursor:pointer;white-space:nowrap;">💵 Cuadrar</button>
+        </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    container.style.display = 'block';
+}
+
+function aq_abrirRetiroAnticipo(item) {
+    aq_retiroAnticipoPendiente = item;
+    document.getElementById('aq-retAnt-titulo').textContent = item.nombre + ' — ' + aq_fmt(item.monto);
+    document.getElementById('aq-retAnt-objetivo').textContent = aq_fmt(item.monto);
+    const form = document.getElementById('aq-retAnt-form');
+    let html = '';
+    AQ_DENOMINACIONES.forEach(d => {
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;">
+            <span style="min-width:68px;font-weight:600;font-size:0.85em;">${aq_fmt(d)}</span>
+            <input type="number" min="0" id="aq-ra-${d}" value="0" oninput="aq_actualizarTotalRetiroAnticipo()"
+                style="width:56px;padding:4px 6px;border:1px solid #ddd;border-radius:5px;font-size:0.88em;text-align:center;">
+            <span id="aq-ra-sub-${d}" style="font-size:0.78em;color:#7f8c8d;min-width:68px;">$0</span>
+        </div>`;
+    });
+    form.innerHTML = html;
+    aq_actualizarTotalRetiroAnticipo();
+    document.getElementById('aq-modalRetiroAnticipo').style.display = 'block';
+}
+
+function aq_actualizarTotalRetiroAnticipo() {
+    let total = 0;
+    AQ_DENOMINACIONES.forEach(d => {
+        const cant = parseInt(document.getElementById('aq-ra-' + d)?.value || 0) || 0;
+        const sub = cant * d; total += sub;
+        const subEl = document.getElementById('aq-ra-sub-' + d);
+        if (subEl) subEl.textContent = sub > 0 ? aq_fmt(sub) : '$0';
+    });
+    const objetivo = aq_retiroAnticipoPendiente ? aq_retiroAnticipoPendiente.monto : 0;
+    const dif = total - objetivo;
+    const totalEl = document.getElementById('aq-retAnt-total');
+    const difEl = document.getElementById('aq-retAnt-dif');
+    const btn = document.getElementById('aq-retAnt-confirmar');
+    if (totalEl) { totalEl.textContent = aq_fmt(total); totalEl.style.color = dif === 0 ? '#10b981' : '#ef4444'; }
+    if (difEl) { difEl.textContent = dif === 0 ? '✓ Exacto' : (dif > 0 ? '+' + aq_fmt(dif) : aq_fmt(dif)); difEl.style.color = dif === 0 ? '#10b981' : '#ef4444'; }
+    if (btn) btn.disabled = dif !== 0;
+}
+
+function aq_confirmarRetiroAnticipo() {
+    if (!aq_retiroAnticipoPendiente) return;
+    const billetes = {};
+    AQ_DENOMINACIONES.forEach(d => {
+        const cant = parseInt(document.getElementById('aq-ra-' + d)?.value || 0) || 0;
+        if (cant > 0) {
+            aq_conteo[d] = (aq_conteo[d] || 0) - cant;
+            aq_movi[d] = (aq_movi[d] ? aq_movi[d] + ', ' : '') + `-(${cant} Ant. ${aq_retiroAnticipoPendiente.nombre})`;
+            billetes[d] = cant;
+        }
+    });
+    aq_totalRetirado += aq_retiroAnticipoPendiente.monto;
+    const registrados = aq_getRetirosAnticiposRegistrados();
+    registrados[aq_retiroAnticipoPendiente.firma] = { nombre: aq_retiroAnticipoPendiente.nombre, monto: aq_retiroAnticipoPendiente.monto, billetes };
+    localStorage.setItem(AQ_SK_RETIROS_ANTICIPOS, JSON.stringify(registrados));
+    aq_saveState();
+    aq_renderPendientesAnticipo();
+    aq_realizarArqueo();
+    document.getElementById('aq-modalRetiroAnticipo').style.display = 'none';
+    aq_retiroAnticipoPendiente = null;
+    showToast('✅ Retiro de anticipo registrado en caja', 'success');
 }
 
 function aq_crearBackupLocal() {
@@ -350,6 +465,8 @@ function aq_resetear() {
     aq_conteo = {}; aq_movi = {}; aq_totalRetirado = 0;
     aq_histStates = []; aq_histIdx = -1;
     localStorage.removeItem(AQ_SK_CONTEO); localStorage.removeItem(AQ_SK_MOVI); localStorage.removeItem(AQ_SK_RETIROS);
+    localStorage.removeItem(AQ_SK_RETIROS_ANTICIPOS);
+    aqAnticiposListaPeriodo = [];
     aq_generarCampos(); aq_realizarArqueo();
 }
 

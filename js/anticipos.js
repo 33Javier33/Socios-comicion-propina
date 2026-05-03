@@ -538,7 +538,7 @@ async function enviarAnticipo() {
     toggleLoader(true);
     try {
         await callApiSocios('registrarBatchAnticipos', { detalleAnticipos: [{ id, nombre, fecha, monto: parseInt(monto), responsable: respIni, areaResponsable: respArea }] });
-        showToast('✅ Anticipo registrado correctamente', 'success');
+        showToast('✅ Anticipo registrado — recuerda cuadrar el retiro en Arqueo de Caja', 'success');
         // Invalidar caché para que próxima consulta traiga datos frescos
         globalCacheAllData = null;
         try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}

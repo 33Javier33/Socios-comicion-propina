@@ -11,6 +11,7 @@ const AQ_URL_GET = 'https://script.google.com/macros/s/AKfycbz_kCb4aEe437zHGbRqn
 const AQ_URL_POST = 'https://script.google.com/macros/s/AKfycbzr0_GPBfp1MuP0YzBUNbwwQAtwr7Nf3oPzX2855_6Fm36T3303_G6TB_7lmE6TnTHLrw/exec';
 const AQ_DENOMINACIONES = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
 const AQ_SK_CONTEO = 'arqueoConteoCLP', AQ_SK_MOVI = 'arqueoMoviDisplayCLP', AQ_SK_RETIROS = 'arqueoRetirosCLP', AQ_SK_BACKUP = 'arqueoBackupHistorial_List';
+const AQ_SK_RETIROS_ANTICIPOS = 'arqueoRetirosAnticipos';
 
 // ===== RESPONSABLES DE ANTICIPOS =====
 const RESP_KEY = 'fondo_responsables';
@@ -68,6 +69,10 @@ let globalValorPuntoTotal = 0;
 let globalMapaPuntosDia = {};
 let globalFechasAusenciaSocioActual = new Set();
 let globalTieneTerminoContrato = false;
+
+// Arqueo: lista plana de anticipos del período y anticipo en espera de retiro
+let aqAnticiposListaPeriodo = [];
+let aq_retiroAnticipoPendiente = null;
 let selectedDaysPT = [];
 let globalDiasPT = {};
 
