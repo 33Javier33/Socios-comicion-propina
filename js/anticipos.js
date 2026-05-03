@@ -372,7 +372,29 @@ async function cargarHistorialSocio(id) {
             if(listaFinal.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#7f8c8d; padding:20px;">No hay movimientos registrados.</td></tr>'; return; }
             listaFinal.sort((a,b) => b.rawDate - a.rawDate);
 
-            listaFinal.forEach(item => {
+            // Agrupar entradas de Término de Contrato en una sola fila de visualización
+            const _esTC = item => Array.from(item.tipos).includes('AUSENCIA') && item.detalles.includes('Término de Contrato');
+            const _tcItems = listaFinal.filter(_esTC);
+            const _otrosItems = listaFinal.filter(item => !_esTC(item));
+            let listaDisplay;
+            if (_tcItems.length > 1) {
+                const _fechasTC = _tcItems.map(e => e.fecha).sort();
+                const _fD = f => { const p = f.split('-'); return `${parseInt(p[2])}/${p[1]}`; };
+                listaDisplay = [..._otrosItems, {
+                    fecha: _fechasTC[0],
+                    fechaDisplay: `${_fD(_fechasTC[0])} al ${_fD(_fechasTC[_fechasTC.length - 1])}`,
+                    tipos: new Set(['AUSENCIA']),
+                    detalles: [`Término de Contrato (${_tcItems.length} días)`],
+                    montoTotal: 0,
+                    rawDate: new Date(_fechasTC[0] + 'T12:00:00'),
+                    uuid: null,
+                    uuidsGrupo: _tcItems.map(e => e.uuid).filter(Boolean)
+                }].sort((a, b) => b.rawDate - a.rawDate);
+            } else {
+                listaDisplay = listaFinal;
+            }
+
+            listaDisplay.forEach(item => {
                 const row = document.createElement('tr');
                 row.classList.add('row-deletable');
 
@@ -383,11 +405,18 @@ async function cargarHistorialSocio(id) {
                 row.addEventListener('touchend', () => clearTimeout(pressTimer));
                 row.addEventListener('mouseleave', () => clearTimeout(pressTimer));
 
-                let fechaVis = item.fecha;
+                let fechaVis = item.fechaDisplay || item.fecha;
                 if(fechaVis.includes('-')) { const f = fechaVis.split('-'); if(f.length === 3) fechaVis = `${f[2]}/${f[1]}/${f[0]}`; }
                 const tiposArr = Array.from(item.tipos);
                 const esAnticipo = tiposArr.includes('Anticipo');
-                let tipoHtml = tiposArr.includes('AUSENCIA') ? '<span class="tag-absent">AUSENCIA</span>' : `<span style="font-weight:bold; color:#7f8c8d;">${tiposArr.join(' + ')}</span>`;
+                let tipoHtml;
+                if (tiposArr.includes('AUSENCIA')) {
+                    tipoHtml = item.uuidsGrupo
+                        ? '<span class="tag-absent" style="background:#991b1b;font-size:0.7em;letter-spacing:0.3px;">🔴 T.CONTRATO</span>'
+                        : '<span class="tag-absent">AUSENCIA</span>';
+                } else {
+                    tipoHtml = `<span style="font-weight:bold; color:#7f8c8d;">${tiposArr.join(' + ')}</span>`;
+                }
                 const detalleHtml = [...new Set(item.detalles)].join(', ') || '-';
                 const esAusencia = Array.from(item.tipos).includes('AUSENCIA');
                 const claseColor = esAusencia ? 'amount-minus' : 'amount-anticipo';
@@ -607,22 +636,34 @@ function seleccionarMotivo(motivo) {
 
 function mostrarModalBorrar(item) {
     document.getElementById('modalConfirmarBorrar').style.display = 'block';
-    document.getElementById('txtDetalleBorrar').innerText = `¿Borrar registro del ${item.fecha} (${Array.from(item.tipos).join(',')})?`;
-    document.getElementById('borrarUUID').value = item.uuid;
+    if (item.uuidsGrupo && item.uuidsGrupo.length > 0) {
+        const detalle = item.detalles.join(', ');
+        document.getElementById('txtDetalleBorrar').innerText = `¿Eliminar ${detalle}? Se borrarán ${item.uuidsGrupo.length} registros.`;
+        document.getElementById('borrarUUID').value = JSON.stringify(item.uuidsGrupo);
+    } else {
+        document.getElementById('txtDetalleBorrar').innerText = `¿Borrar registro del ${item.fecha} (${Array.from(item.tipos).join(',')})?`;
+        document.getElementById('borrarUUID').value = item.uuid;
+    }
     document.getElementById('borrarTipo').value = item.montoTotal > 0 ? 'Anticipo' : 'Extra';
 }
 
 async function borrarItemConfirmado() {
-    const uuid = document.getElementById('borrarUUID').value;
+    const uuidVal = document.getElementById('borrarUUID').value;
     const tipo = document.getElementById('borrarTipo').value;
-    if(!uuid) return alert("No se puede borrar (Falta ID)");
+    if(!uuidVal) return alert("No se puede borrar (Falta ID)");
 
     toggleLoader(true, "Eliminando...");
     document.getElementById('modalConfirmarBorrar').style.display='none';
 
     try {
-        await callApiSocios('borrarMovimiento', { uuid: uuid, tipo: tipo });
-        showToast('Eliminado correctamente', 'success');
+        let uuids;
+        try { const p = JSON.parse(uuidVal); uuids = Array.isArray(p) ? p : [uuidVal]; }
+        catch(e) { uuids = [uuidVal]; }
+
+        for (const u of uuids) {
+            await callApiSocios('borrarMovimiento', { uuid: u, tipo });
+        }
+        showToast(uuids.length > 1 ? `${uuids.length} registros eliminados` : 'Eliminado correctamente', 'success');
         const idSocio = document.getElementById('gestionSocioId').value;
         cargarHistorialSocio(idSocio);
     } catch(e) {
