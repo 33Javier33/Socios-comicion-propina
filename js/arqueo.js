@@ -346,7 +346,9 @@ async function aq_fetchAnticipos(silent = false) {
                     const firma = idSocio + '|' + fechaSimple + '|' + monto;
                     if (procesados.has(firma)) return;
                     procesados.add(firma);
-                    aqAnticiposListaPeriodo.push({ firma, idSocio, nombre: item.nombre || idSocio, fecha: fechaSimple, monto });
+                    const _socio = cacheSocios ? cacheSocios.find(s => String(s.id) === String(idSocio)) : null;
+                    const nombre = (_socio ? (_socio.nombre + ' ' + (_socio.apellido || '')).trim() : null) || item.nombre || idSocio;
+                    aqAnticiposListaPeriodo.push({ firma, idSocio, nombre, fecha: fechaSimple, monto });
                 });
             });
             aq_totalAnticipos = Math.round(aqAnticiposListaPeriodo.reduce((s, a) => s + a.monto, 0));
@@ -399,7 +401,7 @@ function aq_abrirRetiroAnticipo(item) {
     AQ_DENOMINACIONES.forEach(d => {
         html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;">
             <span style="min-width:68px;font-weight:600;font-size:0.85em;">${aq_fmt(d)}</span>
-            <input type="number" min="0" id="aq-ra-${d}" value="0" oninput="aq_actualizarTotalRetiroAnticipo()"
+            <input type="number" min="0" id="aq-ra-${d}" value="" placeholder="0" oninput="aq_actualizarTotalRetiroAnticipo()"
                 style="width:56px;padding:4px 6px;border:1px solid #ddd;border-radius:5px;font-size:0.88em;text-align:center;">
             <span id="aq-ra-sub-${d}" style="font-size:0.78em;color:#7f8c8d;min-width:68px;">$0</span>
         </div>`;
