@@ -547,6 +547,7 @@ async function enviarAnticipo() {
         document.getElementById('fechaAnticipo').value = new Date().toISOString().split('T')[0];
         campoMonto.focus();
         cargarHistorialSocio(id);
+        if (typeof aq_fetchAnticipos === 'function') aq_fetchAnticipos(true);
     } catch(e) {
         campoMonto.classList.remove('input-ok');
         showToast('Error al registrar anticipo', 'error');
@@ -694,8 +695,11 @@ async function borrarItemConfirmado() {
             await callApiSocios('borrarMovimiento', { uuid: u, tipo });
         }
         showToast(uuids.length > 1 ? `${uuids.length} registros eliminados` : 'Eliminado correctamente', 'success');
+        globalCacheAllData = null;
+        try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
         const idSocio = document.getElementById('gestionSocioId').value;
         cargarHistorialSocio(idSocio);
+        if (typeof aq_fetchAnticipos === 'function') aq_fetchAnticipos(true);
     } catch(e) {
         showToast('Error al eliminar', 'error');
     } finally {
