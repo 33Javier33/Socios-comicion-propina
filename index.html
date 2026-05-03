@@ -395,6 +395,21 @@
                         </div>
                     </div>
 
+                    <!-- TARJETA RESUMEN AUSENCIAS (se muestra solo si hay ausencias) -->
+                    <div id="cardResumenAusencias" style="display:none; background:#fef2f2; border:1.5px solid #fca5a5; border-radius:12px; padding:13px 14px; margin-bottom:16px;">
+                        <div style="font-weight:800; color:#dc2626; font-size:0.85em; margin-bottom:10px; display:flex; align-items:center; gap:5px;">📅 Ausencias del período</div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:120px; background:white; border-radius:8px; padding:10px 12px; border:1px solid #fecaca;">
+                                <span style="display:block; font-size:0.68em; text-transform:uppercase; font-weight:700; color:#9b1c1c; margin-bottom:6px; letter-spacing:0.04em;">Días ausentes</span>
+                                <div id="ausenciaDiasLista" style="display:flex; flex-wrap:wrap; gap:4px;"></div>
+                            </div>
+                            <div style="background:white; border-radius:8px; padding:10px 12px; border:1px solid #fecaca; text-align:center; min-width:110px;">
+                                <span style="display:block; font-size:0.68em; text-transform:uppercase; font-weight:700; color:#9b1c1c; margin-bottom:4px; letter-spacing:0.04em;">Descuento total</span>
+                                <span id="ausenciaMontoTotal" style="font-size:1.15em; font-weight:900; color:#dc2626;">$0</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- BLOQUE RESULTADO FINAL -->
                     <div style="background:linear-gradient(135deg, #f8fffe, #f0faf5); border:1px solid #b7e4cc; border-radius:12px; padding:16px; margin-bottom:20px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:8px; border-bottom:1px dashed #cce;">

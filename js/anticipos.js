@@ -281,6 +281,36 @@ async function cargarHistorialSocio(id) {
             }
             globalFechasAusenciaSocioActual = new Set(fechasAusencia);
 
+            // Poblar tarjeta resumen de ausencias
+            const _cardAus = document.getElementById('cardResumenAusencias');
+            if (_cardAus) {
+                const _ausItems = (data.extras || []).filter(e => e.tipo && e.tipo.toLowerCase().includes('ausencia'));
+                if (_ausItems.length > 0) {
+                    const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+                    const _tcItems2 = _ausItems.filter(e => e.detalle === 'Término de Contrato');
+                    const _otrosAus = _ausItems.filter(e => e.detalle !== 'Término de Contrato');
+                    const _montoTotalAus = Math.round(_ausItems.reduce((s, e) => s + (parseFloat(e.monto) || 0), 0));
+                    let _diasHtml = '';
+                    _otrosAus.forEach(e => {
+                        let f = e.fecha; if (f.includes('T')) f = f.split('T')[0];
+                        const dia = parseInt(f.split('-')[2]);
+                        _diasHtml += `<span style="background:#fee2e2;border-radius:5px;padding:2px 7px;font-size:0.78em;font-weight:700;color:#991b1b;">día ${dia}</span>`;
+                    });
+                    if (_tcItems2.length > 0) {
+                        const _ftc = _tcItems2.map(e => { let f = e.fecha; if(f.includes('T')) f=f.split('T')[0]; return f; }).sort();
+                        const _mes = MESES[parseInt(_ftc[0].split('-')[1]) - 1];
+                        const _d1 = parseInt(_ftc[0].split('-')[2]);
+                        const _d2 = parseInt(_ftc[_ftc.length-1].split('-')[2]);
+                        _diasHtml += `<span style="background:#991b1b;border-radius:5px;padding:2px 8px;font-size:0.78em;font-weight:700;color:white;">🔴 ${_d1} al ${_d2} ${_mes} (${_tcItems2.length} días)</span>`;
+                    }
+                    document.getElementById('ausenciaDiasLista').innerHTML = _diasHtml;
+                    document.getElementById('ausenciaMontoTotal').innerText = formatearMoneda(_montoTotalAus);
+                    _cardAus.style.display = 'block';
+                } else {
+                    _cardAus.style.display = 'none';
+                }
+            }
+
             const procesarEntrada = (fechaRaw, tipo, detalle, monto, uuid) => {
                 let fecha = fechaRaw || "";
                 if(fecha.includes('T')) fecha = fecha.split('T')[0];
