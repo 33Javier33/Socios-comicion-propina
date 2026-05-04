@@ -73,14 +73,14 @@ async function informeAnticipos() {
         const col1  = filas.slice(0, mitad);
         const col2  = filas.slice(mitad);
 
-        const ths = 'background:#2c3e50;color:white;padding:2px 3px;font-size:7.5px;border:1px solid #1a252f;text-align:center;';
+        const ths = 'background:#2c3e50;color:white;padding:2px 3px;font-size:7.5px;border:1px solid #1a252f;text-align:center;overflow:hidden;';
         const thead2 = '<thead><tr>'
             + '<th style="'+ths+'width:16px;">N°</th>'
-            + '<th style="'+ths+'text-align:left;min-width:70px;max-width:90px;">NOMBRE</th>'
+            + '<th style="'+ths+'text-align:left;width:80px;">NOMBRE</th>'
             + '<th style="'+ths+'width:22px;">ÁREA</th>'
-            + '<th style="'+ths+'width:52px;">FECHA</th>'
-            + '<th style="'+ths+'width:58px;text-align:right;">VALOR</th>'
-            + '<th style="'+ths+'width:34px;">RESP.</th>'
+            + '<th style="'+ths+'width:56px;">FECHA</th>'
+            + '<th style="'+ths+'width:62px;text-align:right;">VALOR</th>'
+            + '<th style="'+ths+'width:36px;">RESP.</th>'
             + '</tr></thead>';
 
         function buildCol2(rows) {
@@ -108,7 +108,7 @@ async function informeAnticipos() {
                     var pdNombre = isNombreRow ? 'padding:2px 3px 1px 3px' : 'padding:1px 3px';
                     var filaHtml = '<tr style="background:'+col.bg+';line-height:1.15;">'
                         + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-weight:bold;font-size:8px;color:'+col.txt+';">'+(f.n||'')+'</td>'
-                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';font-size:'+(isNombreRow?'8px':'7.5px')+';font-weight:'+(isNombreRow?'800':'400')+';color:'+col.txt+';max-width:90px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+(f.nombre||'')+'</td>'
+                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';font-size:'+(isNombreRow?'7.5px':'7px')+';font-weight:'+(isNombreRow?'800':'400')+';color:'+col.txt+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+(f.nombre||'')+'</td>'
                         + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-size:7.5px;color:'+col.txt+';">'+f.area+'</td>'
                         + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-size:7.5px;color:'+col.txt+';">'+f.fecha+'</td>'
                         + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:right;font-weight:700;font-size:7.5px;color:'+col.txt+';">'+fmt(f.valor)+'</td>'
@@ -140,7 +140,7 @@ async function informeAnticipos() {
             + '.sub { text-align:center; font-size:9px; margin-bottom:5px; font-weight:600; }'
             + '.tothead { background:#c0392b; color:white; padding:5px 10px; font-size:11px; font-weight:900; display:flex; justify-content:space-between; margin-bottom:7px; border-radius:3px; }'
             + '.dos-cols { display:grid; grid-template-columns:1fr 1fr; gap:6px; }'
-            + 'table { width:100%; border-collapse:collapse; }'
+            + 'table { width:100%; border-collapse:collapse; table-layout:fixed; }'
             + '.totfinal { background:#2c3e50; color:white; padding:4px 8px; font-weight:900; font-size:10px; text-align:right; margin-top:7px; border-radius:2px; }'
             + '.footer { text-align:center; font-size:8px; color:#aaa; margin-top:8px; border-top:1px dashed #ccc; padding-top:4px; }'
             + '@media print { @page { margin:8mm; size:A4 landscape; } body { padding:0; } tbody { page-break-inside:avoid; break-inside:avoid; } tr { page-break-inside:avoid; break-inside:avoid; } }'
