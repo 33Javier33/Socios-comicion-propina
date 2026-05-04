@@ -73,14 +73,14 @@ async function informeAnticipos() {
         const col1  = filas.slice(0, mitad);
         const col2  = filas.slice(mitad);
 
-        const ths = 'background:#2c3e50;color:white;padding:3px 4px;font-size:8px;border:1px solid #1a252f;text-align:center;';
+        const ths = 'background:#2c3e50;color:white;padding:2px 3px;font-size:7.5px;border:1px solid #1a252f;text-align:center;';
         const thead2 = '<thead><tr>'
-            + '<th style="'+ths+'width:18px;">N°</th>'
-            + '<th style="'+ths+'text-align:left;min-width:80px;">NOMBRE</th>'
-            + '<th style="'+ths+'width:24px;">ÁREA</th>'
-            + '<th style="'+ths+'width:55px;">FECHA</th>'
-            + '<th style="'+ths+'width:60px;text-align:right;">VALOR</th>'
-            + '<th style="'+ths+'width:38px;">RESP.</th>'
+            + '<th style="'+ths+'width:16px;">N°</th>'
+            + '<th style="'+ths+'text-align:left;min-width:70px;max-width:90px;">NOMBRE</th>'
+            + '<th style="'+ths+'width:22px;">ÁREA</th>'
+            + '<th style="'+ths+'width:52px;">FECHA</th>'
+            + '<th style="'+ths+'width:58px;text-align:right;">VALOR</th>'
+            + '<th style="'+ths+'width:34px;">RESP.</th>'
             + '</tr></thead>';
 
         function buildCol2(rows) {
@@ -105,21 +105,22 @@ async function informeAnticipos() {
                 var col = g.col;
                 var filasHtml = g.filas.map(function(f) {
                     var isNombreRow = !!f.nombre;
-                    var filaHtml = '<tr style="background:'+col.bg+'">'
-                        + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:center;font-weight:bold;font-size:8px;color:'+col.txt+';">'+(f.n||'')+'</td>'
-                        + '<td style="padding:2px 4px;border:1px solid '+col.borde+';font-size:8px;font-weight:'+(isNombreRow?'800':'400')+';color:'+col.txt+';">'+(f.nombre||'')+'</td>'
-                        + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:center;font-size:8px;color:'+col.txt+';">'+f.area+'</td>'
-                        + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:center;font-size:8px;color:'+col.txt+';">'+f.fecha+'</td>'
-                        + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:right;font-weight:700;font-size:8px;color:'+col.txt+';">'+fmt(f.valor)+'</td>'
-                        + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:center;font-size:7px;color:'+col.txt+';">'+(f.responsable ? f.responsable+(f.respArea ? ' '+f.respArea : '') : '')+'</td>'
+                    var pdNombre = isNombreRow ? 'padding:2px 3px 1px 3px' : 'padding:1px 3px';
+                    var filaHtml = '<tr style="background:'+col.bg+';line-height:1.15;">'
+                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-weight:bold;font-size:8px;color:'+col.txt+';">'+(f.n||'')+'</td>'
+                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';font-size:'+(isNombreRow?'8px':'7.5px')+';font-weight:'+(isNombreRow?'800':'400')+';color:'+col.txt+';max-width:90px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+(f.nombre||'')+'</td>'
+                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-size:7.5px;color:'+col.txt+';">'+f.area+'</td>'
+                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-size:7.5px;color:'+col.txt+';">'+f.fecha+'</td>'
+                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:right;font-weight:700;font-size:7.5px;color:'+col.txt+';">'+fmt(f.valor)+'</td>'
+                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-size:7px;color:'+col.txt+';">'+(f.responsable ? f.responsable+(f.respArea ? ' '+f.respArea : '') : '')+'</td>'
                         + '</tr>';
                     // Fila de TOTAL al final del grupo
                     if (f.totalSocio !== null) {
-                        filaHtml += '<tr style="background:'+col.totalBg+';">'
-                            + '<td style="padding:2px 4px;border:1px solid '+col.borde+';font-size:8px;border-top:2px solid '+col.totalTxt+';" colspan="3"></td>'
-                            + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:right;font-size:8px;font-weight:700;color:'+col.totalTxt+';border-top:2px solid '+col.totalTxt+';">TOTAL:</td>'
-                            + '<td style="padding:2px 4px;border:1px solid '+col.borde+';text-align:right;font-weight:900;font-size:9px;color:'+col.totalTxt+';border-top:2px solid '+col.totalTxt+';">'+fmt(f.totalSocio)+'</td>'
-                            + '<td style="padding:2px 4px;border:1px solid '+col.borde+';border-top:2px solid '+col.totalTxt+';"></td>'
+                        filaHtml += '<tr style="background:'+col.totalBg+';line-height:1.1;">'
+                            + '<td style="padding:1px 3px;border:1px solid '+col.borde+';font-size:7.5px;border-top:1.5px solid '+col.totalTxt+';" colspan="3"></td>'
+                            + '<td style="padding:1px 3px;border:1px solid '+col.borde+';text-align:right;font-size:7.5px;font-weight:700;color:'+col.totalTxt+';border-top:1.5px solid '+col.totalTxt+';">TOTAL:</td>'
+                            + '<td style="padding:1px 3px;border:1px solid '+col.borde+';text-align:right;font-weight:900;font-size:8px;color:'+col.totalTxt+';border-top:1.5px solid '+col.totalTxt+';">'+fmt(f.totalSocio)+'</td>'
+                            + '<td style="padding:1px 3px;border:1px solid '+col.borde+';border-top:1.5px solid '+col.totalTxt+';"></td>'
                             + '</tr>';
                     }
                     return filaHtml;
