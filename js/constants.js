@@ -73,6 +73,7 @@ let globalTieneTerminoContrato = false;
 // Arqueo: lista plana de anticipos del período y anticipo en espera de retiro
 let aqAnticiposListaPeriodo = [];
 let aq_retiroAnticipoPendiente = null;
+let aqRetirosAnticiposNube = {}; // retiros sincronizados desde Google Sheets
 let selectedDaysPT = [];
 let globalDiasPT = {};
 

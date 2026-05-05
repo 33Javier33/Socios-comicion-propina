@@ -328,8 +328,27 @@ function aq_filtrarAnticiposPeriodo(objetoAnticipos) {
 
 async function aq_fetchAnticipos(silent = false) {
     try {
-        const response = await fetch(URL_SOCIOS, { method: 'POST', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: 'getAllDataDesdeSheets' }) });
-        const json = await response.json();
+        const [responseAnt, responseRet] = await Promise.all([
+            fetch(URL_SOCIOS, { method: 'POST', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: 'getAllDataDesdeSheets' }) }),
+            fetch(URL_SOCIOS, { method: 'POST', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: 'getRetirosAnticipos' }) }).catch(() => null)
+        ]);
+        const json = await responseAnt.json();
+
+        // Sincronizar retiros desde la nube
+        if (responseRet) {
+            try {
+                const retJson = await responseRet.json();
+                if (retJson.status === 'success' && retJson.data) {
+                    aqRetirosAnticiposNube = retJson.data;
+                    // Fusionar con localStorage para que el otro dispositivo también los tenga
+                    let local = {};
+                    try { local = JSON.parse(localStorage.getItem(AQ_SK_RETIROS_ANTICIPOS)) || {}; } catch(e) {}
+                    const merged = Object.assign({}, aqRetirosAnticiposNube, local);
+                    localStorage.setItem(AQ_SK_RETIROS_ANTICIPOS, JSON.stringify(merged));
+                }
+            } catch(e) {}
+        }
+
         const objetoAnticipos = json.data?.anticipos || json.anticipos || json.result?.anticipos;
         if (objetoAnticipos) {
             const { inicio, fin } = aq_calcularPeriodoActual();
@@ -363,7 +382,9 @@ async function aq_fetchAnticipos(silent = false) {
 }
 
 function aq_getRetirosAnticiposRegistrados() {
-    try { return JSON.parse(localStorage.getItem(AQ_SK_RETIROS_ANTICIPOS)) || {}; } catch(e) { return {}; }
+    let local = {};
+    try { local = JSON.parse(localStorage.getItem(AQ_SK_RETIROS_ANTICIPOS)) || {}; } catch(e) {}
+    return Object.assign({}, aqRetirosAnticiposNube, local);
 }
 
 function aq_renderPendientesAnticipo() {
@@ -431,19 +452,30 @@ function aq_actualizarTotalRetiroAnticipo() {
 
 function aq_confirmarRetiroAnticipo() {
     if (!aq_retiroAnticipoPendiente) return;
+    const item = aq_retiroAnticipoPendiente;
     const billetes = {};
     AQ_DENOMINACIONES.forEach(d => {
         const cant = parseInt(document.getElementById('aq-ra-' + d)?.value || 0) || 0;
         if (cant > 0) {
             aq_conteo[d] = (aq_conteo[d] || 0) - cant;
-            aq_movi[d] = (aq_movi[d] ? aq_movi[d] + ', ' : '') + `-(${cant} Ant. ${aq_retiroAnticipoPendiente.nombre})`;
+            aq_movi[d] = (aq_movi[d] ? aq_movi[d] + ', ' : '') + `-(${cant} Ant. ${item.nombre})`;
             billetes[d] = cant;
         }
     });
-    aq_totalRetirado += aq_retiroAnticipoPendiente.monto;
-    const registrados = aq_getRetirosAnticiposRegistrados();
-    registrados[aq_retiroAnticipoPendiente.firma] = { nombre: aq_retiroAnticipoPendiente.nombre, monto: aq_retiroAnticipoPendiente.monto, billetes };
-    localStorage.setItem(AQ_SK_RETIROS_ANTICIPOS, JSON.stringify(registrados));
+    aq_totalRetirado += item.monto;
+
+    // Guardar en localStorage
+    let local = {};
+    try { local = JSON.parse(localStorage.getItem(AQ_SK_RETIROS_ANTICIPOS)) || {}; } catch(e) {}
+    local[item.firma] = { nombre: item.nombre, monto: item.monto, billetes };
+    localStorage.setItem(AQ_SK_RETIROS_ANTICIPOS, JSON.stringify(local));
+
+    // Guardar en nube (sin bloquear)
+    const responsable = (() => { try { const s = JSON.parse(localStorage.getItem('fs_sesion_responsable')); return s ? (s.ini + '|' + s.area) : ''; } catch(e) { return ''; } })();
+    callApiSocios('registrarRetiroAnticipo', { firma: item.firma, nombre: item.nombre, monto: item.monto, billetes, responsable })
+        .then(() => { aqRetirosAnticiposNube[item.firma] = { nombre: item.nombre, monto: item.monto, billetes }; })
+        .catch(() => {});
+
     aq_saveState();
     aq_renderPendientesAnticipo();
     aq_realizarArqueo();

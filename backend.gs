@@ -342,8 +342,9 @@ const HOJA_SALDOS_CIERRE        = "SaldosCierreMes";
 const HOJA_CHAT_SOCIAL          = "MensajesApp";
 const HOJA_ANTICIPOS_HISTORIAL  = "AnticiposGuardados";
 const HOJA_HISTORIAL_CONEXIONES = "HistorialConexiones";
-const HOJA_AUDITORIA            = "AuditoriaLogs";   // ← historial de auditoría
-const HOJA_CREDENCIALES         = "Credenciales";    // ← PINs personales por responsable
+const HOJA_AUDITORIA            = "AuditoriaLogs";
+const HOJA_CREDENCIALES         = "Credenciales";
+const HOJA_RETIROS_ANTICIPOS    = "RetirosAnticipos";  // cuadre de anticipos en caja
 
 // ==============================================================================
 // FUNCIÓN DE AUDITORÍA — registra quién hizo qué, dónde y cuándo
@@ -547,6 +548,15 @@ function handleRequest(e, method) {
         responseData = { status: 'success', message: 'Credencial eliminada' };
         break;
 
+      case 'registrarRetiroAnticipo':
+        registrarRetiroAnticipo(payload.firma, payload.nombre, payload.monto, payload.billetes, payload.responsable);
+        responseData = { status: 'success', message: 'Retiro de anticipo registrado' };
+        break;
+
+      case 'getRetirosAnticipos':
+        responseData = { status: 'success', data: getRetirosAnticipos() };
+        break;
+
       default:
         responseData = { status: 'error', message: 'Acción desconocida: ' + action };
     }
@@ -581,7 +591,8 @@ function setupSheets() {
     // ── Historial de Auditoría ───────────────────────────────────────────────
     [HOJA_AUDITORIA]:            ['Timestamp', 'Usuario', 'Accion', 'Detalle', 'ID_Afectado', 'GeoLat', 'GeoLng', 'DeviceID', 'IP', 'UserAgent'],
     // ── PINs personales por responsable ─────────────────────────────────────
-    [HOJA_CREDENCIALES]:         ['Ini', 'Area', 'PIN', 'UltimaActualizacion']
+    [HOJA_CREDENCIALES]:         ['Ini', 'Area', 'PIN', 'UltimaActualizacion'],
+    [HOJA_RETIROS_ANTICIPOS]:    ['Firma', 'Nombre', 'Monto', 'Billetes', 'FechaRegistro', 'Responsable']
   };
 
   for (const [name, headers] of Object.entries(sheets)) {
@@ -1275,6 +1286,42 @@ function deleteCredencial(ini, area) {
       return;
     }
   }
+}
+
+// ==============================================================================
+// RETIROS DE ANTICIPOS (sincronización entre dispositivos)
+// ==============================================================================
+function registrarRetiroAnticipo(firma, nombre, monto, billetes, responsable) {
+  if (!firma) return;
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let s = ss.getSheetByName(HOJA_RETIROS_ANTICIPOS);
+  if (!s) { s = ss.insertSheet(HOJA_RETIROS_ANTICIPOS); s.appendRow(['Firma', 'Nombre', 'Monto', 'Billetes', 'FechaRegistro', 'Responsable']); }
+
+  // Si ya existe la firma, no duplicar
+  if (s.getLastRow() > 1) {
+    const datos = s.getRange(2, 1, s.getLastRow() - 1, 1).getValues();
+    for (let i = 0; i < datos.length; i++) {
+      if (String(datos[i][0]) === String(firma)) return;
+    }
+  }
+  const tz = ss.getSpreadsheetTimeZone();
+  const ahora = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd'T'HH:mm:ss");
+  s.appendRow([firma, nombre || '', monto || 0, JSON.stringify(billetes || {}), ahora, responsable || '']);
+}
+
+function getRetirosAnticipos() {
+  const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA_RETIROS_ANTICIPOS);
+  if (!s || s.getLastRow() <= 1) return {};
+  const datos = s.getDataRange().getValues().slice(1);
+  const resultado = {};
+  datos.forEach(r => {
+    const firma = String(r[0]);
+    if (!firma) return;
+    let billetes = {};
+    try { billetes = JSON.parse(r[3] || '{}'); } catch(e) {}
+    resultado[firma] = { nombre: r[1] || '', monto: parseFloat(r[2]) || 0, billetes, fecha: r[4] || '', responsable: r[5] || '' };
+  });
+  return resultado;
 }
 
 function getAuditoria() {
