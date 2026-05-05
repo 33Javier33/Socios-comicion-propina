@@ -367,7 +367,7 @@ async function aq_fetchAnticipos(silent = false) {
 
 async function aq_sincronizarRetirosNube() {
     try {
-        const res = await fetch(AQ_URL_GET + '?action=getRetirosAnticipos');
+        const res = await fetch(AQ_URL_POST + '?action=getRetirosAnticipos');
         const retJson = await res.json();
         if (retJson.status === 'success' && retJson.data) {
             aqRetirosAnticiposNube = retJson.data;
