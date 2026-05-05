@@ -367,7 +367,7 @@ async function aq_fetchAnticipos(silent = false) {
 
 async function aq_sincronizarRetirosNube() {
     try {
-        const res = await fetch(URL_SOCIOS, { method: 'POST', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: 'getRetirosAnticipos' }) });
+        const res = await fetch(AQ_URL_GET + '?action=getRetirosAnticipos');
         const retJson = await res.json();
         if (retJson.status === 'success' && retJson.data) {
             aqRetirosAnticiposNube = retJson.data;
@@ -469,10 +469,11 @@ function aq_confirmarRetiroAnticipo() {
     local[item.firma] = { nombre: item.nombre, monto: item.monto, billetes };
     localStorage.setItem(AQ_SK_RETIROS_ANTICIPOS, JSON.stringify(local));
 
-    // Guardar en nube (sin bloquear)
+    // Guardar en nube (sin bloquear) — usa el script de arqueo
     const responsable = (() => { try { const s = JSON.parse(localStorage.getItem('fs_sesion_responsable')); return s ? (s.ini + '|' + s.area) : ''; } catch(e) { return ''; } })();
-    callApiSocios('registrarRetiroAnticipo', { firma: item.firma, nombre: item.nombre, monto: item.monto, billetes, responsable })
-        .then(() => { aqRetirosAnticiposNube[item.firma] = { nombre: item.nombre, monto: item.monto, billetes }; })
+    fetch(AQ_URL_POST, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'registrarRetiroAnticipo', firma: item.firma, nombre: item.nombre, monto: item.monto, billetes, responsable }) })
+        .then(r => r.json())
+        .then(r => { if (r.status === 'success') aqRetirosAnticiposNube[item.firma] = { nombre: item.nombre, monto: item.monto, billetes }; })
         .catch(() => {});
 
     aq_saveState();
