@@ -328,27 +328,8 @@ function aq_filtrarAnticiposPeriodo(objetoAnticipos) {
 
 async function aq_fetchAnticipos(silent = false) {
     try {
-        const [responseAnt, responseRet] = await Promise.all([
-            fetch(URL_SOCIOS, { method: 'POST', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: 'getAllDataDesdeSheets' }) }),
-            fetch(URL_SOCIOS, { method: 'POST', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: 'getRetirosAnticipos' }) }).catch(() => null)
-        ]);
-        const json = await responseAnt.json();
-
-        // Sincronizar retiros desde la nube
-        if (responseRet) {
-            try {
-                const retJson = await responseRet.json();
-                if (retJson.status === 'success' && retJson.data) {
-                    aqRetirosAnticiposNube = retJson.data;
-                    // Fusionar con localStorage para que el otro dispositivo también los tenga
-                    let local = {};
-                    try { local = JSON.parse(localStorage.getItem(AQ_SK_RETIROS_ANTICIPOS)) || {}; } catch(e) {}
-                    const merged = Object.assign({}, aqRetirosAnticiposNube, local);
-                    localStorage.setItem(AQ_SK_RETIROS_ANTICIPOS, JSON.stringify(merged));
-                }
-            } catch(e) {}
-        }
-
+        const response = await fetch(URL_SOCIOS, { method: 'POST', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: 'getAllDataDesdeSheets' }) });
+        const json = await response.json();
         const objetoAnticipos = json.data?.anticipos || json.anticipos || json.result?.anticipos;
         if (objetoAnticipos) {
             const { inicio, fin } = aq_calcularPeriodoActual();
@@ -379,6 +360,24 @@ async function aq_fetchAnticipos(silent = false) {
         }
     } catch(e) {}
     finally { if(!silent) aq_realizarArqueo(); }
+
+    // Sincronizar retiros desde la nube en segundo plano (sin bloquear)
+    setTimeout(aq_sincronizarRetirosNube, 800);
+}
+
+async function aq_sincronizarRetirosNube() {
+    try {
+        const res = await fetch(URL_SOCIOS, { method: 'POST', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: 'getRetirosAnticipos' }) });
+        const retJson = await res.json();
+        if (retJson.status === 'success' && retJson.data) {
+            aqRetirosAnticiposNube = retJson.data;
+            let local = {};
+            try { local = JSON.parse(localStorage.getItem(AQ_SK_RETIROS_ANTICIPOS)) || {}; } catch(e) {}
+            const merged = Object.assign({}, aqRetirosAnticiposNube, local);
+            localStorage.setItem(AQ_SK_RETIROS_ANTICIPOS, JSON.stringify(merged));
+            aq_renderPendientesAnticipo();
+        }
+    } catch(e) {}
 }
 
 function aq_getRetirosAnticiposRegistrados() {
