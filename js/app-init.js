@@ -69,6 +69,8 @@ function switchTab(tabName) {
     document.getElementById(`tab-${tabName}`).classList.add('active');
     const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
     if (activeBtn) activeBtn.classList.add('active');
+    const mobileLabel = document.getElementById('mobileActiveLabel');
+    if (mobileLabel && activeBtn) mobileLabel.textContent = activeBtn.textContent.trim();
     const fabRec = document.getElementById('fabRecAgregar');
     document.getElementById('fabMatAgregar').style.display = 'none';
     if(tabName === 'registro') { fabRec.style.display = 'none'; aq_detenerSync(); }
@@ -104,22 +106,67 @@ function initLayout() {
 
     nav_restoreOrder(navTabs);
 
-    if (window.innerWidth < 900) return;
+    if (window.innerWidth >= 900) {
+        // Desktop: sidebar fijo a la izquierda
+        const layout = document.createElement('div');
+        layout.className = 'app-layout';
+        const sidebar = document.createElement('div');
+        sidebar.className = 'app-sidebar';
+        sidebar.appendChild(navTabs);
+        const main = document.createElement('div');
+        main.className = 'app-main';
+        tabContents.forEach(tc => main.appendChild(tc));
+        layout.appendChild(sidebar);
+        layout.appendChild(main);
+        headerSection.insertAdjacentElement('afterend', layout);
+    } else {
+        // Mobile: barra + drawer desde abajo
+        navTabs.style.display = 'none';
 
-    const layout = document.createElement('div');
-    layout.className = 'app-layout';
+        // Barra de navegación mobile (muestra sección activa + botón menú)
+        const mobileBar = document.createElement('div');
+        mobileBar.id = 'mobileNavBar';
+        mobileBar.innerHTML = `
+            <span id="mobileActiveLabel">Gestión de Socios</span>
+            <button id="mobileMenuBtn" onclick="mobileNav_open()">☰ Secciones</button>`;
+        headerSection.insertAdjacentElement('afterend', mobileBar);
 
-    const sidebar = document.createElement('div');
-    sidebar.className = 'app-sidebar';
-    sidebar.appendChild(navTabs);
+        // Drawer overlay
+        const drawer = document.createElement('div');
+        drawer.id = 'mobileDrawer';
+        drawer.onclick = e => { if (e.target === drawer) mobileNav_close(); };
+        drawer.innerHTML = `
+            <div id="mobileDrawerPanel">
+                <div id="mobileDrawerHeader">
+                    <span>Secciones <small style="font-size:0.7em;color:#94a3b8;font-weight:500">— mantén para reordenar</small></span>
+                    <button id="mobileDrawerClose" onclick="mobileNav_close()">✕</button>
+                </div>
+                <div id="mobileDrawerNav"></div>
+            </div>`;
+        document.body.appendChild(drawer);
 
-    const main = document.createElement('div');
-    main.className = 'app-main';
-    tabContents.forEach(tc => main.appendChild(tc));
+        // Mover los botones al drawer (lista vertical)
+        const drawerNav = document.getElementById('mobileDrawerNav');
+        navTabs.style.cssText = 'display:flex;flex-direction:column;gap:6px;border:none;margin:0;padding:0;overflow:visible;background:none;';
+        drawerNav.appendChild(navTabs);
 
-    layout.appendChild(sidebar);
-    layout.appendChild(main);
-    headerSection.insertAdjacentElement('afterend', layout);
+        // Cerrar drawer al pulsar una sección
+        navTabs.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+            btn.addEventListener('click', () => setTimeout(mobileNav_close, 80));
+        });
+    }
+}
+
+function mobileNav_open() {
+    const d = document.getElementById('mobileDrawer');
+    if (d) d.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function mobileNav_close() {
+    const d = document.getElementById('mobileDrawer');
+    if (d) d.classList.remove('open');
+    document.body.style.overflow = '';
 }
 
 function initDragReorder() {
