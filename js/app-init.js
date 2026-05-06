@@ -29,6 +29,8 @@ function iniciarApp() {
     const rBadge = document.getElementById('sesionRespBadge');
     const rNombre = document.getElementById('sesionRespNombre');
     if (rBadge && rObj.ini) { rNombre.textContent = rObj.ini + ' (' + rObj.area + ')'; rBadge.style.display = 'block'; }
+    initLayout();
+    initDragReorder();
     if(!URL_SOCIOS || URL_SOCIOS.includes('PEGA_AQUI')) {
         alert('Falta configurar URL_SOCIOS');
     } else {
@@ -63,14 +65,15 @@ async function precargarTodo() {
 function switchTab(tabName) {
     if (tabName === 'config') setTimeout(cfg_renderResponsables, 50);
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.nav-btn[data-tab]').forEach(b => b.classList.remove('active'));
     document.getElementById(`tab-${tabName}`).classList.add('active');
-    const btns = document.querySelectorAll('.nav-btn');
-    btns.forEach(b => b.classList.remove('active'));
+    const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
     const fabRec = document.getElementById('fabRecAgregar');
-    if(tabName === 'registro') { btns[0].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); }
+    document.getElementById('fabMatAgregar').style.display = 'none';
+    if(tabName === 'registro') { fabRec.style.display = 'none'; aq_detenerSync(); }
     else if(tabName === 'gestion') {
-        btns[1].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync();
+        fabRec.style.display = 'none'; aq_detenerSync();
         gestionSociosConMovimientos = {};
         gestionFiltroActivo = 'todos';
         ['Todos','Anticipos','Ausencias'].forEach((t,i) => {
@@ -81,12 +84,91 @@ function switchTab(tabName) {
         renderizarListaBusqueda();
         gestion_cargarTotalAnticipos();
     }
-    else if(tabName === 'recaudacion') { btns[2].classList.add('active'); fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones(); }
-    else if(tabName === 'config') { btns[5].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); cfg_limpiarCampos(); }
-    else if(tabName === 'arqueo') { btns[3].classList.add('active'); fabRec.style.display = 'none'; aq_initSiNoIniciado(); aq_arrancarSync(); }
-    else if(tabName === 'notas') { btns[4].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); notasCargar(); }
-    else if(tabName === 'auditoria') { btns[6].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); auditoria_cargar(); }
-    else if(tabName === 'carpetas') { btns[7].classList.add('active'); fabRec.style.display = 'none'; aq_detenerSync(); carpetas_renderArchivero(); }
+    else if(tabName === 'recaudacion') { fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones(); }
+    else if(tabName === 'config') { fabRec.style.display = 'none'; aq_detenerSync(); cfg_limpiarCampos(); }
+    else if(tabName === 'arqueo') { fabRec.style.display = 'none'; aq_initSiNoIniciado(); aq_arrancarSync(); }
+    else if(tabName === 'notas') { fabRec.style.display = 'none'; aq_detenerSync(); notasCargar(); }
+    else if(tabName === 'auditoria') { fabRec.style.display = 'none'; aq_detenerSync(); auditoria_cargar(); }
+    else if(tabName === 'carpetas') { fabRec.style.display = 'none'; aq_detenerSync(); carpetas_renderArchivero(); }
+    else if(tabName === 'materiales') { fabRec.style.display = 'none'; document.getElementById('fabMatAgregar').style.display = 'flex'; aq_detenerSync(); mat_cargar(); }
+}
+
+// ── Sidebar + drag-to-reorder ────────────────────────────────
+const NAV_ORDER_KEY = 'fondo_nav_order';
+
+function initLayout() {
+    const container = document.querySelector('.container');
+    const headerSection = container.querySelector('.header-section');
+    const navTabs = container.querySelector('.nav-tabs');
+    const tabContents = Array.from(container.querySelectorAll('.tab-content'));
+
+    nav_restoreOrder(navTabs);
+
+    if (window.innerWidth < 900) return;
+
+    const layout = document.createElement('div');
+    layout.className = 'app-layout';
+
+    const sidebar = document.createElement('div');
+    sidebar.className = 'app-sidebar';
+    sidebar.appendChild(navTabs);
+
+    const main = document.createElement('div');
+    main.className = 'app-main';
+    tabContents.forEach(tc => main.appendChild(tc));
+
+    layout.appendChild(sidebar);
+    layout.appendChild(main);
+    headerSection.insertAdjacentElement('afterend', layout);
+}
+
+function initDragReorder() {
+    if (window.innerWidth < 900) return;
+
+    document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+        btn.setAttribute('draggable', 'true');
+        btn.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', btn.dataset.tab);
+            btn.classList.add('dragging');
+        });
+        btn.addEventListener('dragend', () => {
+            btn.classList.remove('dragging');
+            document.querySelectorAll('.nav-btn[data-tab]').forEach(b => b.classList.remove('drag-over'));
+            nav_saveOrder();
+        });
+        btn.addEventListener('dragover', e => {
+            e.preventDefault();
+            document.querySelectorAll('.nav-btn[data-tab]').forEach(b => b.classList.remove('drag-over'));
+            btn.classList.add('drag-over');
+        });
+        btn.addEventListener('drop', e => {
+            e.preventDefault();
+            const draggedTab = e.dataTransfer.getData('text/plain');
+            const draggedBtn = document.querySelector(`.nav-btn[data-tab="${draggedTab}"]`);
+            if (draggedBtn && draggedBtn !== btn) btn.parentNode.insertBefore(draggedBtn, btn);
+            btn.classList.remove('drag-over');
+        });
+    });
+}
+
+function nav_saveOrder() {
+    const order = Array.from(document.querySelectorAll('.nav-btn[data-tab]')).map(b => b.dataset.tab);
+    localStorage.setItem(NAV_ORDER_KEY, JSON.stringify(order));
+}
+
+function nav_restoreOrder(parent) {
+    try {
+        const saved = JSON.parse(localStorage.getItem(NAV_ORDER_KEY) || '[]');
+        if (!saved.length) return;
+        const p = parent || document.querySelector('.nav-btn[data-tab]')?.parentNode;
+        if (!p) return;
+        const ayudaBtn = p.querySelector('button:not([data-tab])');
+        saved.forEach(tab => {
+            const btn = p.querySelector(`.nav-btn[data-tab="${tab}"]`);
+            if (btn) p.appendChild(btn);
+        });
+        if (ayudaBtn) p.appendChild(ayudaBtn);
+    } catch(e) {}
 }
 
 function abrirModalRegistro() { document.getElementById('modalRegistro').style.display = 'block'; if(!isEditing) { document.getElementById('registroForm').reset(); document.getElementById('editId').value = ''; document.getElementById('modalTitle').innerText = 'Nuevo Socio'; document.getElementById('btnSubmit').innerText = 'Registrar Socio'; } }
