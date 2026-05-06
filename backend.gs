@@ -345,6 +345,7 @@ const HOJA_HISTORIAL_CONEXIONES = "HistorialConexiones";
 const HOJA_AUDITORIA            = "AuditoriaLogs";
 const HOJA_CREDENCIALES         = "Credenciales";
 const HOJA_RETIROS_ANTICIPOS    = "RetirosAnticipos";  // cuadre de anticipos en caja
+const HOJA_MATERIALES           = "RecaudacionMateriales";
 
 // ==============================================================================
 // FUNCIÓN DE AUDITORÍA — registra quién hizo qué, dónde y cuándo
@@ -557,6 +558,10 @@ function handleRequest(e, method) {
         responseData = { status: 'success', data: getRetirosAnticipos() };
         break;
 
+      case 'registrarMaterial': registrarMaterial(payload); responseData = { status: 'success' }; break;
+      case 'borrarMaterial': borrarMaterial(payload.uuid, payload.responsable); responseData = { status: 'success' }; break;
+      case 'getAllMaterialesDesdeSheets': responseData = { status: 'success', data: getAllMaterialesDesdeSheets() }; break;
+
       default:
         responseData = { status: 'error', message: 'Acción desconocida: ' + action };
     }
@@ -592,7 +597,8 @@ function setupSheets() {
     [HOJA_AUDITORIA]:            ['Timestamp', 'Usuario', 'Accion', 'Detalle', 'ID_Afectado', 'GeoLat', 'GeoLng', 'DeviceID', 'IP', 'UserAgent'],
     // ── PINs personales por responsable ─────────────────────────────────────
     [HOJA_CREDENCIALES]:         ['Ini', 'Area', 'PIN', 'UltimaActualizacion'],
-    [HOJA_RETIROS_ANTICIPOS]:    ['Firma', 'Nombre', 'Monto', 'Billetes', 'FechaRegistro', 'Responsable']
+    [HOJA_RETIROS_ANTICIPOS]:    ['Firma', 'Nombre', 'Monto', 'Billetes', 'FechaRegistro', 'Responsable'],
+    [HOJA_MATERIALES]:           ['UUID', 'Fecha', 'Tipo', 'Monto', 'Nota', 'Responsable', 'Periodo', 'Estado']
   };
 
   for (const [name, headers] of Object.entries(sheets)) {
@@ -1354,4 +1360,31 @@ function getAllDiasPartTime() {
     }
   }
   return res;
+}
+
+// ==============================================================================
+// RECAUDACIÓN DE MATERIALES Y GASTOS
+// ==============================================================================
+function registrarMaterial(payload) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s = ss.getSheetByName(HOJA_MATERIALES);
+  const uuid = 'mat-' + new Date().getTime() + '-' + Math.random().toString(36).substr(2,5);
+  s.appendRow([uuid, payload.fecha, payload.tipo, payload.monto, payload.nota || '', payload.responsable || '', payload.periodo, 'activo']);
+}
+
+function borrarMaterial(uuid, responsable) {
+  const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA_MATERIALES);
+  if (!s || s.getLastRow() <= 1) return;
+  const datos = s.getDataRange().getValues();
+  for (let i = 1; i < datos.length; i++) {
+    if (String(datos[i][0]) === String(uuid)) { s.getRange(i + 1, 8).setValue('borrado'); return; }
+  }
+}
+
+function getAllMaterialesDesdeSheets() {
+  const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA_MATERIALES);
+  if (!s || s.getLastRow() <= 1) return [];
+  return s.getDataRange().getValues().slice(1)
+    .filter(r => r[7] !== 'borrado' && r[0])
+    .map(r => ({ uuid: r[0], fecha: r[1] ? Utilities.formatDate(new Date(r[1]), SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd') : '', tipo: r[2], monto: parseFloat(r[3]) || 0, nota: r[4] || '', responsable: r[5] || '', periodo: r[6] ? Utilities.formatDate(new Date(r[6]), SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd') : '', estado: r[7] }));
 }

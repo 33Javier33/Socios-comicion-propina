@@ -80,6 +80,7 @@
             <button class="nav-btn" onclick="switchTab('config')">⚙️ Configuración</button>
             <button class="nav-btn" onclick="switchTab('auditoria')">🔍 Auditoría</button>
             <button class="nav-btn" onclick="switchTab('carpetas')">📁 Carpetas</button>
+            <button class="nav-btn" onclick="switchTab('materiales')">📦 Materiales</button>
             <button onclick="ayudaCompleta_abrir()" style="background:#2c3e50;color:white;border:none;border-radius:20px;padding:6px 12px;font-size:0.78em;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto;">📖 Ayuda</button>
         </div>
         
@@ -183,6 +184,7 @@
             <button class="fab-btn" onclick="abrirModalRegistro()">+</button>
             <!-- FAB agregar recaudación (solo visible en pestaña recaudacion) -->
             <button id="fabRecAgregar" class="fab-btn" onclick="rec_abrirAgregar()" style="display:none; background:var(--success); box-shadow:0 4px 15px rgba(39,174,96,0.4); font-size:22px; font-weight:800;" title="Agregar registro de recaudación">➕</button>
+            <button id="fabMatAgregar" class="fab-btn" onclick="mat_abrirModal()" style="display:none; background:#059669; box-shadow:0 4px 15px rgba(5,150,105,0.4); font-size:22px; font-weight:800;" title="Agregar registro de materiales">➕</button>
 
             <!-- MODAL BUSCADOR DE IDs -->
         <div id="modalBuscadorIDs" class="modal">
@@ -874,6 +876,40 @@
             </div>
         </div>
 
+        <!-- PESTAÑA: MATERIALES Y GASTOS -->
+        <div id="tab-materiales" class="tab-content">
+            <div style="padding:15px;max-width:560px;margin:0 auto;">
+                <!-- Period nav -->
+                <div style="display:flex;align-items:center;justify-content:space-between;background:white;border-radius:12px;padding:12px 16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                    <button onclick="mat_cambiarPeriodo(-1)" style="background:none;border:1px solid #e2e8f0;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1em;color:#2c3e50;">◀</button>
+                    <div style="text-align:center;">
+                        <div style="font-size:0.7em;color:#7f8c8d;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;">Período</div>
+                        <div id="mat-periodo-label" style="font-weight:800;color:#1e3a5f;font-size:0.92em;">Cargando...</div>
+                    </div>
+                    <button onclick="mat_cambiarPeriodo(1)" style="background:none;border:1px solid #e2e8f0;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1em;color:#2c3e50;">▶</button>
+                </div>
+                <!-- Balance cards -->
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+                    <div style="background:white;border-radius:12px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);border-top:3px solid #10b981;">
+                        <div style="font-size:0.68em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Ingresos</div>
+                        <div id="mat-total-ingresos" style="font-size:0.95em;font-weight:800;color:#10b981;margin-top:4px;">$0</div>
+                    </div>
+                    <div style="background:white;border-radius:12px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);border-top:3px solid #ef4444;">
+                        <div style="font-size:0.68em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Gastos</div>
+                        <div id="mat-total-gastos" style="font-size:0.95em;font-weight:800;color:#ef4444;margin-top:4px;">$0</div>
+                    </div>
+                    <div id="mat-balance-card" style="background:#dcfce7;border-radius:12px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);border-top:3px solid #059669;">
+                        <div style="font-size:0.68em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Balance</div>
+                        <div id="mat-balance" style="font-size:0.95em;font-weight:800;color:#059669;margin-top:4px;">$0</div>
+                    </div>
+                </div>
+                <!-- Entry list -->
+                <div id="mat-lista" style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="text-align:center;padding:40px;color:#7f8c8d;font-size:0.9em;">Cargando...</div>
+                </div>
+            </div>
+        </div>
+
         <!-- PESTAÑA 4: ARQUEO DE CAJA -->
         <div id="tab-arqueo" class="tab-content">
             <!-- Toolbar principal -->
@@ -1328,6 +1364,7 @@
     <script src="js/help.js"></script>
     <script src="js/auditoria.js"></script>
     <script src="js/carpetas.js"></script>
+    <script src="js/materiales.js"></script>
     <script src="js/app-init.js"></script>
 
 <!-- ══════════════════════════════════════════
@@ -1447,5 +1484,36 @@
     </div>
 </div>
 
+<!-- MODAL: NUEVO REGISTRO DE MATERIALES -->
+<div id="mat-modal" class="modal">
+    <div class="modal-content" style="max-width:420px;">
+        <div class="modal-header" style="background:linear-gradient(135deg,#1e3a5f,#059669);">
+            <h2 style="color:white;margin:0;">Nuevo Registro</h2>
+            <span class="close-modal" onclick="document.getElementById('mat-modal').style.display='none'" style="color:white;">&times;</span>
+        </div>
+        <div class="modal-body">
+            <!-- Tipo toggle -->
+            <div style="display:flex;gap:8px;margin-bottom:16px;">
+                <button id="mat-btn-ingreso" onclick="mat_toggleTipo('Ingreso')" style="flex:1;padding:10px;border:2px solid #10b981;border-radius:8px;font-weight:700;font-size:0.88em;cursor:pointer;transition:0.2s;">↑ Ingreso</button>
+                <button id="mat-btn-gasto" onclick="mat_toggleTipo('Gasto')" style="flex:1;padding:10px;border:2px solid #ef4444;border-radius:8px;font-weight:700;font-size:0.88em;cursor:pointer;transition:0.2s;background:white;color:#ef4444;">↓ Gasto</button>
+            </div>
+            <input type="hidden" id="mat-modal-tipo" value="Ingreso">
+            <div style="margin-bottom:12px;">
+                <label style="font-size:0.82em;font-weight:700;color:#374151;">Fecha</label>
+                <input type="date" id="mat-modal-fecha" style="width:100%;padding:9px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.9em;margin-top:4px;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:0.82em;font-weight:700;color:#374151;">Monto</label>
+                <input type="number" id="mat-modal-monto" placeholder="0" min="1" style="width:100%;padding:9px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.9em;margin-top:4px;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:18px;">
+                <label id="mat-nota-label" style="font-size:0.82em;font-weight:700;color:#374151;">Descripción (ej: Cierre de mes)</label>
+                <input type="text" id="mat-modal-nota" placeholder="Describe el ingreso o gasto..." style="width:100%;padding:9px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.9em;margin-top:4px;box-sizing:border-box;">
+            </div>
+            <button onclick="mat_guardar()" style="width:100%;padding:12px;background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:8px;font-weight:700;font-size:0.95em;cursor:pointer;">Guardar Registro</button>
+        </div>
+    </div>
+</div>
+
 </body>
-</html> 
+</html>
