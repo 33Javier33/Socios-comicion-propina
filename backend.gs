@@ -1370,6 +1370,9 @@ function registrarMaterial(payload) {
   const s = ss.getSheetByName(HOJA_MATERIALES);
   const uuid = 'mat-' + new Date().getTime() + '-' + Math.random().toString(36).substr(2,5);
   s.appendRow([uuid, payload.fecha, payload.tipo, payload.monto, payload.nota || '', payload.responsable || '', payload.periodo, 'activo']);
+  const accion = payload.tipo === 'Ingreso' ? 'Ingreso Material' : 'Gasto Material';
+  const detalle = 'Fecha: ' + payload.fecha + ' | Monto: $' + payload.monto + (payload.nota ? ' | ' + payload.nota : '');
+  registrarAuditoria(payload.responsable || 'Sistema', accion, detalle, uuid);
 }
 
 function borrarMaterial(uuid, responsable) {
@@ -1377,7 +1380,11 @@ function borrarMaterial(uuid, responsable) {
   if (!s || s.getLastRow() <= 1) return;
   const datos = s.getDataRange().getValues();
   for (let i = 1; i < datos.length; i++) {
-    if (String(datos[i][0]) === String(uuid)) { s.getRange(i + 1, 8).setValue('borrado'); return; }
+    if (String(datos[i][0]) === String(uuid)) {
+      s.getRange(i + 1, 8).setValue('borrado');
+      registrarAuditoria(responsable || 'Sistema', 'Eliminar Material', 'UUID: ' + uuid, uuid);
+      return;
+    }
   }
 }
 

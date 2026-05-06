@@ -40,15 +40,17 @@ function auditoria_filtrarDatos() {
 }
 
 const AUD_COLORES = {
-    'Eliminar':  { bg:'#fdecea', txt:'#c0392b' },
-    'Registrar': { bg:'#eafaf1', txt:'#1e8449' },
-    'Agregar':   { bg:'#eaf4fb', txt:'#1a6fa0' },
-    'Editar':    { bg:'#fef9e7', txt:'#b7770d' },
-    'Actualizar':{ bg:'#e8f8f5', txt:'#148f77' },
-    'Cierre':    { bg:'#f5eef8', txt:'#7d3c98' },
-    'Reiniciar': { bg:'#fef0e7', txt:'#a04000' },
-    'Imprimir':  { bg:'#eaf0fb', txt:'#1a3a8a' },
-    'Canje':     { bg:'#e8f5e9', txt:'#1b5e20' },
+    'Eliminar':        { bg:'#fdecea', txt:'#c0392b' },
+    'Registrar':       { bg:'#eafaf1', txt:'#1e8449' },
+    'Agregar':         { bg:'#eaf4fb', txt:'#1a6fa0' },
+    'Editar':          { bg:'#fef9e7', txt:'#b7770d' },
+    'Actualizar':      { bg:'#e8f8f5', txt:'#148f77' },
+    'Cierre':          { bg:'#f5eef8', txt:'#7d3c98' },
+    'Reiniciar':       { bg:'#fef0e7', txt:'#a04000' },
+    'Imprimir':        { bg:'#eaf0fb', txt:'#1a3a8a' },
+    'Canje':           { bg:'#e8f5e9', txt:'#1b5e20' },
+    'Ingreso Material':{ bg:'#f0fdf4', txt:'#059669' },
+    'Gasto Material':  { bg:'#fef2f2', txt:'#dc2626' },
 };
 
 function auditoria_colorAccion(accion) {
@@ -163,7 +165,7 @@ function auditoria_abrirFiltroImpresion() {
     const CPRINT_COL = {
         'Eliminar':'#c0392b','Registrar':'#1a8a44','Agregar':'#1a6fa0',
         'Editar':'#b7770d','Actualizar':'#148f77','Cierre':'#7d3c98','Reiniciar':'#a04000',
-        'Imprimir':'#1a3a8a','Canje':'#1b5e20',
+        'Imprimir':'#1a3a8a','Canje':'#1b5e20','Ingreso Material':'#059669','Gasto Material':'#dc2626',
     };
 
     const checkboxes = accionesUnicas.map(a => {
@@ -253,7 +255,7 @@ function auditoria_informe(datosOverride, filtrosUsados) {
     const CPRINT = {
         'Eliminar':'#c0392b','Registrar':'#1a8a44','Agregar':'#1a6fa0',
         'Editar':'#b7770d','Actualizar':'#148f77','Cierre':'#7d3c98','Reiniciar':'#a04000',
-        'Imprimir':'#1a3a8a','Canje':'#1b5e20',
+        'Imprimir':'#1a3a8a','Canje':'#1b5e20','Ingreso Material':'#059669','Gasto Material':'#dc2626',
     };
 
     const filas = datos.map(r => {
