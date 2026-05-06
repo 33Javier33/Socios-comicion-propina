@@ -903,7 +903,17 @@
                         <div id="mat-balance" style="font-size:0.95em;font-weight:800;color:#059669;margin-top:4px;">$0</div>
                     </div>
                 </div>
+                <!-- Botones de acción -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+                    <button onclick="mat_abrirModal('Ingreso')" style="padding:13px;background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:10px;font-weight:700;font-size:0.88em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 3px 10px rgba(5,150,105,0.3);">
+                        <span style="font-size:1.1em;">↑</span> Agregar Ingreso
+                    </button>
+                    <button onclick="mat_abrirModal('Gasto')" style="padding:13px;background:linear-gradient(135deg,#dc2626,#ef4444);color:white;border:none;border-radius:10px;font-weight:700;font-size:0.88em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 3px 10px rgba(220,38,38,0.3);">
+                        <span style="font-size:1.1em;">↓</span> Agregar Gasto
+                    </button>
+                </div>
                 <!-- Entry list -->
+                <div style="font-size:0.75em;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Historial del período</div>
                 <div id="mat-lista" style="display:flex;flex-direction:column;gap:8px;">
                     <div style="text-align:center;padding:40px;color:#7f8c8d;font-size:0.9em;">Cargando...</div>
                 </div>
@@ -1488,7 +1498,7 @@
 <div id="mat-modal" class="modal">
     <div class="modal-content" style="max-width:420px;">
         <div class="modal-header" style="background:linear-gradient(135deg,#1e3a5f,#059669);">
-            <h2 style="color:white;margin:0;">Nuevo Registro</h2>
+            <h2 id="mat-modal-titulo" style="color:white;margin:0;">Nuevo Registro</h2>
             <span class="close-modal" onclick="document.getElementById('mat-modal').style.display='none'" style="color:white;">&times;</span>
         </div>
         <div class="modal-body">

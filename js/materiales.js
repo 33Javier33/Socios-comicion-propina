@@ -136,18 +136,18 @@ function mat_cambiarPeriodo(dir) {
     mat_render();
 }
 
-// Abre el modal de nuevo registro
-function mat_abrirModal() {
+// Abre el modal de nuevo registro. tipo: 'Ingreso' o 'Gasto'
+function mat_abrirModal(tipo = 'Ingreso') {
     const modal = document.getElementById('mat-modal');
     if (!modal) return;
-    // Reset campos
     const elFecha = document.getElementById('mat-modal-fecha');
     const elMonto = document.getElementById('mat-modal-monto');
     const elNota  = document.getElementById('mat-modal-nota');
     if (elFecha) elFecha.value = new Date().toISOString().split('T')[0];
     if (elMonto) elMonto.value = '';
     if (elNota)  elNota.value  = '';
-    mat_toggleTipo('Ingreso');
+    mat_toggleTipo(tipo);
+    document.getElementById('mat-modal-titulo').textContent = tipo === 'Ingreso' ? 'Nuevo Ingreso' : 'Nuevo Gasto';
     modal.style.display = 'flex';
 }
 
