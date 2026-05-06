@@ -820,7 +820,7 @@
                 position: fixed;
                 inset: 0;
                 background: rgba(0,0,0,0.45);
-                z-index: 500;
+                z-index: 1050;
                 align-items: flex-end;
             }
             #mobileDrawer.open { display: flex; }
@@ -879,6 +879,19 @@
             #mobileDrawerNav .nav-btn.drag-over {
                 border-top: 3px solid var(--secondary) !important;
                 border-left: none !important;
+            }
+            /* Botón Ayuda dentro del drawer */
+            #mobileDrawerNav button:not([data-tab]) {
+                width: 100%;
+                text-align: left;
+                border-radius: 10px !important;
+                border-bottom: none !important;
+                padding: 12px 14px;
+                font-size: 0.88em;
+                box-sizing: border-box;
+                margin-left: 0 !important;
+                margin-top: 4px;
+                border-top: 1px solid var(--border);
             }
         }
         body.dark-mode #mobileNavBar { background: #1e293b; border-color: #334155; }
