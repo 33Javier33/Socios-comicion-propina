@@ -714,4 +714,64 @@
             border: 2px solid var(--primary); border-radius: 10px; font-weight: 700;
             cursor: pointer; font-size: 0.9em; transition: 0.2s;
         }
-        .btn-recover:hover { background: var(--primary); color: white; }
+        .btn-recover:hover { background: var(--primary); color: white; }
+        /* ── Desktop sidebar layout ─────────────────────────────── */
+        @media (min-width: 900px) {
+            .app-layout {
+                display: flex;
+                gap: 20px;
+                align-items: flex-start;
+            }
+            .app-sidebar {
+                width: 190px;
+                min-width: 170px;
+                flex-shrink: 0;
+                position: sticky;
+                top: 16px;
+                max-height: calc(100vh - 32px);
+                overflow-y: auto;
+            }
+            .app-sidebar .nav-tabs {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                margin-bottom: 0;
+                border-bottom: none;
+                background: var(--card-bg);
+                border-radius: 16px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                padding: 12px 8px;
+                overflow-x: unset;
+                flex-wrap: nowrap;
+            }
+            .app-sidebar .nav-btn {
+                width: 100%;
+                text-align: left;
+                border-radius: 10px;
+                padding: 10px 12px;
+                font-size: 0.8em;
+                white-space: normal;
+                border-bottom: none !important;
+                border-radius: 10px !important;
+                box-sizing: border-box;
+                cursor: grab;
+            }
+            .app-sidebar .nav-btn:active { cursor: grabbing; }
+            .app-sidebar .nav-btn.active {
+                background: rgba(52,152,219,0.12);
+                color: var(--secondary);
+                border-bottom: none !important;
+            }
+            .app-sidebar .nav-btn.drag-over { border-top: 3px solid var(--secondary); }
+            .app-sidebar .nav-btn.dragging { opacity: 0.4; }
+            .app-sidebar .nav-tabs > button:not([data-tab]) {
+                margin-top: 8px;
+                margin-left: 0 !important;
+                width: 100%;
+                border-radius: 10px;
+                font-size: 0.78em;
+            }
+            .app-main { flex: 1; min-width: 0; }
+        }
+        body.dark-mode .app-sidebar .nav-tabs { background: #1e293b; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        body.dark-mode .app-sidebar .nav-btn.active { background: rgba(147,197,253,0.15); color: #93c5fd; }
