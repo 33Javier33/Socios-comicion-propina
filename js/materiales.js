@@ -201,13 +201,7 @@ async function mat_guardar() {
     if (!monto || monto <= 0) { showToast('Ingresa un monto válido', 'error'); return; }
     if (!tipo) { showToast('Selecciona el tipo', 'error'); return; }
 
-    const sesionRaw = localStorage.getItem('fs_sesion_responsable');
-    let responsable = '';
-    try {
-        const obj = JSON.parse(sesionRaw);
-        responsable = (obj.ini || '') + '|' + (obj.area || '');
-    } catch(e) { responsable = sesionRaw || ''; }
-
+    const responsable = getSesionResponsable();
     const periodo = mat_periodoDesFecha(fecha);
 
     try {
@@ -227,12 +221,7 @@ async function mat_guardar() {
 async function mat_borrar(uuid) {
     if (!confirm('¿Eliminar este registro?')) return;
 
-    const sesionRaw = localStorage.getItem('fs_sesion_responsable');
-    let responsable = '';
-    try {
-        const obj = JSON.parse(sesionRaw);
-        responsable = (obj.ini || '') + '|' + (obj.area || '');
-    } catch(e) { responsable = sesionRaw || ''; }
+    const responsable = getSesionResponsable();
 
     try {
         toggleLoader(true, 'Eliminando...');
