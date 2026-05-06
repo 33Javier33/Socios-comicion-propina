@@ -123,9 +123,10 @@ function initLayout() {
 }
 
 function initDragReorder() {
-    if (window.innerWidth < 900) return;
+    const btns = document.querySelectorAll('.nav-btn[data-tab]');
 
-    document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+    // ── HTML5 drag (desktop) ──────────────────────────────────
+    btns.forEach(btn => {
         btn.setAttribute('draggable', 'true');
         btn.addEventListener('dragstart', e => {
             e.dataTransfer.setData('text/plain', btn.dataset.tab);
@@ -148,6 +149,47 @@ function initDragReorder() {
             if (draggedBtn && draggedBtn !== btn) btn.parentNode.insertBefore(draggedBtn, btn);
             btn.classList.remove('drag-over');
         });
+    });
+
+    // ── Touch drag (mobile) ───────────────────────────────────
+    let ts = null; // { btn, startX, startY, isDragging }
+
+    btns.forEach(btn => {
+        btn.addEventListener('touchstart', e => {
+            ts = { btn, startX: e.touches[0].clientX, startY: e.touches[0].clientY, isDragging: false };
+        }, { passive: true });
+
+        btn.addEventListener('touchmove', e => {
+            if (!ts || ts.btn !== btn) return;
+            const dx = e.touches[0].clientX - ts.startX;
+            const dy = e.touches[0].clientY - ts.startY;
+            if (!ts.isDragging && Math.sqrt(dx * dx + dy * dy) < 10) return;
+            if (!ts.isDragging) { ts.isDragging = true; btn.classList.add('dragging'); }
+            e.preventDefault();
+            const touch = e.touches[0];
+            btn.style.visibility = 'hidden';
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            btn.style.visibility = '';
+            document.querySelectorAll('.nav-btn[data-tab]').forEach(b => b.classList.remove('drag-over'));
+            const target = el && el.closest('[data-tab]');
+            if (target && target !== btn) target.classList.add('drag-over');
+        }, { passive: false });
+
+        btn.addEventListener('touchend', e => {
+            if (!ts || ts.btn !== btn) return;
+            if (ts.isDragging) {
+                const touch = e.changedTouches[0];
+                btn.style.visibility = 'hidden';
+                const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                btn.style.visibility = '';
+                document.querySelectorAll('.nav-btn[data-tab]').forEach(b => b.classList.remove('drag-over'));
+                const target = el && el.closest('[data-tab]');
+                if (target && target !== btn) target.parentNode.insertBefore(btn, target);
+                btn.classList.remove('dragging');
+                nav_saveOrder();
+            }
+            ts = null;
+        }, { passive: true });
     });
 }
 

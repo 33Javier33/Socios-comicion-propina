@@ -762,7 +762,7 @@
                 color: var(--secondary);
                 border-bottom: none !important;
             }
-            .app-sidebar .nav-btn.drag-over { border-top: 3px solid var(--secondary); }
+            .app-sidebar .nav-btn.drag-over { border-top: 3px solid var(--secondary) !important; border-left: none !important; }
             .app-sidebar .nav-btn.dragging { opacity: 0.4; }
             .app-sidebar .nav-tabs > button:not([data-tab]) {
                 margin-top: 8px;
@@ -775,3 +775,7 @@
         }
         body.dark-mode .app-sidebar .nav-tabs { background: #1e293b; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
         body.dark-mode .app-sidebar .nav-btn.active { background: rgba(147,197,253,0.15); color: #93c5fd; }
+
+        /* drag feedback — todas las pantallas */
+        .nav-btn.dragging { opacity: 0.4; }
+        .nav-btn.drag-over { border-left: 3px solid var(--secondary) !important; }
