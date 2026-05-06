@@ -13,14 +13,39 @@ let auditoriaSnapshots = {};
 async function auditoria_cargar() {
     toggleLoader(true, 'Cargando auditoría...');
     try {
-        const res = await callApiSocios('getAuditoria');
-        if (res.status === 'success') {
-            auditoriaCache = res.data || [];
-            auditoria_actualizarStats();
-            auditoria_renderizar(auditoria_filtrarDatos());
+        const [resAudit, resMat] = await Promise.allSettled([
+            callApiSocios('getAuditoria'),
+            callApiSocios('getAllMaterialesDesdeSheets')
+        ]);
+
+        let audData = [];
+        if (resAudit.status === 'fulfilled' && resAudit.value?.status === 'success') {
+            audData = resAudit.value.data || [];
         } else {
             showToast('Error cargando auditoría', 'error');
         }
+
+        // Fusionar materiales que aún no tienen entrada en AuditoriaLogs
+        const auditUUIDs = new Set(audData.map(r => r.idAfectado).filter(Boolean));
+        if (resMat.status === 'fulfilled') {
+            const mats = resMat.value?.data || [];
+            mats.forEach(m => {
+                if (!m.uuid || auditUUIDs.has(m.uuid)) return;
+                const accion = m.tipo === 'Ingreso' ? 'Ingreso Material' : 'Gasto Material';
+                const monto  = (m.monto || 0).toLocaleString('es-CL');
+                audData.push({
+                    fecha:      (m.fecha || '') + 'T00:00:00',
+                    usuario:    m.responsable || 'Sistema',
+                    accion,
+                    detalle:    `Fecha: ${m.fecha} | Monto: $${monto}${m.nota ? ' | ' + m.nota : ''}`,
+                    idAfectado: m.uuid
+                });
+            });
+        }
+
+        auditoriaCache = audData.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        auditoria_actualizarStats();
+        auditoria_renderizar(auditoria_filtrarDatos());
     } catch(e) {
         showToast('Error de conexión', 'error');
     } finally {
