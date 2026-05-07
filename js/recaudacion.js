@@ -317,4 +317,23 @@ function rec_toggleSinDivisor(btn) { recFiltroSinDiv=!recFiltroSinDiv; recFiltro
 function rec_toggleConDivisor(btn) { recFiltroConDiv=!recFiltroConDiv; recFiltroSinDiv=false; btn.classList.toggle('activo-ok',recFiltroConDiv); const c2=document.getElementById('chipSinDivisor'); if(c2){c2.classList.remove('activo-warn','activo');} filtrarRecaudacion(); }
 function rec_limpiarFiltros() { recFiltroTipo=''; recFiltroSinDiv=false; recFiltroConDiv=false; const inp=document.getElementById('filtroRecaudacion'); if(inp) inp.value=''; document.querySelectorAll('.rec-filtro-chip[data-tipo]').forEach(b=>b.classList.remove('activo')); const p=document.querySelector('.rec-filtro-chip[data-tipo=""]'); if(p) p.classList.add('activo'); const s=document.getElementById('chipSinDivisor'); const cv=document.getElementById('chipConDivisor'); if(s){s.classList.remove('activo-warn','activo');} if(cv){cv.classList.remove('activo-ok','activo');} document.querySelectorAll('.date-card').forEach(card=>{card.style.display='block'; card.querySelectorAll('.type-item').forEach(f=>f.style.display='');}); const info=document.getElementById('rec-filtro-info'); if(info) info.textContent=''; }
 
-function rec_irAlInicio() { const m = document.querySelector('.app-main'); if (m) { m.scrollTo({ top: 0, behavior: 'smooth' }); } else { window.scrollTo({ top: 0, behavior: 'smooth' }); } }
+function rec_irAlInicio() {
+    const m = document.querySelector('.app-main');
+    if (m) { m.scrollTo({ top: 0, behavior: 'smooth' }); }
+    else { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+}
+
+// Muestra u oculta el FAB de "Inicio" según scroll y tab activa
+function rec_initScrollFab() {
+    const fab = document.getElementById('fabScrollTop');
+    if (!fab) return;
+    const scroller = document.querySelector('.app-main') || window;
+    const getScroll = () => scroller === window ? window.scrollY : scroller.scrollTop;
+    const update = () => {
+        const enRec = document.getElementById('tab-recaudacion')?.classList.contains('active');
+        fab.style.display = (enRec && getScroll() > 180) ? 'flex' : 'none';
+    };
+    scroller.addEventListener('scroll', update, { passive: true });
+    // Re-evaluar cada vez que se activa la pestaña
+    document.addEventListener('tabChanged', update);
+}
