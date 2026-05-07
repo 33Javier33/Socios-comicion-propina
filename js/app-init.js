@@ -31,7 +31,6 @@ function iniciarApp() {
     if (rBadge && rObj.ini) { rNombre.textContent = rObj.ini + ' (' + rObj.area + ')'; rBadge.style.display = 'block'; }
     initLayout();
     initDragReorder();
-    rec_initScrollFab();
     if(!URL_SOCIOS || URL_SOCIOS.includes('PEGA_AQUI')) {
         alert('Falta configurar URL_SOCIOS');
     } else {
@@ -94,7 +93,9 @@ function switchTab(tabName) {
     else if(tabName === 'auditoria') { fabRec.style.display = 'none'; aq_detenerSync(); auditoria_cargar(); }
     else if(tabName === 'carpetas') { fabRec.style.display = 'none'; aq_detenerSync(); carpetas_renderArchivero(); }
     else if(tabName === 'materiales') { fabRec.style.display = 'none'; document.getElementById('fabMatAgregar').style.display = 'flex'; aq_detenerSync(); mat_cargar(); }
-    document.dispatchEvent(new CustomEvent('tabChanged', { detail: tabName }));
+    // FAB volver al inicio: visible solo en recaudacion
+    const fabTop = document.getElementById('fabScrollTop');
+    if (fabTop) fabTop.style.display = (tabName === 'recaudacion') ? 'flex' : 'none';
 }
 
 // ── Sidebar + drag-to-reorder ────────────────────────────────
