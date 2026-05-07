@@ -6,6 +6,9 @@ let matDatos = [];
 let matPeriodoVista = null;
 let matAñoVista = new Date().getFullYear();
 
+// Convierte monto a número entero (Sheets puede devolver strings)
+function mat_monto(r) { return Math.round(Number(r.monto) || 0); }
+
 // Dado un string YYYY-MM-DD, retorna el inicio del período (siempre el 15).
 // Si day >= 15: YYYY-MM-15 del mismo mes. Si day < 15: el 15 del mes anterior.
 function mat_periodoDesFecha(fechaStr) {
@@ -58,7 +61,7 @@ async function mat_cargar() {
     }
 }
 
-// Renderiza la vista del período actual
+// Renderiza la vista completa (anual + período)
 function mat_render() {
     if (!matPeriodoVista) matPeriodoVista = mat_periodoActual();
 
@@ -71,12 +74,12 @@ function mat_render() {
         return mat_periodoDesFecha(r.fecha) === matPeriodoVista;
     });
 
-    // Calcular totales
-    const totalIngresos = filtrados.filter(r => r.tipo === 'Ingreso').reduce((s, r) => s + (r.monto || 0), 0);
-    const totalGastos   = filtrados.filter(r => r.tipo === 'Gasto').reduce((s, r) => s + (r.monto || 0), 0);
+    // Calcular totales del período
+    const totalIngresos = filtrados.filter(r => r.tipo === 'Ingreso').reduce((s, r) => s + mat_monto(r), 0);
+    const totalGastos   = filtrados.filter(r => r.tipo === 'Gasto').reduce((s, r) => s + mat_monto(r), 0);
     const balance = totalIngresos - totalGastos;
 
-    // Actualizar tarjetas de resumen
+    // Actualizar tarjetas del período
     const elIngresos = document.getElementById('mat-total-ingresos');
     const elGastos   = document.getElementById('mat-total-gastos');
     const elBalance  = document.getElementById('mat-balance');
@@ -123,7 +126,7 @@ function mat_render() {
                 <div style="font-size:0.82em;font-weight:700;color:#2c3e50;">${fechaDisplay}</div>
                 ${notaDisplay}
             </div>
-            <div style="font-weight:800;color:${montoColor};font-size:0.92em;white-space:nowrap;">${montoSigno}${formatearMoneda(r.monto)}</div>
+            <div style="font-weight:800;color:${montoColor};font-size:0.92em;white-space:nowrap;">${montoSigno}${formatearMoneda(mat_monto(r))}</div>
             <button onclick="mat_borrar('${r.uuid}')" style="background:none;border:none;cursor:pointer;font-size:1.1em;padding:2px 4px;color:#94a3b8;line-height:1;" title="Eliminar">🗑️</button>
         </div>`;
     }).join('');
@@ -142,8 +145,8 @@ function mat_render_anual() {
     if (elAño) elAño.textContent = año;
 
     const anuales = matDatos.filter(r => r.fecha && r.fecha.startsWith(String(año)));
-    const totalIng = anuales.filter(r => r.tipo === 'Ingreso').reduce((s, r) => s + (r.monto || 0), 0);
-    const totalGas = anuales.filter(r => r.tipo === 'Gasto').reduce((s, r) => s + (r.monto || 0), 0);
+    const totalIng = anuales.filter(r => r.tipo === 'Ingreso').reduce((s, r) => s + mat_monto(r), 0);
+    const totalGas = anuales.filter(r => r.tipo === 'Gasto').reduce((s, r) => s + mat_monto(r), 0);
     const balance  = totalIng - totalGas;
 
     const elIng  = document.getElementById('mat-anual-ingresos');
@@ -175,8 +178,8 @@ function mat_render_desglose_mensual(año, datos) {
         const mes = parseInt((r.fecha || '').split('-')[1], 10);
         if (!mes) return;
         if (!porMes[mes]) porMes[mes] = { ing: 0, gas: 0 };
-        if (r.tipo === 'Ingreso') porMes[mes].ing += (r.monto || 0);
-        else porMes[mes].gas += (r.monto || 0);
+        if (r.tipo === 'Ingreso') porMes[mes].ing += mat_monto(r);
+        else porMes[mes].gas += mat_monto(r);
     });
 
     const mesesConDatos = Object.keys(porMes).map(Number).sort((a, b) => b - a);
@@ -268,7 +271,7 @@ function mat_toggleTipo(tipo) {
 async function mat_guardar() {
     const tipo  = (document.getElementById('mat-modal-tipo')  || {}).value || '';
     const fecha = (document.getElementById('mat-modal-fecha') || {}).value || '';
-    const monto = parseFloat((document.getElementById('mat-modal-monto') || {}).value || '0');
+    const monto = Math.round(parseFloat((document.getElementById('mat-modal-monto') || {}).value.replace(/\./g,'').replace(',','.') || '0'));
     const nota  = (document.getElementById('mat-modal-nota')  || {}).value || '';
 
     if (!fecha) { showToast('Selecciona una fecha', 'error'); return; }
