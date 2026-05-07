@@ -562,6 +562,11 @@ function handleRequest(e, method) {
       case 'borrarMaterial': borrarMaterial(payload.uuid, payload.responsable); responseData = { status: 'success' }; break;
       case 'getAllMaterialesDesdeSheets': responseData = { status: 'success', data: getAllMaterialesDesdeSheets() }; break;
 
+      case 'archivarCarpetaEnSheets':
+        const tabCarp = archivarCarpetaEnSheets(payload);
+        responseData = { status: 'success', tabNombre: tabCarp };
+        break;
+
       default:
         responseData = { status: 'error', message: 'Acción desconocida: ' + action };
     }
@@ -1394,4 +1399,60 @@ function getAllMaterialesDesdeSheets() {
   return s.getDataRange().getValues().slice(1)
     .filter(r => r[7] !== 'borrado' && r[0])
     .map(r => ({ uuid: r[0], fecha: r[1] ? Utilities.formatDate(new Date(r[1]), SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd') : '', tipo: r[2], monto: parseFloat(r[3]) || 0, nota: r[4] || '', responsable: r[5] || '', periodo: r[6] ? Utilities.formatDate(new Date(r[6]), SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd') : '', estado: r[7] }));
+}
+
+// ==============================================================================
+// ARCHIVAR CARPETA DE RECAUDACIÓN EN SHEETS
+// ==============================================================================
+function archivarCarpetaEnSheets(payload) {
+  const ss  = SpreadsheetApp.getActiveSpreadsheet();
+  const tz  = ss.getSpreadsheetTimeZone();
+  const hoy = Utilities.formatDate(new Date(), tz, 'dd-MM-yyyy');
+
+  // Nombre único para la pestaña
+  let tabNombre = 'Carpeta_' + hoy;
+  let sufijo = 0;
+  while (ss.getSheetByName(tabNombre)) {
+    sufijo++;
+    tabNombre = 'Carpeta_' + hoy + '_' + sufijo;
+  }
+
+  const tab = ss.insertSheet(tabNombre);
+
+  // Fila 1: encabezado del período
+  tab.appendRow(['Período', payload.rango || '', 'Archivado', new Date()]);
+  tab.getRange(1, 1, 1, 4).setFontWeight('bold');
+
+  // Fila 2: vacía como separador
+  tab.appendRow([]);
+
+  // Fila 3: cabeceras de datos
+  const headers = ['Fecha', 'Tipo', 'Monto', 'Divisor'];
+  tab.appendRow(headers);
+  tab.getRange(3, 1, 1, headers.length).setFontWeight('bold').setBackground('#e2e8f0');
+
+  // Datos de recaudación
+  const datos = payload.datos || [];
+  if (datos.length > 0) {
+    const filas = datos.map(r => [
+      r.fecha || '',
+      r.tipo  || '',
+      parseFloat(r.monto) || 0,
+      r.divisor || ''
+    ]);
+    tab.getRange(4, 1, filas.length, 4).setValues(filas);
+  }
+
+  // Autoajustar columnas
+  tab.autoResizeColumns(1, 4);
+
+  // Registrar en auditoría
+  registrarAuditoria(
+    payload.responsable || 'Sistema',
+    'Archivar Carpeta',
+    'Período: ' + (payload.rango || '') + ' | Registros: ' + datos.length + ' | Pestaña: ' + tabNombre,
+    tabNombre
+  );
+
+  return tabNombre;
 }

@@ -213,16 +213,30 @@ async function carpetas_vaciarYArchivar() {
         } catch(e) {}
 
         // ── PASO 2: guardar en archivero local PRIMERO ────────────────
+        const snapDatos = JSON.parse(JSON.stringify(recDatosRaw));
         recArchivero.push({
             rango,
             totalRec: formatearMoneda(totalR),
             totalPtos,
-            data: JSON.parse(JSON.stringify(recDatosRaw)),
+            data: snapDatos,
             divisores,
             fechaArchivo: new Date().toISOString()
         });
         localStorage.setItem(CARPETAS_SK, JSON.stringify(recArchivero));
         carpetas_renderArchivero(); // actualizar UI antes de tocar la nube
+
+        // ── PASO 2b: respaldar en Google Sheets (backend socios) ──────
+        try {
+            const responsable = getSesionResponsable();
+            await callApiSocios('archivarCarpetaEnSheets', {
+                rango,
+                datos: snapDatos,
+                responsable
+            });
+        } catch(eBk) {
+            console.warn('Backup en Sheets falló (no crítico):', eBk);
+            showToast('Datos archivados localmente (Sheets no disponible)', 'info');
+        }
 
         // ── PASO 3: vaciar la nube ────────────────────────────────────
         await fetch(URL_RECAUDACIONES, {
