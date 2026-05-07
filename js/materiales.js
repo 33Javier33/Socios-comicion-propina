@@ -155,38 +155,37 @@ function mat_render_anual() {
     mat_render_desglose_mensual(año, anuales);
 }
 
-// Renderiza el desglose mes a mes con cada movimiento y su descripción
+// Renderiza el desglose de períodos (15→14) con cada movimiento y su descripción
 function mat_render_desglose_mensual(año, datos) {
     const el = document.getElementById('mat-desglose-mensual');
     if (!el) return;
 
-    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-
-    // Agrupar por mes calendario (1-12)
-    const porMes = {};
+    // Agrupar por período 15→14 (clave: "YYYY-MM-15")
+    const porPeriodo = {};
     datos.forEach(r => {
-        const mes = parseInt((r.fecha || '').split('-')[1], 10);
-        if (!mes) return;
-        if (!porMes[mes]) porMes[mes] = { ing: 0, gas: 0, registros: [] };
+        if (!r.fecha) return;
+        const ps = mat_periodoDesFecha(r.fecha);
+        if (!porPeriodo[ps]) porPeriodo[ps] = { ing: 0, gas: 0, registros: [] };
         const mto = mat_monto(r);
-        if (r.tipo === 'Ingreso') porMes[mes].ing += mto;
-        else porMes[mes].gas += mto;
-        porMes[mes].registros.push(r);
+        if (r.tipo === 'Ingreso') porPeriodo[ps].ing += mto;
+        else porPeriodo[ps].gas += mto;
+        porPeriodo[ps].registros.push(r);
     });
 
-    const mesesConDatos = Object.keys(porMes).map(Number).sort((a, b) => b - a);
+    const periodos = Object.keys(porPeriodo).sort((a, b) => b.localeCompare(a)); // más reciente primero
 
-    if (mesesConDatos.length === 0) {
+    if (periodos.length === 0) {
         el.innerHTML = `<div style="text-align:center;padding:14px;color:#94a3b8;font-size:0.8em;">Sin movimientos en ${año}</div>`;
         return;
     }
 
-    el.innerHTML = mesesConDatos.map(m => {
-        const { ing, gas, registros } = porMes[m];
+    el.innerHTML = periodos.map(ps => {
+        const { ing, gas, registros } = porPeriodo[ps];
         const bal = ing - gas;
         const balColor = bal >= 0 ? '#059669' : '#ef4444';
+        const label = mat_periodoDisplay(ps); // "15 Ene → 14 Feb 2026"
 
-        // Registros del mes ordenados por fecha asc
+        // Registros del período ordenados por fecha asc
         const regsOrdenados = [...registros].sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
 
         const filaRegistros = regsOrdenados.map(r => {
@@ -194,7 +193,6 @@ function mat_render_desglose_mensual(año, datos) {
             const color  = esIng ? '#059669' : '#dc2626';
             const icon   = esIng ? '↑' : '↓';
             const signo  = esIng ? '+' : '-';
-            // día/mes del registro
             const partes = (r.fecha || '').split('-');
             const diaStr = partes[2] ? partes[2] + '/' + partes[1] : '';
             const desc   = r.nota || r.tipo;
@@ -206,12 +204,14 @@ function mat_render_desglose_mensual(año, datos) {
             </div>`;
         }).join('');
 
-        return `<div style="background:#f8fafc;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;margin-bottom:2px;">
-            <div style="display:grid;grid-template-columns:36px 1fr 1fr 1fr;align-items:center;gap:4px;padding:8px 10px;background:#f1f5f9;">
-                <div style="font-size:0.72em;font-weight:900;color:#334155;">${meses[m-1]}</div>
-                <div style="font-size:0.7em;font-weight:700;color:#059669;text-align:right;">+${formatearMoneda(ing)}</div>
-                <div style="font-size:0.7em;font-weight:700;color:#ef4444;text-align:right;">-${formatearMoneda(gas)}</div>
-                <div style="font-size:0.7em;font-weight:800;color:${balColor};text-align:right;">${bal >= 0 ? '+' : ''}${formatearMoneda(bal)}</div>
+        return `<div style="background:#f8fafc;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;margin-bottom:4px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#f1f5f9;gap:6px;flex-wrap:wrap;">
+                <div style="font-size:0.68em;font-weight:900;color:#334155;white-space:nowrap;">${label}</div>
+                <div style="display:flex;gap:8px;flex-shrink:0;">
+                    <span style="font-size:0.68em;font-weight:700;color:#059669;">+${formatearMoneda(ing)}</span>
+                    <span style="font-size:0.68em;font-weight:700;color:#ef4444;">-${formatearMoneda(gas)}</span>
+                    <span style="font-size:0.68em;font-weight:800;color:${balColor};">${bal >= 0 ? '+' : ''}${formatearMoneda(bal)}</span>
+                </div>
             </div>
             ${filaRegistros}
         </div>`;
