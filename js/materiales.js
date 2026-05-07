@@ -4,6 +4,7 @@
 
 let matDatos = [];
 let matPeriodoVista = null;
+let matAñoVista = new Date().getFullYear();
 
 // Dado un string YYYY-MM-DD, retorna el inicio del período (siempre el 15).
 // Si day >= 15: YYYY-MM-15 del mismo mes. Si day < 15: el 15 del mes anterior.
@@ -60,6 +61,9 @@ async function mat_cargar() {
 // Renderiza la vista del período actual
 function mat_render() {
     if (!matPeriodoVista) matPeriodoVista = mat_periodoActual();
+
+    // Panel superior: resumen anual
+    mat_render_anual();
 
     // Filtrar por período
     const filtrados = matDatos.filter(r => {
@@ -121,6 +125,76 @@ function mat_render() {
             </div>
             <div style="font-weight:800;color:${montoColor};font-size:0.92em;white-space:nowrap;">${montoSigno}${formatearMoneda(r.monto)}</div>
             <button onclick="mat_borrar('${r.uuid}')" style="background:none;border:none;cursor:pointer;font-size:1.1em;padding:2px 4px;color:#94a3b8;line-height:1;" title="Eliminar">🗑️</button>
+        </div>`;
+    }).join('');
+}
+
+// Mueve el año de vista ±1 y re-renderiza
+function mat_cambiarAño(dir) {
+    matAñoVista += dir;
+    mat_render();
+}
+
+// Renderiza el panel de resumen anual
+function mat_render_anual() {
+    const año = matAñoVista;
+    const elAño = document.getElementById('mat-año-label');
+    if (elAño) elAño.textContent = año;
+
+    const anuales = matDatos.filter(r => r.fecha && r.fecha.startsWith(String(año)));
+    const totalIng = anuales.filter(r => r.tipo === 'Ingreso').reduce((s, r) => s + (r.monto || 0), 0);
+    const totalGas = anuales.filter(r => r.tipo === 'Gasto').reduce((s, r) => s + (r.monto || 0), 0);
+    const balance  = totalIng - totalGas;
+
+    const elIng  = document.getElementById('mat-anual-ingresos');
+    const elGas  = document.getElementById('mat-anual-gastos');
+    const elBal  = document.getElementById('mat-anual-balance');
+    const elCard = document.getElementById('mat-anual-bal-card');
+    if (elIng)  elIng.textContent  = formatearMoneda(totalIng);
+    if (elGas)  elGas.textContent  = formatearMoneda(totalGas);
+    if (elBal)  elBal.textContent  = formatearMoneda(balance);
+    if (elCard) {
+        elCard.style.background     = balance >= 0 ? '#dcfce7' : '#fee2e2';
+        elCard.style.borderTopColor = balance >= 0 ? '#059669' : '#ef4444';
+        if (elBal) elBal.style.color = balance >= 0 ? '#059669' : '#ef4444';
+    }
+
+    mat_render_desglose_mensual(año, anuales);
+}
+
+// Renderiza el desglose mes a mes en #mat-desglose-mensual
+function mat_render_desglose_mensual(año, datos) {
+    const el = document.getElementById('mat-desglose-mensual');
+    if (!el) return;
+
+    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+    // Agrupar por mes calendario (1-12)
+    const porMes = {};
+    datos.forEach(r => {
+        const mes = parseInt((r.fecha || '').split('-')[1], 10);
+        if (!mes) return;
+        if (!porMes[mes]) porMes[mes] = { ing: 0, gas: 0 };
+        if (r.tipo === 'Ingreso') porMes[mes].ing += (r.monto || 0);
+        else porMes[mes].gas += (r.monto || 0);
+    });
+
+    const mesesConDatos = Object.keys(porMes).map(Number).sort((a, b) => b - a);
+
+    if (mesesConDatos.length === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:14px;color:#94a3b8;font-size:0.8em;">Sin movimientos en ' + año + '</div>';
+        return;
+    }
+
+    el.innerHTML = mesesConDatos.map(m => {
+        const { ing, gas } = porMes[m];
+        const bal = ing - gas;
+        const balColor = bal >= 0 ? '#059669' : '#ef4444';
+        return `<div style="display:grid;grid-template-columns:40px 1fr 1fr 1fr;align-items:center;gap:6px;background:#f8fafc;border-radius:8px;padding:8px 10px;">
+            <div style="font-size:0.72em;font-weight:800;color:#64748b;">${meses[m-1]}</div>
+            <div style="font-size:0.72em;font-weight:700;color:#059669;text-align:right;">+${formatearMoneda(ing)}</div>
+            <div style="font-size:0.72em;font-weight:700;color:#ef4444;text-align:right;">-${formatearMoneda(gas)}</div>
+            <div style="font-size:0.72em;font-weight:800;color:${balColor};text-align:right;">${bal >= 0 ? '+' : ''}${formatearMoneda(bal)}</div>
         </div>`;
     }).join('');
 }
