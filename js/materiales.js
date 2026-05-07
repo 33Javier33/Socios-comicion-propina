@@ -10,20 +10,18 @@ let matAñoVista = new Date().getFullYear();
 function mat_monto(r) { return Math.round(Number(r.monto) || 0); }
 
 // Dado un string YYYY-MM-DD, retorna el inicio del período (siempre el 15).
-// Si day >= 15: YYYY-MM-15 del mismo mes. Si day < 15: el 15 del mes anterior.
 function mat_periodoDesFecha(fechaStr) {
     const [y, m, d] = fechaStr.split('-').map(Number);
     if (d >= 15) {
         return `${y}-${String(m).padStart(2,'0')}-15`;
     } else {
-        const dt = new Date(y, m - 2, 15); // mes anterior
+        const dt = new Date(y, m - 2, 15);
         const py = dt.getFullYear();
         const pm = dt.getMonth() + 1;
         return `${py}-${String(pm).padStart(2,'0')}-15`;
     }
 }
 
-// Calcula el período actual en base a hoy
 function mat_periodoActual() {
     const hoy = new Date();
     const y = hoy.getFullYear();
@@ -32,18 +30,14 @@ function mat_periodoActual() {
     return mat_periodoDesFecha(`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
 }
 
-// Retorna string legible, ej: "15 May → 14 Jun 2026"
 function mat_periodoDisplay(periodoStart) {
     const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     const [y, m] = periodoStart.split('-').map(Number);
-    const startDay = 15;
     const startMes = meses[m - 1];
-    // Fin: día 14 del mes siguiente
-    const fechaFin = new Date(y, m, 14); // mes (m) es ya el siguiente porque JS es 0-based
-    const endDay = 14;
+    const fechaFin = new Date(y, m, 14);
     const endMes = meses[fechaFin.getMonth()];
     const endYear = fechaFin.getFullYear();
-    return `${startDay} ${startMes} → ${endDay} ${endMes} ${endYear}`;
+    return `15 ${startMes} → 14 ${endMes} ${endYear}`;
 }
 
 // Carga todos los materiales desde el backend
@@ -65,57 +59,53 @@ async function mat_cargar() {
 function mat_render() {
     if (!matPeriodoVista) matPeriodoVista = mat_periodoActual();
 
-    // Panel superior: resumen anual
+    // ── Panel 1: resumen anual ──────────────────────────────
     mat_render_anual();
 
-    // Filtrar por período
-    const filtrados = matDatos.filter(r => {
+    // ── Panel 2: período actual ─────────────────────────────
+    // "Fondo total" = todos los ingresos del año (el acumulado global)
+    const anuales = matDatos.filter(r => r.fecha && r.fecha.startsWith(String(matAñoVista)));
+    const fondoTotal   = anuales.filter(r => r.tipo === 'Ingreso').reduce((s, r) => s + mat_monto(r), 0);
+    const gastosTotAño = anuales.filter(r => r.tipo === 'Gasto').reduce((s, r) => s + mat_monto(r), 0);
+    const balanceGlobal = fondoTotal - gastosTotAño;
+
+    // Gastos = solo los del período actual (15→14)
+    const delPeriodo = matDatos.filter(r => {
         if (!r.fecha) return false;
         return mat_periodoDesFecha(r.fecha) === matPeriodoVista;
     });
+    const gastosPeriodo = delPeriodo.filter(r => r.tipo === 'Gasto').reduce((s, r) => s + mat_monto(r), 0);
 
-    // Calcular totales del período
-    const totalIngresos = filtrados.filter(r => r.tipo === 'Ingreso').reduce((s, r) => s + mat_monto(r), 0);
-    const totalGastos   = filtrados.filter(r => r.tipo === 'Gasto').reduce((s, r) => s + mat_monto(r), 0);
-    const balance = totalIngresos - totalGastos;
-
-    // Actualizar tarjetas del período
-    const elIngresos = document.getElementById('mat-total-ingresos');
-    const elGastos   = document.getElementById('mat-total-gastos');
-    const elBalance  = document.getElementById('mat-balance');
-    const elBalCard  = document.getElementById('mat-balance-card');
-    if (elIngresos) elIngresos.textContent = formatearMoneda(totalIngresos);
-    if (elGastos)   elGastos.textContent   = formatearMoneda(totalGastos);
-    if (elBalance)  elBalance.textContent  = formatearMoneda(balance);
+    const elFondo   = document.getElementById('mat-total-ingresos');
+    const elGastos  = document.getElementById('mat-total-gastos');
+    const elBalance = document.getElementById('mat-balance');
+    const elBalCard = document.getElementById('mat-balance-card');
+    if (elFondo)   elFondo.textContent   = formatearMoneda(fondoTotal);
+    if (elGastos)  elGastos.textContent  = formatearMoneda(gastosPeriodo);
+    if (elBalance) elBalance.textContent = formatearMoneda(balanceGlobal);
     if (elBalCard) {
-        elBalCard.style.background = balance >= 0 ? '#dcfce7' : '#fee2e2';
-        elBalCard.style.borderTopColor = balance >= 0 ? '#059669' : '#ef4444';
-        if (elBalance) elBalance.style.color = balance >= 0 ? '#059669' : '#ef4444';
+        elBalCard.style.background     = balanceGlobal >= 0 ? '#dcfce7' : '#fee2e2';
+        elBalCard.style.borderTopColor = balanceGlobal >= 0 ? '#059669' : '#ef4444';
+        if (elBalance) elBalance.style.color = balanceGlobal >= 0 ? '#059669' : '#ef4444';
     }
 
-    // Actualizar label del período
     const elPeriodo = document.getElementById('mat-periodo-label');
     if (elPeriodo) elPeriodo.textContent = mat_periodoDisplay(matPeriodoVista);
 
-    // Renderizar lista (ordenada por fecha desc)
+    // Lista de movimientos del período (ordenada por fecha desc)
     const elLista = document.getElementById('mat-lista');
     if (!elLista) return;
 
-    if (filtrados.length === 0) {
+    if (delPeriodo.length === 0) {
         elLista.innerHTML = '<div style="text-align:center;padding:40px;color:#7f8c8d;font-size:0.9em;">Sin registros en este período</div>';
         return;
     }
 
-    const ordenados = [...filtrados].sort((a, b) => {
-        if (!a.fecha) return 1;
-        if (!b.fecha) return -1;
-        return b.fecha.localeCompare(a.fecha);
-    });
-
+    const ordenados = [...delPeriodo].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
     elLista.innerHTML = ordenados.map(r => {
         const esIngreso = r.tipo === 'Ingreso';
         const badgeColor = esIngreso ? '#10b981' : '#ef4444';
-        const badgeBg = esIngreso ? '#dcfce7' : '#fee2e2';
+        const badgeBg    = esIngreso ? '#dcfce7' : '#fee2e2';
         const montoColor = esIngreso ? '#10b981' : '#ef4444';
         const montoSigno = esIngreso ? '+' : '-';
         const fechaDisplay = r.fecha ? r.fecha.split('-').reverse().join('/') : '';
@@ -132,7 +122,7 @@ function mat_render() {
     }).join('');
 }
 
-// Mueve el año de vista ±1 y re-renderiza
+// Mueve el año de vista ±1
 function mat_cambiarAño(dir) {
     matAñoVista += dir;
     mat_render();
@@ -165,7 +155,7 @@ function mat_render_anual() {
     mat_render_desglose_mensual(año, anuales);
 }
 
-// Renderiza el desglose mes a mes en #mat-desglose-mensual
+// Renderiza el desglose mes a mes con cada movimiento y su descripción
 function mat_render_desglose_mensual(año, datos) {
     const el = document.getElementById('mat-desglose-mensual');
     if (!el) return;
@@ -177,27 +167,53 @@ function mat_render_desglose_mensual(año, datos) {
     datos.forEach(r => {
         const mes = parseInt((r.fecha || '').split('-')[1], 10);
         if (!mes) return;
-        if (!porMes[mes]) porMes[mes] = { ing: 0, gas: 0 };
-        if (r.tipo === 'Ingreso') porMes[mes].ing += mat_monto(r);
-        else porMes[mes].gas += mat_monto(r);
+        if (!porMes[mes]) porMes[mes] = { ing: 0, gas: 0, registros: [] };
+        const mto = mat_monto(r);
+        if (r.tipo === 'Ingreso') porMes[mes].ing += mto;
+        else porMes[mes].gas += mto;
+        porMes[mes].registros.push(r);
     });
 
     const mesesConDatos = Object.keys(porMes).map(Number).sort((a, b) => b - a);
 
     if (mesesConDatos.length === 0) {
-        el.innerHTML = '<div style="text-align:center;padding:14px;color:#94a3b8;font-size:0.8em;">Sin movimientos en ' + año + '</div>';
+        el.innerHTML = `<div style="text-align:center;padding:14px;color:#94a3b8;font-size:0.8em;">Sin movimientos en ${año}</div>`;
         return;
     }
 
     el.innerHTML = mesesConDatos.map(m => {
-        const { ing, gas } = porMes[m];
+        const { ing, gas, registros } = porMes[m];
         const bal = ing - gas;
         const balColor = bal >= 0 ? '#059669' : '#ef4444';
-        return `<div style="display:grid;grid-template-columns:40px 1fr 1fr 1fr;align-items:center;gap:6px;background:#f8fafc;border-radius:8px;padding:8px 10px;">
-            <div style="font-size:0.72em;font-weight:800;color:#64748b;">${meses[m-1]}</div>
-            <div style="font-size:0.72em;font-weight:700;color:#059669;text-align:right;">+${formatearMoneda(ing)}</div>
-            <div style="font-size:0.72em;font-weight:700;color:#ef4444;text-align:right;">-${formatearMoneda(gas)}</div>
-            <div style="font-size:0.72em;font-weight:800;color:${balColor};text-align:right;">${bal >= 0 ? '+' : ''}${formatearMoneda(bal)}</div>
+
+        // Registros del mes ordenados por fecha asc
+        const regsOrdenados = [...registros].sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+
+        const filaRegistros = regsOrdenados.map(r => {
+            const esIng = r.tipo === 'Ingreso';
+            const color  = esIng ? '#059669' : '#dc2626';
+            const icon   = esIng ? '↑' : '↓';
+            const signo  = esIng ? '+' : '-';
+            // día/mes del registro
+            const partes = (r.fecha || '').split('-');
+            const diaStr = partes[2] ? partes[2] + '/' + partes[1] : '';
+            const desc   = r.nota || r.tipo;
+            return `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-top:1px solid #f1f5f9;">
+                <span style="color:${color};font-weight:900;font-size:0.75em;width:12px;flex-shrink:0;">${icon}</span>
+                <span style="color:#64748b;font-size:0.7em;min-width:34px;flex-shrink:0;">${diaStr}</span>
+                <span style="flex:1;color:#334155;font-size:0.72em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${desc}">${desc}</span>
+                <span style="color:${color};font-weight:700;font-size:0.72em;white-space:nowrap;">${signo}${formatearMoneda(mat_monto(r))}</span>
+            </div>`;
+        }).join('');
+
+        return `<div style="background:#f8fafc;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;margin-bottom:2px;">
+            <div style="display:grid;grid-template-columns:36px 1fr 1fr 1fr;align-items:center;gap:4px;padding:8px 10px;background:#f1f5f9;">
+                <div style="font-size:0.72em;font-weight:900;color:#334155;">${meses[m-1]}</div>
+                <div style="font-size:0.7em;font-weight:700;color:#059669;text-align:right;">+${formatearMoneda(ing)}</div>
+                <div style="font-size:0.7em;font-weight:700;color:#ef4444;text-align:right;">-${formatearMoneda(gas)}</div>
+                <div style="font-size:0.7em;font-weight:800;color:${balColor};text-align:right;">${bal >= 0 ? '+' : ''}${formatearMoneda(bal)}</div>
+            </div>
+            ${filaRegistros}
         </div>`;
     }).join('');
 }
@@ -213,7 +229,7 @@ function mat_cambiarPeriodo(dir) {
     mat_render();
 }
 
-// Abre el modal de nuevo registro. tipo: 'Ingreso' o 'Gasto'
+// Abre el modal de nuevo registro
 function mat_abrirModal(tipo = 'Ingreso') {
     const modal = document.getElementById('mat-modal');
     if (!modal) return;
@@ -228,7 +244,6 @@ function mat_abrirModal(tipo = 'Ingreso') {
     modal.style.display = 'flex';
 }
 
-// Alterna el tipo de registro (Ingreso / Gasto)
 function mat_toggleTipo(tipo) {
     const btnIngreso = document.getElementById('mat-btn-ingreso');
     const btnGasto   = document.getElementById('mat-btn-gasto');
@@ -237,41 +252,29 @@ function mat_toggleTipo(tipo) {
     if (hiddenTipo) hiddenTipo.value = tipo;
 
     if (btnIngreso) {
-        if (tipo === 'Ingreso') {
-            btnIngreso.style.background = '#10b981';
-            btnIngreso.style.color = 'white';
-            btnIngreso.style.border = '2px solid #10b981';
-        } else {
-            btnIngreso.style.background = 'white';
-            btnIngreso.style.color = '#10b981';
-            btnIngreso.style.border = '2px solid #10b981';
-        }
+        btnIngreso.style.background = tipo === 'Ingreso' ? '#10b981' : 'white';
+        btnIngreso.style.color      = tipo === 'Ingreso' ? 'white'   : '#10b981';
+        btnIngreso.style.border     = '2px solid #10b981';
     }
     if (btnGasto) {
-        if (tipo === 'Gasto') {
-            btnGasto.style.background = '#ef4444';
-            btnGasto.style.color = 'white';
-            btnGasto.style.border = '2px solid #ef4444';
-        } else {
-            btnGasto.style.background = 'white';
-            btnGasto.style.color = '#ef4444';
-            btnGasto.style.border = '2px solid #ef4444';
-        }
+        btnGasto.style.background = tipo === 'Gasto' ? '#ef4444' : 'white';
+        btnGasto.style.color      = tipo === 'Gasto' ? 'white'   : '#ef4444';
+        btnGasto.style.border     = '2px solid #ef4444';
     }
     if (notaLabel) {
-        if (tipo === 'Ingreso') {
-            notaLabel.textContent = 'Descripción (ej: Cierre de mes)';
-        } else {
-            notaLabel.textContent = 'Descripción (ej: Compra de materiales)';
-        }
+        notaLabel.textContent = tipo === 'Ingreso'
+            ? 'Descripción (ej: Aporte mensual)'
+            : 'Descripción (ej: Compra de materiales)';
     }
 }
 
-// Guarda un nuevo registro de material
+// Guarda un nuevo registro
 async function mat_guardar() {
     const tipo  = (document.getElementById('mat-modal-tipo')  || {}).value || '';
     const fecha = (document.getElementById('mat-modal-fecha') || {}).value || '';
-    const monto = Math.round(parseFloat((document.getElementById('mat-modal-monto') || {}).value.replace(/\./g,'').replace(',','.') || '0'));
+    // Elimina puntos de miles que el usuario pueda haber escrito
+    const rawMonto = ((document.getElementById('mat-modal-monto') || {}).value || '').replace(/\./g,'').replace(',','.');
+    const monto = Math.round(parseFloat(rawMonto) || 0);
     const nota  = (document.getElementById('mat-modal-nota')  || {}).value || '';
 
     if (!fecha) { showToast('Selecciona una fecha', 'error'); return; }
@@ -294,12 +297,10 @@ async function mat_guardar() {
     }
 }
 
-// Borra un registro de material
+// Borra un registro
 async function mat_borrar(uuid) {
     if (!confirm('¿Eliminar este registro?')) return;
-
     const responsable = getSesionResponsable();
-
     try {
         toggleLoader(true, 'Eliminando...');
         await callApiSocios('borrarMaterial', { uuid, responsable });
