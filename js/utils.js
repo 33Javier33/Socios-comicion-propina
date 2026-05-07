@@ -112,3 +112,35 @@ function mostrarErrorConexion(msg) {
     document.getElementById('error-conexion-msg').textContent = '⚠️ ' + msg;
     banner.style.display = 'flex';
 }
+
+// ── FAB global "Volver al inicio" ─────────────────────────────
+function irAlInicio() {
+    const m = document.querySelector('.app-main');
+    if (m) m.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function initScrollTopFab() {
+    const fab = document.getElementById('fabScrollTop');
+    if (!fab) return;
+
+    function checkScroll() {
+        const appMain = document.querySelector('.app-main');
+        const mainY = appMain ? appMain.scrollTop : 0;
+        const winY  = window.scrollY || document.documentElement.scrollTop || 0;
+        fab.style.display = (mainY > 150 || winY > 150) ? 'flex' : 'none';
+    }
+
+    // Escuchar scroll en window siempre
+    window.addEventListener('scroll', checkScroll, { passive: true });
+
+    // Escuchar scroll en .app-main cuando exista (desktop)
+    // Se re-adjunta si initLayout lo crea después
+    function attachMain() {
+        const m = document.querySelector('.app-main');
+        if (m) m.addEventListener('scroll', checkScroll, { passive: true });
+    }
+    attachMain();
+    // Por si initLayout() aún no corrió, volver a intentar
+    setTimeout(attachMain, 600);
+}
