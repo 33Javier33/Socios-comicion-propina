@@ -390,12 +390,148 @@ const BASE_CONOCIMIENTO = [
         </div>
       </div>`,
       pasos:['Cada acción crítica queda registrada automáticamente (no requiere intervención manual)','Ve a la pestaña <strong>🔍 Auditoría</strong> → presiona <strong>🔄 Actualizar</strong>','Usa los filtros para buscar por usuario, tipo de acción, fechas o texto libre','Presiona <strong>🖨️ Imprimir informe</strong> para generar un PDF con todos los registros filtrados','El informe incluye un resumen por usuario y por tipo de acción'],
-      nota:'Las acciones registradas son: Registrar Anticipo, Eliminar, Editar, Agregar/Editar/Eliminar Socio, Actualizar Saldo, Reiniciar Anticipos, Cierre de Mes. Los accesos al sistema (login/logout) se registran en la hoja HistorialConexiones de Google Sheets.' },
+      nota:'Las acciones registradas son: Registrar/Editar/Eliminar Anticipo, Agregar/Editar/Eliminar Socio, Actualizar/Registrar Saldo Anterior, Reiniciar Anticipos, Cierre de Mes, Agregar Días PT, Imprimir Recibo, Canje, Ingreso Material, Gasto Material, Eliminar Material. Los accesos se registran en la hoja HistorialConexiones de Google Sheets.' },
 
     { id:'seg3', cat:'seguridad', titulo:'¿Cómo evito que alguien borre anticipos sin dejar rastro?', tags:['borrar','eliminar','rastro','seguridad','robo','fraude','control'],
       resp:'El sistema tiene <strong>tres capas de protección</strong>: PIN personalizado por usuario, Historial de Auditoría que registra cada borrado, y el Historial en Google Sheets que no se puede borrar desde la aplicación.',
       pasos:['<strong>PIN personal:</strong> cada responsable usa su propia contraseña — si alguien borra algo, queda identificado','<strong>Auditoría:</strong> cada borrado registra quién lo hizo, qué monto, de qué socio y en qué fecha','<strong>Historial en Sheets:</strong> los datos van a la hoja AuditoriaLogs directamente — solo accesible por el administrador de la planilla','<strong>Informe periódico:</strong> imprime el informe de Auditoría una vez por semana para revisión externa al sistema'],
       nota:'⚠️ Para máxima seguridad: asegúrate de que TODOS los responsables tengan su PIN personal configurado y que nadie comparta sus credenciales.' },
+
+    // ═══════════════════════════════════════════════════════
+    // MATERIALES Y GASTOS
+    // ═══════════════════════════════════════════════════════
+    { id:'mat1', cat:'materiales', titulo:'¿Qué es la sección Materiales y Gastos?', tags:['materiales','gastos','ingresos','balance','período','recaudación','fondo'],
+      resp:'La sección <strong>📦 Materiales</strong> registra los <strong>ingresos y gastos del fondo de materiales</strong> del casino: compras de suministros, cierre de propina asignado a materiales, etc. Muestra el balance neto por período.',
+      vista:`<div class="ayuda-vista">
+        <div class="ayuda-vista-titulo">📦 Panel de Materiales</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">
+          <div style="background:white;border-radius:8px;padding:8px;border-top:3px solid #10b981;text-align:center;">
+            <div style="font-weight:900;color:#10b981;font-size:0.9em;">$120.000</div>
+            <div style="font-size:0.6em;color:#7f8c8d;text-transform:uppercase;font-weight:700;">Ingresos</div>
+          </div>
+          <div style="background:white;border-radius:8px;padding:8px;border-top:3px solid #ef4444;text-align:center;">
+            <div style="font-weight:900;color:#ef4444;font-size:0.9em;">$45.000</div>
+            <div style="font-size:0.6em;color:#7f8c8d;text-transform:uppercase;font-weight:700;">Gastos</div>
+          </div>
+          <div style="background:#dcfce7;border-radius:8px;padding:8px;border-top:3px solid #059669;text-align:center;">
+            <div style="font-weight:900;color:#059669;font-size:0.9em;">$75.000</div>
+            <div style="font-size:0.6em;color:#7f8c8d;text-transform:uppercase;font-weight:700;">Balance</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:white;border-radius:8px;padding:8px 12px;border:1px solid #eee;font-size:0.8em;">
+          <span>‹</span>
+          <strong style="color:#2c3e50;">15 May → 14 Jun 2026</strong>
+          <span>›</span>
+        </div>
+      </div>`,
+      pasos:['Ve a la pestaña <strong>📦 Materiales</strong> en el menú','El panel muestra tres tarjetas: <strong>Ingresos totales</strong>, <strong>Gastos totales</strong> y <strong>Balance</strong>','El balance verde = superávit, rojo = déficit','Usa las flechas ‹ › para navegar entre períodos','Debajo aparece el historial de todos los movimientos del período, ordenados por fecha'],
+      nota:'Los movimientos se ingresan manualmente al hacer el cierre de la propina. Todos quedan registrados en Auditoría.' },
+
+    { id:'mat2', cat:'materiales', titulo:'¿Cómo registro un Ingreso de materiales?', tags:['ingreso','agregar','registrar','materiales','cierre','propina','fondo'],
+      resp:'Un <strong>Ingreso</strong> es dinero que entra al fondo de materiales, por ejemplo el monto del cierre de propina destinado a materiales o una recuperación de gastos.',
+      vista:`<div class="ayuda-vista">
+        <div class="ayuda-vista-titulo">📈 Formulario Nuevo Ingreso</div>
+        <div class="ayuda-mini-card" style="font-size:0.82em;">
+          <div style="display:flex;gap:6px;margin-bottom:10px;">
+            <span style="background:#10b981;color:white;border-radius:8px;padding:5px 14px;font-weight:700;font-size:0.85em;flex:1;text-align:center;">INGRESO</span>
+            <span style="background:white;color:#ef4444;border:2px solid #ef4444;border-radius:8px;padding:5px 14px;font-weight:700;font-size:0.85em;flex:1;text-align:center;">GASTO</span>
+          </div>
+          <div style="margin-bottom:6px;"><div style="font-size:0.7em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Fecha</div>
+            <div style="border:1px solid #ddd;border-radius:5px;padding:5px 8px;margin-top:2px;">15/05/2026</div></div>
+          <div style="margin-bottom:6px;"><div style="font-size:0.7em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Monto ($)</div>
+            <div style="border:2px solid #10b981;border-radius:5px;padding:5px 8px;margin-top:2px;font-weight:800;color:#10b981;">120.000</div></div>
+          <div><div style="font-size:0.7em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Descripción</div>
+            <div style="border:1px solid #ddd;border-radius:5px;padding:5px 8px;margin-top:2px;color:#aaa;">Cierre de mes Mayo</div></div>
+        </div>
+      </div>`,
+      pasos:['Presiona el botón verde <strong>"↑ Agregar Ingreso"</strong> en la sección Materiales','El modal se abre con el tipo <strong>INGRESO</strong> preseleccionado (verde activo)','Ingresa la fecha (por defecto hoy)','Escribe el monto sin puntos ni comas','Agrega una descripción opcional (ej: "Cierre de mes Mayo")','Presiona <strong>Guardar</strong> — el ingreso aparece en el historial del período'],
+      nota:'El ingreso se asigna al período según su fecha: si el día es ≥15 va al mes actual, si es <15 va al período anterior. Queda en Auditoría como "Ingreso Material".' },
+
+    { id:'mat3', cat:'materiales', titulo:'¿Cómo registro un Gasto de materiales?', tags:['gasto','egreso','compra','materiales','suministros','artículos'],
+      resp:'Un <strong>Gasto</strong> es dinero que sale del fondo de materiales, como la compra de suministros, artículos de limpieza u otros insumos del casino.',
+      pasos:['Presiona el botón rojo <strong>"↓ Agregar Gasto"</strong> en la sección Materiales','El modal se abre con el tipo <strong>GASTO</strong> preseleccionado (rojo activo)','Ingresa la fecha del gasto','Escribe el monto','Agrega una descripción del gasto (ej: "Compra de materiales de limpieza")','Presiona <strong>Guardar</strong>'],
+      nota:'También puedes cambiar el tipo dentro del modal: si abriste "Ingreso" por error, presiona el botón GASTO para cambiarlo antes de guardar.' },
+
+    { id:'mat4', cat:'materiales', titulo:'¿Cómo funciona el período 15 a 15 en Materiales?', tags:['período','15','mes','materiales','navegar','histórico','ciclo'],
+      resp:'Los movimientos se agrupan en períodos del <strong>día 15 de un mes al 14 del siguiente</strong>, siguiendo el mismo ciclo de la propina.',
+      vista:`<div class="ayuda-vista">
+        <div class="ayuda-vista-titulo">📅 Lógica del período</div>
+        <div style="display:grid;gap:5px;font-size:0.82em;">
+          <div class="ayuda-mini-card" style="display:flex;align-items:center;gap:8px;">
+            <span style="background:#dcfce7;color:#059669;border-radius:5px;padding:2px 7px;font-weight:700;font-size:0.8em;">20 Mayo</span>
+            <span style="color:#7f8c8d;">→ período</span>
+            <span style="font-weight:700;">15 May → 14 Jun</span>
+          </div>
+          <div class="ayuda-mini-card" style="display:flex;align-items:center;gap:8px;">
+            <span style="background:#fee2e2;color:#dc2626;border-radius:5px;padding:2px 7px;font-weight:700;font-size:0.8em;">10 Mayo</span>
+            <span style="color:#7f8c8d;">→ período</span>
+            <span style="font-weight:700;">15 Abr → 14 May</span>
+          </div>
+        </div>
+        <div class="ayuda-formula" style="margin-top:6px;">Día ≥ 15 → período del mes actual<br>Día &lt; 15 → período del mes anterior</div>
+      </div>`,
+      pasos:['Al abrir la sección se muestra el <strong>período actual</strong> automáticamente','Presiona <strong>‹</strong> para retroceder un período o <strong>›</strong> para avanzar','Cada movimiento queda en el período de su fecha, no del día en que se ingresó','Para consultar meses anteriores, navega con las flechas hasta llegar al período deseado'],
+      nota:'El encabezado siempre muestra el período activo, por ejemplo "15 May → 14 Jun 2026".' },
+
+    { id:'mat5', cat:'materiales', titulo:'¿Cómo elimino un registro de Materiales?', tags:['eliminar','borrar','materiales','ingreso','gasto','corregir'],
+      resp:'En el historial del período, cada registro tiene un botón <strong>🗑️</strong> a la derecha para eliminarlo.',
+      pasos:['En el historial del período, localiza el registro a eliminar','Presiona el ícono 🗑️ a la derecha del monto','Confirma la eliminación','El balance se actualiza automáticamente'],
+      nota:'La eliminación queda registrada en Auditoría como "Eliminar Material". No se puede deshacer.' },
+
+    // ═══════════════════════════════════════════════════════
+    // MENÚ Y NAVEGACIÓN
+    // ═══════════════════════════════════════════════════════
+    { id:'nav1', cat:'config', titulo:'¿Cómo reordeno las secciones del menú?', tags:['menú','reordenar','mover','secciones','personalizar','orden','drag','arrastrar'],
+      resp:'Puedes <strong>arrastrar y soltar</strong> cualquier sección del menú para organizarlas a tu gusto. El nuevo orden se guarda automáticamente en el dispositivo.',
+      vista:`<div class="ayuda-vista">
+        <div class="ayuda-vista-titulo">↕️ Arrastrar para reordenar</div>
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:0.82em;">
+          <div class="ayuda-mini-card" style="opacity:0.4;border:2px dashed #3498db;display:flex;align-items:center;gap:8px;">
+            <span style="color:#3498db;">⋮⋮</span><strong>💰 Arqueo de Caja</strong>
+            <span style="font-size:0.7em;color:#3498db;margin-left:auto;">arrastrando...</span>
+          </div>
+          <div class="ayuda-mini-card" style="display:flex;align-items:center;gap:8px;">
+            <span style="color:#aaa;">⋮⋮</span><strong>👥 Gestión de Socios</strong>
+          </div>
+          <div class="ayuda-mini-card" style="border-top:3px solid #3498db;display:flex;align-items:center;gap:8px;">
+            <span style="color:#aaa;">⋮⋮</span><strong>📊 Montos Recaudados</strong>
+            <span style="font-size:0.7em;color:#3498db;margin-left:auto;">← soltar aquí</span>
+          </div>
+        </div>
+      </div>`,
+      pasos:['<strong>En computador:</strong> haz clic y arrastra cualquier sección del menú lateral hacia arriba o abajo','<strong>En móvil:</strong> abre "☰ Secciones" → mantén el dedo sobre una sección y arrastra verticalmente','Una línea azul indica dónde quedará la sección al soltar','Suelta para confirmar la nueva posición','El orden se guarda automáticamente — persiste al recargar la página'],
+      nota:'El orden se guarda por dispositivo en el almacenamiento local. Si accedes desde otro dispositivo, verás el orden predeterminado.' },
+
+    { id:'nav2', cat:'config', titulo:'¿Cómo funciona el menú en computador y en móvil?', tags:['menú','lateral','sidebar','móvil','drawer','secciones','computador','pantalla'],
+      resp:'El menú se adapta al tamaño de pantalla: <strong>sidebar fijo</strong> en computador (≥900px) y <strong>drawer desde abajo</strong> en móvil.',
+      vista:`<div class="ayuda-vista">
+        <div class="ayuda-vista-titulo">📱 Móvil vs 🖥️ Computador</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:0.78em;">
+          <div class="ayuda-mini-card">
+            <div style="font-weight:700;margin-bottom:6px;text-align:center;">📱 Móvil</div>
+            <div style="background:#f8f9fa;border-radius:6px;padding:6px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;background:white;border-radius:5px;padding:4px 6px;border:1px solid #eee;">
+                <span style="color:#3498db;font-weight:700;font-size:0.85em;">Arqueo de Caja</span>
+                <span style="background:#3498db;color:white;border-radius:10px;padding:1px 6px;font-size:0.75em;">☰</span>
+              </div>
+              <div style="text-align:center;color:#7f8c8d;font-size:0.72em;margin-top:4px;">Barra con sección activa + botón menú</div>
+            </div>
+          </div>
+          <div class="ayuda-mini-card">
+            <div style="font-weight:700;margin-bottom:6px;text-align:center;">🖥️ Computador</div>
+            <div style="display:flex;gap:4px;">
+              <div style="background:#f8f9fa;border-radius:5px;padding:4px;display:flex;flex-direction:column;gap:2px;min-width:55px;">
+                <div style="background:#3498db;color:white;border-radius:3px;padding:2px 4px;font-size:0.72em;font-weight:700;">Arqueo</div>
+                <div style="background:#eee;border-radius:3px;padding:2px 4px;font-size:0.72em;">Socios</div>
+                <div style="background:#eee;border-radius:3px;padding:2px 4px;font-size:0.72em;">Montos</div>
+              </div>
+              <div style="flex:1;background:#f8f9fa;border-radius:5px;padding:6px;font-size:0.7em;color:#7f8c8d;display:flex;align-items:center;">contenido →</div>
+            </div>
+          </div>
+        </div>
+      </div>`,
+      pasos:['<strong>Computador:</strong> el menú aparece como panel fijo a la izquierda, siempre visible','<strong>Móvil:</strong> la barra superior muestra la sección activa y el botón "☰ Secciones"','Para navegar en móvil: presiona "☰ Secciones" → el panel aparece desde abajo → toca la sección deseada → el panel se cierra','Para reordenar en móvil: con el drawer abierto, arrastra verticalmente las secciones','En computador: el cursor cambia a ⊹ (grab) al pasar sobre el menú, indicando que se puede arrastrar'],
+      nota:'El drawer en móvil cubre automáticamente los botones flotantes (FABs) para evitar confusión.' },
 ];
 
 // ══════════════════════════════════════════════════════════
@@ -577,7 +713,7 @@ function ayudaCompleta_filtrar(cat, btn) {
 function ayudaCompleta_renderizar(items, resaltar) {
     const cont = document.getElementById('ayudaResultados');
     if (!items.length) { cont.innerHTML = '<div class="ayuda-sin-result">😕 No encontramos respuesta.<br><small>Intenta: anticipo, punto, arqueo, recibo, divisor...</small></div>'; return; }
-    const catIcon = {socios:'👥',anticipos:'💰',recaudacion:'📊',arqueo:'🔒',puntos:'⭐',impresion:'🖨️',config:'⚙️',seguridad:'🔐'};
+    const catIcon = {socios:'👥',anticipos:'💰',recaudacion:'📊',arqueo:'🔒',puntos:'⭐',impresion:'🖨️',config:'⚙️',seguridad:'🔐',materiales:'📦'};
     cont.innerHTML = items.map((item, idx) => {
         let titulo = item.titulo;
         if (resaltar) { const re = new RegExp('('+resaltar.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'); titulo = titulo.replace(re,'<span class="ayuda-highlight">$1</span>'); }

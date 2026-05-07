@@ -69,6 +69,8 @@ function switchTab(tabName) {
     document.getElementById(`tab-${tabName}`).classList.add('active');
     const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
     if (activeBtn) activeBtn.classList.add('active');
+    const mobileLabel = document.getElementById('mobileActiveLabel');
+    if (mobileLabel && activeBtn) mobileLabel.textContent = activeBtn.textContent.trim();
     const fabRec = document.getElementById('fabRecAgregar');
     document.getElementById('fabMatAgregar').style.display = 'none';
     if(tabName === 'registro') { fabRec.style.display = 'none'; aq_detenerSync(); }
@@ -104,28 +106,74 @@ function initLayout() {
 
     nav_restoreOrder(navTabs);
 
-    if (window.innerWidth < 900) return;
+    if (window.innerWidth >= 900) {
+        // Desktop: sidebar fijo a la izquierda
+        const layout = document.createElement('div');
+        layout.className = 'app-layout';
+        const sidebar = document.createElement('div');
+        sidebar.className = 'app-sidebar';
+        sidebar.appendChild(navTabs);
+        const main = document.createElement('div');
+        main.className = 'app-main';
+        tabContents.forEach(tc => main.appendChild(tc));
+        layout.appendChild(sidebar);
+        layout.appendChild(main);
+        headerSection.insertAdjacentElement('afterend', layout);
+    } else {
+        // Mobile: barra + drawer desde abajo
+        navTabs.style.display = 'none';
 
-    const layout = document.createElement('div');
-    layout.className = 'app-layout';
+        // Barra de navegación mobile (muestra sección activa + botón menú)
+        const mobileBar = document.createElement('div');
+        mobileBar.id = 'mobileNavBar';
+        mobileBar.innerHTML = `
+            <span id="mobileActiveLabel">Gestión de Socios</span>
+            <button id="mobileMenuBtn" onclick="mobileNav_open()">☰ Secciones</button>`;
+        headerSection.insertAdjacentElement('afterend', mobileBar);
 
-    const sidebar = document.createElement('div');
-    sidebar.className = 'app-sidebar';
-    sidebar.appendChild(navTabs);
+        // Drawer overlay
+        const drawer = document.createElement('div');
+        drawer.id = 'mobileDrawer';
+        drawer.onclick = e => { if (e.target === drawer) mobileNav_close(); };
+        drawer.innerHTML = `
+            <div id="mobileDrawerPanel">
+                <div id="mobileDrawerHeader">
+                    <span>Secciones <small style="font-size:0.7em;color:#94a3b8;font-weight:500">— mantén para reordenar</small></span>
+                    <button id="mobileDrawerClose" onclick="mobileNav_close()">✕</button>
+                </div>
+                <div id="mobileDrawerNav"></div>
+            </div>`;
+        document.body.appendChild(drawer);
 
-    const main = document.createElement('div');
-    main.className = 'app-main';
-    tabContents.forEach(tc => main.appendChild(tc));
+        // Mover los botones al drawer (lista vertical)
+        const drawerNav = document.getElementById('mobileDrawerNav');
+        navTabs.style.cssText = 'display:flex;flex-direction:column;gap:6px;border:none;margin:0;padding:0;overflow:visible;background:none;';
+        drawerNav.appendChild(navTabs);
 
-    layout.appendChild(sidebar);
-    layout.appendChild(main);
-    headerSection.insertAdjacentElement('afterend', layout);
+        // Cerrar drawer al pulsar una sección
+        navTabs.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+            btn.addEventListener('click', () => setTimeout(mobileNav_close, 80));
+        });
+    }
+}
+
+function mobileNav_open() {
+    const d = document.getElementById('mobileDrawer');
+    if (d) d.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function mobileNav_close() {
+    const d = document.getElementById('mobileDrawer');
+    if (d) d.classList.remove('open');
+    document.body.style.overflow = '';
 }
 
 function initDragReorder() {
-    if (window.innerWidth < 900) return;
+    const btns = document.querySelectorAll('.nav-btn[data-tab]');
 
-    document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+    // ── HTML5 drag (desktop) ──────────────────────────────────
+    btns.forEach(btn => {
         btn.setAttribute('draggable', 'true');
         btn.addEventListener('dragstart', e => {
             e.dataTransfer.setData('text/plain', btn.dataset.tab);
@@ -148,6 +196,47 @@ function initDragReorder() {
             if (draggedBtn && draggedBtn !== btn) btn.parentNode.insertBefore(draggedBtn, btn);
             btn.classList.remove('drag-over');
         });
+    });
+
+    // ── Touch drag (mobile) ───────────────────────────────────
+    let ts = null; // { btn, startX, startY, isDragging }
+
+    btns.forEach(btn => {
+        btn.addEventListener('touchstart', e => {
+            ts = { btn, startX: e.touches[0].clientX, startY: e.touches[0].clientY, isDragging: false };
+        }, { passive: true });
+
+        btn.addEventListener('touchmove', e => {
+            if (!ts || ts.btn !== btn) return;
+            const dx = e.touches[0].clientX - ts.startX;
+            const dy = e.touches[0].clientY - ts.startY;
+            if (!ts.isDragging && Math.sqrt(dx * dx + dy * dy) < 10) return;
+            if (!ts.isDragging) { ts.isDragging = true; btn.classList.add('dragging'); }
+            e.preventDefault();
+            const touch = e.touches[0];
+            btn.style.visibility = 'hidden';
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            btn.style.visibility = '';
+            document.querySelectorAll('.nav-btn[data-tab]').forEach(b => b.classList.remove('drag-over'));
+            const target = el && el.closest('[data-tab]');
+            if (target && target !== btn) target.classList.add('drag-over');
+        }, { passive: false });
+
+        btn.addEventListener('touchend', e => {
+            if (!ts || ts.btn !== btn) return;
+            if (ts.isDragging) {
+                const touch = e.changedTouches[0];
+                btn.style.visibility = 'hidden';
+                const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                btn.style.visibility = '';
+                document.querySelectorAll('.nav-btn[data-tab]').forEach(b => b.classList.remove('drag-over'));
+                const target = el && el.closest('[data-tab]');
+                if (target && target !== btn) target.parentNode.insertBefore(btn, target);
+                btn.classList.remove('dragging');
+                nav_saveOrder();
+            }
+            ts = null;
+        }, { passive: true });
     });
 }
 

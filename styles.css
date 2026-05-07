@@ -762,7 +762,7 @@
                 color: var(--secondary);
                 border-bottom: none !important;
             }
-            .app-sidebar .nav-btn.drag-over { border-top: 3px solid var(--secondary); }
+            .app-sidebar .nav-btn.drag-over { border-top: 3px solid var(--secondary) !important; border-left: none !important; }
             .app-sidebar .nav-btn.dragging { opacity: 0.4; }
             .app-sidebar .nav-tabs > button:not([data-tab]) {
                 margin-top: 8px;
@@ -775,3 +775,127 @@
         }
         body.dark-mode .app-sidebar .nav-tabs { background: #1e293b; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
         body.dark-mode .app-sidebar .nav-btn.active { background: rgba(147,197,253,0.15); color: #93c5fd; }
+
+        /* drag feedback — todas las pantallas */
+        .nav-btn.dragging { opacity: 0.4; }
+        .nav-btn.drag-over { border-left: 3px solid var(--secondary) !important; }
+
+        /* ── Mobile drawer navigation ───────────────────────────── */
+        @media (max-width: 899px) {
+            #mobileNavBar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 10px 14px;
+                background: var(--card-bg);
+                border-radius: 12px;
+                margin-bottom: 16px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+                border: 1px solid var(--border);
+            }
+            #mobileActiveLabel {
+                font-size: 0.88em;
+                font-weight: 700;
+                color: var(--secondary);
+                flex: 1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            #mobileMenuBtn {
+                background: var(--secondary);
+                color: white;
+                border: none;
+                border-radius: 20px;
+                padding: 7px 14px;
+                font-size: 0.8em;
+                font-weight: 700;
+                cursor: pointer;
+                white-space: nowrap;
+                margin-left: 10px;
+                flex-shrink: 0;
+            }
+            #mobileDrawer {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.45);
+                z-index: 1050;
+                align-items: flex-end;
+            }
+            #mobileDrawer.open { display: flex; }
+            #mobileDrawerPanel {
+                background: var(--card-bg);
+                width: 100%;
+                border-radius: 20px 20px 0 0;
+                padding: 0 12px 32px;
+                max-height: 85vh;
+                overflow-y: auto;
+                box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
+            }
+            #mobileDrawerHeader {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px 4px 12px;
+                border-bottom: 1px solid var(--border);
+                margin-bottom: 10px;
+                font-weight: 700;
+                font-size: 0.9em;
+                color: var(--primary);
+                position: sticky;
+                top: 0;
+                background: var(--card-bg);
+                z-index: 1;
+            }
+            #mobileDrawerClose {
+                background: #f1f5f9;
+                border: none;
+                border-radius: 50%;
+                width: 32px;
+                height: 32px;
+                font-size: 1em;
+                cursor: pointer;
+                color: var(--primary);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            #mobileDrawerNav .nav-btn {
+                width: 100%;
+                text-align: left;
+                border-radius: 10px !important;
+                border-bottom: none !important;
+                padding: 12px 14px;
+                font-size: 0.88em;
+                white-space: normal;
+                box-sizing: border-box;
+            }
+            #mobileDrawerNav .nav-btn.active {
+                background: rgba(52,152,219,0.12);
+                color: var(--secondary);
+                border-bottom: none !important;
+            }
+            #mobileDrawerNav .nav-btn.drag-over {
+                border-top: 3px solid var(--secondary) !important;
+                border-left: none !important;
+            }
+            /* Botón Ayuda dentro del drawer */
+            #mobileDrawerNav button:not([data-tab]) {
+                width: 100%;
+                text-align: left;
+                border-radius: 10px !important;
+                border-bottom: none !important;
+                padding: 12px 14px;
+                font-size: 0.88em;
+                box-sizing: border-box;
+                margin-left: 0 !important;
+                margin-top: 4px;
+                border-top: 1px solid var(--border);
+            }
+        }
+        body.dark-mode #mobileNavBar { background: #1e293b; border-color: #334155; }
+        body.dark-mode #mobileDrawerPanel { background: #1e293b; }
+        body.dark-mode #mobileDrawerHeader { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+        body.dark-mode #mobileDrawerClose { background: #334155; color: #e2e8f0; }
+        body.dark-mode #mobileDrawerNav .nav-btn.active { background: rgba(147,197,253,0.15); color: #93c5fd; }
