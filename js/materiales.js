@@ -128,6 +128,15 @@ function mat_cambiarAño(dir) {
     mat_render();
 }
 
+function mat_toggleDesglose() {
+    const el = document.getElementById('mat-desglose-mensual');
+    const arrow = document.getElementById('mat-desglose-arrow');
+    if (!el) return;
+    const visible = el.style.display !== 'none';
+    el.style.display = visible ? 'none' : 'flex';
+    if (arrow) arrow.textContent = visible ? '▶' : '▼';
+}
+
 // Renderiza el panel de resumen anual
 function mat_render_anual() {
     const año = matAñoVista;
@@ -153,6 +162,14 @@ function mat_render_anual() {
     }
 
     mat_render_desglose_mensual(año, anuales);
+    // On desktop, keep desglose in its current open/closed state; default closed
+    const des = document.getElementById('mat-desglose-mensual');
+    const arrow = document.getElementById('mat-desglose-arrow');
+    if (des && window.innerWidth >= 900 && des.dataset.initialized !== '1') {
+        des.style.display = 'none';
+        if (arrow) arrow.textContent = '▶';
+        des.dataset.initialized = '1';
+    }
 }
 
 // Renderiza el desglose de períodos (15→14) con cada movimiento y su descripción
