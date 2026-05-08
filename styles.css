@@ -781,6 +781,7 @@
                 max-width: 1000px;
                 padding: 16px !important;
             }
+            #mat-btns-agregar { grid-column: 1 / -1; }
         }
         body.dark-mode .app-sidebar .nav-tabs { background: #1e293b; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
         body.dark-mode .app-sidebar .nav-btn.active { background: rgba(147,197,253,0.15); color: #93c5fd; }
