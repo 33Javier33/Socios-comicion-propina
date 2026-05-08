@@ -332,6 +332,20 @@ async function cargarHistorialSocio(id) {
                     procesarEntrada(a.fecha, 'Anticipo', 'Adelanto' + respInfo, Number(a.cantidad || a.monto || 0), a.uuid);
                 });
             }
+            // Tarjeta indicador de anticipos
+            const _cardAnts = document.getElementById('cardResumenAnticipos');
+            if (_cardAnts) {
+                const _ants = data.anticipos || [];
+                if (_ants.length > 0) {
+                    const _totalAnts = _ants.reduce((s, a) => s + Number(a.cantidad || a.monto || 0), 0);
+                    document.getElementById('anticiposCount').textContent = _ants.length;
+                    document.getElementById('anticiposTotal').textContent = formatearMoneda(_totalAnts);
+                    _cardAnts.style.display = 'block';
+                } else {
+                    _cardAnts.style.display = 'none';
+                }
+            }
+
             // Actualizar anticipos del socio activo para detección de duplicados
             gestionSocioAnticiposActuales = (data.anticipos || []).map(a => {
                 let f = a.fecha; if (f && f.includes('T')) f = f.split('T')[0];
