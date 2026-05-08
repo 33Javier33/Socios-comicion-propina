@@ -933,13 +933,22 @@
                 <!-- ── PERÍODO ACTUAL ──────────────────────────────── -->
                 <div style="background:white;border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,0.07);">
                     <!-- Navegación de período -->
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
                         <button onclick="mat_cambiarPeriodo(-1)" style="background:none;border:1px solid #e2e8f0;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1em;color:#2c3e50;">◀</button>
                         <div style="text-align:center;">
                             <div style="font-size:0.62em;color:#7f8c8d;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Período</div>
                             <div id="mat-periodo-label" style="font-weight:800;color:#1e3a5f;font-size:0.9em;">Cargando...</div>
                         </div>
                         <button onclick="mat_cambiarPeriodo(1)" style="background:none;border:1px solid #e2e8f0;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1em;color:#2c3e50;">▶</button>
+                    </div>
+                    <!-- Botones agregar -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                        <button onclick="mat_abrirModal('Ingreso')" style="padding:11px;background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:10px;font-weight:700;font-size:0.85em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 3px 10px rgba(5,150,105,0.3);">
+                            <span>↑</span> Agregar Ingreso
+                        </button>
+                        <button onclick="mat_abrirModal('Gasto')" style="padding:11px;background:linear-gradient(135deg,#dc2626,#ef4444);color:white;border:none;border-radius:10px;font-weight:700;font-size:0.85em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 3px 10px rgba(220,38,38,0.3);">
+                            <span>↓</span> Agregar Gasto
+                        </button>
                     </div>
                     <!-- Mini tarjetas del período -->
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
@@ -955,15 +964,6 @@
                             <div style="font-size:0.6em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Balance global</div>
                             <div id="mat-balance" style="font-size:0.85em;font-weight:800;color:#059669;margin-top:3px;">$0</div>
                         </div>
-                    </div>
-                    <!-- Botones agregar -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-                        <button onclick="mat_abrirModal('Ingreso')" style="padding:11px;background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:10px;font-weight:700;font-size:0.85em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 3px 10px rgba(5,150,105,0.3);">
-                            <span>↑</span> Agregar Ingreso
-                        </button>
-                        <button onclick="mat_abrirModal('Gasto')" style="padding:11px;background:linear-gradient(135deg,#dc2626,#ef4444);color:white;border:none;border-radius:10px;font-weight:700;font-size:0.85em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 3px 10px rgba(220,38,38,0.3);">
-                            <span>↓</span> Agregar Gasto
-                        </button>
                     </div>
                     <!-- Lista de movimientos del período -->
                     <div style="font-size:0.7em;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Movimientos del período</div>
