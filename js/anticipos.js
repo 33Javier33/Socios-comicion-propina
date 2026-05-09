@@ -333,17 +333,23 @@ async function cargarHistorialSocio(id) {
                 });
             }
             // Tarjeta indicador de anticipos
-            const _cardAnts = document.getElementById('cardResumenAnticipos');
-            if (_cardAnts) {
-                const _ants = data.anticipos || [];
-                if (_ants.length > 0) {
-                    const _totalAnts = _ants.reduce((s, a) => s + Number(a.cantidad || a.monto || 0), 0);
-                    document.getElementById('anticiposCount').textContent = _ants.length;
-                    document.getElementById('anticiposTotal').textContent = formatearMoneda(_totalAnts);
-                    _cardAnts.style.display = 'block';
-                } else {
-                    _cardAnts.style.display = 'none';
-                }
+            let _cardAnts = document.getElementById('cardResumenAnticipos');
+            if (!_cardAnts) {
+                _cardAnts = document.createElement('div');
+                _cardAnts.id = 'cardResumenAnticipos';
+                _cardAnts.style.cssText = 'display:none;background:#eff6ff;border:1.5px solid #93c5fd;border-radius:12px;padding:13px 14px;margin-bottom:10px;';
+                _cardAnts.innerHTML = '<div style="font-weight:800;color:#1d4ed8;font-size:0.85em;margin-bottom:10px;display:flex;align-items:center;gap:5px;">💰 Anticipos en el historial</div><div style="display:flex;gap:10px;flex-wrap:wrap;"><div style="background:white;border-radius:8px;padding:10px 12px;border:1px solid #bfdbfe;text-align:center;min-width:90px;"><span style="display:block;font-size:0.68em;text-transform:uppercase;font-weight:700;color:#1e40af;margin-bottom:4px;letter-spacing:0.04em;">Cantidad</span><span id="anticiposCount" style="font-size:1.3em;font-weight:900;color:#1d4ed8;">0</span></div><div style="background:white;border-radius:8px;padding:10px 12px;border:1px solid #bfdbfe;text-align:center;min-width:110px;"><span style="display:block;font-size:0.68em;text-transform:uppercase;font-weight:700;color:#1e40af;margin-bottom:4px;letter-spacing:0.04em;">Total solicitado</span><span id="anticiposTotal" style="font-size:1.15em;font-weight:900;color:#1d4ed8;">$0</span></div></div>';
+                const _cardAusRef = document.getElementById('cardResumenAusencias');
+                if (_cardAusRef) _cardAusRef.parentNode.insertBefore(_cardAnts, _cardAusRef);
+            }
+            const _ants = data.anticipos || [];
+            if (_ants.length > 0) {
+                const _totalAnts = _ants.reduce((s, a) => s + Number(a.cantidad || a.monto || 0), 0);
+                document.getElementById('anticiposCount').textContent = _ants.length;
+                document.getElementById('anticiposTotal').textContent = formatearMoneda(_totalAnts);
+                _cardAnts.style.display = 'block';
+            } else {
+                _cardAnts.style.display = 'none';
             }
 
             // Actualizar anticipos del socio activo para detección de duplicados
