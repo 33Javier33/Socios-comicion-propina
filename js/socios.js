@@ -76,7 +76,7 @@ function renderizarCards() {
                 <div class="card-body"><div><p style="margin:0; font-size:0.9em;">Antigüedad: ${socio.anios} años</p><small style="color:#7f8c8d;">${fechaVis}</small>${fipVis}</div><div class="points-badge"><span class="points-number">${socio.puntos}</span></div></div>
                 <div class="card-actions">
                     <button class="btn-card btn-edit" onclick="prepararEdicion('${socio.id}')">Editar</button>
-                    <button class="btn-card btn-info" onclick="verEstadoFinanciero('${socio.id}')">📊 Estado</button>
+                    <button class="btn-card btn-info" onclick="verEstadoFinanciero('${socio.id}')">&#128202; Estado</button>
                     <button class="btn-card btn-delete" onclick="eliminarSocio('${socio.id}')">Eliminar</button>
                 </div>
             `;
@@ -196,7 +196,7 @@ function verificarEscalamientos() {
     const ingresaronEstePeriodo = [];
 
     let periodoInicio, periodoFin;
-    if (diaActual >= 15) {
+    if (diaActual > 15) {
         periodoInicio = new Date(anioActual, mesActual, 15);
         periodoFin    = new Date(anioActual, mesActual + 1, 14);
     } else {
