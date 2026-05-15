@@ -56,12 +56,12 @@ function toggleLoader(show, text='Procesando...') {
 
 function formatearMoneda(valor) { return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(valor); }
 
-// Retorna clave del periodo actual (ej: "2026-04"). Usa la misma lógica del día 15 que el arqueo.
+// Retorna clave del periodo actual (ej: "2026-04"). Día 15 en adelante = mes actual (clave nueva para cierre).
 function calcularPeriodoClave() {
     const hoy = new Date();
     const anio = hoy.getFullYear();
     const mes  = hoy.getMonth(); // 0-based
-    if (hoy.getDate() > 15) {
+    if (hoy.getDate() >= 15) {
         return anio + '-' + String(mes + 1).padStart(2, '0');
     } else {
         const mesPrev  = mes === 0 ? 11 : mes - 1;
