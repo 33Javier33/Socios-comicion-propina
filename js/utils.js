@@ -61,7 +61,7 @@ function calcularPeriodoClave() {
     const hoy = new Date();
     const anio = hoy.getFullYear();
     const mes  = hoy.getMonth(); // 0-based
-    if (hoy.getDate() >= 15) {
+    if (hoy.getDate() > 15) {
         return anio + '-' + String(mes + 1).padStart(2, '0');
     } else {
         const mesPrev  = mes === 0 ? 11 : mes - 1;

@@ -12,7 +12,7 @@ function mat_monto(r) { return Math.round(Number(r.monto) || 0); }
 // Dado un string YYYY-MM-DD, retorna el inicio del período (siempre el 15).
 function mat_periodoDesFecha(fechaStr) {
     const [y, m, d] = fechaStr.split('-').map(Number);
-    if (d >= 15) {
+    if (d > 15) {
         return `${y}-${String(m).padStart(2,'0')}-15`;
     } else {
         const dt = new Date(y, m - 2, 15);
