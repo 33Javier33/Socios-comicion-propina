@@ -1,5 +1,6 @@
 // ============================================================
 // MÓDULO: AGREGAR DÍAS A MÚLTIPLES SOCIOS PART-TIME (BATCH)
+// Y REINICIO DE DÍAS PARA NUEVO PERÍODO
 // ============================================================
 
 let batchPTSociosSeleccionados = [];
@@ -273,4 +274,91 @@ async function batchPT_guardarDias() {
     } finally {
         toggleLoader(false);
     }
+}
+
+// ============================================================
+// MÓDULO: REINICIAR DÍAS PART-TIME PARA NUEVO PERÍODO
+// ============================================================
+
+function abrirModalReiniciarDiasPT() {
+    const partTimes = cacheSocios.filter(s => s.contrato === 'Part-Time');
+    if (partTimes.length === 0) {
+        showToast('No hay socios Part-Time registrados', 'error');
+        return;
+    }
+
+    const lista = document.getElementById('reiniciarPT-lista-socios');
+    let html = '<div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap;">';
+    html += '<button onclick="reiniciarPT_seleccionarTodos(true)" style="font-size:0.75em;padding:5px 10px;border:1px solid #e74c3c;background:#e74c3c;color:white;border-radius:5px;cursor:pointer;font-weight:600;">✓ Todos</button>';
+    html += '<button onclick="reiniciarPT_seleccionarTodos(false)" style="font-size:0.75em;padding:5px 10px;border:1px solid #e5e7eb;background:white;border-radius:5px;cursor:pointer;font-weight:600;">✕ Ninguno</button>';
+    html += '</div>';
+    html += '<div style="max-height:260px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#f9fafb;">';
+
+    partTimes.forEach(socio => {
+        const diasCount = (globalDiasPT[socio.id] || []).length;
+        const colorBadge = diasCount > 0 ? '#991b1b' : '#166534';
+        const bgBadge    = diasCount > 0 ? '#fef2f2' : '#f0fdf4';
+        html += `
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;margin:4px 0;border-radius:6px;background:white;border:1px solid #e5e7eb;cursor:pointer;">
+                <input type="checkbox" id="reiniciarPT-chk-${socio.id}" checked style="width:16px;height:16px;cursor:pointer;">
+                <span style="font-size:0.88em;flex:1;"><strong>${socio.nombre} ${socio.apellido}</strong></span>
+                <span style="font-size:0.72em;color:${colorBadge};background:${bgBadge};padding:2px 8px;border-radius:10px;font-weight:700;">${diasCount} días</span>
+            </label>`;
+    });
+
+    html += '</div>';
+    lista.innerHTML = html;
+    document.getElementById('modalReiniciarDiasPT').style.display = 'block';
+}
+
+function reiniciarPT_seleccionarTodos(seleccionar) {
+    cacheSocios.filter(s => s.contrato === 'Part-Time').forEach(socio => {
+        const chk = document.getElementById(`reiniciarPT-chk-${socio.id}`);
+        if (chk) chk.checked = seleccionar;
+    });
+}
+
+async function ejecutarReiniciarDiasPT() {
+    const partTimes = cacheSocios.filter(s => s.contrato === 'Part-Time');
+    const seleccionados = partTimes.filter(socio => {
+        const chk = document.getElementById(`reiniciarPT-chk-${socio.id}`);
+        return chk && chk.checked;
+    });
+
+    if (seleccionados.length === 0) {
+        showToast('Selecciona al menos un socio', 'error');
+        return;
+    }
+
+    const nombres = seleccionados.map(s => `${s.nombre} ${s.apellido}`).join('\n  • ');
+    if (!confirm(`¿Reiniciar días de ${seleccionados.length} socio(s) Part-Time?\n\n  • ${nombres}\n\nSe borrarán todos los días del período actual. Los datos quedan en el historial del servidor.`)) return;
+
+    document.getElementById('modalReiniciarDiasPT').style.display = 'none';
+    toggleLoader(true, 'Reiniciando días PT...');
+
+    let exitosos = 0, errores = 0;
+    for (const socio of seleccionados) {
+        try {
+            await callApiSocios('guardarDiasPartTime', {
+                id: socio.id,
+                nombre: `${socio.nombre} ${socio.apellido}`,
+                dias: []
+            });
+            globalDiasPT[socio.id] = [];
+            exitosos++;
+        } catch(e) {
+            errores++;
+        }
+    }
+
+    toggleLoader(false);
+    if (errores === 0) {
+        showToast(`✅ Días reiniciados para ${exitosos} socio(s) Part-Time`, 'success');
+        logAccion('RESET_DIAS_PT', `${exitosos} socios reiniciados`);
+    } else {
+        showToast(`${exitosos} OK — ${errores} con error. Verifica manualmente.`, 'error');
+    }
+
+    const idActivo = document.getElementById('gestionSocioId')?.value;
+    if (idActivo) cargarHistorialSocio(idActivo);
 }
