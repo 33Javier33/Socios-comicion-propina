@@ -808,6 +808,29 @@ async function ejecutarReinicioMes() {
     }
 }
 
+function abrirModalReiniciarAusencias() {
+    document.getElementById('modalReiniciarAusencias').style.display = 'block';
+}
+
+async function ejecutarReiniciarAusencias() {
+    document.getElementById('modalReiniciarAusencias').style.display = 'none';
+    toggleLoader(true, 'Archivando ausencias...');
+    try {
+        const hoy = new Date();
+        const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+        const tabNombre = `Ausencias_${MESES[hoy.getMonth()]}_${hoy.getFullYear()}`;
+        await callApiSocios('reiniciarExtras', { tabNombre });
+        showToast('✅ Ausencias archivadas en ' + tabNombre, 'success');
+        logAccion('Reiniciar Ausencias', `Archivado en ${tabNombre}`);
+        const idSocio = document.getElementById('gestionSocioId').value;
+        if(idSocio) cargarHistorialSocio(idSocio);
+    } catch(e) {
+        showToast('Error al reiniciar ausencias. Verifica que el backend tenga la acción reiniciarExtras.', 'error');
+    } finally {
+        toggleLoader(false);
+    }
+}
+
 async function cerrarMesSocio() {
     const id = document.getElementById('gestionSocioId').value;
     const nombre = document.getElementById('gestionSocioNombre').value;

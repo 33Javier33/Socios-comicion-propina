@@ -532,7 +532,10 @@
 
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:10px; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
                         <h3 style="margin:0;display:flex;align-items:center;gap:8px;">Historial <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-historial',this)" title="Ayuda rápida">?</button><div id="pop-historial" class="ayuda-popover"><div class="ayuda-popover-titulo">📋 Historial de movimientos</div><div class="ayuda-popover-texto">Muestra todos los anticipos y ausencias del socio en el período actual.</div><ol class="ayuda-popover-pasos"><li>Los anticipos aparecen en azul con monto negativo</li><li>Las ausencias en rojo</li><li><strong>Mantén presionado 1 segundo</strong> sobre un registro para eliminarlo</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Solo aparecen los movimientos del período activo (15 del mes anterior al 14 del mes actual).</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaIrA('anticipos')">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-historial')">✕</span></div></div></div><small style="color:#7f8c8d;font-weight:normal;font-size:0.75em;">(Mantén presionado para borrar)</small></h3>
-                        <button onclick="reiniciarAnticipos()" style="background:linear-gradient(135deg,#8e44ad,#6c3483); color:white; border:none; border-radius:8px; padding:8px 14px; font-size:0.8em; font-weight:700; cursor:pointer; white-space:nowrap;">🔄 Reinicio Mes</button>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            <button onclick="reiniciarAnticipos()" style="background:linear-gradient(135deg,#8e44ad,#6c3483); color:white; border:none; border-radius:8px; padding:8px 14px; font-size:0.8em; font-weight:700; cursor:pointer; white-space:nowrap;">🔄 Reinicio Mes</button>
+                            <button onclick="abrirModalReiniciarAusencias()" style="background:linear-gradient(135deg,#c0392b,#e74c3c); color:white; border:none; border-radius:8px; padding:8px 14px; font-size:0.8em; font-weight:700; cursor:pointer; white-space:nowrap;">📅 Reset Ausencias</button>
+                        </div>
                     </div>
                     <table class="history-table">
                         <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Monto</th></tr></thead>
@@ -642,6 +645,24 @@
                     <div style="display:flex; gap:10px; justify-content:center;">
                         <button class="btn-action" style="background:#999;" onclick="document.getElementById('modalReinicioMes').style.display='none'">Cancelar</button>
                         <button class="btn-action" style="background:#8e44ad;" onclick="ejecutarReinicioMes()">✅ Confirmar Reinicio</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL REINICIAR AUSENCIAS -->
+        <div id="modalReiniciarAusencias" class="modal">
+            <div class="modal-content" style="max-width:420px; margin-top:15%;">
+                <div class="modal-body" style="text-align:center; padding:28px;">
+                    <div style="font-size:2.5em; margin-bottom:10px;">📅</div>
+                    <h3 style="color:#c0392b; margin:0 0 10px;">Reinicio de Ausencias</h3>
+                    <p style="color:#7f8c8d; font-size:0.9em; margin-bottom:18px;">Archivará <strong>todas las ausencias del período actual</strong> en una pestaña de respaldo en Google Sheets y las borrará de la hoja activa.<br><br>Los saldos y anticipos <strong>no se modifican</strong>.</p>
+                    <div style="background:#fef2f2; border:1px solid #fca5a5; border-radius:10px; padding:12px 14px; margin-bottom:16px; text-align:left; font-size:0.82em; color:#991b1b;">
+                        <strong>⚠️ Requisito:</strong> El backend de Google Apps Script debe tener la acción <code>reiniciarExtras</code>. Si no la tiene, el botón mostrará un error.
+                    </div>
+                    <div style="display:flex; gap:10px; justify-content:center;">
+                        <button class="btn-action" style="background:#999;" onclick="document.getElementById('modalReiniciarAusencias').style.display='none'">Cancelar</button>
+                        <button class="btn-action" style="background:#c0392b;" onclick="ejecutarReiniciarAusencias()">📅 Confirmar Reinicio</button>
                     </div>
                 </div>
             </div>
