@@ -349,6 +349,7 @@
                         <button id="filtroGestionAnticipos" onclick="setFiltroGestion('anticipos')" style="flex:1; padding:6px 8px; border:1px solid var(--warning); background:white; color:var(--warning); border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">💰 Anticipos</button>
                         <button id="filtroGestionAusencias" onclick="setFiltroGestion('ausencias')" style="flex:1; padding:6px 8px; border:1px solid var(--danger); background:white; color:var(--danger); border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">📅 Ausencias</button>
                         <button onclick="abrirModalBatchDiasPartTime()" style="flex:1; padding:6px 8px; border:1px solid #7c3aed; background:#7c3aed; color:white; border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s; white-space:nowrap;">➕ Batch PT</button>
+                        <button onclick="abrirModalReiniciarDiasPT()" style="flex:1; padding:6px 8px; border:1px solid #e74c3c; background:white; color:#e74c3c; border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s; white-space:nowrap;">🔄 Reset PT</button>
                     </div>
                     <div id="filtroGestionInfo" style="font-size:0.75em; color:#7f8c8d; margin-bottom:6px; min-height:16px;"></div>
                     <input type="text" id="buscadorGestion" placeholder="Escribe nombre o apellido..." onkeyup="filtrarSociosGestion()" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ddd; border-radius:8px;">
@@ -782,6 +783,26 @@
             </div>
         </div>
 
+
+        <!-- MODAL: REINICIAR DÍAS PART-TIME -->
+        <div id="modalReiniciarDiasPT" class="modal">
+            <div class="modal-content" style="max-width:520px;">
+                <div class="modal-header" style="background:linear-gradient(135deg,#e74c3c,#c0392b);">
+                    <h2 style="color:white; margin:0; display:flex; align-items:center; gap:8px;">🔄 Reiniciar Días Part-Time</h2>
+                    <span class="close-modal" onclick="document.getElementById('modalReiniciarDiasPT').style.display='none'" style="color:white;">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:0.82em;color:#991b1b;">
+                        <strong>⚠️ Atención:</strong> Esta acción borrará todos los días del período actual para los socios seleccionados. Úsala al iniciar un nuevo mes, después del cierre.
+                    </div>
+                    <div id="reiniciarPT-lista-socios" style="min-height:100px;"></div>
+                    <div style="display:flex; gap:10px; margin-top:14px;">
+                        <button onclick="ejecutarReiniciarDiasPT()" class="btn-submit" style="flex:1; background:linear-gradient(135deg,#e74c3c,#c0392b); border:none;">🗑️ Confirmar Reinicio</button>
+                        <button onclick="document.getElementById('modalReiniciarDiasPT').style.display='none'" class="btn-submit" style="flex:1; background:#999; border:none;">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- MODAL EDICITAR / AGREGAR RECAUDACIÓN -->
         <div id="modalRecEditar" class="modal">
