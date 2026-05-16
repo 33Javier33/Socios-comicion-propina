@@ -265,7 +265,7 @@ function abrirModalRegistro() { document.getElementById('modalRegistro').style.d
 function cerrarModalRegistro() { document.getElementById('modalRegistro').style.display = 'none'; isEditing = false; document.getElementById('registroForm').reset(); document.getElementById('editId').value = ''; document.getElementById('fechaInicioPuntos').value = ''; }
 
 window.addEventListener('click', function(e) {
-    ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats','modalCanje','modalEditarAnticipo','modalReinicioMes','modalAyudaCompleta','modalBuscadorIDs'].forEach(id => {
+    ['aq-modalConteo','aq-modalBackup','aq-modalEdicion','aq-modalStats','modalCanje','modalEditarAnticipo','modalReinicioMes','modalAyudaCompleta','modalBuscadorIDs','modalReiniciarDiasPT'].forEach(id => {
         const el = document.getElementById(id);
         if(el && e.target === el) el.style.display = 'none';
     });

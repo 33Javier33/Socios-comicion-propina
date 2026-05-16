@@ -959,6 +959,18 @@ async function ejecutarCierreTodos() {
     // Guardar flag para que los escalamientos sepan que el cierre ya fue ejecutado
     if (exitosos > 0) {
         localStorage.setItem('fondo_cierre_todos_' + calcularPeriodoClave(), '1');
+
+        // Archivar y limpiar anticipos del período cerrado
+        try {
+            const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+            const ahora = new Date();
+            const tabNombre = `Anticipos_${MESES[ahora.getMonth()]}_${ahora.getFullYear()}`;
+            status.textContent = 'Archivando anticipos del período...';
+            await callApiSocios('reiniciarAnticipos', { tabNombre });
+            showToast(`Anticipos archivados en ${tabNombre}`, 'success');
+        } catch(e) {
+            showToast('Remanentes guardados pero error al archivar anticipos. Usa "Reinicio Mes" manualmente.', 'error');
+        }
     }
 
     const idActivo = document.getElementById('gestionSocioId').value;
