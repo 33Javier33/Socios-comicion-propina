@@ -480,6 +480,11 @@ function handleRequest(e, method) {
         responseData = { status: 'success', message: 'Anticipos archivados' };
         break;
 
+      case 'reiniciarExtras':
+        reiniciarExtras(payload.tabNombre, payload.responsable);
+        responseData = { status: 'success', message: 'Ausencias archivadas' };
+        break;
+
       case 'borrarMovimiento':
         const borradoExito = borrarMovimientoGlobal(payload.uuid, payload.tipo, payload.responsable, payload.detalle);
         responseData = borradoExito
@@ -915,6 +920,30 @@ function reiniciarAnticipos(tabNombre, usuario) {
   registrarAuditoria(
     usuario || 'Desconocido',
     'Reiniciar Anticipos',
+    'Registros archivados: ' + numRows + ' | Pestaña de respaldo: ' + tabNombre,
+    tabNombre
+  );
+}
+
+function reiniciarExtras(tabNombre, usuario) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sExt = ss.getSheetByName(HOJA_EXTRAS);
+  if (!sExt || sExt.getLastRow() <= 1) return;
+  const numRows = sExt.getLastRow() - 1;
+  const numCols = sExt.getLastColumn();
+  const datos = sExt.getRange(2, 1, numRows, numCols).getValues();
+  const fechaArchivo = new Date();
+  let tabRespaldo = ss.getSheetByName(tabNombre);
+  if (!tabRespaldo) {
+    tabRespaldo = ss.insertSheet(tabNombre);
+    tabRespaldo.appendRow(['ID Socio', 'Nombre', 'Fecha', 'Tipo', 'Monto', 'Detalle/Nota', 'Estado', 'UUID', 'FechaArchivo']);
+  }
+  const datosConFecha = datos.map(r => [...r.slice(0, numCols), fechaArchivo]);
+  tabRespaldo.getRange(tabRespaldo.getLastRow() + 1, 1, datosConFecha.length, datosConFecha[0].length).setValues(datosConFecha);
+  sExt.getRange(2, 1, numRows, numCols).clearContent();
+  registrarAuditoria(
+    usuario || 'Desconocido',
+    'Reiniciar Ausencias',
     'Registros archivados: ' + numRows + ' | Pestaña de respaldo: ' + tabNombre,
     tabNombre
   );
