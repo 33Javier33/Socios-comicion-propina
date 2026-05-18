@@ -242,16 +242,23 @@ async function guardarSaldoAnterior() {
 // ── Historial de anticipos de meses anteriores ───────────────
 let _antAntAbierto = false;
 let _antAntCargado = false;
+let _antAntData = [];
+
+const _MESES_ES = {'ENERO':'Enero','FEBRERO':'Febrero','MARZO':'Marzo','ABRIL':'Abril','MAYO':'Mayo','JUNIO':'Junio','JULIO':'Julio','AGOSTO':'Agosto','SEPTIEMBRE':'Septiembre','OCTUBRE':'Octubre','NOVIEMBRE':'Noviembre','DICIEMBRE':'Diciembre'};
+const _MESES_ORD = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
 
 function _antAntReset() {
     _antAntAbierto = false;
     _antAntCargado = false;
+    _antAntData = [];
     const panel = document.getElementById('panelAnticiposAnt');
     const icon = document.getElementById('antAntToggleIcon');
     const contenido = document.getElementById('antAntContenido');
+    const filtros = document.getElementById('antAntFiltros');
     if (panel) panel.style.display = 'none';
     if (icon) icon.style.transform = '';
     if (contenido) contenido.innerHTML = '';
+    if (filtros) filtros.style.display = 'none';
 }
 
 function toggleAnticiposAnt() {
@@ -274,52 +281,151 @@ async function cargarAnticiposAnteriores(idSocio, nombreSocio) {
     loader.style.display = 'block';
     contenido.innerHTML = '';
     _antAntCargado = false;
+    _antAntData = [];
     try {
         const res = await callApiSocios('getHistorialAnticiposSocio', { idSocio, nombreSocio });
         loader.style.display = 'none';
         _antAntCargado = true;
-        if (!res.data || res.data.length === 0) {
-            contenido.innerHTML = '<div style="text-align:center;color:#64748b;font-size:0.85em;padding:20px;">Sin anticipos en meses anteriores.</div>';
-            return;
-        }
-        let totalGeneral = 0;
-        let html = '';
-        res.data.forEach(({ tab, registros }) => {
-            const mes = tab.replace('Anticipos_', '').replace(/_/g, ' ');
-            const totalMes = registros.reduce((s, r) => s + (parseFloat(r.monto) || 0), 0);
-            totalGeneral += totalMes;
-            html += `<div style="margin-bottom:14px;border-radius:8px;overflow:hidden;border:1px solid #dbeafe;">
-                <div style="background:#dbeafe;padding:7px 12px;display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-weight:700;color:#1e40af;font-size:0.82em;">📅 ${mes}</span>
-                    <span style="font-weight:800;color:#1e40af;font-size:0.83em;">${formatearMoneda(totalMes)}</span>
-                </div>
-                <table style="width:100%;border-collapse:collapse;font-size:0.79em;">
-                    <thead><tr style="background:#eff6ff;">
-                        <th style="padding:5px 8px;text-align:left;color:#1e40af;font-weight:700;">Fecha</th>
-                        <th style="padding:5px 8px;text-align:right;color:#1e40af;font-weight:700;">Monto</th>
-                        <th style="padding:5px 8px;text-align:left;color:#1e40af;font-weight:700;">Estado</th>
-                        <th style="padding:5px 8px;text-align:left;color:#1e40af;font-weight:700;">Responsable</th>
-                    </tr></thead>
-                    <tbody>`;
-            registros.forEach(r => {
-                html += `<tr style="border-bottom:1px solid #e0f2fe;">
-                    <td style="padding:5px 8px;color:#374151;">${r.fecha || '-'}</td>
-                    <td style="padding:5px 8px;text-align:right;font-weight:700;color:#1d4ed8;">${formatearMoneda(parseFloat(r.monto)||0)}</td>
-                    <td style="padding:5px 8px;color:#374151;">${r.estado || '-'}</td>
-                    <td style="padding:5px 8px;color:#374151;">${r.responsable || '-'}</td>
-                </tr>`;
-            });
-            html += `</tbody></table></div>`;
-        });
-        const totalHtml = `<div style="background:#1e40af;color:white;border-radius:8px;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-size:0.85em;">
-            <span style="font-weight:700;">💰 Total histórico</span>
-            <span style="font-weight:900;font-size:1.05em;">${formatearMoneda(totalGeneral)}</span>
-        </div>`;
-        contenido.innerHTML = totalHtml + html;
+        _antAntData = res.data || [];
+        antAnt_renderFiltros();
+        antAnt_render();
     } catch(e) {
         loader.style.display = 'none';
         contenido.innerHTML = '<div style="text-align:center;color:#e74c3c;font-size:0.85em;padding:16px;">Error al cargar. Actualiza el backend con la acción <code>getHistorialAnticiposSocio</code>.</div>';
     }
+}
+
+function antAnt_parseTab(tab) {
+    const parts = tab.replace('Anticipos_', '').split('_');
+    return { mes: parts[0] || '', año: parts[1] || '????' };
+}
+
+function antAnt_renderFiltros() {
+    const filtrosEl = document.getElementById('antAntFiltros');
+    if (!filtrosEl) return;
+    if (!_antAntData.length) { filtrosEl.style.display = 'none'; return; }
+
+    const años = [...new Set(_antAntData.map(d => antAnt_parseTab(d.tab).año))].sort((a,b) => b.localeCompare(a));
+    const meses = [...new Set(_antAntData.map(d => antAnt_parseTab(d.tab).mes))].sort((a,b) => _MESES_ORD.indexOf(a) - _MESES_ORD.indexOf(b));
+
+    filtrosEl.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;background:#f1f5f9;border-radius:8px;padding:8px 10px;';
+    filtrosEl.innerHTML = `<span style="font-size:0.78em;font-weight:700;color:#475569;">Filtrar:</span>
+        <select id="antAntFiltroAno" onchange="antAnt_render()" style="padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.8em;color:#374151;cursor:pointer;">
+            <option value="">Todos los años</option>
+            ${años.map(a => `<option value="${a}">${a}</option>`).join('')}
+        </select>
+        <select id="antAntFiltroMes" onchange="antAnt_render()" style="padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.8em;color:#374151;cursor:pointer;">
+            <option value="">Todos los meses</option>
+            ${meses.map(m => `<option value="${m}">${_MESES_ES[m] || m}</option>`).join('')}
+        </select>`;
+}
+
+function antAnt_render() {
+    const contenido = document.getElementById('antAntContenido');
+    if (!contenido) return;
+    const filtroAno = (document.getElementById('antAntFiltroAno') || {}).value || '';
+    const filtroMes = (document.getElementById('antAntFiltroMes') || {}).value || '';
+
+    if (!_antAntData.length) {
+        contenido.innerHTML = '<div style="text-align:center;color:#64748b;font-size:0.85em;padding:20px;">Sin anticipos en meses anteriores.</div>';
+        return;
+    }
+
+    // Agrupar por año
+    const porAno = {};
+    _antAntData.forEach(({ tab, registros }) => {
+        const { mes, año } = antAnt_parseTab(tab);
+        if (filtroAno && año !== filtroAno) return;
+        if (filtroMes && mes !== filtroMes) return;
+        if (!porAno[año]) porAno[año] = [];
+        porAno[año].push({ mes, tab, registros });
+    });
+
+    const años = Object.keys(porAno).sort((a,b) => b.localeCompare(a));
+    if (!años.length) {
+        contenido.innerHTML = '<div style="text-align:center;color:#64748b;font-size:0.85em;padding:20px;">Sin resultados para los filtros seleccionados.</div>';
+        return;
+    }
+
+    let totalGeneral = 0;
+    let html = '';
+
+    años.forEach((año, anoIdx) => {
+        const meses = porAno[año].sort((a,b) => _MESES_ORD.indexOf(b.mes) - _MESES_ORD.indexOf(a.mes));
+        const totalAno = meses.reduce((s,m) => s + m.registros.reduce((ss,r) => ss + (parseFloat(r.monto)||0), 0), 0);
+        totalGeneral += totalAno;
+        const anoOpen = anoIdx === 0;
+
+        html += `<div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1.5px solid #bfdbfe;">
+            <div onclick="antAntToggleYear('${año}')" style="background:#1e40af;color:white;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;">
+                <span style="font-weight:800;font-size:0.9em;">📆 ${año}</span>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:0.82em;opacity:0.85;">${meses.length} mes${meses.length!==1?'es':''}</span>
+                    <span style="font-weight:800;font-size:0.88em;">${formatearMoneda(totalAno)}</span>
+                    <span id="antAntYearIcon-${año}" style="font-size:0.8em;">${anoOpen?'▲':'▼'}</span>
+                </div>
+            </div>
+            <div id="antAntYear-${año}" style="display:${anoOpen?'block':'none'};">`;
+
+        meses.forEach((mesData, mesIdx) => {
+            const mesOpen = anoIdx === 0 && mesIdx === 0;
+            const totalMes = mesData.registros.reduce((s,r) => s + (parseFloat(r.monto)||0), 0);
+            const mesId = `${mesData.mes}_${año}`;
+
+            html += `<div style="border-bottom:1px solid #dbeafe;">
+                <div onclick="antAntToggleMes('${mesId}')" style="background:#eff6ff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;">
+                    <span style="font-weight:700;color:#1e40af;font-size:0.83em;">📅 ${_MESES_ES[mesData.mes]||mesData.mes}</span>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:0.75em;color:#64748b;">${mesData.registros.length} registro${mesData.registros.length!==1?'s':''}</span>
+                        <span style="font-weight:800;color:#1e40af;font-size:0.83em;">${formatearMoneda(totalMes)}</span>
+                        <span id="antAntMesIcon-${mesId}" style="color:#1e40af;font-size:0.72em;">${mesOpen?'▲':'▼'}</span>
+                    </div>
+                </div>
+                <div id="antAntMes-${mesId}" style="display:${mesOpen?'block':'none'};">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.79em;">
+                        <thead><tr style="background:#dbeafe;">
+                            <th style="padding:5px 10px;text-align:left;color:#1e40af;font-weight:700;">Fecha</th>
+                            <th style="padding:5px 10px;text-align:right;color:#1e40af;font-weight:700;">Monto</th>
+                            <th style="padding:5px 10px;text-align:left;color:#1e40af;font-weight:700;">Estado</th>
+                            <th style="padding:5px 10px;text-align:left;color:#1e40af;font-weight:700;">Responsable</th>
+                        </tr></thead>
+                        <tbody>`;
+            mesData.registros.forEach(r => {
+                html += `<tr style="border-bottom:1px solid #f0f9ff;">
+                    <td style="padding:5px 10px;color:#374151;">${r.fecha||'-'}</td>
+                    <td style="padding:5px 10px;text-align:right;font-weight:700;color:#1d4ed8;">${formatearMoneda(parseFloat(r.monto)||0)}</td>
+                    <td style="padding:5px 10px;color:#374151;">${r.estado||'-'}</td>
+                    <td style="padding:5px 10px;color:#374151;">${r.responsable||'-'}</td>
+                </tr>`;
+            });
+            html += `</tbody></table></div></div>`;
+        });
+        html += `</div></div>`;
+    });
+
+    const totalHtml = `<div style="background:#1e40af;color:white;border-radius:8px;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:0.85em;">
+        <span style="font-weight:700;">💰 Total histórico</span>
+        <span style="font-weight:900;font-size:1.05em;">${formatearMoneda(totalGeneral)}</span>
+    </div>`;
+    contenido.innerHTML = totalHtml + html;
+}
+
+function antAntToggleYear(año) {
+    const body = document.getElementById(`antAntYear-${año}`);
+    const icon = document.getElementById(`antAntYearIcon-${año}`);
+    if (!body) return;
+    const open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    if (icon) icon.textContent = open ? '▼' : '▲';
+}
+
+function antAntToggleMes(mesId) {
+    const body = document.getElementById(`antAntMes-${mesId}`);
+    const icon = document.getElementById(`antAntMesIcon-${mesId}`);
+    if (!body) return;
+    const open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    if (icon) icon.textContent = open ? '▼' : '▲';
 }
 
 async function cargarHistorialSocio(id) {
