@@ -324,7 +324,8 @@ async function cargarAnticiposAnteriores(idSocio, nombreSocio) {
 
 async function cargarHistorialSocio(id) {
     _antAntReset();
-    document.getElementById('seccionAnticiposAnt').style.display = 'block';
+    const _secAnt = document.getElementById('seccionAnticiposAnt');
+    if (_secAnt) _secAnt.style.display = 'block';
     const tbody = document.getElementById('tablaHistorial');
     tbody.innerHTML = Array(3).fill(`<tr>
         <td><div style="height:14px;background:#eee;border-radius:4px;width:70px;animation:shimmer 1.2s infinite alternate;"></div></td>
