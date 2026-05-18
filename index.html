@@ -541,6 +541,18 @@
                         <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Monto</th></tr></thead>
                         <tbody id="tablaHistorial"></tbody>
                     </table>
+
+                    <!-- ANTICIPOS DE MESES ANTERIORES -->
+                    <div id="seccionAnticiposAnt" style="display:none; margin-top:16px; border-radius:12px; border:1.5px solid #dbeafe; overflow:hidden; background:white;">
+                        <div onclick="toggleAnticiposAnt()" style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; cursor:pointer; background:#eff6ff; user-select:none;">
+                            <span style="font-weight:700; color:#1d4ed8; font-size:0.85em; display:flex; align-items:center; gap:7px;">📚 Anticipos de Meses Anteriores</span>
+                            <span id="antAntToggleIcon" style="color:#1d4ed8; font-size:0.75em; transition:transform 0.25s;">▼</span>
+                        </div>
+                        <div id="panelAnticiposAnt" style="display:none; padding:14px;">
+                            <div id="antAntLoader" style="text-align:center; color:#64748b; font-size:0.85em; padding:20px; display:none;">Cargando historial...</div>
+                            <div id="antAntContenido"></div>
+                        </div>
+                    </div>
                 </div>
                 <div id="mensajeSeleccion" style="display:flex; justify-content:center; align-items:center; color:#7f8c8d; height:300px; background:white; border-radius:12px;">Selecciona un socio para gestionar.</div>
             </div>

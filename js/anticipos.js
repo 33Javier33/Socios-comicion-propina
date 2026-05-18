@@ -239,7 +239,92 @@ async function guardarSaldoAnterior() {
     } catch(e) { showToast('Error al guardar saldo', 'error'); } finally { toggleLoader(false); }
 }
 
+// ── Historial de anticipos de meses anteriores ───────────────
+let _antAntAbierto = false;
+let _antAntCargado = false;
+
+function _antAntReset() {
+    _antAntAbierto = false;
+    _antAntCargado = false;
+    const panel = document.getElementById('panelAnticiposAnt');
+    const icon = document.getElementById('antAntToggleIcon');
+    const contenido = document.getElementById('antAntContenido');
+    if (panel) panel.style.display = 'none';
+    if (icon) icon.style.transform = '';
+    if (contenido) contenido.innerHTML = '';
+}
+
+function toggleAnticiposAnt() {
+    _antAntAbierto = !_antAntAbierto;
+    const panel = document.getElementById('panelAnticiposAnt');
+    const icon = document.getElementById('antAntToggleIcon');
+    if (panel) panel.style.display = _antAntAbierto ? 'block' : 'none';
+    if (icon) icon.style.transform = _antAntAbierto ? 'rotate(180deg)' : '';
+    if (_antAntAbierto && !_antAntCargado) {
+        const idSocio = document.getElementById('gestionSocioId').value;
+        const nombreSocio = document.getElementById('gestionSocioNombre').value;
+        cargarAnticiposAnteriores(idSocio, nombreSocio);
+    }
+}
+
+async function cargarAnticiposAnteriores(idSocio, nombreSocio) {
+    const contenido = document.getElementById('antAntContenido');
+    const loader = document.getElementById('antAntLoader');
+    if (!contenido || !loader) return;
+    loader.style.display = 'block';
+    contenido.innerHTML = '';
+    _antAntCargado = false;
+    try {
+        const res = await callApiSocios('getHistorialAnticiposSocio', { idSocio, nombreSocio });
+        loader.style.display = 'none';
+        _antAntCargado = true;
+        if (!res.data || res.data.length === 0) {
+            contenido.innerHTML = '<div style="text-align:center;color:#64748b;font-size:0.85em;padding:20px;">Sin anticipos en meses anteriores.</div>';
+            return;
+        }
+        let totalGeneral = 0;
+        let html = '';
+        res.data.forEach(({ tab, registros }) => {
+            const mes = tab.replace('Anticipos_', '').replace(/_/g, ' ');
+            const totalMes = registros.reduce((s, r) => s + (parseFloat(r.monto) || 0), 0);
+            totalGeneral += totalMes;
+            html += `<div style="margin-bottom:14px;border-radius:8px;overflow:hidden;border:1px solid #dbeafe;">
+                <div style="background:#dbeafe;padding:7px 12px;display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-weight:700;color:#1e40af;font-size:0.82em;">📅 ${mes}</span>
+                    <span style="font-weight:800;color:#1e40af;font-size:0.83em;">${formatearMoneda(totalMes)}</span>
+                </div>
+                <table style="width:100%;border-collapse:collapse;font-size:0.79em;">
+                    <thead><tr style="background:#eff6ff;">
+                        <th style="padding:5px 8px;text-align:left;color:#1e40af;font-weight:700;">Fecha</th>
+                        <th style="padding:5px 8px;text-align:right;color:#1e40af;font-weight:700;">Monto</th>
+                        <th style="padding:5px 8px;text-align:left;color:#1e40af;font-weight:700;">Estado</th>
+                        <th style="padding:5px 8px;text-align:left;color:#1e40af;font-weight:700;">Responsable</th>
+                    </tr></thead>
+                    <tbody>`;
+            registros.forEach(r => {
+                html += `<tr style="border-bottom:1px solid #e0f2fe;">
+                    <td style="padding:5px 8px;color:#374151;">${r.fecha || '-'}</td>
+                    <td style="padding:5px 8px;text-align:right;font-weight:700;color:#1d4ed8;">${formatearMoneda(parseFloat(r.monto)||0)}</td>
+                    <td style="padding:5px 8px;color:#374151;">${r.estado || '-'}</td>
+                    <td style="padding:5px 8px;color:#374151;">${r.responsable || '-'}</td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
+        });
+        const totalHtml = `<div style="background:#1e40af;color:white;border-radius:8px;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-size:0.85em;">
+            <span style="font-weight:700;">💰 Total histórico</span>
+            <span style="font-weight:900;font-size:1.05em;">${formatearMoneda(totalGeneral)}</span>
+        </div>`;
+        contenido.innerHTML = totalHtml + html;
+    } catch(e) {
+        loader.style.display = 'none';
+        contenido.innerHTML = '<div style="text-align:center;color:#e74c3c;font-size:0.85em;padding:16px;">Error al cargar. Actualiza el backend con la acción <code>getHistorialAnticiposSocio</code>.</div>';
+    }
+}
+
 async function cargarHistorialSocio(id) {
+    _antAntReset();
+    document.getElementById('seccionAnticiposAnt').style.display = 'block';
     const tbody = document.getElementById('tablaHistorial');
     tbody.innerHTML = Array(3).fill(`<tr>
         <td><div style="height:14px;background:#eee;border-radius:4px;width:70px;animation:shimmer 1.2s infinite alternate;"></div></td>

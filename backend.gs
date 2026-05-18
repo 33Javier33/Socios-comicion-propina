@@ -563,6 +563,10 @@ function handleRequest(e, method) {
         responseData = { status: 'success', data: getRetirosAnticipos() };
         break;
 
+      case 'getHistorialAnticiposSocio':
+        responseData = { status: 'success', data: getHistorialAnticiposSocio(payload.idSocio, payload.nombreSocio) };
+        break;
+
       case 'registrarMaterial': registrarMaterial(payload); responseData = { status: 'success' }; break;
       case 'borrarMaterial': borrarMaterial(payload.uuid, payload.responsable); responseData = { status: 'success' }; break;
       case 'getAllMaterialesDesdeSheets': responseData = { status: 'success', data: getAllMaterialesDesdeSheets() }; break;
@@ -947,6 +951,44 @@ function reiniciarExtras(tabNombre, usuario) {
     'Registros archivados: ' + numRows + ' | Pestaña de respaldo: ' + tabNombre,
     tabNombre
   );
+}
+
+function getHistorialAnticiposSocio(idSocio, nombreSocio) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets();
+  const resultado = [];
+  const idStr = String(idSocio || '').trim();
+  const nomStr = String(nombreSocio || '').trim().toLowerCase();
+
+  sheets.forEach(function(sheet) {
+    const nombre = sheet.getName();
+    if (!nombre.startsWith('Anticipos_')) return;
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return;
+    const datos = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+    const registros = datos.filter(function(row) {
+      const sheetId = String(row[0]).trim();
+      const sheetNom = String(row[1]).trim().toLowerCase();
+      if (idStr && sheetId === idStr) return true;
+      if (nomStr && sheetNom.includes(nomStr)) return true;
+      return false;
+    }).map(function(row) {
+      return {
+        tab: nombre,
+        idSocio: row[0],
+        nombre: row[1],
+        fecha: row[2] instanceof Date ? Utilities.formatDate(row[2], Session.getScriptTimeZone(), 'dd/MM/yyyy') : String(row[2]),
+        monto: row[3],
+        estado: row[4],
+        responsable: row[6],
+        areaResponsable: row[7]
+      };
+    });
+    if (registros.length > 0) resultado.push({ tab: nombre, registros: registros });
+  });
+
+  resultado.sort(function(a, b) { return b.tab.localeCompare(a.tab); });
+  return resultado;
 }
 
 function registrarSaldo(id, nombre, monto, usuario) {
