@@ -68,10 +68,23 @@ async function informeAnticipos() {
 
         if (!filas.length) { toggleLoader(false); return showToast('No hay anticipos en el período actual', 'error'); }
 
-        // ── DOS COLUMNAS LADO A LADO (como el Excel) ─────────
-        const mitad = Math.ceil(filas.length / 2);
-        const col1  = filas.slice(0, mitad);
-        const col2  = filas.slice(mitad);
+        // ── DOS COLUMNAS: dividir en grupos completos (nunca cortar en medio de un socio) ───
+        const grupos = [];
+        let gActual = null;
+        filas.forEach(function(f) {
+            if (f.nombre) { gActual = { filas: [] }; grupos.push(gActual); }
+            if (gActual) gActual.filas.push(f);
+        });
+        // Buscar el límite de grupo más cercano a la mitad del total de filas
+        const totalFilas = filas.length;
+        let acumG = 0, splitIdx = Math.ceil(grupos.length / 2), mejorDif = Infinity;
+        grupos.forEach(function(g, i) {
+            acumG += g.filas.length;
+            const dif = Math.abs(acumG - totalFilas / 2);
+            if (dif < mejorDif) { mejorDif = dif; splitIdx = i + 1; }
+        });
+        const col1 = grupos.slice(0, splitIdx).reduce(function(acc, g) { return acc.concat(g.filas); }, []);
+        const col2 = grupos.slice(splitIdx).reduce(function(acc, g) { return acc.concat(g.filas); }, []);
 
         const ths = 'background:#2c3e50;color:white;padding:2px 3px;font-size:7.5px;border:1px solid #1a252f;text-align:center;overflow:hidden;';
         const thead2 = '<thead><tr>'
@@ -88,7 +101,6 @@ async function informeAnticipos() {
                 { bg:'#ffffff', borde:'#ccc', txt:'#1a1a1a', totalBg:'#f0f0f0', totalTxt:'#c0392b' },
                 { bg:'#e8f4fd', borde:'#aed6f1', txt:'#0d3a6e', totalBg:'#aed6f1', totalTxt:'#0d3a6e' },
             ];
-            // Agrupar filas por socio para evitar cortes de página
             var grupos = [];
             var grupoActual = null;
             var colorIdx = 0;
@@ -100,7 +112,6 @@ async function informeAnticipos() {
                 }
                 if (grupoActual) grupoActual.filas.push(f);
             });
-            // Cada grupo va en su propio <tbody> con page-break-inside:avoid
             return grupos.map(function(g) {
                 var col = g.col;
                 var filasHtml = g.filas.map(function(f) {
@@ -114,7 +125,6 @@ async function informeAnticipos() {
                         + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:right;font-weight:700;font-size:7.5px;color:'+col.txt+';">'+fmt(f.valor)+'</td>'
                         + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-size:7px;color:'+col.txt+';">'+(f.responsable ? f.responsable+(f.respArea ? ' '+f.respArea : '') : '')+'</td>'
                         + '</tr>';
-                    // Fila de TOTAL al final del grupo
                     if (f.totalSocio !== null) {
                         filaHtml += '<tr style="background:'+col.totalBg+';line-height:1.1;">'
                             + '<td style="padding:1px 3px;border:1px solid '+col.borde+';font-size:7.5px;border-top:1.5px solid '+col.totalTxt+';" colspan="3"></td>'
@@ -125,7 +135,6 @@ async function informeAnticipos() {
                     }
                     return filaHtml;
                 }).join('');
-                // tbody con page-break-inside:avoid — no corta al imprimir
                 return '<tbody style="page-break-inside:avoid;break-inside:avoid;">' + filasHtml + '</tbody>';
             }).join('');
         }
@@ -139,11 +148,12 @@ async function informeAnticipos() {
             + 'h1 { font-size:13px; text-align:center; font-weight:900; letter-spacing:1px; margin-bottom:2px; }'
             + '.sub { text-align:center; font-size:9px; margin-bottom:5px; font-weight:600; }'
             + '.tothead { background:#c0392b; color:white; padding:5px 10px; font-size:11px; font-weight:900; display:flex; justify-content:space-between; margin-bottom:7px; border-radius:3px; }'
-            + '.dos-cols { display:grid; grid-template-columns:1fr 1fr; gap:6px; }'
-            + 'table { width:100%; border-collapse:collapse; table-layout:fixed; }'
+            + '.dos-cols { width:100%; border-collapse:collapse; }'
+            + '.dos-cols td { vertical-align:top; }'
+            + 'table.inner { width:100%; border-collapse:collapse; table-layout:fixed; }'
             + '.totfinal { background:#2c3e50; color:white; padding:4px 8px; font-weight:900; font-size:10px; text-align:right; margin-top:7px; border-radius:2px; }'
             + '.footer { text-align:center; font-size:8px; color:#aaa; margin-top:8px; border-top:1px dashed #ccc; padding-top:4px; }'
-            + '@media print { @page { margin:8mm; size:A4 landscape; } body { padding:0; } tbody { page-break-inside:avoid; break-inside:avoid; } tr { page-break-inside:avoid; break-inside:avoid; } }'
+            + '@media print { @page { margin:8mm; size:A4 landscape; } body { padding:0 !important; } .page { max-width:none !important; padding:0 !important; box-shadow:none !important; } tbody { page-break-inside:avoid; break-inside:avoid; } }'
             + '@media screen { body { background:#ddd; } .page { background:white; max-width:1050px; margin:0 auto; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,0.2); } }'
             + '<\/style>'
             + '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},400);}<\/scr'+'ipt>'
@@ -151,14 +161,14 @@ async function informeAnticipos() {
             + '<h1>DETALLE DE ANTICIPOS</h1>'
             + '<div class="sub">FONDO DE SOLIDARIDAD &mdash; CASINO DE PUERTO VARAS &nbsp;|&nbsp; LEY 17312 DEL 29/07/70</div>'
             + '<div class="tothead"><span>TOTAL EGRESOS &mdash; PERÍODO '+periodoStr+'</span><span>'+fmt(totalGeneral)+'</span></div>'
-            + '<div class="dos-cols">'
-            + '<table>'+thead2+buildCol2(col1)+'</table>'
-            + '<table>'+thead2+buildCol2(col2)+'</table>'
-            + '</div>'
+            + '<table class="dos-cols"><tr>'
+            + '<td style="width:49.5%;padding-right:3px;"><table class="inner">'+thead2+buildCol2(col1)+'</table></td>'
+            + '<td style="width:1%;"></td>'
+            + '<td style="width:49.5%;padding-left:3px;"><table class="inner">'+thead2+buildCol2(col2)+'</table></td>'
+            + '</tr></table>'
             + '<div class="totfinal">TOTAL GENERAL: '+fmt(totalGeneral)+'</div>'
             + '<div class="footer">Emitido: '+fechaHoyVis+' &nbsp;|&nbsp; Sistema Fondo Solidario &mdash; Casino de Puerto Varas</div>'
             + '</div></body></html>';
-
 
         printHTML(htmlInforme, fileName);
 
