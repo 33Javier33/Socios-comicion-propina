@@ -1027,22 +1027,197 @@ async function cerrarMesSocio() {
     const id = document.getElementById('gestionSocioId').value;
     const nombre = document.getElementById('gestionSocioNombre').value;
     const remanente = parseInt(document.getElementById('gestionSocioRemanente').value) || 0;
-
     if (!id) return showToast('Selecciona un socio primero', 'error');
 
+    const aPagarEl = document.getElementById('socioAPagar');
+    const aPagar = aPagarEl ? parseInt((aPagarEl.innerText || '').replace(/[^0-9]/g, '')) || 0 : 0;
+    const fmtM = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v);
     const signo = remanente >= 0 ? '+' : '';
-    const msg = `¿Cerrar mes para ${nombre}?\n\nRemanente a traspasar: ${signo}${new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP'}).format(remanente)}\n\nEste monto quedará como saldo del próximo mes.`;
 
-    if (!confirm(msg)) return;
+    if (!confirm(`¿Cerrar mes para ${nombre}?\n\n💵 A Pagar: ${fmtM(aPagar)}\n🔄 Remanente: ${signo}${fmtM(remanente)}\n\nSe generará el recibo automáticamente.`)) return;
 
     toggleLoader(true, 'Cerrando mes...');
     try {
         await callApiSocios('registrarSaldoAnterior', { id, nombre, monto: remanente });
-        showToast(`✅ Mes cerrado. Remanente ${new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP'}).format(remanente)} guardado como saldo anterior.`, 'success');
+        cierresMes_registrar(id, nombre, aPagar, remanente);
+        cierresMes_render();
         document.getElementById('gestionSocioSaldoAnt').value = remanente;
         cargarHistorialSocio(id);
+        showToast(`✅ Mes cerrado. A Pagar: ${fmtM(aPagar)} · Remanente: ${signo}${fmtM(remanente)}`, 'success');
+        await imprimirReciboSocio();
     } catch(e) {
         showToast('Error al cerrar mes', 'error');
+    } finally {
+        toggleLoader(false);
+    }
+}
+
+// ── Estado de Cobros del Período ─────────────────────────────
+function cierresMes_getClave() {
+    try { const { inicio, fin } = aq_calcularPeriodoActual(); return `cierresMes_${inicio}_${fin}`; }
+    catch { return 'cierresMes_fallback'; }
+}
+
+function cierresMes_obtener() {
+    try { return JSON.parse(localStorage.getItem(cierresMes_getClave()) || '[]'); } catch { return []; }
+}
+
+function cierresMes_registrar(id, nombre, aPagar, remanente) {
+    const lista = cierresMes_obtener();
+    const idx = lista.findIndex(c => c.id === id);
+    const entry = { id, nombre, aPagar, remanente, fechaCierre: new Date().toISOString() };
+    if (idx >= 0) lista[idx] = entry; else lista.push(entry);
+    localStorage.setItem(cierresMes_getClave(), JSON.stringify(lista));
+}
+
+function toggleCierreMes() {
+    const body = document.getElementById('cierreMesBody');
+    const icon = document.getElementById('cierreMesIcon');
+    if (!body) return;
+    const open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    if (icon) icon.textContent = open ? '▼' : '▲';
+    if (!open) cierresMes_render();
+}
+
+function cierresMes_render() {
+    const badge = document.getElementById('cierreMesBadge');
+    const body = document.getElementById('cierreMesBody');
+    if (!badge) return;
+
+    const cerrados = cierresMes_obtener();
+    const cerradosIds = new Set(cerrados.map(c => c.id));
+    const total = cacheSocios.length;
+    const nCerrados = cacheSocios.filter(s => cerradosIds.has(s.id)).length;
+    const nPendientes = total - nCerrados;
+    const allClosed = nCerrados === total && total > 0;
+
+    badge.textContent = `${nCerrados}/${total} cerrados`;
+    badge.style.background = allClosed ? '#16a34a' : (nCerrados > 0 ? '#f59e0b' : '#dc2626');
+
+    if (!body || body.style.display === 'none') return;
+
+    const fmtM = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
+    let pendientesHtml = '', cerradosHtml = '';
+
+    cacheSocios.forEach(s => {
+        const c = cerrados.find(x => x.id === s.id);
+        if (c) {
+            const fecha = new Date(c.fechaCierre).toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+            cerradosHtml += `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid #f0fdf4;background:white;">
+                <span style="font-size:1.05em;">✅</span>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:700;font-size:0.83em;color:#15803d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.nombre} ${s.apellido}</div>
+                    <div style="font-size:0.7em;color:#64748b;">${s.area} · ${fecha}</div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;">
+                    <div style="font-weight:800;color:#15803d;font-size:0.82em;">${fmtM(c.aPagar)}</div>
+                    <div style="color:#64748b;font-size:0.7em;">rem: ${fmtM(c.remanente)}</div>
+                </div>
+            </div>`;
+        } else {
+            pendientesHtml += `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid #fef2f2;background:white;">
+                <span style="font-size:1.05em;">⏳</span>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:700;font-size:0.83em;color:#991b1b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.nombre} ${s.apellido}</div>
+                    <div style="font-size:0.7em;color:#64748b;">${s.area} · Pendiente</div>
+                </div>
+                <button onclick="cierresMes_ejecutarCierreSocio('${s.id}')" style="background:#dc2626;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:0.75em;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🔒 Cerrar</button>
+            </div>`;
+        }
+    });
+
+    body.innerHTML = `
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;text-align:center;">
+                <div style="font-size:1.6em;font-weight:900;color:#16a34a;">${nCerrados}</div>
+                <div style="font-size:0.7em;text-transform:uppercase;font-weight:700;color:#15803d;letter-spacing:0.04em;">Cerrados</div>
+            </div>
+            <div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;text-align:center;">
+                <div style="font-size:1.6em;font-weight:900;color:#dc2626;">${nPendientes}</div>
+                <div style="font-size:0.7em;text-transform:uppercase;font-weight:700;color:#991b1b;letter-spacing:0.04em;">Pendientes</div>
+            </div>
+            <div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;text-align:center;">
+                <div style="font-size:1.6em;font-weight:900;color:#1d4ed8;">${total}</div>
+                <div style="font-size:0.7em;text-transform:uppercase;font-weight:700;color:#1e40af;letter-spacing:0.04em;">Total</div>
+            </div>
+        </div>
+        ${allClosed ? `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:linear-gradient(135deg,#8e44ad,#6c3483);color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">🏁 Todos cobrados — Archivar Anticipos en Google Sheets</button>` : ''}
+        ${pendientesHtml ? `<div style="font-weight:700;font-size:0.77em;color:#991b1b;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">⏳ Pendientes (${nPendientes})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #fecaca;margin-bottom:12px;">${pendientesHtml}</div>` : ''}
+        ${cerradosHtml ? `<div style="font-weight:700;font-size:0.77em;color:#15803d;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">✅ Cerrados (${nCerrados})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #bbf7d0;">${cerradosHtml}</div>` : ''}
+        <div style="margin-top:10px;text-align:right;">
+            <button onclick="if(confirm('¿Reiniciar el seguimiento local? Los datos en Google Sheets no se borran.')){localStorage.removeItem(cierresMes_getClave());cierresMes_render();}" style="background:none;border:1px solid #cbd5e1;border-radius:6px;padding:3px 10px;font-size:0.73em;color:#64748b;cursor:pointer;">↺ Reiniciar seguimiento</button>
+        </div>`;
+}
+
+async function cierresMes_ejecutarCierreSocio(socioId) {
+    const socio = cacheSocios.find(s => s.id === socioId);
+    if (!socio) return showToast('Socio no encontrado', 'error');
+    const fmtM = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
+
+    if (!confirm(`¿Cerrar mes para ${socio.nombre} ${socio.apellido}?\n\nSe calculará el monto, se guardará en Sheets y se generará el recibo.`)) return;
+
+    toggleLoader(true, `Cerrando mes de ${socio.nombre}...`);
+    try {
+        const response = await fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${socio.id}`);
+        const res = await response.json();
+        let remanente = 0, aPagar = 0;
+
+        if (res.status === 'success') {
+            const data = res.data || {};
+            const saldoAnterior = Number(data.saldoAnterior || 0);
+            let sumaPedido = 0;
+            if (data.anticipos) data.anticipos.forEach(a => { sumaPedido += Number(a.cantidad || a.monto || 0); });
+
+            const fechasAusencia = new Set();
+            if (data.extras) data.extras.forEach(e => {
+                if (e.tipo && e.tipo.toLowerCase().includes('ausencia')) {
+                    let f = e.fecha; if (f.includes('T')) f = f.split('T')[0]; fechasAusencia.add(f);
+                }
+            });
+
+            let alcance = 0;
+            if (socio.contrato === 'Part-Time') {
+                (globalDiasPT[socio.id] || []).forEach(d => { if (!fechasAusencia.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
+                alcance *= socio.puntos;
+            } else {
+                for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) { if (!fechasAusencia.has(dia)) alcance += valor; }
+                alcance *= socio.puntos;
+            }
+            const saldoReal = alcance + saldoAnterior - sumaPedido;
+            aPagar = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
+            remanente = Math.round(saldoReal - aPagar);
+        }
+
+        await callApiSocios('registrarSaldoAnterior', { id: socio.id, nombre: `${socio.nombre} ${socio.apellido}`, monto: remanente });
+        cierresMes_registrar(socio.id, `${socio.nombre} ${socio.apellido}`, aPagar, remanente);
+        cierresMes_render();
+        showToast(`✅ ${socio.nombre} — A Pagar: ${fmtM(aPagar)} · Remanente: ${fmtM(remanente)}`, 'success');
+        const idActivo = document.getElementById('gestionSocioId').value;
+        if (idActivo === socio.id) { document.getElementById('gestionSocioSaldoAnt').value = remanente; cargarHistorialSocio(socio.id); }
+    } catch(e) {
+        showToast(`Error al cerrar mes de ${socio.nombre}`, 'error');
+    } finally {
+        toggleLoader(false);
+    }
+}
+
+async function cierresMes_finalizarPeriodo() {
+    if (!confirm('¿Finalizar el período?\n\nEsto archivará TODOS los anticipos en la pestaña del período actual y los borrará de la hoja activa.\n\n⚠️ Esta acción no se puede deshacer.')) return;
+    toggleLoader(true, 'Archivando anticipos...');
+    try {
+        const hoy = new Date();
+        const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+        const tabNombre = `Anticipos_${MESES[hoy.getMonth()]}_${hoy.getFullYear()}`;
+        await callApiSocios('reiniciarAnticipos', { tabNombre });
+        showToast('✅ Anticipos archivados en ' + tabNombre, 'success');
+        logAccion('Finalizar Período', `Archivado en ${tabNombre}`);
+        localStorage.removeItem(cierresMes_getClave());
+        cierresMes_render();
+        const idActivo = document.getElementById('gestionSocioId').value;
+        if (idActivo) cargarHistorialSocio(idActivo);
+    } catch(e) {
+        showToast('Error al archivar anticipos', 'error');
     } finally {
         toggleLoader(false);
     }
