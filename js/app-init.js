@@ -86,6 +86,7 @@ function switchTab(tabName) {
         });
         renderizarListaBusqueda();
         gestion_cargarTotalAnticipos();
+        cierresMes_render();
     }
     else if(tabName === 'recaudacion') { fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones(); }
     else if(tabName === 'config') { fabRec.style.display = 'none'; aq_detenerSync(); cfg_limpiarCampos(); }

@@ -340,6 +340,20 @@
                 </div>
             </div>
 
+            <!-- PANEL ESTADO CIERRE DE MES -->
+            <div style="background:white; border-radius:12px; border:1.5px solid #e9d5ff; margin-bottom:12px; overflow:hidden;">
+                <div onclick="toggleCierreMes()" style="background:linear-gradient(135deg,#6c3483,#8e44ad); color:white; padding:10px 16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; user-select:none;">
+                    <span style="font-weight:800; font-size:0.9em;">📊 Estado de Cobros del Período</span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span id="cierreMesBadge" style="background:#dc2626; color:white; font-size:0.75em; font-weight:800; padding:2px 8px; border-radius:10px;">0/0 cerrados</span>
+                        <span id="cierreMesIcon" style="font-size:0.75em;">▼</span>
+                    </div>
+                </div>
+                <div id="cierreMesBody" style="display:none; padding:14px;">
+                    <div style="text-align:center;color:#64748b;font-size:0.85em;padding:10px;">Cargando...</div>
+                </div>
+            </div>
+
             <div class="gestion-layout">
                 <div class="search-panel">
                     <h3 style="display:flex;align-items:center;gap:8px;">Buscar Socio <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-buscar-socio',this)" title="Ayuda rápida">?</button><div id="pop-buscar-socio" class="ayuda-popover"><div class="ayuda-popover-titulo">🔍 Buscar Socio</div><div class="ayuda-popover-texto">Escribe el nombre o apellido del socio para ver su información, anticipos y saldos.</div><ol class="ayuda-popover-pasos"><li>Escribe al menos 2 letras del nombre</li><li>Haz clic en el socio para seleccionarlo</li><li>Sus datos cargarán en el panel derecho</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Debes seleccionar un socio antes de registrar un anticipo o ausencia.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaIrA('anticipos')">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-buscar-socio')">✕</span></div></div></div></h3>
@@ -532,7 +546,6 @@
 
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:10px; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
                         <h3 style="margin:0;display:flex;align-items:center;gap:8px;">Historial <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-historial',this)" title="Ayuda rápida">?</button><div id="pop-historial" class="ayuda-popover"><div class="ayuda-popover-titulo">📋 Historial de movimientos</div><div class="ayuda-popover-texto">Muestra todos los anticipos y ausencias del socio en el período actual.</div><ol class="ayuda-popover-pasos"><li>Los anticipos aparecen en azul con monto negativo</li><li>Las ausencias en rojo</li><li><strong>Mantén presionado 1 segundo</strong> sobre un registro para eliminarlo</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Solo aparecen los movimientos del período activo (15 del mes anterior al 14 del mes actual).</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaIrA('anticipos')">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-historial')">✕</span></div></div></div><small style="color:#7f8c8d;font-weight:normal;font-size:0.75em;">(Mantén presionado para borrar)</small></h3>
-                        <button onclick="reiniciarAnticipos()" style="background:linear-gradient(135deg,#8e44ad,#6c3483); color:white; border:none; border-radius:8px; padding:8px 14px; font-size:0.8em; font-weight:700; cursor:pointer; white-space:nowrap;">🔄 Reinicio Mes</button>
                     </div>
                     <table class="history-table">
                         <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Monto</th></tr></thead>
