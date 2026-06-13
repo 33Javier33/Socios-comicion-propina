@@ -116,7 +116,7 @@ async function notasBorrar(btnEl) {
         await fetch(URL_RECAUDACIONES, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'deleteNote', index: parseInt(rowIndex) })
+            body: JSON.stringify({ action: 'deleteNote', index: rowIndex })
         });
         showToast('Nota eliminada', 'success');
         try { localStorage.removeItem(CACHE_KEY_NOTAS); } catch(e) {}
