@@ -118,8 +118,8 @@ function procesarDatosRecaudacion(datos, silent) {
                     + `<span class="type-name">${nombreTipo}</span>`
                     + `<span class="type-value">${formatearMoneda(valorTipo)}</span>`
                     + `<div style="display:flex;gap:3px;margin-left:auto;">`
-                    + `<button onclick="rec_abrirEditar('${fecha}','${nombreTipo}',${valorTipo},${idx})" style="background:none;border:1px solid var(--secondary);color:var(--secondary);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">✏️</button>`
-                    + `<button onclick="rec_borrarFila(${idx},'${nombreTipo}','${fecha}')" style="background:none;border:1px solid var(--danger);color:var(--danger);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">🗑️</button>`
+                    + `<button onclick="rec_abrirEditar('${fecha}','${nombreTipo}',${valorTipo},'${idx}')" style="background:none;border:1px solid var(--secondary);color:var(--secondary);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">✏️</button>`
+                    + `<button onclick="rec_borrarFila('${idx}','${nombreTipo}','${fecha}')" style="background:none;border:1px solid var(--danger);color:var(--danger);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">🗑️</button>`
                     + `</div></div>`;
             });
 
