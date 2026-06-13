@@ -198,3 +198,23 @@ const dbRec = supabase.createClient(_SB_URL_REC, _SB_KEY_REC);
         return _origFetch(url, options);
     };
 })();
+
+// ── Realtime: recargar datos al instante cuando otra app cambia datos ──────────
+window.addEventListener('load', () => {
+    let _rtRec = null, _rtNotes = null;
+
+    dbRec.channel('socios-com-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'recaudaciones' }, () => {
+            clearTimeout(_rtRec);
+            _rtRec = setTimeout(() => { if (typeof cargarRecaudaciones === 'function') cargarRecaudaciones(true); }, 600);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'notas_recaudacion' }, () => {
+            clearTimeout(_rtNotes);
+            _rtNotes = setTimeout(() => { if (typeof notasCargar === 'function') notasCargar(); }, 400);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'divisores' }, () => {
+            clearTimeout(_rtRec);
+            _rtRec = setTimeout(() => { if (typeof cargarRecaudaciones === 'function') cargarRecaudaciones(true); }, 600);
+        })
+        .subscribe();
+});
