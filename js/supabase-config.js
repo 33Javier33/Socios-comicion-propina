@@ -11,6 +11,10 @@ const _SB_KEY_REC = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const dbRec = supabase.createClient(_SB_URL_REC, _SB_KEY_REC);
 
+// Canal compartido para notificar/recibir cambios en tiempo real
+const _recBroadcast = dbRec.channel('rec-data-sync');
+const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'changed', payload: {} }).catch(() => {});
+
 (function () {
     const _origFetch = window.fetch.bind(window);
 
@@ -65,6 +69,7 @@ const dbRec = supabase.createClient(_SB_URL_REC, _SB_KEY_REC);
                     monto: Number(body.monto) || 0
                 });
                 if (error) throw error;
+                _notificarCambio();
                 return succ();
             } catch (e) { return err(e.message); }
         }
@@ -72,13 +77,14 @@ const dbRec = supabase.createClient(_SB_URL_REC, _SB_KEY_REC);
         // ── UPDATE recaudacion (por UUID en sheetIndex) ──────────────
         if (action === 'update') {
             try {
-                const id = body.sheetIndex; // UUID string (ya no parseInt)
+                const id = body.sheetIndex;
                 const { error } = await dbRec.from('recaudaciones').update({
                     fecha: body.fecha,
                     tipo: body.tipo || 'Sin Tipo',
                     monto: Number(body.monto) || 0
                 }).eq('id', id);
                 if (error) throw error;
+                _notificarCambio();
                 return succ();
             } catch (e) { return err(e.message); }
         }
@@ -86,9 +92,10 @@ const dbRec = supabase.createClient(_SB_URL_REC, _SB_KEY_REC);
         // ── DELETE recaudacion (por UUID en index) ───────────────────
         if (action === 'delete') {
             try {
-                const id = body.index; // UUID string (ya no parseInt)
+                const id = body.index;
                 const { error } = await dbRec.from('recaudaciones').delete().eq('id', id);
                 if (error) throw error;
+                _notificarCambio();
                 return succ();
             } catch (e) { return err(e.message); }
         }
@@ -97,11 +104,12 @@ const dbRec = supabase.createClient(_SB_URL_REC, _SB_KEY_REC);
         if (action === 'updateDivisor') {
             try {
                 const { error } = await dbRec.from('divisores').upsert({
-                    id: body.fecha,   // fecha como clave única
+                    id: body.fecha,
                     fecha: body.fecha,
                     valor: Number(body.divisor)
                 }, { onConflict: 'fecha' });
                 if (error) throw error;
+                _notificarCambio();
                 return succ();
             } catch (e) { return err(e.message); }
         }
@@ -199,22 +207,13 @@ const dbRec = supabase.createClient(_SB_URL_REC, _SB_KEY_REC);
     };
 })();
 
-// ── Realtime: recargar datos al instante cuando otra app cambia datos ──────────
+// ── Realtime broadcast: recargar UI cuando otra app cambia datos ───────────────
 window.addEventListener('load', () => {
-    let _rtRec = null, _rtNotes = null;
-
-    dbRec.channel('socios-com-realtime')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'recaudaciones' }, () => {
-            clearTimeout(_rtRec);
-            _rtRec = setTimeout(() => { if (typeof cargarRecaudaciones === 'function') cargarRecaudaciones(true); }, 600);
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'notas_recaudacion' }, () => {
-            clearTimeout(_rtNotes);
-            _rtNotes = setTimeout(() => { if (typeof notasCargar === 'function') notasCargar(); }, 400);
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'divisores' }, () => {
-            clearTimeout(_rtRec);
-            _rtRec = setTimeout(() => { if (typeof cargarRecaudaciones === 'function') cargarRecaudaciones(true); }, 600);
+    let _rt = null;
+    _recBroadcast
+        .on('broadcast', { event: 'changed' }, () => {
+            clearTimeout(_rt);
+            _rt = setTimeout(() => { if (typeof cargarRecaudaciones === 'function') cargarRecaudaciones(true); }, 500);
         })
         .subscribe();
 });
