@@ -211,7 +211,7 @@ async function rec_guardarCambio() {
     toggleLoader(true, modo === 'editar' ? 'Actualizando...' : 'Guardando...');
     try {
         if (modo === 'editar' && idx !== '') {
-            await rec_postRec({ action: 'update', sheetIndex: parseInt(idx), tipo, fecha, monto });
+            await rec_postRec({ action: 'update', sheetIndex: idx, tipo, fecha, monto });
             showToast('Registro actualizado', 'success');
         } else {
             await rec_postRec({ action: 'add', tipo, fecha, monto });
@@ -232,7 +232,7 @@ async function rec_borrarFila(idx, tipo, fecha) {
     if (!confirm('Borrar "' + tipo + '" del ' + fechaVis + '?')) return;
     toggleLoader(true, 'Borrando...');
     try {
-        await rec_postRec({ action: 'delete', index: parseInt(idx) });
+        await rec_postRec({ action: 'delete', index: idx });
         showToast('Registro eliminado', 'success');
         try { localStorage.removeItem(CACHE_KEY_REC); } catch(e) {}
         cargarRecaudaciones();
