@@ -8,3 +8,78 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
+<body>
+
+    <!-- ===== LOGIN OVERLAY ===== -->
+    <div id="loginOverlay">
+        <div class="login-box">
+            <div class="login-logo">💰</div>
+            <div class="login-title">Fondo Solidario</div>
+            <div class="login-sub">Sistema Integral de Comisión Propina</div>
+
+            <div class="login-user-badge">
+                👤 &nbsp; <strong>comision propina</strong>
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label style="font-size:0.78em;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">¿Quién ingresa?</label>
+                <select id="loginResponsable" onchange="actualizarHintPin()"
+                    style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font-size:0.95em;font-family:'DM Sans',sans-serif;color:#2c3e50;background:white;cursor:pointer;">
+                    <option value="">— Selecciona tu nombre —</option>
+                </select>
+                <div id="pinHint" style="min-height:18px;margin-top:5px;text-align:center;"></div>
+            </div>
+
+            <div class="pin-wrapper">
+                <input type="password" id="pinInput" class="pin-input"
+                    maxlength="4" inputmode="numeric" placeholder="● ● ● ●"
+                    autocomplete="off" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                    onkeydown="if(event.key==='Enter') intentarLogin()">
+                <span class="pin-eye" id="pinEye" onclick="togglePinVista()">👁</span>
+            </div>
+            <div class="login-error" id="loginError">PIN incorrecto. Inténtalo de nuevo.</div>
+            <button class="btn-login" onclick="intentarLogin()">Ingresar →</button>
+
+            <div class="login-recover" onclick="toggleRecuperar()">¿Olvidaste el PIN?</div>
+
+            <div class="recover-panel" id="recoverPanel">
+                <input type="text" id="claveRecuperar" placeholder="Clave de recuperación" autocomplete="off">
+                <button class="btn-recover" onclick="recuperarPin()">Verificar y Resetear</button>
+                <div id="recoverMsg" style="font-size:0.8em;margin-top:8px;color:#7f8c8d;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loader moderno: barra + badge -->
+    <div id="globalLoader">
+        <div id="loaderBar"></div>
+    </div>
+    <div id="loaderActionBadge"><span class="spinner"></span> <span id="loaderText">Procesando...</span></div>
+
+    <div class="container">
+        <div id="toast-container"></div>
+
+        <div class="header-section">
+            <h1>Sistema Integral <small style="font-size:0.5em; color:#7f8c8d;">Fondo Solidario</small></h1>
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <div class="fecha-badge" id="fechaHoyBadge"></div>
+                <div id="sesionRespBadge" style="display:none;background:rgba(52,152,219,0.12);color:var(--secondary);border:1px solid rgba(52,152,219,0.3);border-radius:20px;padding:5px 12px;font-size:0.78em;font-weight:700;">👤 <span id="sesionRespNombre"></span></div>
+                <div id="inactividadBadge" style="display:none; background:#fff3cd; color:#856404; border:1px solid #ffc107; border-radius:20px; padding:6px 12px; font-size:0.78em; font-weight:700;">⏱ <span id="inactividadTimer">15:00</span></div>
+                <button onclick="toggleDarkMode()" id="darkModeBtn" style="background:var(--card-bg);color:var(--text-color);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:0.85em;cursor:pointer;transition:0.2s;" title="Modo oscuro">🌙</button>
+                <button onclick="toggleAbout(true)" style="background:#2c3e50; color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">ℹ️ Acerca de</button>
+                <button onclick="cerrarSesion()" style="background:var(--danger); color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔒 Cerrar sesión</button>
+            </div>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-btn active" data-tab="registro" onclick="switchTab('registro')">Gestión de Socios</button>
+            <button class="nav-btn" data-tab="gestion" onclick="switchTab('gestion')">Anticipos y Ausencias</button>
+            <button class="nav-btn" data-tab="recaudacion" onclick="switchTab('recaudacion')">Montos Recaudados</button>
+            <button class="nav-btn" data-tab="arqueo" onclick="switchTab('arqueo')">💰 Arqueo de Caja</button>
+            <button class="nav-btn" data-tab="notas" onclick="switchTab('notas')">📝 Notas Admin</button>
+            <button class="nav-btn" data-tab="config" onclick="switchTab('config')">⚙️ Configuración</button>
+            <button class="nav-btn" data-tab="auditoria" onclick="switchTab('auditoria')">🔍 Auditoría</button>
+            <button class="nav-btn" data-tab="carpetas" onclick="switchTab('carpetas')">📁 Carpetas</button>
+            <button class="nav-btn" data-tab="materiales" onclick="switchTab('materiales')">📦 Materiales</button>
+            <button onclick="ayudaCompleta_abrir()" style="background:#2c3e50;color:white;border:none;border-radius:20px;padding:6px 12px;font-size:0.78em;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto;">📖 Ayuda</button>
+        </div>
