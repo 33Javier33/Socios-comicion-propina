@@ -235,7 +235,11 @@ window.addEventListener('load', () => {
     _recBroadcast
         .on('broadcast', { event: 'changed' }, () => {
             clearTimeout(_rt);
-            _rt = setTimeout(() => { if (typeof cargarRecaudaciones === 'function') cargarRecaudaciones(true); }, 500);
+            _rt = setTimeout(() => {
+                if (typeof cargarRecaudaciones === 'function') cargarRecaudaciones(true);
+                const notasTab = document.getElementById('tab-notas');
+                if (notasTab && notasTab.classList.contains('active') && typeof notasCargar === 'function') notasCargar();
+            }, 500);
         })
         .subscribe();
 });

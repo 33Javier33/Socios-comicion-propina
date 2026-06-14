@@ -299,7 +299,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Auto-refresh de recaudaciones cada 5 segundos (actualización automática)
+// Auto-refresh de recaudaciones y notas cada 5 segundos
 setInterval(() => {
     if (typeof cargarRecaudaciones === 'function') cargarRecaudaciones(true);
+    const notasTab = document.getElementById('tab-notas');
+    if (notasTab && notasTab.classList.contains('active') && typeof notasCargar === 'function') notasCargar();
 }, 5000);
