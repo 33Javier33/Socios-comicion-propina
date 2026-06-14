@@ -1,15 +1,17 @@
 // ============================================================
 // SUPABASE CONFIG — socios-comicion-propina
-// Intercepta las llamadas a URL_RECAUDACIONES y las redirige a
-// las tablas recaudaciones, divisores y notas_recaudacion en
-// Supabase (lpulmjzboogixbdxxayo).
-// Todas las llamadas a URL_SOCIOS siguen yendo a GAS.
+// Intercepta URL_RECAUDACIONES → recaudaciones Supabase
+// Intercepta URL_SOCIOS       → socios/anticipos/extras Supabase
 // ============================================================
 
 const _SB_URL_REC = 'https://lpulmjzboogixbdxxayo.supabase.co';
 const _SB_KEY_REC = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwdWxtanpib29naXhiZHh4YXlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NjY0NzMsImV4cCI6MjA5MTI0MjQ3M30.vjebyQb4Bb62ZQlNaJZveuxdBYDOmtC4bM7uwAilDzY';
 
+const _SB_URL_SOC = 'https://teemahksasdougehrcly.supabase.co';
+const _SB_KEY_SOC = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlZW1haGtzYXNkb3VnZWhyY2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTkwNjIsImV4cCI6MjA5Njg3NTA2Mn0.EIQ7gRcwf3zYgvGESKw3s5lnZMABN_EuNWsrJK3L1zk';
+
 const dbRec = supabase.createClient(_SB_URL_REC, _SB_KEY_REC);
+const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
 
 // Canal compartido para notificar/recibir cambios en tiempo real
 const _recBroadcast = dbRec.channel('rec-data-sync');
@@ -18,10 +20,122 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 (function () {
     const _origFetch = window.fetch.bind(window);
 
+    // ── Helper ──────────────────────────────────────────────────
+    function _mockOk(data) { return { ok: true, status: 200, json: async () => data, text: async () => JSON.stringify(data) }; }
+
+    // ── HANDLER: URL_SOCIOS ──────────────────────────────────────
+    async function _socHandler(url, options) {
+        // Extraer action (GET o POST)
+        const s = String(url);
+        let action = new URLSearchParams(s.split('?')[1] || '').get('action') || '';
+        let body = {};
+        if (options && options.body) {
+            try { body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body; } catch(e) {}
+        }
+        if (!action) action = body.action || '';
+
+        // ── getDatosSocio: leer anticipos + extras + saldo desde Supabase ──
+        if (action === 'getDatosSocio') {
+            const socioId = new URLSearchParams(s.split('?')[1] || '').get('socioId') || body.socioId;
+            try {
+                const [antRes, extRes, salRes] = await Promise.all([
+                    dbSoc.from('anticipos').select('*').eq('socio_id', socioId),
+                    dbSoc.from('extras').select('*').eq('socio_id', socioId),
+                    dbSoc.from('saldos_socio').select('monto').eq('id', socioId).maybeSingle()
+                ]);
+                const anticipos = (antRes.data || []).map(a => ({
+                    uuid: a.id, fecha: a.fecha,
+                    monto: Number(a.monto || 0), cantidad: Number(a.monto || 0),
+                    responsable: a.responsable || ''
+                }));
+                const extras = (extRes.data || []).map(e => ({
+                    uuid: e.id, fecha: e.fecha,
+                    tipo: e.tipo || '', monto: Number(e.monto || 0),
+                    detalle: e.detalle || e.descripcion || ''
+                }));
+                const saldoAnterior = Number(salRes.data?.monto || 0);
+                return _mockOk({ status: 'success', data: { anticipos, extras, saldoAnterior } });
+            } catch(err) {
+                console.error('[supabase-config] getDatosSocio:', err);
+                return _origFetch(url, options);
+            }
+        }
+
+        // ── registrarBatchAnticipos → insertar en Supabase ────────
+        if (action === 'registrarBatchAnticipos') {
+            const items = body.detalleAnticipos || [];
+            try {
+                await dbSoc.from('anticipos').insert(items.map(a => ({
+                    id: crypto.randomUUID(),
+                    socio_id: String(a.id),
+                    monto: Number(a.monto || 0),
+                    fecha: a.fecha,
+                    responsable: (a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')
+                })));
+            } catch(err) { console.error('[supabase-config] registrarBatchAnticipos:', err); }
+            // Pasar igual a GAS para auditoría / Telegram
+            _origFetch(url, options).catch(() => {});
+            return _mockOk({ status: 'success' });
+        }
+
+        // ── registrarBatchExtras → insertar en Supabase ───────────
+        if (action === 'registrarBatchExtras') {
+            const items = body.detalleExtras || [];
+            try {
+                await dbSoc.from('extras').insert(items.map(e => ({
+                    id: crypto.randomUUID(),
+                    socio_id: String(e.id),
+                    fecha: e.fecha,
+                    tipo: e.tipo || 'extra',
+                    monto: Number(e.monto || 0),
+                    detalle: e.detalle || ''
+                })));
+            } catch(err) { console.error('[supabase-config] registrarBatchExtras:', err); }
+            _origFetch(url, options).catch(() => {});
+            return _mockOk({ status: 'success' });
+        }
+
+        // ── borrarMovimiento → borrar de Supabase por UUID ────────
+        if (action === 'borrarMovimiento') {
+            const uuid = body.uuid;
+            const tipo = (body.tipo || '').toLowerCase();
+            try {
+                if (tipo === 'anticipo' || tipo === 'anticipos') {
+                    await dbSoc.from('anticipos').delete().eq('id', uuid);
+                } else {
+                    await dbSoc.from('extras').delete().eq('id', uuid);
+                }
+            } catch(err) { console.error('[supabase-config] borrarMovimiento:', err); }
+            _origFetch(url, options).catch(() => {});
+            return _mockOk({ status: 'success' });
+        }
+
+        // ── actualizarAnticipo → actualizar en Supabase ───────────
+        if (action === 'actualizarAnticipo') {
+            try {
+                await dbSoc.from('anticipos').update({
+                    fecha: body.fecha,
+                    monto: Number(body.monto || 0),
+                    responsable: (body.responsable || '') + (body.areaResponsable ? ' ' + body.areaResponsable : '')
+                }).eq('id', body.uuid);
+            } catch(err) { console.error('[supabase-config] actualizarAnticipo:', err); }
+            _origFetch(url, options).catch(() => {});
+            return _mockOk({ status: 'success' });
+        }
+
+        // Cualquier otra acción de socios: pasar a GAS
+        return _origFetch(url, options);
+    }
+
     window.fetch = async function (url, options = {}) {
         const s = String(url);
 
-        // Solo interceptar URL_RECAUDACIONES
+        // Interceptar URL_SOCIOS
+        if (typeof URL_SOCIOS !== 'undefined' && s.startsWith(URL_SOCIOS)) {
+            return _socHandler(s, options);
+        }
+
+        // Interceptar URL_RECAUDACIONES (si no llegó aquí ya fue manejado arriba)
         if (typeof URL_RECAUDACIONES === 'undefined' || !s.startsWith(URL_RECAUDACIONES)) {
             return _origFetch(url, options);
         }
