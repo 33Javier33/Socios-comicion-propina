@@ -148,8 +148,22 @@ async function notasBorrar(btnEl) {
 
 window._notaPin = async (id, pinned) => {
     try {
+        // Un solo pin a la vez — desfijar el resto desde el cache actual
+        const cached = leerCache(CACHE_KEY_NOTAS) || [];
+        if (pinned) {
+            const others = cached.filter(n => n.pinned && n.originalIndex !== id);
+            for (const o of others) {
+                await fetch(URL_RECAUDACIONES, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'togglePin', id: o.originalIndex, pinned: false }) });
+                o.pinned = false;
+            }
+        }
+        // Actualizar cache local y re-renderizar al instante
+        const nota = cached.find(n => n.originalIndex === id);
+        if (nota) nota.pinned = pinned;
+        guardarCache(CACHE_KEY_NOTAS, cached);
+        notasRenderizar(cached);
+        // Persistir en Supabase
         await fetch(URL_RECAUDACIONES, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'togglePin', id, pinned }) });
-        notasCargar();
     } catch(e) {}
 };
 
