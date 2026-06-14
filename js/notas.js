@@ -170,11 +170,19 @@ window._notaPin = async (id, pinned) => {
 window._notaReaccion = async (id, emoji) => {
     const myRx = JSON.parse(localStorage.getItem('_rec_my_reactions') || '{}');
     const alreadyReacted = myRx[id]?.[emoji];
-    try {
-        await fetch(URL_RECAUDACIONES, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'toggleReaction', id, emoji, add: !alreadyReacted }) });
-        if (!myRx[id]) myRx[id] = {};
-        if (alreadyReacted) delete myRx[id][emoji]; else myRx[id][emoji] = true;
-        localStorage.setItem('_rec_my_reactions', JSON.stringify(myRx));
-        notasCargar();
-    } catch(e) {}
+    // Actualizar local inmediatamente
+    if (!myRx[id]) myRx[id] = {};
+    if (alreadyReacted) delete myRx[id][emoji]; else myRx[id][emoji] = true;
+    localStorage.setItem('_rec_my_reactions', JSON.stringify(myRx));
+    const cached = leerCache(CACHE_KEY_NOTAS) || [];
+    const nota = cached.find(n => n.originalIndex === id);
+    if (nota) {
+        if (!nota.reactions) nota.reactions = {};
+        nota.reactions[emoji] = Math.max(0, (nota.reactions[emoji] || 0) + (alreadyReacted ? -1 : 1));
+        if (nota.reactions[emoji] === 0) delete nota.reactions[emoji];
+        guardarCache(CACHE_KEY_NOTAS, cached);
+        notasRenderizar(cached);
+    }
+    // Persistir en Supabase
+    fetch(URL_RECAUDACIONES, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'toggleReaction', id, emoji, add: !alreadyReacted }) }).catch(()=>{});
 };
