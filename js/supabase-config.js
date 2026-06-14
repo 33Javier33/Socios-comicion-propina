@@ -35,28 +35,48 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         // ── registrarBatchAnticipos → escribir en Supabase + GAS ──────
         if (action === 'registrarBatchAnticipos') {
             const items = body.detalleAnticipos || [];
-            dbSoc.from('anticipos').insert(items.map(a => ({
-                id: crypto.randomUUID(),
-                socio_id: String(a.id),
-                monto: Number(a.monto || 0),
-                fecha: a.fecha,
-                responsable: (a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')
-            }))).then(() => {}).catch(e => console.error('[supabase-config] anticipos insert:', e));
-            // GAS sigue manejando la operación principal (retorna el JSON real)
+            (async () => {
+                for (const a of items) {
+                    const row = {
+                        id: crypto.randomUUID(),
+                        socio_id: String(a.id),
+                        monto: Number(a.monto || 0),
+                        fecha: a.fecha,
+                        responsable: (a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')
+                    };
+                    let { error } = await dbSoc.from('anticipos').insert(row);
+                    if (error && error.message && error.message.toLowerCase().includes('responsable')) {
+                        // columna aún no existe en Supabase — reintentar sin ella
+                        const { responsable: _r, ...base } = row;
+                        ({ error } = await dbSoc.from('anticipos').insert(base));
+                    }
+                    if (error) console.error('[supabase-config] anticipos insert:', error.message);
+                }
+            })();
             return _origFetch(url, options);
         }
 
         // ── registrarBatchExtras → escribir en Supabase + GAS ─────────
         if (action === 'registrarBatchExtras') {
             const items = body.detalleExtras || [];
-            dbSoc.from('extras').insert(items.map(e => ({
-                id: crypto.randomUUID(),
-                socio_id: String(e.id),
-                fecha: e.fecha,
-                tipo: e.tipo || 'extra',
-                monto: Number(e.monto || 0),
-                detalle: e.detalle || ''
-            }))).then(() => {}).catch(e => console.error('[supabase-config] extras insert:', e));
+            (async () => {
+                for (const e of items) {
+                    const row = {
+                        id: crypto.randomUUID(),
+                        socio_id: String(e.id),
+                        fecha: e.fecha,
+                        tipo: e.tipo || 'extra',
+                        monto: Number(e.monto || 0),
+                        detalle: e.detalle || ''
+                    };
+                    let { error } = await dbSoc.from('extras').insert(row);
+                    if (error && error.message && error.message.toLowerCase().includes('detalle')) {
+                        const { detalle: _d, ...base } = row;
+                        ({ error } = await dbSoc.from('extras').insert(base));
+                    }
+                    if (error) console.error('[supabase-config] extras insert:', error.message);
+                }
+            })();
             return _origFetch(url, options);
         }
 
