@@ -7,6 +7,26 @@
 const TELEGRAM_TOKEN = '8318855772:AAEDfwR7BdyF5gL7nMJjaYowvMF9gh6yfCw';
 const TELEGRAM_CHAT_ID = '5981473068';
 
+// ── SUPABASE (socios/anticipos/extras) ────────────────────────────────────────
+const SB_URL = 'https://teemahksasdougehrcly.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlZW1haGtzYXNkb3VnZWhyY2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTkwNjIsImV4cCI6MjA5Njg3NTA2Mn0.EIQ7gRcwf3zYgvGESKw3s5lnZMABN_EuNWsrJK3L1zk';
+
+function sbInsert(tabla, payload) {
+  try {
+    const res = UrlFetchApp.fetch(SB_URL + '/rest/v1/' + tabla, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Prefer': 'return=minimal' },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+    const code = res.getResponseCode();
+    if (code >= 300) Logger.log('[Supabase ' + tabla + '] HTTP ' + code + ': ' + res.getContentText());
+  } catch(e) {
+    Logger.log('[Supabase ' + tabla + '] Error: ' + e);
+  }
+}
+
 function telegramEnviar(mensaje) {
   try {
     const url = 'https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage';
@@ -645,6 +665,16 @@ function borrarMovimientoGlobal(uuid, tipo, usuario, detalle) {
 
       sheet.deleteRow(i + 1);
 
+      // Eliminar de Supabase
+      const tblSb = (tipo === 'Anticipo') ? 'anticipos' : 'extras';
+      try {
+        UrlFetchApp.fetch(SB_URL + '/rest/v1/' + tblSb + '?id=eq.' + encodeURIComponent(uuid), {
+          method: 'delete',
+          headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY },
+          muteHttpExceptions: true
+        });
+      } catch(e) { Logger.log('[Supabase borrar] ' + e); }
+
       // ── Registrar en auditoría ────────────────────────────────────────────
       registrarAuditoria(
         usuario || 'Desconocido',
@@ -815,6 +845,17 @@ function registrarBatchAnticipos(lista, usuario) {
     const uuid = item.uuid || Utilities.getUuid();
     s.appendRow([item.id, item.nombre, parseDateStrict(item.fecha), Number(item.monto), 'PENDIENTE', uuid, item.responsable || '', item.areaResponsable || '']);
 
+    // Escribir en Supabase (fuente de verdad para propi.solicitada)
+    sbInsert('anticipos', {
+      id: uuid,
+      socio_id: String(item.id),
+      fecha: item.fecha,
+      monto: Number(item.monto || 0),
+      responsable: ((item.responsable || '') + (item.areaResponsable ? ' ' + item.areaResponsable : '')).trim(),
+      autor: item.responsable || usuario || '',
+      periodo: 'activo'
+    });
+
     registrarAuditoria(
       item.responsable || usuario || 'Desconocido',
       'Registrar Anticipo',
@@ -834,17 +875,30 @@ function registrarBatchAnticipos(lista, usuario) {
 function registrarBatchExtras(lista, usuario) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA_EXTRAS);
   if (!lista.length) return;
-  const newRows = lista.map(item => {
-    const uuid = item.uuid || Utilities.getUuid();
+  const itemsConUuid = lista.map(item => ({ ...item, _uuid: item.uuid || Utilities.getUuid() }));
+  const newRows = itemsConUuid.map(item => {
     registrarAuditoria(
       item.responsable || usuario || 'Desconocido',
       'Registrar ' + (item.tipo || 'Extra'),
       'Socio: ' + item.nombre + ' | Detalle: ' + (item.detalle || item.tipo) + ' | Fecha: ' + item.fecha,
-      uuid
+      item._uuid
     );
-    return [item.id, item.nombre, parseDateStrict(item.fecha), item.tipo, Number(item.monto || 0), item.detalle, 'PENDIENTE', uuid];
+    return [item.id, item.nombre, parseDateStrict(item.fecha), item.tipo, Number(item.monto || 0), item.detalle, 'PENDIENTE', item._uuid];
   });
   sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, 8).setValues(newRows);
+
+  // Escribir en Supabase
+  itemsConUuid.forEach(item => {
+    sbInsert('extras', {
+      id: item._uuid,
+      socio_id: String(item.id),
+      fecha: item.fecha,
+      tipo: item.tipo || 'extra',
+      monto: Number(item.monto || 0),
+      detalle: item.detalle || '',
+      periodo: 'activo'
+    });
+  });
 
   // Agrupar ausencias por nombre+detalle para evitar spam en Telegram
   const ausencias = lista.filter(item => item.tipo && item.tipo.toLowerCase().includes('ausencia'));
@@ -890,6 +944,21 @@ function actualizarAnticipo(uuid, fecha, monto, responsable, areaResponsable) {
       s.getRange(i + 1, 4).setValue(Number(monto));
       s.getRange(i + 1, 7).setValue(responsable || '');
       s.getRange(i + 1, 8).setValue(areaResponsable || '');
+
+      // Actualizar en Supabase
+      try {
+        UrlFetchApp.fetch(SB_URL + '/rest/v1/anticipos?id=eq.' + encodeURIComponent(uuid), {
+          method: 'patch',
+          contentType: 'application/json',
+          headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Prefer': 'return=minimal' },
+          payload: JSON.stringify({
+            fecha: fecha,
+            monto: Number(monto || 0),
+            responsable: ((responsable || '') + (areaResponsable ? ' ' + areaResponsable : '')).trim()
+          }),
+          muteHttpExceptions: true
+        });
+      } catch(e) { Logger.log('[Supabase actualizar] ' + e); }
 
       registrarAuditoria(
         responsable || 'Desconocido',
