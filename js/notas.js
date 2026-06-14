@@ -28,15 +28,28 @@ function notasFormatearMensaje(texto) {
 
 function notasCrearElemento(n, idx) {
     const lastSeen = parseInt(localStorage.getItem('_rec_last_seen')) || 0;
-    const myRx = JSON.parse(localStorage.getItem('_rec_my_reactions') || '{}');
     const isNew = lastSeen > 0 && new Date(n.fecha).getTime() > lastSeen;
     const EMOJIS = ['👍','❤️','😂'];
     const rowIndex = n.originalIndex !== undefined ? n.originalIndex : idx;
+
+    const sesion = typeof getSesionResponsableObj === 'function' ? getSesionResponsableObj() : { ini: '', area: '' };
+    const meId = sesion.ini ? sesion.ini + ' (' + sesion.area + ')' : '';
+
     const rxBtns = EMOJIS.map(e => {
-        const cnt = (n.reactions||{})[e]||0;
-        const mine = myRx[rowIndex]?.[e];
-        return `<button onclick="_notaReaccion('${rowIndex}','${e}')" style="background:${mine?'rgba(59,130,246,0.12)':'#f8fafc'};border:1px solid ${mine?'#93c5fd':'#e2e8f0'};border-radius:20px;padding:2px 10px;cursor:pointer;font-size:0.82em;transition:0.15s">${e}${cnt?' '+cnt:''}</button>`;
+        const arr = Array.isArray((n.reactions||{})[e]) ? (n.reactions||{})[e] : [];
+        const cnt = arr.length;
+        const mine = meId && arr.includes(meId);
+        const names = arr.map(u => u.split(' ')[0]).join(', ');
+        return `<button onclick="_notaReaccion('${rowIndex}','${e}')" title="${names}" style="background:${mine?'rgba(59,130,246,0.12)':'#f8fafc'};border:1px solid ${mine?'#93c5fd':'#e2e8f0'};border-radius:20px;padding:2px 10px;cursor:pointer;font-size:0.82em;transition:0.15s">${e}${cnt?' '+cnt:''}</button>`;
     }).join('');
+
+    const rxSummary = EMOJIS.map(e => {
+        const arr = Array.isArray((n.reactions||{})[e]) ? (n.reactions||{})[e] : [];
+        if (!arr.length) return '';
+        const names = arr.map(u => u.split(' ')[0]);
+        const label = names.length <= 3 ? names.join(', ') : names.slice(0,3).join(', ') + ' y ' + (names.length-3) + ' más';
+        return `<span style="white-space:nowrap">${e} ${label}</span>`;
+    }).filter(Boolean).join(' &nbsp;');
     const border = n.pinned ? '3px solid #f59e0b' : isNew ? '3px solid #3b82f6' : '';
     const bg = n.pinned ? '#fffde7' : isNew ? '#eff6ff' : '';
     const div = document.createElement('div');
@@ -57,7 +70,8 @@ function notasCrearElemento(n, idx) {
             </div>
         </div>
         <div style="font-size:0.95em;color:#333;line-height:1.5;white-space:pre-wrap;margin-bottom:10px">${notasFormatearMensaje(n.mensaje||'')}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">${rxBtns}</div>`;
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${rxBtns}</div>
+        ${rxSummary ? `<div style="font-size:0.72em;color:#7f8c8d;margin-top:5px;line-height:1.4">${rxSummary}</div>` : ''}`;
     return div;
 }
 
@@ -168,21 +182,20 @@ window._notaPin = async (id, pinned) => {
 };
 
 window._notaReaccion = async (id, emoji) => {
-    const myRx = JSON.parse(localStorage.getItem('_rec_my_reactions') || '{}');
-    const alreadyReacted = myRx[id]?.[emoji];
-    // Actualizar local inmediatamente
-    if (!myRx[id]) myRx[id] = {};
-    if (alreadyReacted) delete myRx[id][emoji]; else myRx[id][emoji] = true;
-    localStorage.setItem('_rec_my_reactions', JSON.stringify(myRx));
+    const sesion = typeof getSesionResponsableObj === 'function' ? getSesionResponsableObj() : { ini: '', area: '' };
+    const meId = sesion.ini ? sesion.ini + ' (' + sesion.area + ')' : 'Anon';
+
     const cached = leerCache(CACHE_KEY_NOTAS) || [];
     const nota = cached.find(n => n.originalIndex === id);
-    if (nota) {
-        if (!nota.reactions) nota.reactions = {};
-        nota.reactions[emoji] = Math.max(0, (nota.reactions[emoji] || 0) + (alreadyReacted ? -1 : 1));
-        if (nota.reactions[emoji] === 0) delete nota.reactions[emoji];
-        guardarCache(CACHE_KEY_NOTAS, cached);
-        notasRenderizar(cached);
-    }
+    if (!nota) return;
+    if (!nota.reactions) nota.reactions = {};
+    const arr = Array.isArray(nota.reactions[emoji]) ? [...nota.reactions[emoji]] : [];
+    const idx = arr.indexOf(meId);
+    const adding = idx === -1;
+    if (adding) arr.push(meId); else arr.splice(idx, 1);
+    if (arr.length === 0) delete nota.reactions[emoji]; else nota.reactions[emoji] = arr;
+    guardarCache(CACHE_KEY_NOTAS, cached);
+    notasRenderizar(cached);
     // Persistir en Supabase
-    fetch(URL_RECAUDACIONES, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'toggleReaction', id, emoji, add: !alreadyReacted }) }).catch(()=>{});
+    fetch(URL_RECAUDACIONES, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'toggleReaction', id, emoji, user: meId, add: adding }) }).catch(()=>{});
 };

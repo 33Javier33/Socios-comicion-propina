@@ -216,8 +216,12 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             try {
                 const { data: rd } = await dbRec.from('notas_recaudacion').select('reactions').eq('id', body.id).maybeSingle();
                 const r = rd?.reactions || {};
-                if (body.add) r[body.emoji] = (r[body.emoji] || 0) + 1;
-                else { r[body.emoji] = Math.max(0, (r[body.emoji] || 0) - 1); if (r[body.emoji] === 0) delete r[body.emoji]; }
+                const arr = Array.isArray(r[body.emoji]) ? [...r[body.emoji]] : [];
+                const user = body.user || 'Anon';
+                const pos = arr.indexOf(user);
+                if (body.add && pos === -1) arr.push(user);
+                else if (!body.add && pos !== -1) arr.splice(pos, 1);
+                if (arr.length === 0) delete r[body.emoji]; else r[body.emoji] = arr;
                 await dbRec.from('notas_recaudacion').update({ reactions: r }).eq('id', body.id);
                 _notificarCambio();
             } catch(e) {}
