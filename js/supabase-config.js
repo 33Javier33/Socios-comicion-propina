@@ -23,119 +23,77 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     // ── Helper ──────────────────────────────────────────────────
     function _mockOk(data) { return { ok: true, status: 200, json: async () => data, text: async () => JSON.stringify(data) }; }
 
-    // ── HANDLER: URL_SOCIOS ──────────────────────────────────────
-    async function _socHandler(url, options) {
-        // Extraer action (GET o POST)
-        const s = String(url);
-        let action = new URLSearchParams(s.split('?')[1] || '').get('action') || '';
+    // ── HANDLER: URL_SOCIOS (solo escritura — lectura sigue en GAS) ─────────────
+    // Escribe en Supabase Y pasa a GAS. Las lecturas van directo a GAS.
+    async function _socWriteHandler(url, options) {
         let body = {};
         if (options && options.body) {
             try { body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body; } catch(e) {}
         }
-        if (!action) action = body.action || '';
+        const action = body.action || '';
 
-        // ── getDatosSocio: leer anticipos + extras + saldo desde Supabase ──
-        if (action === 'getDatosSocio') {
-            const socioId = new URLSearchParams(s.split('?')[1] || '').get('socioId') || body.socioId;
-            try {
-                const [antRes, extRes, salRes] = await Promise.all([
-                    dbSoc.from('anticipos').select('*').eq('socio_id', socioId),
-                    dbSoc.from('extras').select('*').eq('socio_id', socioId),
-                    dbSoc.from('saldos_socio').select('monto').eq('id', socioId).maybeSingle()
-                ]);
-                const anticipos = (antRes.data || []).map(a => ({
-                    uuid: a.id, fecha: a.fecha,
-                    monto: Number(a.monto || 0), cantidad: Number(a.monto || 0),
-                    responsable: a.responsable || ''
-                }));
-                const extras = (extRes.data || []).map(e => ({
-                    uuid: e.id, fecha: e.fecha,
-                    tipo: e.tipo || '', monto: Number(e.monto || 0),
-                    detalle: e.detalle || e.descripcion || ''
-                }));
-                const saldoAnterior = Number(salRes.data?.monto || 0);
-                return _mockOk({ status: 'success', data: { anticipos, extras, saldoAnterior } });
-            } catch(err) {
-                console.error('[supabase-config] getDatosSocio:', err);
-                return _origFetch(url, options);
-            }
-        }
-
-        // ── registrarBatchAnticipos → insertar en Supabase ────────
+        // ── registrarBatchAnticipos → escribir en Supabase + GAS ──────
         if (action === 'registrarBatchAnticipos') {
             const items = body.detalleAnticipos || [];
-            try {
-                await dbSoc.from('anticipos').insert(items.map(a => ({
-                    id: crypto.randomUUID(),
-                    socio_id: String(a.id),
-                    monto: Number(a.monto || 0),
-                    fecha: a.fecha,
-                    responsable: (a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')
-                })));
-            } catch(err) { console.error('[supabase-config] registrarBatchAnticipos:', err); }
-            // Pasar igual a GAS para auditoría / Telegram
-            _origFetch(url, options).catch(() => {});
-            return _mockOk({ status: 'success' });
+            dbSoc.from('anticipos').insert(items.map(a => ({
+                id: crypto.randomUUID(),
+                socio_id: String(a.id),
+                monto: Number(a.monto || 0),
+                fecha: a.fecha,
+                responsable: (a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')
+            }))).then(() => {}).catch(e => console.error('[supabase-config] anticipos insert:', e));
+            // GAS sigue manejando la operación principal (retorna el JSON real)
+            return _origFetch(url, options);
         }
 
-        // ── registrarBatchExtras → insertar en Supabase ───────────
+        // ── registrarBatchExtras → escribir en Supabase + GAS ─────────
         if (action === 'registrarBatchExtras') {
             const items = body.detalleExtras || [];
-            try {
-                await dbSoc.from('extras').insert(items.map(e => ({
-                    id: crypto.randomUUID(),
-                    socio_id: String(e.id),
-                    fecha: e.fecha,
-                    tipo: e.tipo || 'extra',
-                    monto: Number(e.monto || 0),
-                    detalle: e.detalle || ''
-                })));
-            } catch(err) { console.error('[supabase-config] registrarBatchExtras:', err); }
-            _origFetch(url, options).catch(() => {});
-            return _mockOk({ status: 'success' });
+            dbSoc.from('extras').insert(items.map(e => ({
+                id: crypto.randomUUID(),
+                socio_id: String(e.id),
+                fecha: e.fecha,
+                tipo: e.tipo || 'extra',
+                monto: Number(e.monto || 0),
+                detalle: e.detalle || ''
+            }))).then(() => {}).catch(e => console.error('[supabase-config] extras insert:', e));
+            return _origFetch(url, options);
         }
 
-        // ── borrarMovimiento → borrar de Supabase por UUID ────────
+        // ── borrarMovimiento → borrar de Supabase + GAS ───────────────
         if (action === 'borrarMovimiento') {
             const uuid = body.uuid;
             const tipo = (body.tipo || '').toLowerCase();
-            try {
-                if (tipo === 'anticipo' || tipo === 'anticipos') {
-                    await dbSoc.from('anticipos').delete().eq('id', uuid);
-                } else {
-                    await dbSoc.from('extras').delete().eq('id', uuid);
-                }
-            } catch(err) { console.error('[supabase-config] borrarMovimiento:', err); }
-            _origFetch(url, options).catch(() => {});
-            return _mockOk({ status: 'success' });
+            const tbl = (tipo === 'anticipo' || tipo === 'anticipos') ? 'anticipos' : 'extras';
+            dbSoc.from(tbl).delete().eq('id', uuid)
+                .then(() => {}).catch(e => console.error('[supabase-config] borrar:', e));
+            return _origFetch(url, options);
         }
 
-        // ── actualizarAnticipo → actualizar en Supabase ───────────
+        // ── actualizarAnticipo → actualizar en Supabase + GAS ─────────
         if (action === 'actualizarAnticipo') {
-            try {
-                await dbSoc.from('anticipos').update({
-                    fecha: body.fecha,
-                    monto: Number(body.monto || 0),
-                    responsable: (body.responsable || '') + (body.areaResponsable ? ' ' + body.areaResponsable : '')
-                }).eq('id', body.uuid);
-            } catch(err) { console.error('[supabase-config] actualizarAnticipo:', err); }
-            _origFetch(url, options).catch(() => {});
-            return _mockOk({ status: 'success' });
+            dbSoc.from('anticipos').update({
+                fecha: body.fecha,
+                monto: Number(body.monto || 0),
+                responsable: (body.responsable || '') + (body.areaResponsable ? ' ' + body.areaResponsable : '')
+            }).eq('id', body.uuid)
+                .then(() => {}).catch(e => console.error('[supabase-config] actualizar:', e));
+            return _origFetch(url, options);
         }
 
-        // Cualquier otra acción de socios: pasar a GAS
+        // Cualquier otra acción POST de socios: pasar a GAS sin interceptar
         return _origFetch(url, options);
     }
 
     window.fetch = async function (url, options = {}) {
         const s = String(url);
 
-        // Interceptar URL_SOCIOS
-        if (typeof URL_SOCIOS !== 'undefined' && s.startsWith(URL_SOCIOS)) {
-            return _socHandler(s, options);
+        // Interceptar URL_SOCIOS — solo POST con body (escrituras)
+        if (typeof URL_SOCIOS !== 'undefined' && s.startsWith(URL_SOCIOS) && options.method === 'POST') {
+            return _socWriteHandler(s, options);
         }
 
-        // Interceptar URL_RECAUDACIONES (si no llegó aquí ya fue manejado arriba)
+        // Interceptar URL_RECAUDACIONES
         if (typeof URL_RECAUDACIONES === 'undefined' || !s.startsWith(URL_RECAUDACIONES)) {
             return _origFetch(url, options);
         }
