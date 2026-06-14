@@ -298,3 +298,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Auto-refresh de recaudaciones cada 5 segundos (actualización automática)
+setInterval(() => {
+    if (typeof cargarRecaudaciones === 'function') cargarRecaudaciones(true);
+}, 5000);
