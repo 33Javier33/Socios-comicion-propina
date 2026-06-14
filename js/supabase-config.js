@@ -170,18 +170,18 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         if (action === 'getNotes') {
             try {
                 const { data } = await dbRec.from('notas_recaudacion')
-                    .select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false });
-                return ok({
-                    data: (data || []).map(m => ({
-                        uuid: m.id,
-                        originalIndex: m.id,
-                        fecha: m.created_at,
-                        autor: m.autor || 'Admin',
-                        mensaje: m.mensaje || '',
-                        pinned: m.pinned || false,
-                        reactions: m.reactions || {}
-                    }))
-                });
+                    .select('*').order('created_at', { ascending: false });
+                const mapped = (data || []).map(m => ({
+                    uuid: m.id,
+                    originalIndex: m.id,
+                    fecha: m.created_at,
+                    autor: m.autor || 'Admin',
+                    mensaje: m.mensaje || '',
+                    pinned: m.pinned || false,
+                    reactions: m.reactions || {}
+                }));
+                mapped.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+                return ok({ data: mapped });
             } catch (e) { return ok({ data: [] }); }
         }
 
