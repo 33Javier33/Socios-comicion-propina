@@ -114,8 +114,9 @@ function procesarDatosRecaudacion(datos, silent) {
                     return f === fecha && (r.tipo === tBuscado || r.tipo === nombreTipo);
                 });
                 const idx = reg !== undefined ? reg.originalIndex : 'null';
+                const regPor = reg?.registrado_por_nombre || null;
                 tiposHtml += `<div class="type-item" data-tipo="${nombreTipo}">`
-                    + `<span class="type-name">${nombreTipo}</span>`
+                    + `<span class="type-name">${nombreTipo}${regPor ? `<br><small style="font-size:0.68em;color:#7f8c8d;font-weight:500">👤 ${regPor}</small>` : ''}</span>`
                     + `<span class="type-value">${formatearMoneda(valorTipo)}</span>`
                     + `<div style="display:flex;gap:3px;margin-left:auto;">`
                     + `<button onclick="rec_abrirEditar('${fecha}','${nombreTipo}',${valorTipo},'${idx}')" style="background:none;border:1px solid var(--secondary);color:var(--secondary);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">✏️</button>`

@@ -53,7 +53,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     fecha: r.fecha,
                     tipo: r.tipo,
                     monto: Number(r.monto),
-                    divisor: divMap[r.fecha] || null
+                    divisor: divMap[r.fecha] || null,
+                    registrado_por_nombre: r.registrado_por_nombre || null
                 }));
                 return succ(data);
             } catch (e) { return err(e.message); }
