@@ -8,7 +8,7 @@ async function cargarRecaudaciones(silent = false) {
     const cached = leerCache(CACHE_KEY_REC);
     if (cached) {
         procesarDatosRecaudacion(cached, silent);
-        if (silent) return;
+        // Siempre actualizar desde Supabase en background aunque haya caché
         fetch(`${URL_RECAUDACIONES}?action=get&t=${new Date().getTime()}`)
             .then(r => r.json())
             .then(result => {
@@ -25,7 +25,7 @@ async function cargarRecaudaciones(silent = false) {
         const result = await response.json();
         if(result.status !== 'success') throw new Error(result.message || "Error al cargar");
         guardarCache(CACHE_KEY_REC, result.data || []);
-        procesarDatosRecaudacion(result.data || [], silent);
+        procesarDatosRecaudacion(result.data || [], false);
     } catch (error) { console.error(error); if(!silent) showToast("Error al obtener datos", "error"); }
 }
 
