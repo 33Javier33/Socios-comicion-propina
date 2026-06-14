@@ -32,43 +32,55 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         }
         const action = body.action || '';
 
-        // ── registrarBatchAnticipos → escribir en Supabase + GAS ──────
+        // ── registrarBatchAnticipos → escribir en Supabase vía REST directo + GAS ──
         if (action === 'registrarBatchAnticipos') {
             const items = body.detalleAnticipos || [];
-            console.log('[supabase-config] registrarBatchAnticipos → interceptado, items:', items.length);
             items.forEach(a => {
-                const row = {
-                    id: crypto.randomUUID(),
-                    socio_id: String(a.id),
-                    monto: Number(a.monto || 0),
-                    fecha: a.fecha,
-                    responsable: ((a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')).trim()
-                };
-                console.log('[supabase-config] insertando anticipo:', row);
-                dbSoc.from('anticipos').insert(row)
-                    .then(({ error }) => {
-                        if (error) console.error('[supabase-config] anticipos insert ERROR:', JSON.stringify(error));
-                        else console.log('[supabase-config] anticipo insertado OK, socio_id:', row.socio_id);
+                _origFetch(_SB_URL_SOC + '/rest/v1/anticipos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': _SB_KEY_SOC,
+                        'Authorization': 'Bearer ' + _SB_KEY_SOC,
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({
+                        id: crypto.randomUUID(),
+                        socio_id: String(a.id),
+                        monto: Number(a.monto || 0),
+                        fecha: a.fecha,
+                        responsable: ((a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')).trim()
                     })
-                    .catch(e => console.error('[supabase-config] anticipos insert EXCEPCION:', e));
+                }).then(async r => {
+                    if (!r.ok) console.error('[sb] anticipo insert error:', await r.text());
+                }).catch(e => console.error('[sb] anticipo insert ex:', e));
             });
             return _origFetch(url, options);
         }
 
-        // ── registrarBatchExtras → escribir en Supabase + GAS ─────────
+        // ── registrarBatchExtras → escribir en Supabase vía REST directo + GAS ──
         if (action === 'registrarBatchExtras') {
             const items = body.detalleExtras || [];
             items.forEach(e => {
-                dbSoc.from('extras').insert({
-                    id: crypto.randomUUID(),
-                    socio_id: String(e.id),
-                    fecha: e.fecha,
-                    tipo: e.tipo || 'extra',
-                    monto: Number(e.monto || 0),
-                    detalle: e.detalle || ''
-                }).then(({ error }) => {
-                    if (error) console.error('[supabase-config] extras insert ERROR:', JSON.stringify(error));
-                }).catch(e => console.error('[supabase-config] extras insert EXCEPCION:', e));
+                _origFetch(_SB_URL_SOC + '/rest/v1/extras', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': _SB_KEY_SOC,
+                        'Authorization': 'Bearer ' + _SB_KEY_SOC,
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({
+                        id: crypto.randomUUID(),
+                        socio_id: String(e.id),
+                        fecha: e.fecha,
+                        tipo: e.tipo || 'extra',
+                        monto: Number(e.monto || 0),
+                        detalle: e.detalle || ''
+                    })
+                }).then(async r => {
+                    if (!r.ok) console.error('[sb] extras insert error:', await r.text());
+                }).catch(e => console.error('[sb] extras insert ex:', e));
             });
             return _origFetch(url, options);
         }
