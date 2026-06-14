@@ -27,18 +27,37 @@ function notasFormatearMensaje(texto) {
 }
 
 function notasCrearElemento(n, idx) {
-    const fecha = new Date(n.fecha).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    const autor = (n.autor||'Admin').toUpperCase();
+    const lastSeen = parseInt(localStorage.getItem('_rec_last_seen')) || 0;
+    const myRx = JSON.parse(localStorage.getItem('_rec_my_reactions') || '{}');
+    const isNew = lastSeen > 0 && new Date(n.fecha).getTime() > lastSeen;
+    const EMOJIS = ['👍','❤️','😂'];
     const rowIndex = n.originalIndex !== undefined ? n.originalIndex : idx;
+    const rxBtns = EMOJIS.map(e => {
+        const cnt = (n.reactions||{})[e]||0;
+        const mine = myRx[rowIndex]?.[e];
+        return `<button onclick="_notaReaccion('${rowIndex}','${e}')" style="background:${mine?'rgba(59,130,246,0.12)':'#f8fafc'};border:1px solid ${mine?'#93c5fd':'#e2e8f0'};border-radius:20px;padding:2px 10px;cursor:pointer;font-size:0.82em;transition:0.15s">${e}${cnt?' '+cnt:''}</button>`;
+    }).join('');
+    const border = n.pinned ? '3px solid #f59e0b' : isNew ? '3px solid #3b82f6' : '';
+    const bg = n.pinned ? '#fffde7' : isNew ? '#eff6ff' : '';
     const div = document.createElement('div');
     div.className = 'nota-card';
     div.dataset.rowIndex = rowIndex;
+    if (border) div.style.borderLeft = border;
+    if (bg) div.style.background = bg;
     div.innerHTML =
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
-        + '<div style="flex:1;"><div style="font-size:0.75em;color:#7f8c8d;margin-bottom:5px;font-weight:600;">'+autor+' &middot; '+fecha+'</div>'
-        + '<div style="font-size:0.95em;color:#333;line-height:1.5;white-space:pre-wrap;">'+notasFormatearMensaje(n.mensaje||'')+'</div></div>'
-        + '<button onclick="notasBorrar(this)" style="background:none;border:1px solid #fee2e2;color:#ef4444;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:0.8em;flex-shrink:0;" title="Eliminar">&#x1F5D1;</button>'
-        + '</div>';
+        `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
+                ${n.pinned?'<span style="background:#f59e0b;color:#fff;font-size:0.68em;font-weight:700;padding:1px 7px;border-radius:20px">📌 FIJADA</span>':''}
+                ${isNew?'<span style="background:#3b82f6;color:#fff;font-size:0.68em;font-weight:700;padding:1px 7px;border-radius:20px">NUEVO</span>':''}
+                <div style="font-size:0.75em;color:#7f8c8d;font-weight:600">${(n.autor||'Admin').toUpperCase()} &middot; ${new Date(n.fecha).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+                <button onclick="_notaPin('${rowIndex}',${!n.pinned})" style="background:none;border:1px solid #e2e8f0;border-radius:6px;padding:2px 7px;cursor:pointer;font-size:0.85em" title="${n.pinned?'Desfijar':'Fijar'}">${n.pinned?'📌':'📍'}</button>
+                <button onclick="notasBorrar(this)" style="background:none;border:1px solid #fee2e2;color:#ef4444;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:0.8em">🗑️</button>
+            </div>
+        </div>
+        <div style="font-size:0.95em;color:#333;line-height:1.5;white-space:pre-wrap;margin-bottom:10px">${notasFormatearMensaje(n.mensaje||'')}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${rxBtns}</div>`;
     return div;
 }
 
@@ -47,6 +66,7 @@ function notasRenderizar(notas) {
     if (!cont) return;
     cont.innerHTML = '';
     if (!notas.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#7f8c8d;">Sin notas guardadas.</div>'; return; }
+    notas = [...notas].sort((a,b) => (b.pinned?1:0)-(a.pinned?1:0));
     notas.forEach((n, i) => {
         const idx = n.originalIndex !== undefined ? n.originalIndex : i;
         const el  = notasCrearElemento(n, idx);
@@ -125,3 +145,22 @@ async function notasBorrar(btnEl) {
         notasCargar();
     }
 }
+
+window._notaPin = async (id, pinned) => {
+    try {
+        await fetch(URL_RECAUDACIONES, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'togglePin', id, pinned }) });
+        notasCargar();
+    } catch(e) {}
+};
+
+window._notaReaccion = async (id, emoji) => {
+    const myRx = JSON.parse(localStorage.getItem('_rec_my_reactions') || '{}');
+    const alreadyReacted = myRx[id]?.[emoji];
+    try {
+        await fetch(URL_RECAUDACIONES, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'toggleReaction', id, emoji, add: !alreadyReacted }) });
+        if (!myRx[id]) myRx[id] = {};
+        if (alreadyReacted) delete myRx[id][emoji]; else myRx[id][emoji] = true;
+        localStorage.setItem('_rec_my_reactions', JSON.stringify(myRx));
+        notasCargar();
+    } catch(e) {}
+};

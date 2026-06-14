@@ -91,7 +91,7 @@ function switchTab(tabName) {
     else if(tabName === 'recaudacion') { fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones(); }
     else if(tabName === 'config') { fabRec.style.display = 'none'; aq_detenerSync(); cfg_limpiarCampos(); }
     else if(tabName === 'arqueo') { fabRec.style.display = 'none'; aq_initSiNoIniciado(); aq_arrancarSync(); }
-    else if(tabName === 'notas') { fabRec.style.display = 'none'; aq_detenerSync(); notasCargar(); }
+    else if(tabName === 'notas') { fabRec.style.display = 'none'; aq_detenerSync(); localStorage.setItem('_rec_last_seen', Date.now()); notasCargar(); }
     else if(tabName === 'auditoria') { fabRec.style.display = 'none'; aq_detenerSync(); auditoria_cargar(); }
     else if(tabName === 'carpetas') { fabRec.style.display = 'none'; aq_detenerSync(); carpetas_renderArchivero(); }
     else if(tabName === 'materiales') { fabRec.style.display = 'none'; document.getElementById('fabMatAgregar').style.display = 'flex'; aq_detenerSync(); mat_cargar(); }

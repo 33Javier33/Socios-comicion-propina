@@ -170,14 +170,16 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         if (action === 'getNotes') {
             try {
                 const { data } = await dbRec.from('notas_recaudacion')
-                    .select('*').order('created_at', { ascending: false });
+                    .select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false });
                 return ok({
                     data: (data || []).map(m => ({
                         uuid: m.id,
                         originalIndex: m.id,
                         fecha: m.created_at,
                         autor: m.autor || 'Admin',
-                        mensaje: m.mensaje || ''
+                        mensaje: m.mensaje || '',
+                        pinned: m.pinned || false,
+                        reactions: m.reactions || {}
                     }))
                 });
             } catch (e) { return ok({ data: [] }); }
@@ -199,6 +201,26 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 const noteId = body.index;
                 if (noteId) await dbRec.from('notas_recaudacion').delete().eq('id', noteId);
             } catch (e) { console.error('[supabase-config] deleteNote:', e); }
+            return ok({ success: true });
+        }
+
+        if (action === 'togglePin') {
+            try {
+                await dbRec.from('notas_recaudacion').update({ pinned: body.pinned }).eq('id', body.id);
+                _notificarCambio();
+            } catch(e) {}
+            return ok({ success: true });
+        }
+
+        if (action === 'toggleReaction') {
+            try {
+                const { data: rd } = await dbRec.from('notas_recaudacion').select('reactions').eq('id', body.id).maybeSingle();
+                const r = rd?.reactions || {};
+                if (body.add) r[body.emoji] = (r[body.emoji] || 0) + 1;
+                else { r[body.emoji] = Math.max(0, (r[body.emoji] || 0) - 1); if (r[body.emoji] === 0) delete r[body.emoji]; }
+                await dbRec.from('notas_recaudacion').update({ reactions: r }).eq('id', body.id);
+                _notificarCambio();
+            } catch(e) {}
             return ok({ success: true });
         }
 
