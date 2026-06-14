@@ -165,9 +165,40 @@ function migrarAnticipos() {
     if (!socioId) continue;
     filas.push({ id: toStr(d[i][5]) || Utilities.getUuid(),
                  socio_id: socioId, fecha: formatFecha(d[i][2]),
-                 monto: toNum(d[i][3]), autor: toStr(d[i][6]), periodo: 'activo' });
+                 monto: toNum(d[i][3]),
+                 responsable: toStr(d[i][6]),
+                 autor: toStr(d[i][6]), periodo: 'activo' });
   }
   supabaseInsert('anticipos', filas);
+}
+
+// ==============================================================================
+// remigrarAnticipos() — vacía tabla y reimporta TODOS los anticipos desde Sheets
+// EJECUTAR SOLO UNA VEZ para sincronizar GAS → Supabase
+// ==============================================================================
+function remigrarAnticipos() {
+  Logger.log('=== REMIGRANDO ANTICIPOS ===');
+
+  // 1. Vaciar tabla anticipos
+  var del = UrlFetchApp.fetch(SUPABASE_URL + '/rest/v1/anticipos?id=neq.__never__', {
+    method: 'delete',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY },
+    muteHttpExceptions: true
+  });
+  Logger.log('1. Vaciando tabla anticipos → HTTP ' + del.getResponseCode());
+  Utilities.sleep(600);
+
+  // 2. Importar anticipos activos (hoja "Anticipos")
+  Logger.log('2. Importando anticipos activos (hoja "' + HOJA_ANTICIPOS + '")...');
+  migrarAnticipos();
+  Utilities.sleep(500);
+
+  // 3. Importar hojas históricas (Anticipos_MAYO_2026, Anticipos_ABRIL_2026, etc.)
+  Logger.log('3. Importando anticipos históricos (hojas Anticipos_*)...');
+  migrarAnticiposDinamicos();
+
+  Logger.log('=== REMIGRACIÓN ANTICIPOS COMPLETA ===');
+  Logger.log('Ahora corre probarConexion() para verificar cuántas filas quedaron.');
 }
 
 // ==============================================================================
