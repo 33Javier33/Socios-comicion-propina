@@ -424,8 +424,10 @@ async function imprimirReciboSocio() {
             <div class='row'><label>SALDO ANTERIOR</label><span>${saldoAnt}</span></div>
             <div class='row bold'><label>SALDO REAL</label><strong>${saldoReal}</strong></div>
             <div class='divider'></div>
-            <div style='text-align:center;font-size:9px;font-weight:bold;margin-top:6px;letter-spacing:1px;'>TOTAL A COBRAR</div>
-            <div class='row big'><span>${aPagar}</span></div>
+            <div class='total-cobrar'>
+              <div class='total-label'>TOTAL A COBRAR</div>
+              <div class='total-monto'>${aPagar}</div>
+            </div>
             <div class='row'><label>REMANENTE</label><span>${remanente}</span></div>
             <div class='divider'></div>
             <div class='section-title'>MOVIMIENTOS / RESPONSABLES</div>
@@ -452,7 +454,9 @@ async function imprimirReciboSocio() {
         .row { display:flex; justify-content:space-between; align-items:baseline; padding:2px 0; border-bottom:1px solid #eee; }
         .row label { font-size:8.5px; color:#555; flex-shrink:0; }
         .row > strong, .row > span { font-size:8.5px; font-weight:700; text-align:right; word-break:break-word; margin-left:4px; }
-        .row.big { font-size:20px; font-weight:900; border-top:2px solid #000; border-bottom:2px solid #000; margin:5px 0; padding:5px 0; justify-content:center; border-bottom:2px solid #000; }
+        .total-cobrar { text-align:center; border-top:2px solid #000; border-bottom:2px solid #000; margin:6px 0; padding:6px 0; }
+        .total-label { font-size:9px; font-weight:bold; letter-spacing:1px; margin-bottom:2px; }
+        .total-monto { font-size:22px; font-weight:900; }
         table { width:100%; border-collapse:collapse; font-size:8px; }
         th { background:#f0f0f0; padding:2px; border-bottom:1px solid #ccc; }
         td { word-break:break-word; }
