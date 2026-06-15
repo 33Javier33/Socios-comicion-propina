@@ -1053,6 +1053,7 @@ async function cerrarMesSocio() {
 }
 
 // ── Estado de Cobros del Período ─────────────────────────────
+let _cierreMesFiltro = '';
 function cierresMes_getClave() {
     try { const { inicio, fin } = aq_calcularPeriodoActual(); return `cierresMes_${inicio}_${fin}`; }
     catch { return 'cierresMes_fallback'; }
@@ -1077,6 +1078,7 @@ function toggleCierreMes() {
     const open = body.style.display !== 'none';
     body.style.display = open ? 'none' : 'block';
     if (icon) icon.textContent = open ? '▼' : '▲';
+    if (open) _cierreMesFiltro = ''; // limpiar filtro al cerrar
     if (!open) cierresMes_render();
 }
 
@@ -1099,8 +1101,13 @@ function cierresMes_render() {
 
     const fmtM = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
     let pendientesHtml = '', cerradosHtml = '';
+    const filtro = (_cierreMesFiltro || '').toLowerCase().trim();
 
-    cacheSocios.forEach(s => {
+    const sociosFiltrados = filtro
+        ? cacheSocios.filter(s => `${s.nombre} ${s.apellido}`.toLowerCase().includes(filtro))
+        : cacheSocios;
+
+    sociosFiltrados.forEach(s => {
         const c = cerrados.find(x => x.id === s.id);
         if (c) {
             const fecha = new Date(c.fechaCierre).toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -1127,6 +1134,10 @@ function cierresMes_render() {
         }
     });
 
+    // Contar pendientes/cerrados dentro del filtro actual
+    const nCerradosFiltro = sociosFiltrados.filter(s => cerradosIds.has(s.id)).length;
+    const nPendientesFiltro = sociosFiltrados.length - nCerradosFiltro;
+
     body.innerHTML = `
         <div style="display:flex;gap:8px;margin-bottom:12px;">
             <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;text-align:center;">
@@ -1142,12 +1153,25 @@ function cierresMes_render() {
                 <div style="font-size:0.7em;text-transform:uppercase;font-weight:700;color:#1e40af;letter-spacing:0.04em;">Total</div>
             </div>
         </div>
-        ${allClosed ? `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:linear-gradient(135deg,#8e44ad,#6c3483);color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">🏁 Todos cobrados — Archivar Anticipos en Google Sheets</button>` : ''}
-        ${pendientesHtml ? `<div style="font-weight:700;font-size:0.77em;color:#991b1b;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">⏳ Pendientes (${nPendientes})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #fecaca;margin-bottom:12px;">${pendientesHtml}</div>` : ''}
-        ${cerradosHtml ? `<div style="font-weight:700;font-size:0.77em;color:#15803d;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">✅ Cerrados (${nCerrados})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #bbf7d0;">${cerradosHtml}</div>` : ''}
+        <div style="position:relative;margin-bottom:12px;">
+            <input id="cierreMesBuscador" type="text" placeholder="🔍 Buscar por nombre..." value="${_cierreMesFiltro.replace(/"/g,'&quot;')}"
+                oninput="_cierreMesFiltro=this.value;cierresMes_render();"
+                style="width:100%;box-sizing:border-box;padding:8px 32px 8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.87em;outline:none;">
+            ${_cierreMesFiltro ? `<button onclick="_cierreMesFiltro='';cierresMes_render();" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1em;line-height:1;">✕</button>` : ''}
+        </div>
+        ${allClosed && !filtro ? `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:linear-gradient(135deg,#8e44ad,#6c3483);color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">🏁 Todos cobrados — Archivar Anticipos en Google Sheets</button>` : ''}
+        ${!pendientesHtml && !cerradosHtml && filtro ? `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.85em;">Sin resultados para "${_cierreMesFiltro}"</div>` : ''}
+        ${pendientesHtml ? `<div style="font-weight:700;font-size:0.77em;color:#991b1b;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">⏳ Pendientes (${nPendientesFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #fecaca;margin-bottom:12px;">${pendientesHtml}</div>` : ''}
+        ${cerradosHtml ? `<div style="font-weight:700;font-size:0.77em;color:#15803d;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">✅ Cerrados (${nCerradosFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #bbf7d0;">${cerradosHtml}</div>` : ''}
         <div style="margin-top:10px;text-align:right;">
             <button onclick="if(confirm('¿Reiniciar el seguimiento local? Los datos en Google Sheets no se borran.')){localStorage.removeItem(cierresMes_getClave());cierresMes_render();}" style="background:none;border:1px solid #cbd5e1;border-radius:6px;padding:3px 10px;font-size:0.73em;color:#64748b;cursor:pointer;">↺ Reiniciar seguimiento</button>
         </div>`;
+
+    // Restaurar foco y cursor al final del input (innerHTML lo destruye)
+    if (_cierreMesFiltro) {
+        const inp = document.getElementById('cierreMesBuscador');
+        if (inp) { inp.focus(); const len = inp.value.length; inp.setSelectionRange(len, len); }
+    }
 }
 
 async function cierresMes_ejecutarCierreSocio(socioId) {
