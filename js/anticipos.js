@@ -1082,7 +1082,7 @@ function toggleCierreMes() {
     if (!open) cierresMes_render();
 }
 
-function cierresMes_render() {
+function cierresMes_render(refocusBuscador = false) {
     const badge = document.getElementById('cierreMesBadge');
     const body = document.getElementById('cierreMesBody');
     if (!badge) return;
@@ -1155,9 +1155,9 @@ function cierresMes_render() {
         </div>
         <div style="position:relative;margin-bottom:12px;">
             <input id="cierreMesBuscador" type="text" placeholder="🔍 Buscar por nombre..." value="${_cierreMesFiltro.replace(/"/g,'&quot;')}"
-                oninput="_cierreMesFiltro=this.value;cierresMes_render();"
+                oninput="_cierreMesFiltro=this.value;cierresMes_render(true);"
                 style="width:100%;box-sizing:border-box;padding:8px 32px 8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.87em;outline:none;">
-            ${_cierreMesFiltro ? `<button onclick="_cierreMesFiltro='';cierresMes_render();" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1em;line-height:1;">✕</button>` : ''}
+            ${_cierreMesFiltro ? `<button onclick="_cierreMesFiltro='';cierresMes_render(true);" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1em;line-height:1;">✕</button>` : ''}
         </div>
         ${allClosed && !filtro ? `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:linear-gradient(135deg,#8e44ad,#6c3483);color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">🏁 Todos cobrados — Archivar Anticipos en Google Sheets</button>` : ''}
         ${!pendientesHtml && !cerradosHtml && filtro ? `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.85em;">Sin resultados para "${_cierreMesFiltro}"</div>` : ''}
@@ -1167,10 +1167,12 @@ function cierresMes_render() {
             <button onclick="if(confirm('¿Reiniciar el seguimiento local? Los datos en Google Sheets no se borran.')){localStorage.removeItem(cierresMes_getClave());cierresMes_render();}" style="background:none;border:1px solid #cbd5e1;border-radius:6px;padding:3px 10px;font-size:0.73em;color:#64748b;cursor:pointer;">↺ Reiniciar seguimiento</button>
         </div>`;
 
-    // Restaurar foco y cursor al final del input (innerHTML lo destruye)
-    if (_cierreMesFiltro) {
-        const inp = document.getElementById('cierreMesBuscador');
-        if (inp) { inp.focus(); const len = inp.value.length; inp.setSelectionRange(len, len); }
+    // Restaurar foco tras reconstruir innerHTML (solo cuando viene del buscador)
+    if (refocusBuscador) {
+        requestAnimationFrame(() => {
+            const inp = document.getElementById('cierreMesBuscador');
+            if (inp) { inp.focus(); const len = inp.value.length; inp.setSelectionRange(len, len); }
+        });
     }
 }
 
