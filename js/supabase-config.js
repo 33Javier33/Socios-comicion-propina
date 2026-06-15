@@ -53,7 +53,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         try {
             const [gasRaw, sbRaw] = await Promise.all([
                 _origFetch(url, options).then(r => r.json()).catch(() => ({ status: 'error', data: [] })),
-                _origFetch(_SB_URL_SOC + '/rest/v1/socios?select=id,puntos&activo=eq.true', {
+                // Sin filtro activo — activo puede ser NULL en filas migradas
+                _origFetch(_SB_URL_SOC + '/rest/v1/socios?select=id,puntos', {
                     headers: { 'apikey': _SB_KEY_SOC, 'Authorization': 'Bearer ' + _SB_KEY_SOC }
                 }).then(r => r.ok ? r.json() : []).catch(() => [])
             ]);
@@ -66,18 +67,30 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 if (Number.isFinite(v) && v > 0) sbPuntos[String(row.id)] = v;
             }
 
+            // DEBUG temporal — abrir consola (F12) para ver qué retorna Supabase
+            console.log('[SB-SOCIOS] Supabase rows:', (Array.isArray(sbRaw) ? sbRaw : []).length,
+                '| matches >0:', Object.keys(sbPuntos).length,
+                '| sample IDs:', Object.keys(sbPuntos).slice(0, 3));
+            if ((gasRaw.data || []).length > 0) {
+                const primerID = String((gasRaw.data[0] || {}).ID || '');
+                console.log('[SB-SOCIOS] GAS primer ID:', primerID, '| en SB:', sbPuntos[primerID]);
+            }
+
             // Agregar Puntos desde socios.puntos a cada socio de GAS (solo si > 0)
             const merged = (gasRaw.data || []).map(s => {
                 const sp = sbPuntos[String(s.ID)];
                 return sp !== undefined ? { ...s, Puntos: sp } : s;
             });
 
-            // Seed background: actualizar socios.puntos para socios con 0 o null
+            // Seed background: actualizar socios.puntos para socios con 0 o null en Supabase
             const toSeed = [];
             for (const s of (gasRaw.data || [])) {
                 if (sbPuntos[String(s.ID)] !== undefined || !s.FechaIngreso) continue;
                 const p = _calcularPuntosParaSeed(s);
                 if (p !== null) toSeed.push({ id: String(s.ID), puntos: p });
+            }
+            if (toSeed.length > 0) {
+                console.log('[SB-SOCIOS] Seeding', toSeed.length, 'socios sin puntos en Supabase');
             }
             toSeed.forEach(row => {
                 _origFetch(_SB_URL_SOC + '/rest/v1/socios?id=eq.' + encodeURIComponent(row.id), {
@@ -94,6 +107,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 
             return _mockOk({ status: 'success', data: merged });
         } catch(e) {
+            console.error('[SB-SOCIOS] Error en handler:', e);
             return _origFetch(url, options);
         }
     }

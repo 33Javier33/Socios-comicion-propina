@@ -32,8 +32,8 @@ const CLAVE_RECUP  = 'socios2026';
 const INACTIVIDAD_MS = 15 * 60 * 1000; // 15 minutos
 
 // ===== CACHÉ =====
-const CACHE_KEY_SOCIOS = 'fondo_cache_socios';
-const CACHE_KEY_DIAS   = 'fondo_cache_dias';
+const CACHE_KEY_SOCIOS = 'fondo_cache_socios_v2';
+const CACHE_KEY_DIAS   = 'fondo_cache_dias_v2';
 const CACHE_KEY_REC    = 'fondo_cache_recaudacion';
 const CACHE_KEY_NOTAS   = 'fondo_cache_notas';
 const CACHE_SOCIO_TTL   = 5 * 60 * 1000;

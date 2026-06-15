@@ -88,6 +88,7 @@ async function actualizarSociosSilencioso() {
     } catch (e) { console.error(e); showToast('Error de conexión', 'error'); } finally { toggleLoader(false); }
 }
 
+let _dbgSocio = true; // log solo el primer socio
 function procesarSocioDesdeGoogle(s) {
     const fechaStr = s.FechaIngreso;
     if(!fechaStr) return { ...s, anios: 0, puntos: 0, puntosActivos: false, visible: false };
@@ -119,6 +120,7 @@ function procesarSocioDesdeGoogle(s) {
 
     const puntosActivos = visible; // puntos activos solo si ya pasó el día 15
     const areaNorm = (s.Area || '').toLowerCase().trim();
+    if (_dbgSocio) { _dbgSocio = false; console.log('[DBG-SOCIO] FechaIngreso:', fechaStr, '| FechaInicioPuntos:', s.FechaInicioPuntos, '| año15:', año15, '| mes15:', mes15, '| fechaParaPuntos:', fechaParaPuntos, '| visible:', visible, '| Puntos SB:', s.Puntos); }
 
     if (areaNorm === 'gastoscomision' || areaNorm.includes('gastos')) {
         return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: 'GastosComision', contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios: 0, puntos: puntosActivos ? 1 : 0, puntosActivos, visible };
