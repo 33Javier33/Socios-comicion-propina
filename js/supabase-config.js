@@ -61,16 +61,18 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 
             const sbPuntos = {};
             for (const row of (Array.isArray(sbRaw) ? sbRaw : [])) {
-                if (row.puntos !== null && row.puntos !== undefined) sbPuntos[String(row.id)] = Number(row.puntos);
+                // Solo registrar si es un valor positivo — 0 y null se tratan como "sin dato"
+                const v = Number(row.puntos);
+                if (Number.isFinite(v) && v > 0) sbPuntos[String(row.id)] = v;
             }
 
-            // Agregar Puntos desde socios.puntos a cada socio de GAS
+            // Agregar Puntos desde socios.puntos a cada socio de GAS (solo si > 0)
             const merged = (gasRaw.data || []).map(s => {
                 const sp = sbPuntos[String(s.ID)];
                 return sp !== undefined ? { ...s, Puntos: sp } : s;
             });
 
-            // Seed background: actualizar socios.puntos para socios que aún tienen null
+            // Seed background: actualizar socios.puntos para socios con 0 o null
             const toSeed = [];
             for (const s of (gasRaw.data || [])) {
                 if (sbPuntos[String(s.ID)] !== undefined || !s.FechaIngreso) continue;

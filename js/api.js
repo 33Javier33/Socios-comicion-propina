@@ -132,8 +132,8 @@ function procesarSocioDesdeGoogle(s) {
     const puntosBase = 4;
     // puntosMaxPosible: lo que corresponde por fórmula (para detectar escalamientos en verificarEscalamientos)
     const puntosMaxPosible = puntosActivos ? Math.min(puntosBase + (anios * 2), puntosMaximos) : 0;
-    // puntosFinales: usa el valor guardado en Supabase si existe; si no, fórmula como valor inicial (seed)
-    const puntosGuardados = (s.Puntos !== undefined && s.Puntos !== null && s.Puntos !== '') ? Number(s.Puntos) : null;
-    const puntosFinales = puntosGuardados !== null ? puntosGuardados : puntosMaxPosible;
+    // puntosFinales: usa el valor guardado en Supabase si es positivo; 0 y null se tratan como "sin dato" → usa fórmula
+    const ptsSB = Number(s.Puntos);
+    const puntosFinales = (Number.isFinite(ptsSB) && ptsSB > 0) ? ptsSB : puntosMaxPosible;
     return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: areaNorm, contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios, puntos: puntosFinales, puntosMaxPosible, puntosActivos, visible };
 }
