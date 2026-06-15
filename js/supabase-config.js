@@ -23,6 +23,74 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     // ── Helper ──────────────────────────────────────────────────
     function _mockOk(data) { return { ok: true, status: 200, json: async () => data, text: async () => JSON.stringify(data) }; }
 
+    // ── Cola de operaciones offline ──────────────────────────────
+    const _PENDING_OPS_KEY = 'sc_ops_pendientes';
+
+    function _opGuardar(tipo, datos) {
+        try {
+            const ops = JSON.parse(localStorage.getItem(_PENDING_OPS_KEY) || '[]');
+            ops.push({ _oid: crypto.randomUUID(), tipo, datos, ts: Date.now() });
+            localStorage.setItem(_PENDING_OPS_KEY, JSON.stringify(ops));
+        } catch(e) {}
+    }
+
+    function _opEliminar(oid) {
+        try {
+            const ops = JSON.parse(localStorage.getItem(_PENDING_OPS_KEY) || '[]');
+            localStorage.setItem(_PENDING_OPS_KEY, JSON.stringify(ops.filter(o => o._oid !== oid)));
+        } catch(e) {}
+    }
+
+    async function _sincronizarOps() {
+        let ops;
+        try { ops = JSON.parse(localStorage.getItem(_PENDING_OPS_KEY) || '[]'); } catch(e) { return; }
+        if (ops.length === 0) return;
+
+        let ok = 0, omit = 0, fail = 0;
+        for (const op of [...ops]) {
+            try {
+                if (op.tipo === 'anticipo' || op.tipo === 'extra') {
+                    const tbl = op.tipo === 'anticipo' ? 'anticipos' : 'extras';
+                    // Verificar si ya existe por ID único — si existe, saltar
+                    const chk = await _origFetch(
+                        `${_SB_URL_SOC}/rest/v1/${tbl}?id=eq.${encodeURIComponent(op.datos.id)}`,
+                        { headers: { apikey: _SB_KEY_SOC, Authorization: 'Bearer ' + _SB_KEY_SOC } }
+                    );
+                    const existe = await chk.json();
+                    if (Array.isArray(existe) && existe.length > 0) {
+                        _opEliminar(op._oid); omit++; continue;
+                    }
+                    const res = await _origFetch(`${_SB_URL_SOC}/rest/v1/${tbl}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', apikey: _SB_KEY_SOC, Authorization: 'Bearer ' + _SB_KEY_SOC, Prefer: 'return=minimal' },
+                        body: JSON.stringify(op.datos)
+                    });
+                    if (res.ok) { _opEliminar(op._oid); ok++; } else { fail++; }
+
+                } else if (op.tipo === 'puntos') {
+                    // PATCH es idempotente — siempre aplicar
+                    const res = await _origFetch(
+                        `${_SB_URL_SOC}/rest/v1/socios?id=eq.${encodeURIComponent(op.datos.socioId)}`,
+                        { method: 'PATCH', headers: { 'Content-Type': 'application/json', apikey: _SB_KEY_SOC, Authorization: 'Bearer ' + _SB_KEY_SOC, Prefer: 'return=minimal' }, body: JSON.stringify({ puntos: op.datos.puntos }) }
+                    );
+                    if (res.ok) { _opEliminar(op._oid); ok++; } else { fail++; }
+                }
+            } catch(e) { fail++; /* sin red aún — dejar en cola */ }
+        }
+
+        if (ok > 0 || omit > 0) {
+            const msg = `Sincronizado: ${ok} enviado${ok !== 1 ? 's' : ''}${omit > 0 ? `, ${omit} ya existía${omit !== 1 ? 'n' : ''}` : ''}`;
+            if (typeof showToast === 'function') showToast(msg, 'success');
+        }
+        if (fail > 0 && ok === 0) {
+            const pend = JSON.parse(localStorage.getItem(_PENDING_OPS_KEY) || '[]').length;
+            if (typeof showToast === 'function') showToast(`${pend} operación${pend !== 1 ? 'es' : ''} pendiente${pend !== 1 ? 's' : ''} de sincronizar`, 'warning');
+        }
+    }
+
+    // Exponer para el listener online (fuera del IIFE)
+    window._scSincronizar = _sincronizarOps;
+
     // ── Calcula puntos por fórmula para seed inicial ──────────────────────────
     function _calcularPuntosParaSeed(s) {
         try {
@@ -123,53 +191,63 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         // ── registrarBatchAnticipos → escribir en Supabase vía REST directo + GAS ──
         if (action === 'registrarBatchAnticipos') {
             const items = body.detalleAnticipos || [];
+            const offline = !navigator.onLine;
             items.forEach(a => {
-                _origFetch(_SB_URL_SOC + '/rest/v1/anticipos', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': _SB_KEY_SOC,
-                        'Authorization': 'Bearer ' + _SB_KEY_SOC,
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify({
-                        id: crypto.randomUUID(),
-                        socio_id: String(a.id),
-                        monto: Number(a.monto || 0),
-                        fecha: a.fecha,
-                        responsable: ((a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')).trim()
-                    })
-                }).then(async r => {
-                    if (!r.ok) console.error('[sb] anticipo insert error:', await r.text());
-                }).catch(e => console.error('[sb] anticipo insert ex:', e));
+                const datos = {
+                    id: crypto.randomUUID(),
+                    socio_id: String(a.id),
+                    monto: Number(a.monto || 0),
+                    fecha: a.fecha,
+                    responsable: ((a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')).trim()
+                };
+                if (offline) {
+                    _opGuardar('anticipo', datos);
+                } else {
+                    _origFetch(_SB_URL_SOC + '/rest/v1/anticipos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'apikey': _SB_KEY_SOC, 'Authorization': 'Bearer ' + _SB_KEY_SOC, 'Prefer': 'return=minimal' },
+                        body: JSON.stringify(datos)
+                    }).then(async r => {
+                        if (!r.ok) console.error('[sb] anticipo insert error:', await r.text());
+                    }).catch(() => { _opGuardar('anticipo', datos); }); // cola si cae la red
+                }
             });
+            if (offline) {
+                setTimeout(() => { if (typeof showToast === 'function') showToast('Sin conexión — anticipo guardado, se enviará al reconectar 📶', 'warning'); }, 300);
+                return _mockOk({ status: 'success', message: 'offline' });
+            }
             return _origFetch(url, options);
         }
 
         // ── registrarBatchExtras → escribir en Supabase vía REST directo + GAS ──
         if (action === 'registrarBatchExtras') {
             const items = body.detalleExtras || [];
+            const offline = !navigator.onLine;
             items.forEach(e => {
-                _origFetch(_SB_URL_SOC + '/rest/v1/extras', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': _SB_KEY_SOC,
-                        'Authorization': 'Bearer ' + _SB_KEY_SOC,
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify({
-                        id: crypto.randomUUID(),
-                        socio_id: String(e.id),
-                        fecha: e.fecha,
-                        tipo: e.tipo || 'extra',
-                        monto: Number(e.monto || 0),
-                        detalle: e.detalle || ''
-                    })
-                }).then(async r => {
-                    if (!r.ok) console.error('[sb] extras insert error:', await r.text());
-                }).catch(e => console.error('[sb] extras insert ex:', e));
+                const datos = {
+                    id: crypto.randomUUID(),
+                    socio_id: String(e.id),
+                    fecha: e.fecha,
+                    tipo: e.tipo || 'extra',
+                    monto: Number(e.monto || 0),
+                    detalle: e.detalle || ''
+                };
+                if (offline) {
+                    _opGuardar('extra', datos);
+                } else {
+                    _origFetch(_SB_URL_SOC + '/rest/v1/extras', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'apikey': _SB_KEY_SOC, 'Authorization': 'Bearer ' + _SB_KEY_SOC, 'Prefer': 'return=minimal' },
+                        body: JSON.stringify(datos)
+                    }).then(async r => {
+                        if (!r.ok) console.error('[sb] extras insert error:', await r.text());
+                    }).catch(() => { _opGuardar('extra', datos); }); // cola si cae la red
+                }
             });
+            if (offline) {
+                setTimeout(() => { if (typeof showToast === 'function') showToast('Sin conexión — extra guardado, se enviará al reconectar 📶', 'warning'); }, 300);
+                return _mockOk({ status: 'success', message: 'offline' });
+            }
             return _origFetch(url, options);
         }
 
@@ -198,9 +276,15 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         if (action === 'updateSocio' && body.updates && body.updates.Puntos !== undefined) {
             const socioId = String(body.socioId || '');
             if (socioId) {
-                dbSoc.from('socios').update({ puntos: Number(body.updates.Puntos) })
-                    .eq('id', socioId)
-                    .then(() => {}).catch(e => console.error('[sb] socios.puntos update:', e));
+                if (!navigator.onLine) {
+                    _opGuardar('puntos', { socioId, puntos: Number(body.updates.Puntos) });
+                    return _mockOk({ status: 'success', message: 'offline' });
+                }
+                _origFetch(`${_SB_URL_SOC}/rest/v1/socios?id=eq.${encodeURIComponent(socioId)}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'apikey': _SB_KEY_SOC, 'Authorization': 'Bearer ' + _SB_KEY_SOC, 'Prefer': 'return=minimal' },
+                    body: JSON.stringify({ puntos: Number(body.updates.Puntos) })
+                }).catch(() => { _opGuardar('puntos', { socioId, puntos: Number(body.updates.Puntos) }); });
             }
             return _origFetch(url, options);
         }
@@ -437,6 +521,32 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         return _origFetch(url, options);
     };
 })();
+
+// ── Sincronización automática al recuperar conexión ───────────────────────────
+window.addEventListener('online', () => {
+    setTimeout(() => {
+        if (typeof window._scSincronizar === 'function') window._scSincronizar();
+    }, 1500); // esperar 1.5s para que la red se estabilice
+});
+
+// ── Verificar ops pendientes al cargar ────────────────────────────────────────
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        try {
+            const pend = JSON.parse(localStorage.getItem('sc_ops_pendientes') || '[]');
+            if (pend.length === 0) return;
+            if (navigator.onLine) {
+                // Hay conexión → sincronizar automáticamente
+                if (typeof window._scSincronizar === 'function') window._scSincronizar();
+            } else {
+                // Sin conexión → avisar cuántos hay pendientes
+                if (typeof showToast === 'function') {
+                    showToast(`Sin conexión — ${pend.length} operación${pend.length !== 1 ? 'es' : ''} pendiente${pend.length !== 1 ? 's' : ''} 📶`, 'warning');
+                }
+            }
+        } catch(e) {}
+    }, 3000); // esperar 3s para que la app cargue y showToast esté disponible
+});
 
 // ── Realtime broadcast: recargar UI cuando otra app cambia datos ───────────────
 window.addEventListener('load', () => {
