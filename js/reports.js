@@ -425,7 +425,7 @@ async function imprimirReciboSocio() {
             <div class='row bold'><label>SALDO REAL</label><strong>${saldoReal}</strong></div>
             <div class='divider'></div>
             <div style='text-align:center;font-size:9px;font-weight:bold;margin-top:6px;letter-spacing:1px;'>TOTAL A COBRAR</div>
-            <div class='row big'><span>$ ${aPagar}</span></div>
+            <div class='row big'><span>${aPagar}</span></div>
             <div class='row'><label>REMANENTE</label><span>${remanente}</span></div>
             <div class='divider'></div>
             <div class='section-title'>MOVIMIENTOS / RESPONSABLES</div>
@@ -445,29 +445,29 @@ async function imprimirReciboSocio() {
         <html><head><title>${fileName}</title><style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family: Arial, sans-serif; font-size: 10px; color:#000; background:white; }
-        .page { width:100%; padding:6px 8px; }
+        .page { width:72mm; margin:0 auto; padding:4px 6px; }
         .header { text-align:center; border:2px solid #000; padding:8px; margin-bottom:10px; }
         .header h1 { font-size:12px; font-weight:bold; letter-spacing:1px; }
         .section-title { text-align:center; font-weight:bold; font-size:10px; border-bottom:1px solid #000; padding-bottom:2px; margin:8px 0 5px; letter-spacing:1px; }
-        .row { display:flex; justify-content:space-between; align-items:baseline; gap:6px; padding:2px 0; border-bottom:1px solid #eee; }
-        .row label { flex:0 0 auto; max-width:52%; font-weight:600; color:#555; }
-        .row strong, .row > span:last-child { flex:1; text-align:right; min-width:0; word-break:break-word; }
-        .row.big { font-size:18px; font-weight:900; border-top:2px solid #000; border-bottom:2px solid #000; margin:5px 0; padding:5px 0; justify-content:center; }
+        .row { display:flex; justify-content:space-between; align-items:baseline; padding:2px 0; border-bottom:1px solid #eee; }
+        .row label { font-size:8.5px; color:#555; flex-shrink:0; }
+        .row > strong, .row > span { font-size:8.5px; font-weight:700; text-align:right; word-break:break-word; margin-left:4px; }
+        .row.big { font-size:20px; font-weight:900; border-top:2px solid #000; border-bottom:2px solid #000; margin:5px 0; padding:5px 0; justify-content:center; border-bottom:2px solid #000; }
         table { width:100%; border-collapse:collapse; font-size:8px; }
         th { background:#f0f0f0; padding:2px; border-bottom:1px solid #ccc; }
-        td { padding:3px 5px; border-bottom:1px solid #eee; word-break:break-word; }
+        td { word-break:break-word; }
         .divider { border-top:1px solid #000; margin:5px 0; }
         .copy-label { text-align:center; font-size:8px; font-weight:bold; background:#000; color:white; padding:2px; margin-bottom:5px; }
         .cut { border-top:2px dashed #000; margin:15px 0; text-align:center; font-size:8px; color:#aaa; padding-top:4px; }
         .firmas { display:flex; gap:10px; margin-top:20px; }
-        .firma-box { flex:1; text-align:center; overflow:hidden; }
-        .firma-nombre { font-size:8px; font-weight:700; word-break:break-word; }
+        .firma-box { flex:1; text-align:center; }
         .firma-linea { border-top:1px solid #000; margin-bottom:4px; margin-top:15px; }
+        .firma-nombre { font-size:8px; font-weight:700; word-break:break-word; }
         .firma-label { font-size:7px; color:#555; }
         .footer { text-align:center; font-size:7px; color:#888; margin-top:5px; }
         .folio-badge { text-align:center; font-size:8px; font-family:monospace; background:#f4f6f7; border:1px dashed #aaa; padding:3px 6px; margin-bottom:6px; letter-spacing:0.5px; border-radius:3px; }
-        @media print { @page { margin:0; size:80mm auto; } body { padding:4px 6px; } .cut { page-break-after:always; } }
-        @media screen { body { background:#ddd; } .page { background:white; max-width:80mm; margin:0 auto; box-shadow:0 2px 12px rgba(0,0,0,0.2); } }
+        @media print { @page { margin:0; size:80mm auto; } .cut { page-break-after:always; } }
+        @media screen { body { background:#ddd; } .page { background:white; box-shadow:0 2px 12px rgba(0,0,0,0.2); } }
         </style></head><body><div class='page'>`;
 
     const opcion = window.confirm('¿Cómo imprimir?\n\nOK → Copia a copia (seleccionar después)\nCANCELAR → Dos copias en una hoja');
