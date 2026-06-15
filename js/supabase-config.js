@@ -23,8 +23,80 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     // ── Helper ──────────────────────────────────────────────────
     function _mockOk(data) { return { ok: true, status: 200, json: async () => data, text: async () => JSON.stringify(data) }; }
 
-    // ── HANDLER: URL_SOCIOS (solo escritura — lectura sigue en GAS) ─────────────
-    // Escribe en Supabase Y pasa a GAS. Las lecturas van directo a GAS.
+    // ── Calcula puntos por fórmula para seed inicial ──────────────────────────
+    function _calcularPuntosParaSeed(s) {
+        try {
+            const fechaStr = (s.FechaInicioPuntos && s.FechaInicioPuntos.trim()) ? s.FechaInicioPuntos.trim() : s.FechaIngreso;
+            if (!fechaStr) return null;
+            const partes = fechaStr.split('-');
+            const año15 = parseInt(partes[0]);
+            const mes15 = parseInt(partes[1]) - 1;
+            const hoy = new Date();
+            if (hoy < new Date(año15, mes15, 15)) return 0;
+            let anios = hoy.getFullYear() - año15;
+            if (hoy.getMonth() < mes15 || (hoy.getMonth() === mes15 && hoy.getDate() < 15)) anios--;
+            if (anios < 0) anios = 0;
+            const areaNorm = (s.Area || '').toLowerCase();
+            if (areaNorm.includes('gastos')) return 1;
+            let max = 10;
+            if (areaNorm === 'mesas') max = 20;
+            else if (areaNorm === 'maquinas') max = 12;
+            else if (areaNorm === 'tecnicos') max = 12;
+            else if (areaNorm === 'boveda') max = 10;
+            else if (areaNorm.includes('cambista')) max = 8;
+            return Math.min(4 + (anios * 2), max);
+        } catch(e) { return null; }
+    }
+
+    // ── HANDLER: getSocios GET → mergea puntos guardados de Supabase ─────────
+    async function _socGetSociosHandler(url, options) {
+        try {
+            const [gasRaw, sbRaw] = await Promise.all([
+                _origFetch(url, options).then(r => r.json()).catch(() => ({ status: 'error', data: [] })),
+                _origFetch(_SB_URL_SOC + '/rest/v1/socios_puntos?select=socio_id,puntos', {
+                    headers: { 'apikey': _SB_KEY_SOC, 'Authorization': 'Bearer ' + _SB_KEY_SOC }
+                }).then(r => r.ok ? r.json() : []).catch(() => [])
+            ]);
+            if (gasRaw.status !== 'success') return _mockOk(gasRaw);
+
+            const sbPuntos = {};
+            for (const row of (Array.isArray(sbRaw) ? sbRaw : [])) {
+                sbPuntos[String(row.socio_id)] = Number(row.puntos);
+            }
+
+            // Agregar Puntos desde Supabase a cada socio
+            const merged = (gasRaw.data || []).map(s => {
+                const sp = sbPuntos[String(s.ID)];
+                return sp !== undefined ? { ...s, Puntos: sp } : s;
+            });
+
+            // Seed background: guardar puntos fórmula para socios sin registro en Supabase
+            const toSeed = [];
+            for (const s of (gasRaw.data || [])) {
+                if (sbPuntos[String(s.ID)] !== undefined || !s.FechaIngreso) continue;
+                const p = _calcularPuntosParaSeed(s);
+                if (p !== null) toSeed.push({ socio_id: String(s.ID), puntos: p });
+            }
+            if (toSeed.length > 0) {
+                _origFetch(_SB_URL_SOC + '/rest/v1/socios_puntos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': _SB_KEY_SOC,
+                        'Authorization': 'Bearer ' + _SB_KEY_SOC,
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify(toSeed)
+                }).catch(() => {});
+            }
+
+            return _mockOk({ status: 'success', data: merged });
+        } catch(e) {
+            return _origFetch(url, options);
+        }
+    }
+
+    // ── HANDLER: URL_SOCIOS POST (escrituras) ────────────────────────────────
     async function _socWriteHandler(url, options) {
         let body = {};
         if (options && options.body) {
@@ -101,6 +173,18 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             return _origFetch(url, options);
         }
 
+        // ── updateSocio con Puntos → guardar en Supabase socios_puntos ─
+        if (action === 'updateSocio' && body.updates && body.updates.Puntos !== undefined) {
+            const socioId = String(body.socioId || '');
+            if (socioId) {
+                dbSoc.from('socios_puntos').upsert(
+                    { socio_id: socioId, puntos: Number(body.updates.Puntos), updated_at: new Date().toISOString() },
+                    { onConflict: 'socio_id' }
+                ).then(() => {}).catch(e => console.error('[sb] socios_puntos update:', e));
+            }
+            return _origFetch(url, options);
+        }
+
         // Cualquier otra acción POST de socios: pasar a GAS sin interceptar
         return _origFetch(url, options);
     }
@@ -108,8 +192,16 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     window.fetch = async function (url, options = {}) {
         const s = String(url);
 
-        // Interceptar URL_SOCIOS — solo POST con body (escrituras)
-        if (typeof URL_SOCIOS !== 'undefined' && s.startsWith(URL_SOCIOS) && options.method === 'POST') {
+        // Interceptar URL_SOCIOS
+        if (typeof URL_SOCIOS !== 'undefined' && s.startsWith(URL_SOCIOS)) {
+            const method = (options.method || 'GET').toUpperCase();
+            if (method !== 'POST') {
+                // GET: interceptar getSocios para mergear puntos de Supabase
+                let action = '';
+                try { action = new URLSearchParams(s.split('?')[1] || '').get('action') || ''; } catch(e) {}
+                if (action === 'getSocios') return _socGetSociosHandler(s, options);
+                return _origFetch(url, options);
+            }
             return _socWriteHandler(s, options);
         }
 
