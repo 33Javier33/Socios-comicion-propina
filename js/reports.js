@@ -482,9 +482,9 @@ async function imprimirReciboSocio() {
         const label = cual ? '★ COPIA ADMINISTRADOR ★' : '★ COMPROBANTE SOCIO ★';
         contenido = htmlBase + bloqueRecibo(label) + '</div></body></html>';
     } else {
-        contenido = htmlBase + bloqueRecibo('★ COPIA ADMINISTRADOR ★') +
-                      '<div class="cut">✂ CORTAR AQUÍ ✂</div>' +
-                      bloqueRecibo('★ COMPROBANTE SOCIO ★') + '</div></body></html>';
+        contenido = htmlBase + bloqueRecibo('★ COPIA ADMINISTRADOR ★') + '</div>' +
+                      '<div style="page-break-after:always;break-after:page;height:0;overflow:hidden;"></div>' +
+                      '<div class="page">' + bloqueRecibo('★ COMPROBANTE SOCIO ★') + '</div></body></html>';
     }
 
     // Snapshot completo para auditoría y reimpresión
