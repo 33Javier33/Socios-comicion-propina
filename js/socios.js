@@ -77,6 +77,7 @@ function renderizarCards() {
                 <div class="card-actions">
                     <button class="btn-card btn-edit" onclick="prepararEdicion('${socio.id}')">Editar</button>
                     <button class="btn-card btn-info" onclick="verEstadoFinanciero('${socio.id}')">&#128202; Estado</button>
+                    <button class="btn-card btn-puntos" onclick="corregirPuntosSocio('${socio.id}','${socio.nombre} ${socio.apellido}',${socio.puntos})">✏️ ${socio.puntos}pts</button>
                     <button class="btn-card btn-delete" onclick="eliminarSocio('${socio.id}')">Eliminar</button>
                 </div>
             `;
@@ -155,6 +156,29 @@ async function subirPuntosSocio(id, nombre, puntosNuevos) {
         await actualizarSociosSilencioso();
     } catch(e) {
         showToast('Error al actualizar puntos', 'error');
+    } finally {
+        toggleLoader(false);
+    }
+}
+
+async function corregirPuntosSocio(id, nombre, puntosActuales) {
+    const input = prompt(`Corregir puntos de ${nombre}\n\nValor actual: ${puntosActuales} pts\nIngresa el nuevo valor:`, puntosActuales);
+    if (input === null || input.trim() === '') return;
+    const puntosNuevos = parseInt(input.trim());
+    if (isNaN(puntosNuevos) || puntosNuevos < 0 || puntosNuevos > 20) {
+        alert('Valor inválido. Ingresa un número entre 0 y 20.');
+        return;
+    }
+    if (puntosNuevos === puntosActuales) return;
+    if (!confirm(`¿Cambiar puntos de ${nombre} de ${puntosActuales} a ${puntosNuevos}?`)) return;
+    toggleLoader(true, 'Guardando puntos...');
+    try {
+        await callApiSocios('updateSocio', { socioId: id, updates: { Puntos: puntosNuevos } });
+        showToast(`✅ ${nombre}: corregido a ${puntosNuevos} pts`, 'success');
+        try { localStorage.removeItem(CACHE_KEY_SOCIOS); } catch(e) {}
+        await actualizarSociosSilencioso();
+    } catch(e) {
+        showToast('Error al guardar puntos', 'error');
     } finally {
         toggleLoader(false);
     }
