@@ -48,12 +48,12 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         } catch(e) { return null; }
     }
 
-    // ── HANDLER: getSocios GET → mergea puntos guardados de Supabase ─────────
+    // ── HANDLER: getSocios GET → mergea puntos desde tabla socios (misma que lee propi.solicitada) ──
     async function _socGetSociosHandler(url, options) {
         try {
             const [gasRaw, sbRaw] = await Promise.all([
                 _origFetch(url, options).then(r => r.json()).catch(() => ({ status: 'error', data: [] })),
-                _origFetch(_SB_URL_SOC + '/rest/v1/socios_puntos?select=socio_id,puntos', {
+                _origFetch(_SB_URL_SOC + '/rest/v1/socios?select=id,puntos&activo=eq.true', {
                     headers: { 'apikey': _SB_KEY_SOC, 'Authorization': 'Bearer ' + _SB_KEY_SOC }
                 }).then(r => r.ok ? r.json() : []).catch(() => [])
             ]);
@@ -61,34 +61,34 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 
             const sbPuntos = {};
             for (const row of (Array.isArray(sbRaw) ? sbRaw : [])) {
-                sbPuntos[String(row.socio_id)] = Number(row.puntos);
+                if (row.puntos !== null && row.puntos !== undefined) sbPuntos[String(row.id)] = Number(row.puntos);
             }
 
-            // Agregar Puntos desde Supabase a cada socio
+            // Agregar Puntos desde socios.puntos a cada socio de GAS
             const merged = (gasRaw.data || []).map(s => {
                 const sp = sbPuntos[String(s.ID)];
                 return sp !== undefined ? { ...s, Puntos: sp } : s;
             });
 
-            // Seed background: guardar puntos fórmula para socios sin registro en Supabase
+            // Seed background: actualizar socios.puntos para socios que aún tienen null
             const toSeed = [];
             for (const s of (gasRaw.data || [])) {
                 if (sbPuntos[String(s.ID)] !== undefined || !s.FechaIngreso) continue;
                 const p = _calcularPuntosParaSeed(s);
-                if (p !== null) toSeed.push({ socio_id: String(s.ID), puntos: p });
+                if (p !== null) toSeed.push({ id: String(s.ID), puntos: p });
             }
-            if (toSeed.length > 0) {
-                _origFetch(_SB_URL_SOC + '/rest/v1/socios_puntos', {
-                    method: 'POST',
+            toSeed.forEach(row => {
+                _origFetch(_SB_URL_SOC + '/rest/v1/socios?id=eq.' + encodeURIComponent(row.id), {
+                    method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                         'apikey': _SB_KEY_SOC,
                         'Authorization': 'Bearer ' + _SB_KEY_SOC,
                         'Prefer': 'return=minimal'
                     },
-                    body: JSON.stringify(toSeed)
+                    body: JSON.stringify({ puntos: row.puntos })
                 }).catch(() => {});
-            }
+            });
 
             return _mockOk({ status: 'success', data: merged });
         } catch(e) {
@@ -178,14 +178,13 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             return _origFetch(url, options);
         }
 
-        // ── updateSocio con Puntos → guardar en Supabase socios_puntos ─
+        // ── updateSocio con Puntos → actualizar socios.puntos (misma tabla que lee propi.solicitada) ─
         if (action === 'updateSocio' && body.updates && body.updates.Puntos !== undefined) {
             const socioId = String(body.socioId || '');
             if (socioId) {
-                dbSoc.from('socios_puntos').upsert(
-                    { socio_id: socioId, puntos: Number(body.updates.Puntos), updated_at: new Date().toISOString() },
-                    { onConflict: 'socio_id' }
-                ).then(() => {}).catch(e => console.error('[sb] socios_puntos update:', e));
+                dbSoc.from('socios').update({ puntos: Number(body.updates.Puntos) })
+                    .eq('id', socioId)
+                    .then(() => {}).catch(e => console.error('[sb] socios.puntos update:', e));
             }
             return _origFetch(url, options);
         }
