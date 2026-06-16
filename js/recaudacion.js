@@ -333,11 +333,13 @@ function rec_initScrollFab() {}
 const REC_DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
 let _recVerIdx   = null;
 let _recVerMonto = 0;
+let _recVerTipo  = '';
 
 function rec_abrirVerificar(idx, fecha, tipo, monto) {
     if (!idx || idx === 'null') return showToast('No se puede identificar el registro', 'error');
     _recVerIdx   = idx;
     _recVerMonto = monto;
+    _recVerTipo  = tipo;
 
     const partes = fecha.split('-');
     const fechaVis = `${partes[2]}/${partes[1]}/${partes[0]}`;
@@ -406,10 +408,60 @@ async function rec_confirmarVerificacion() {
     toggleLoader(true, 'Verificando...');
     try {
         await rec_postRec({ action: 'arqueado', id: _recVerIdx, billetes });
+        _rec_volcarBilletesAArqueo(_recVerTipo, billetes);
         showToast('Recaudación verificada en caja ✅', 'success');
         try { localStorage.removeItem(CACHE_KEY_REC); } catch(e) {}
         cargarRecaudaciones();
     } catch(e) {
         showToast('Error al guardar verificación', 'error');
     } finally { toggleLoader(false); }
+}
+
+function _rec_volcarBilletesAArqueo(tipo, billetes) {
+    const etiq = { SalaDeJuegos: 'SDJ', EfectivoMDA: 'EMD', TarjetaMDA: 'TMD', Boveda: 'BOV' }[tipo] || tipo.slice(0, 3).toUpperCase();
+
+    // Leer estado actual del arqueo desde localStorage
+    let aqConteo = {};
+    let aqMovi   = {};
+    let aqRet    = 0;
+    try {
+        const sc = localStorage.getItem(AQ_SK_CONTEO);
+        const sm = localStorage.getItem(AQ_SK_MOVI);
+        const sr = localStorage.getItem(AQ_SK_RETIROS);
+        if (sc) aqConteo = JSON.parse(sc);
+        if (sm) aqMovi   = JSON.parse(sm);
+        if (sr) aqRet    = parseInt(sr) || 0;
+    } catch(e) {}
+
+    // Sumar billetes verificados al conteo
+    Object.entries(billetes).forEach(([denom, qty]) => {
+        const v = parseInt(denom);
+        if (!qty) return;
+        aqConteo[v] = (aqConteo[v] || 0) + qty;
+        const prev = aqMovi[v] || '';
+        aqMovi[v]  = prev ? `${prev}+(${qty})[${etiq}]` : `(${qty})[${etiq}]`;
+    });
+
+    // Guardar en localStorage
+    localStorage.setItem(AQ_SK_CONTEO, JSON.stringify(aqConteo));
+    localStorage.setItem(AQ_SK_MOVI,   JSON.stringify(aqMovi));
+
+    // Si el arqueo ya está abierto en esta sesión, actualizar la vista en vivo
+    if (typeof aq_iniciado !== 'undefined' && aq_iniciado) {
+        aq_conteo = aqConteo;
+        aq_movi   = aqMovi;
+        // Agregar al historial de undo si la función está disponible
+        if (typeof aq_histStates !== 'undefined') {
+            aq_histStates.push({ c: JSON.parse(JSON.stringify(aq_conteo)), r: aqRet, m: JSON.parse(JSON.stringify(aq_movi)) });
+            aq_histIdx = aq_histStates.length - 1;
+        }
+        if (typeof aq_generarCampos === 'function') aq_generarCampos();
+    }
+
+    // Guardar en nube (silencioso, sin diálogo de confirmación)
+    fetch(AQ_URL_POST, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ conteoActual: aqConteo, movimientoDisplay: aqMovi, totalRetirado: aqRet })
+    }).catch(() => {});
 }
