@@ -1169,7 +1169,10 @@ function cierresMes_render(refocusBuscador = false) {
                 style="width:100%;box-sizing:border-box;padding:8px 32px 8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.87em;outline:none;">
             ${_cierreMesFiltro ? `<button onclick="_cierreMesFiltro='';cierresMes_render(true);" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1em;line-height:1;">✕</button>` : ''}
         </div>
-        ${allClosed && !filtro ? `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:linear-gradient(135deg,#8e44ad,#6c3483);color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">🏁 Todos cobrados — Archivar Anticipos en Google Sheets</button>` : ''}
+        ${!filtro ? (allClosed
+            ? `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:linear-gradient(135deg,#8e44ad,#6c3483);color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">🏁 Todos cobrados — Archivar Anticipos y Empezar Nuevo Mes</button>`
+            : `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:linear-gradient(135deg,#d97706,#b45309);color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">📦 Archivar todos los anticipos y empezar nuevo mes${nPendientes > 0 ? ' ⚠️ ('+nPendientes+' pendientes)' : ''}</button>`
+        ) : ''}
         ${!pendientesHtml && !cerradosHtml && filtro ? `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.85em;">Sin resultados para "${_cierreMesFiltro}"</div>` : ''}
         ${pendientesHtml ? `<div style="font-weight:700;font-size:0.77em;color:#991b1b;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">⏳ Pendientes (${nPendientesFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #fecaca;margin-bottom:12px;">${pendientesHtml}</div>` : ''}
         ${cerradosHtml ? `<div style="font-weight:700;font-size:0.77em;color:#15803d;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">✅ Cerrados (${nCerradosFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #bbf7d0;">${cerradosHtml}</div>` : ''}
@@ -1239,12 +1242,12 @@ async function cierresMes_ejecutarCierreSocio(socioId) {
 }
 
 async function cierresMes_finalizarPeriodo() {
-    if (!confirm('¿Finalizar el período?\n\nEsto archivará TODOS los anticipos en la pestaña del período actual y los borrará de la hoja activa.\n\n⚠️ Esta acción no se puede deshacer.')) return;
+    const hoy = new Date();
+    const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+    const tabNombre = `Anticipos_${MESES[hoy.getMonth()]}_${hoy.getFullYear()}`;
+    if (!confirm(`¿Archivar TODOS los anticipos del período?\n\nSe moverán a la pestaña "${tabNombre}" y se borrarán de la hoja activa y de Supabase.\n\n⚠️ Esta acción no se puede deshacer.\n\n✅ Hazlo cuando ya hayas cobrado a todos o quieras limpiar y empezar el mes nuevo.`)) return;
     toggleLoader(true, 'Archivando anticipos...');
     try {
-        const hoy = new Date();
-        const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-        const tabNombre = `Anticipos_${MESES[hoy.getMonth()]}_${hoy.getFullYear()}`;
         await callApiSocios('reiniciarAnticipos', { tabNombre });
         showToast('✅ Anticipos archivados en ' + tabNombre, 'success');
         logAccion('Finalizar Período', `Archivado en ${tabNombre}`);
