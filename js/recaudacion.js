@@ -357,9 +357,9 @@ function rec_abrirVerificar(idx, fecha, tipo, monto) {
         html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;">
             <span style="flex:1;font-size:0.85em;font-weight:600;color:#374151;">${formatearMoneda(v)}</span>
             <button onclick="recVer_adj(${v},-1)" style="background:#ef4444;color:white;border:none;border-radius:4px;width:26px;height:26px;font-size:1em;cursor:pointer;line-height:1;">−</button>
-            <input type="number" id="rv-${v}" value="0" min="0"
+            <input type="number" id="rv-${v}" value="" placeholder="0" min="0"
                 style="width:50px;text-align:center;border:1px solid #cbd5e1;border-radius:6px;padding:3px 4px;font-size:0.9em;font-weight:700;"
-                oninput="recVer_updateTotal()">
+                oninput="recVer_updateTotal()" onkeydown="recVer_enterNext(event,${v})">
             <button onclick="recVer_adj(${v},1)" style="background:#10b981;color:white;border:none;border-radius:4px;width:26px;height:26px;font-size:1em;cursor:pointer;line-height:1;">+</button>
             <span id="rv-sub-${v}" style="flex:0 0 85px;text-align:right;font-size:0.8em;color:#64748b;">$0</span>
         </div>`;
@@ -367,12 +367,26 @@ function rec_abrirVerificar(idx, fecha, tipo, monto) {
     document.getElementById('recVerDenoms').innerHTML = html;
     recVer_updateTotal();
     document.getElementById('modalRecVerificar').style.display = 'block';
+    setTimeout(() => { const f = document.getElementById(`rv-${REC_DENOMS[0]}`); if (f) { f.focus(); f.select(); } }, 100);
 }
 
 function recVer_adj(v, sign) {
     const inp = document.getElementById(`rv-${v}`);
-    inp.value = Math.max(0, (parseInt(inp.value) || 0) + sign);
+    inp.value = Math.max(0, (parseInt(inp.value) || 0) + sign) || '';
     recVer_updateTotal();
+}
+
+function recVer_enterNext(event, currentDenom) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const idx = REC_DENOMS.indexOf(currentDenom);
+    const next = REC_DENOMS[idx + 1];
+    if (next !== undefined) {
+        const inp = document.getElementById(`rv-${next}`);
+        if (inp) { inp.focus(); inp.select(); }
+    } else {
+        document.getElementById('recVerBtnConfirmar').focus();
+    }
 }
 
 function recVer_updateTotal() {
