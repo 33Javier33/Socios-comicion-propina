@@ -626,8 +626,10 @@ async function aq_recuperarDeNube() {
             aq_movi = json.data.movimientoDisplay || {};
             aq_totalRetirado = json.data.totalRetirado || 0;
             aq_generarCampos(); showToast('✅ Datos cargados desde nube', 'success');
+        } else {
+            showToast('Sin datos guardados en la nube', 'warning');
         }
-    } catch(e) { showToast('Error al cargar', 'error'); } finally { toggleLoader(false); }
+    } catch(e) { showToast('Error al cargar: ' + e.message, 'error'); } finally { toggleLoader(false); }
 }
 
 async function aq_guardarEnNube() {
@@ -640,7 +642,8 @@ async function aq_guardarEnNube() {
         const resp = await fetch(AQ_URL_POST, { method: 'POST', body: JSON.stringify(payload) });
         const json = await resp.json();
         if(json.status === 'success') { aq_crearBackupLocal(); showToast('✅ Guardado exitosamente', 'success'); aq_resetear(); }
-    } catch(e) { showToast('Error al guardar', 'error'); } finally { toggleLoader(false); }
+        else { showToast('Error al guardar: ' + (json.message || 'desconocido'), 'error'); }
+    } catch(e) { showToast('Error al guardar: ' + e.message, 'error'); } finally { toggleLoader(false); }
 }
 
 async function aq_archivarEnNube() {
@@ -651,8 +654,10 @@ async function aq_archivarEnNube() {
     const payload = { action: 'archive', conteoActual: aq_conteo, totalRetirado: Math.round(aq_totalRetirado), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
     try {
         const resp = await fetch(AQ_URL_POST + '?action=archive', { method: 'POST', body: JSON.stringify(payload) });
-        if(resp.ok) { aq_crearBackupLocal(); aq_resetear(); showToast('✅ Informe archivado correctamente', 'success'); }
-    } catch(e) { showToast('Error al archivar', 'error'); } finally { toggleLoader(false); }
+        const json = await resp.json();
+        if(json.status === 'success') { aq_crearBackupLocal(); aq_resetear(); showToast('✅ Informe archivado correctamente', 'success'); }
+        else { showToast('Error al archivar: ' + (json.message || 'desconocido'), 'error'); }
+    } catch(e) { showToast('Error al archivar: ' + e.message, 'error'); } finally { toggleLoader(false); }
 }
 
 function statsTab(nombre, btn) {
