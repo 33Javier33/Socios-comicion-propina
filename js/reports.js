@@ -56,7 +56,6 @@ async function informeAnticipos() {
                 filas.push({
                     n: idx===0 ? numero++ : '',
                     nombre: idx===0 ? (socio.nombre+' '+socio.apellido).toUpperCase() : '',
-                    area: idx===0 ? areaNom : '',
                     resp,
                     fecha: fechaVis,
                     valor: Number(ant.cantidad||ant.monto)||0,
@@ -89,10 +88,9 @@ async function informeAnticipos() {
         const ths = 'background:#2c3e50;color:white;padding:2px 3px;font-size:7.5px;border:1px solid #1a252f;text-align:center;overflow:hidden;';
         const thead2 = '<thead><tr>'
             + '<th style="'+ths+'width:16px;">N°</th>'
-            + '<th style="'+ths+'text-align:left;width:80px;">NOMBRE</th>'
-            + '<th style="'+ths+'width:22px;">ÁREA</th>'
-            + '<th style="'+ths+'width:56px;">FECHA</th>'
-            + '<th style="'+ths+'width:62px;text-align:right;">VALOR</th>'
+            + '<th style="'+ths+'text-align:left;width:112px;">NOMBRE</th>'
+            + '<th style="'+ths+'width:42px;">FECHA</th>'
+            + '<th style="'+ths+'width:54px;text-align:right;">VALOR</th>'
             + '<th style="'+ths+'width:36px;">RESP.</th>'
             + '</tr></thead>';
 
@@ -120,14 +118,13 @@ async function informeAnticipos() {
                     var filaHtml = '<tr style="background:'+col.bg+';line-height:1.15;">'
                         + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-weight:bold;font-size:8px;color:'+col.txt+';">'+(f.n||'')+'</td>'
                         + '<td style="'+pdNombre+';border:1px solid '+col.borde+';font-size:'+(isNombreRow?'7.5px':'7px')+';font-weight:'+(isNombreRow?'800':'400')+';color:'+col.txt+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+(f.nombre||'')+'</td>'
-                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-size:7.5px;color:'+col.txt+';">'+f.area+'</td>'
-                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-size:7.5px;color:'+col.txt+';">'+f.fecha+'</td>'
+                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-size:7px;color:'+col.txt+';">'+f.fecha+'</td>'
                         + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:right;font-weight:700;font-size:7.5px;color:'+col.txt+';">'+fmt(f.valor)+'</td>'
                         + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-size:7px;color:'+col.txt+';">'+(f.responsable ? f.responsable+(f.respArea ? ' '+f.respArea : '') : '')+'</td>'
                         + '</tr>';
                     if (f.totalSocio !== null) {
                         filaHtml += '<tr style="background:'+col.totalBg+';line-height:1.1;">'
-                            + '<td style="padding:1px 3px;border:1px solid '+col.borde+';font-size:7.5px;border-top:1.5px solid '+col.totalTxt+';" colspan="3"></td>'
+                            + '<td style="padding:1px 3px;border:1px solid '+col.borde+';font-size:7.5px;border-top:1.5px solid '+col.totalTxt+';" colspan="2"></td>'
                             + '<td style="padding:1px 3px;border:1px solid '+col.borde+';text-align:right;font-size:7.5px;font-weight:700;color:'+col.totalTxt+';border-top:1.5px solid '+col.totalTxt+';">TOTAL:</td>'
                             + '<td style="padding:1px 3px;border:1px solid '+col.borde+';text-align:right;font-weight:900;font-size:8px;color:'+col.totalTxt+';border-top:1.5px solid '+col.totalTxt+';">'+fmt(f.totalSocio)+'</td>'
                             + '<td style="padding:1px 3px;border:1px solid '+col.borde+';border-top:1.5px solid '+col.totalTxt+';"></td>'
