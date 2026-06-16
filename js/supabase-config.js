@@ -330,18 +330,16 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             if (!aqAction) aqAction = aqBody.action || '';
             console.log('[AQ-SB] acción:', aqAction || '(guardar)');
 
-            // ID fijo para la única fila de estado del arqueo (evita UUID inválido en delete)
-            const _AQ_ID = '00000000-0000-0000-0000-000000000001';
-
             // GET getLast → devolver estado guardado
+            // Tabla arqueo_estado: PK=periodo(TEXT), conteo(JSONB), movimiento_display(JSONB), total_retirado(NUMERIC)
             if (aqAction === 'getLast') {
                 const { data: row, error } = await dbSoc.from('arqueo_estado')
-                    .select('*').eq('id', _AQ_ID).maybeSingle();
-                console.log('[AQ-SB] getLast →', row ? 'encontrado' : 'vacío', error ? '| error:' + error.message : '');
+                    .select('*').eq('periodo', 'actual').maybeSingle();
+                console.log('[AQ-SB] getLast →', row ? 'encontrado' : 'vacío', error ? '| error: ' + error.message : '');
                 if (error) return _mockOk({ status: 'error', message: error.message });
                 if (row) {
                     return _mockOk({ status: 'success', data: {
-                        conteoActual: row.conteo_actual || {},
+                        conteoActual: row.conteo || {},
                         movimientoDisplay: row.movimiento_display || {},
                         totalRetirado: Number(row.total_retirado || 0)
                     }});
@@ -349,31 +347,32 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 return _mockOk({ status: 'error', message: 'Sin datos guardados' });
             }
 
-            // GET getRetirosAnticipos → devolver todos los retiros registrados
+            // GET getRetirosAnticipos
+            // Tabla retiros_anticipos: firma(TEXT unique), socio_nombre(TEXT), monto(NUMERIC), billetes(JSONB)
             if (aqAction === 'getRetirosAnticipos') {
-                const { data, error } = await dbSoc.from('retiros_anticipos').select('*');
-                if (error) return _mockOk({ status: 'success', data: {} });
+                const { data, error } = await dbSoc.from('retiros_anticipos').select('firma,socio_nombre,monto,billetes');
+                if (error) { console.error('[AQ-SB] getRetirosAnticipos error:', error.message); return _mockOk({ status: 'success', data: {} }); }
                 const mapped = {};
                 (data || []).forEach(r => {
-                    mapped[r.firma] = { nombre: r.nombre, monto: Number(r.monto), billetes: r.billetes || {} };
+                    mapped[r.firma] = { nombre: r.socio_nombre, monto: Number(r.monto), billetes: r.billetes || {} };
                 });
                 return _mockOk({ status: 'success', data: mapped });
             }
 
-            // POST registrarRetiroAnticipo → upsert en retiros_anticipos
+            // POST registrarRetiroAnticipo
             if (aqAction === 'registrarRetiroAnticipo') {
                 const { error } = await dbSoc.from('retiros_anticipos').upsert({
                     firma: aqBody.firma,
-                    nombre: aqBody.nombre || '',
+                    socio_nombre: aqBody.nombre || '',
                     monto: Number(aqBody.monto || 0),
                     billetes: aqBody.billetes || {},
                     responsable: aqBody.responsable || ''
                 }, { onConflict: 'firma' });
-                if (error) return _mockOk({ status: 'error', message: error.message });
+                if (error) { console.error('[AQ-SB] registrarRetiro error:', error.message); return _mockOk({ status: 'error', message: error.message }); }
                 return _mockOk({ status: 'success' });
             }
 
-            // POST archive → guardar en arqueo_cierres y limpiar arqueo_estado
+            // POST archive → guardar en arqueo_cierres y borrar estado actual
             if (aqAction === 'archive') {
                 const { error: insErr } = await dbSoc.from('arqueo_cierres').insert({
                     total_contado: Number(aqBody.totalContado || 0),
@@ -385,24 +384,17 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     divisor_pt: Number(aqBody.divisorPartTime || 1)
                 });
                 if (insErr) return _mockOk({ status: 'error', message: insErr.message });
-                await dbSoc.from('arqueo_estado').delete().eq('id', _AQ_ID);
+                await dbSoc.from('arqueo_estado').delete().eq('periodo', 'actual');
                 return _mockOk({ status: 'success' });
             }
 
-            // POST default → guardar/actualizar estado (upsert con ID fijo → siempre una sola fila)
+            // POST default → guardar/actualizar estado con upsert por periodo='actual'
             const { error: upErr } = await dbSoc.from('arqueo_estado').upsert({
-                id: _AQ_ID,
-                fecha: new Date().toISOString(),
-                conteo_actual: aqBody.conteoActual || {},
+                periodo: 'actual',
+                conteo: aqBody.conteoActual || {},
                 movimiento_display: aqBody.movimientoDisplay || {},
-                total_retirado: Number(aqBody.totalRetirado || 0),
-                total_contado: Number(aqBody.totalContado || 0),
-                total_esperado: Number(aqBody.totalEsperado || 0),
-                total_anticipos: Number(aqBody.totalAnticiposNomina || 0),
-                diferencia: Number(aqBody.diferencia || 0),
-                divisor_planta: Number(aqBody.divisorPlanta || 1),
-                divisor_pt: Number(aqBody.divisorPartTime || 1)
-            }, { onConflict: 'id' });
+                total_retirado: Number(aqBody.totalRetirado || 0)
+            }, { onConflict: 'periodo' });
             console.log('[AQ-SB] guardar →', upErr ? 'ERROR: ' + upErr.message : 'OK');
             if (upErr) return _mockOk({ status: 'error', message: upErr.message });
             return _mockOk({ status: 'success' });
