@@ -85,13 +85,13 @@ async function informeAnticipos() {
         const col1 = grupos.slice(0, splitIdx).reduce(function(acc, g) { return acc.concat(g.filas); }, []);
         const col2 = grupos.slice(splitIdx).reduce(function(acc, g) { return acc.concat(g.filas); }, []);
 
-        const ths = 'background:#2c3e50;color:white;padding:2px 3px;font-size:7.5px;border:1px solid #1a252f;text-align:center;overflow:hidden;';
+        const ths = 'background:#2c3e50;color:white;padding:2px 2px;font-size:7px;border:1px solid #1a252f;text-align:center;overflow:hidden;';
         const thead2 = '<thead><tr>'
-            + '<th style="'+ths+'width:16px;">N°</th>'
-            + '<th style="'+ths+'text-align:left;width:112px;">NOMBRE</th>'
-            + '<th style="'+ths+'width:42px;">FECHA</th>'
-            + '<th style="'+ths+'width:54px;text-align:right;">VALOR</th>'
-            + '<th style="'+ths+'width:36px;">RESP.</th>'
+            + '<th style="'+ths+'width:13px;">N°</th>'
+            + '<th style="'+ths+'text-align:left;width:90px;">NOMBRE</th>'
+            + '<th style="'+ths+'width:36px;">FECHA</th>'
+            + '<th style="'+ths+'width:46px;text-align:right;">MONTO</th>'
+            + '<th style="'+ths+'width:28px;">RESP.</th>'
             + '</tr></thead>';
 
         function buildCol2(rows) {
@@ -114,20 +114,20 @@ async function informeAnticipos() {
                 var col = g.col;
                 var filasHtml = g.filas.map(function(f) {
                     var isNombreRow = !!f.nombre;
-                    var pdNombre = isNombreRow ? 'padding:2px 3px 1px 3px' : 'padding:1px 3px';
-                    var filaHtml = '<tr style="background:'+col.bg+';line-height:1.15;">'
-                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-weight:bold;font-size:8px;color:'+col.txt+';">'+(f.n||'')+'</td>'
-                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';font-size:'+(isNombreRow?'7.5px':'7px')+';font-weight:'+(isNombreRow?'800':'400')+';color:'+col.txt+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+(f.nombre||'')+'</td>'
-                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-size:7px;color:'+col.txt+';">'+f.fecha+'</td>'
-                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:right;font-weight:700;font-size:7.5px;color:'+col.txt+';">'+fmt(f.valor)+'</td>'
-                        + '<td style="'+pdNombre+';border:1px solid '+col.borde+';text-align:center;font-size:7px;color:'+col.txt+';">'+(f.responsable ? f.responsable+(f.respArea ? ' '+f.respArea : '') : '')+'</td>'
+                    var pd = isNombreRow ? 'padding:2px 2px 1px 2px' : 'padding:1px 2px';
+                    var filaHtml = '<tr style="background:'+col.bg+';line-height:1.1;">'
+                        + '<td style="'+pd+';border:1px solid '+col.borde+';text-align:center;font-weight:bold;font-size:7px;color:'+col.txt+';">'+(f.n||'')+'</td>'
+                        + '<td style="'+pd+';border:1px solid '+col.borde+';font-size:'+(isNombreRow?'7px':'6.5px')+';font-weight:'+(isNombreRow?'800':'400')+';color:'+col.txt+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+(f.nombre||'')+'</td>'
+                        + '<td style="'+pd+';border:1px solid '+col.borde+';text-align:center;font-size:6.5px;color:'+col.txt+';">'+f.fecha+'</td>'
+                        + '<td style="'+pd+';border:1px solid '+col.borde+';text-align:right;font-weight:700;font-size:7px;color:'+col.txt+';">'+fmt(f.valor)+'</td>'
+                        + '<td style="'+pd+';border:1px solid '+col.borde+';text-align:center;font-size:6.5px;color:'+col.txt+';">'+(f.responsable ? f.responsable+(f.respArea ? ' '+f.respArea : '') : '')+'</td>'
                         + '</tr>';
                     if (f.totalSocio !== null) {
-                        filaHtml += '<tr style="background:'+col.totalBg+';line-height:1.1;">'
-                            + '<td style="padding:1px 3px;border:1px solid '+col.borde+';font-size:7.5px;border-top:1.5px solid '+col.totalTxt+';" colspan="2"></td>'
-                            + '<td style="padding:1px 3px;border:1px solid '+col.borde+';text-align:right;font-size:7.5px;font-weight:700;color:'+col.totalTxt+';border-top:1.5px solid '+col.totalTxt+';">TOTAL:</td>'
-                            + '<td style="padding:1px 3px;border:1px solid '+col.borde+';text-align:right;font-weight:900;font-size:8px;color:'+col.totalTxt+';border-top:1.5px solid '+col.totalTxt+';">'+fmt(f.totalSocio)+'</td>'
-                            + '<td style="padding:1px 3px;border:1px solid '+col.borde+';border-top:1.5px solid '+col.totalTxt+';"></td>'
+                        filaHtml += '<tr style="background:'+col.totalBg+';line-height:1.05;">'
+                            + '<td style="padding:1px 2px;border:1px solid '+col.borde+';font-size:7px;border-top:1.5px solid '+col.totalTxt+';" colspan="2"></td>'
+                            + '<td style="padding:1px 2px;border:1px solid '+col.borde+';text-align:right;font-size:7px;font-weight:700;color:'+col.totalTxt+';border-top:1.5px solid '+col.totalTxt+';">TOTAL:</td>'
+                            + '<td style="padding:1px 2px;border:1px solid '+col.borde+';text-align:right;font-weight:900;font-size:7.5px;color:'+col.totalTxt+';border-top:1.5px solid '+col.totalTxt+';">'+fmt(f.totalSocio)+'</td>'
+                            + '<td style="padding:1px 2px;border:1px solid '+col.borde+';border-top:1.5px solid '+col.totalTxt+';"></td>'
                             + '</tr>';
                     }
                     return filaHtml;
@@ -141,17 +141,17 @@ async function informeAnticipos() {
             + '<title>'+fileName+'</title>'
             + '<style>'
             + '* { margin:0; padding:0; box-sizing:border-box; }'
-            + 'body { font-family:Arial,sans-serif; font-size:9px; color:#000; padding:10px; }'
-            + 'h1 { font-size:13px; text-align:center; font-weight:900; letter-spacing:1px; margin-bottom:2px; }'
-            + '.sub { text-align:center; font-size:9px; margin-bottom:5px; font-weight:600; }'
-            + '.tothead { background:#c0392b; color:white; padding:5px 10px; font-size:11px; font-weight:900; display:flex; justify-content:space-between; margin-bottom:7px; border-radius:3px; }'
+            + 'body { font-family:Arial,sans-serif; font-size:8.5px; color:#000; padding:8px; }'
+            + 'h1 { font-size:12px; text-align:center; font-weight:900; letter-spacing:1px; margin-bottom:2px; }'
+            + '.sub { text-align:center; font-size:8px; margin-bottom:4px; font-weight:600; }'
+            + '.tothead { background:#c0392b; color:white; padding:4px 8px; font-size:10px; font-weight:900; display:flex; justify-content:space-between; margin-bottom:6px; border-radius:3px; }'
             + '.dos-cols { width:100%; border-collapse:collapse; }'
-            + '.dos-cols td { vertical-align:top; }'
+            + '.dos-cols > tbody > tr > td, .dos-cols > tr > td { vertical-align:top; }'
             + 'table.inner { width:100%; border-collapse:collapse; table-layout:fixed; }'
-            + '.totfinal { background:#2c3e50; color:white; padding:4px 8px; font-weight:900; font-size:10px; text-align:right; margin-top:7px; border-radius:2px; }'
-            + '.footer { text-align:center; font-size:8px; color:#aaa; margin-top:8px; border-top:1px dashed #ccc; padding-top:4px; }'
-            + '@media print { @page { margin:8mm; size:A4 landscape; } body { padding:0 !important; } .page { max-width:none !important; padding:0 !important; box-shadow:none !important; } tbody { page-break-inside:avoid; break-inside:avoid; } }'
-            + '@media screen { body { background:#ddd; } .page { background:white; max-width:1050px; margin:0 auto; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,0.2); } }'
+            + '.totfinal { background:#2c3e50; color:white; padding:3px 8px; font-weight:900; font-size:9px; text-align:right; margin-top:5px; border-radius:2px; }'
+            + '.footer { text-align:center; font-size:7.5px; color:#aaa; margin-top:6px; border-top:1px dashed #ccc; padding-top:3px; }'
+            + '@media print { @page { margin:7mm; size:216mm 330mm portrait; } body { padding:0 !important; } .page { max-width:none !important; padding:0 !important; box-shadow:none !important; } tbody { page-break-inside:avoid; break-inside:avoid; } }'
+            + '@media screen { body { background:#ddd; } .page { background:white; max-width:820px; margin:0 auto; padding:12px; box-shadow:0 2px 12px rgba(0,0,0,0.2); } }'
             + '<\/style>'
             + '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},400);}<\/scr'+'ipt>'
             + '</head><body><div class="page">'
