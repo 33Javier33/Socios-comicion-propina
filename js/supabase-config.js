@@ -91,89 +91,75 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     // Exponer para el listener online (fuera del IIFE)
     window._scSincronizar = _sincronizarOps;
 
-    // ── Calcula puntos por fórmula para seed inicial ──────────────────────────
-    function _calcularPuntosParaSeed(s) {
-        try {
-            const fechaStr = (s.FechaInicioPuntos && s.FechaInicioPuntos.trim()) ? s.FechaInicioPuntos.trim() : s.FechaIngreso;
-            if (!fechaStr) return null;
-            const partes = fechaStr.split('-');
-            const año15 = parseInt(partes[0]);
-            const mes15 = parseInt(partes[1]) - 1;
-            const hoy = new Date();
-            if (hoy < new Date(año15, mes15, 15)) return 0;
-            let anios = hoy.getFullYear() - año15;
-            if (hoy.getMonth() < mes15 || (hoy.getMonth() === mes15 && hoy.getDate() < 15)) anios--;
-            if (anios < 0) anios = 0;
-            const areaNorm = (s.Area || '').toLowerCase();
-            if (areaNorm.includes('gastos')) return 1;
-            let max = 10;
-            if (areaNorm === 'mesas') max = 20;
-            else if (areaNorm === 'maquinas') max = 12;
-            else if (areaNorm === 'tecnicos') max = 12;
-            else if (areaNorm === 'boveda') max = 10;
-            else if (areaNorm.includes('cambista')) max = 8;
-            return Math.min(4 + (anios * 2), max);
-        } catch(e) { return null; }
+    // ── Helper: upsert datos de socios a Supabase (sin sobreescribir puntos) ──
+    function _seedSociosToSupabase(socios) {
+        if (!Array.isArray(socios) || socios.length === 0) return;
+        const rows = socios.map(s => ({
+            id: String(s.ID),
+            nombre: s.Nombre || '',
+            apellido: s.Apellido || '',
+            area: s.Area || '',
+            contrato: s.TipoContrato || '',
+            fecha_ingreso: s.FechaIngreso || null,
+            fecha_inicio_puntos: s.FechaInicioPuntos || null
+            // SIN puntos — preservar valor existente en Supabase
+        }));
+        _origFetch(`${_SB_URL_SOC}/rest/v1/socios`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': _SB_KEY_SOC,
+                'Authorization': 'Bearer ' + _SB_KEY_SOC,
+                'Prefer': 'resolution=merge-duplicates,return=minimal'
+            },
+            body: JSON.stringify(rows)
+        }).then(r => {
+            if (!r.ok) r.text().then(t => console.error('[SB-SEED]', t));
+            else console.log('[SB-SEED]', rows.length, 'socios sincronizados con Supabase');
+        }).catch(e => console.error('[SB-SEED]', e));
     }
 
-    // ── HANDLER: getSocios GET → mergea puntos desde tabla socios (misma que lee propi.solicitada) ──
+    // ── HANDLER: getSocios GET → Supabase primero (rápido), GAS refresca en segundo plano ──
     async function _socGetSociosHandler(url, options) {
         try {
-            const [gasRaw, sbRaw] = await Promise.all([
-                _origFetch(url, options).then(r => r.json()).catch(() => ({ status: 'error', data: [] })),
-                // Sin filtro activo — activo puede ser NULL en filas migradas
-                _origFetch(_SB_URL_SOC + '/rest/v1/socios?select=id,puntos', {
-                    headers: { 'apikey': _SB_KEY_SOC, 'Authorization': 'Bearer ' + _SB_KEY_SOC }
-                }).then(r => r.ok ? r.json() : []).catch(() => [])
-            ]);
-            if (gasRaw.status !== 'success') return _mockOk(gasRaw);
+            // 1. Intentar Supabase primero
+            const sbRes = await _origFetch(
+                `${_SB_URL_SOC}/rest/v1/socios?select=id,nombre,apellido,area,contrato,fecha_ingreso,fecha_inicio_puntos,puntos&order=nombre.asc`,
+                { headers: { 'apikey': _SB_KEY_SOC, 'Authorization': 'Bearer ' + _SB_KEY_SOC } }
+            );
+            const sbData = sbRes.ok ? await sbRes.json() : [];
+            const tieneNombres = Array.isArray(sbData) && sbData.some(r => r.nombre);
 
-            const sbPuntos = {};
-            for (const row of (Array.isArray(sbRaw) ? sbRaw : [])) {
-                // Solo registrar si es un valor positivo — 0 y null se tratan como "sin dato"
-                const v = Number(row.puntos);
-                if (Number.isFinite(v) && v > 0) sbPuntos[String(row.id)] = v;
+            if (tieneNombres) {
+                // Convertir formato Supabase → formato GAS para compatibilidad con procesarSocioDesdeGoogle
+                const data = sbData
+                    .filter(s => s.fecha_ingreso)
+                    .map(s => ({
+                        ID: s.id,
+                        Nombre: s.nombre || '',
+                        Apellido: s.apellido || '',
+                        Area: s.area || '',
+                        TipoContrato: s.contrato || '',
+                        FechaIngreso: s.fecha_ingreso || '',
+                        FechaInicioPuntos: s.fecha_inicio_puntos || '',
+                        Puntos: Number(s.puntos) || 0
+                    }));
+
+                // Refrescar GAS en segundo plano → mantiene Supabase sincronizado con Sheets
+                _origFetch(url, options)
+                    .then(r => r.json())
+                    .then(gasRaw => { if (gasRaw && gasRaw.status === 'success') _seedSociosToSupabase(gasRaw.data); })
+                    .catch(() => {});
+
+                console.log('[SB-SOCIOS] Sirviendo', data.length, 'socios desde Supabase (instantáneo)');
+                return _mockOk({ status: 'success', data });
             }
 
-            // DEBUG temporal — abrir consola (F12) para ver qué retorna Supabase
-            console.log('[SB-SOCIOS] Supabase rows:', (Array.isArray(sbRaw) ? sbRaw : []).length,
-                '| matches >0:', Object.keys(sbPuntos).length,
-                '| sample IDs:', Object.keys(sbPuntos).slice(0, 3));
-            if ((gasRaw.data || []).length > 0) {
-                const primerID = String((gasRaw.data[0] || {}).ID || '');
-                console.log('[SB-SOCIOS] GAS primer ID:', primerID, '| en SB:', sbPuntos[primerID]);
-            }
-
-            // Agregar Puntos desde socios.puntos a cada socio de GAS (solo si > 0)
-            const merged = (gasRaw.data || []).map(s => {
-                const sp = sbPuntos[String(s.ID)];
-                return sp !== undefined ? { ...s, Puntos: sp } : s;
-            });
-
-            // Seed background: actualizar socios.puntos para socios con 0 o null en Supabase
-            const toSeed = [];
-            for (const s of (gasRaw.data || [])) {
-                if (sbPuntos[String(s.ID)] !== undefined || !s.FechaIngreso) continue;
-                const p = _calcularPuntosParaSeed(s);
-                if (p !== null) toSeed.push({ id: String(s.ID), puntos: p });
-            }
-            if (toSeed.length > 0) {
-                console.log('[SB-SOCIOS] Seeding', toSeed.length, 'socios sin puntos en Supabase');
-            }
-            toSeed.forEach(row => {
-                _origFetch(_SB_URL_SOC + '/rest/v1/socios?id=eq.' + encodeURIComponent(row.id), {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': _SB_KEY_SOC,
-                        'Authorization': 'Bearer ' + _SB_KEY_SOC,
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify({ puntos: row.puntos })
-                }).catch(() => {});
-            });
-
-            return _mockOk({ status: 'success', data: merged });
+            // 2. Supabase sin datos completos → esperar GAS y sembrar
+            console.log('[SB-SOCIOS] Sin datos en Supabase, cargando desde GAS...');
+            const gasRaw = await _origFetch(url, options).then(r => r.json()).catch(() => ({ status: 'error', data: [] }));
+            if (gasRaw.status === 'success') _seedSociosToSupabase(gasRaw.data);
+            return _mockOk(gasRaw);
         } catch(e) {
             console.error('[SB-SOCIOS] Error en handler:', e);
             return _origFetch(url, options);
