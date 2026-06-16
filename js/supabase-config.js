@@ -328,6 +328,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 try { aqBody = typeof options.body === 'string' ? JSON.parse(options.body) : options.body; } catch(e) {}
             }
             if (!aqAction) aqAction = aqBody.action || '';
+            console.log('[AQ-SB] acción:', aqAction || '(guardar)');
 
             // ID fijo para la única fila de estado del arqueo (evita UUID inválido en delete)
             const _AQ_ID = '00000000-0000-0000-0000-000000000001';
@@ -336,6 +337,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             if (aqAction === 'getLast') {
                 const { data: row, error } = await dbSoc.from('arqueo_estado')
                     .select('*').eq('id', _AQ_ID).maybeSingle();
+                console.log('[AQ-SB] getLast →', row ? 'encontrado' : 'vacío', error ? '| error:' + error.message : '');
                 if (error) return _mockOk({ status: 'error', message: error.message });
                 if (row) {
                     return _mockOk({ status: 'success', data: {
@@ -401,6 +403,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 divisor_planta: Number(aqBody.divisorPlanta || 1),
                 divisor_pt: Number(aqBody.divisorPartTime || 1)
             }, { onConflict: 'id' });
+            console.log('[AQ-SB] guardar →', upErr ? 'ERROR: ' + upErr.message : 'OK');
             if (upErr) return _mockOk({ status: 'error', message: upErr.message });
             return _mockOk({ status: 'success' });
         }
