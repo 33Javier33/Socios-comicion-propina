@@ -117,7 +117,7 @@ function procesarDatosRecaudacion(datos, silent) {
                 const regPor = reg?.registrado_por_nombre || null;
                 const esArqueado = reg?.arqueado === true;
                 const arqueadoBadge = esArqueado
-                    ? `<span title="Verificado en caja" style="background:#dcfce7;color:#15803d;border-radius:5px;padding:2px 7px;font-size:0.78em;font-weight:700;cursor:default;">✅</span>`
+                    ? ''
                     : `<button onclick="rec_abrirVerificar('${idx}','${fecha}','${nombreTipo}',${valorTipo})" title="Verificar en caja" style="background:none;border:1px solid #f59e0b;color:#b45309;border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;font-weight:700;">⚠️ Verificar</button>`;
                 tiposHtml += `<div class="type-item" data-tipo="${nombreTipo}">`
                     + `<span class="type-name">${nombreTipo}${regPor ? `<br><small style="font-size:0.68em;color:#7f8c8d;font-weight:500">👤 ${regPor}</small>` : ''}</span>`
