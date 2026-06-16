@@ -115,10 +115,15 @@ function procesarDatosRecaudacion(datos, silent) {
                 });
                 const idx = reg !== undefined ? reg.originalIndex : 'null';
                 const regPor = reg?.registrado_por_nombre || null;
+                const esArqueado = reg?.arqueado === true;
+                const arqueadoBadge = esArqueado
+                    ? `<span title="Verificado en caja" style="background:#dcfce7;color:#15803d;border-radius:5px;padding:2px 7px;font-size:0.78em;font-weight:700;cursor:default;">✅</span>`
+                    : `<button onclick="rec_abrirVerificar('${idx}','${fecha}','${nombreTipo}',${valorTipo})" title="Verificar en caja" style="background:none;border:1px solid #f59e0b;color:#b45309;border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;font-weight:700;">⚠️ Verificar</button>`;
                 tiposHtml += `<div class="type-item" data-tipo="${nombreTipo}">`
                     + `<span class="type-name">${nombreTipo}${regPor ? `<br><small style="font-size:0.68em;color:#7f8c8d;font-weight:500">👤 ${regPor}</small>` : ''}</span>`
                     + `<span class="type-value">${formatearMoneda(valorTipo)}</span>`
-                    + `<div style="display:flex;gap:3px;margin-left:auto;">`
+                    + `<div style="display:flex;gap:3px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end;">`
+                    + arqueadoBadge
                     + `<button onclick="rec_abrirEditar('${fecha}','${nombreTipo}',${valorTipo},'${idx}')" style="background:none;border:1px solid var(--secondary);color:var(--secondary);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">✏️</button>`
                     + `<button onclick="rec_borrarFila('${idx}','${nombreTipo}','${fecha}')" style="background:none;border:1px solid var(--danger);color:var(--danger);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">🗑️</button>`
                     + `</div></div>`;
@@ -320,3 +325,91 @@ function rec_limpiarFiltros() { recFiltroTipo=''; recFiltroSinDiv=false; recFilt
 
 function rec_irAlInicio() { irAlInicio(); }
 function rec_initScrollFab() {}
+
+// ============================================================
+// VERIFICACIÓN DE RECAUDACIONES EN CAJA (ARQUEO INDIVIDUAL)
+// ============================================================
+
+const REC_DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
+let _recVerIdx   = null;
+let _recVerMonto = 0;
+
+function rec_abrirVerificar(idx, fecha, tipo, monto) {
+    if (!idx || idx === 'null') return showToast('No se puede identificar el registro', 'error');
+    _recVerIdx   = idx;
+    _recVerMonto = monto;
+
+    const partes = fecha.split('-');
+    const fechaVis = `${partes[2]}/${partes[1]}/${partes[0]}`;
+    const tipoLabel = tipo === 'SalaDeJuegos' ? 'Sala de Juegos' : tipo;
+
+    document.getElementById('recVerTitulo').textContent = `Verificar: ${tipoLabel}`;
+    document.getElementById('recVerInfo').innerHTML =
+        `<div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:#64748b;">📅 ${fechaVis} &nbsp;·&nbsp; <strong>${tipoLabel}</strong></span>
+            <span style="font-size:1.1em;font-weight:900;color:#1e293b;">${formatearMoneda(monto)}</span>
+        </div>`;
+
+    let html = '';
+    REC_DENOMS.forEach(v => {
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;">
+            <span style="flex:1;font-size:0.85em;font-weight:600;color:#374151;">${formatearMoneda(v)}</span>
+            <button onclick="recVer_adj(${v},-1)" style="background:#ef4444;color:white;border:none;border-radius:4px;width:26px;height:26px;font-size:1em;cursor:pointer;line-height:1;">−</button>
+            <input type="number" id="rv-${v}" value="0" min="0"
+                style="width:50px;text-align:center;border:1px solid #cbd5e1;border-radius:6px;padding:3px 4px;font-size:0.9em;font-weight:700;"
+                oninput="recVer_updateTotal()">
+            <button onclick="recVer_adj(${v},1)" style="background:#10b981;color:white;border:none;border-radius:4px;width:26px;height:26px;font-size:1em;cursor:pointer;line-height:1;">+</button>
+            <span id="rv-sub-${v}" style="flex:0 0 85px;text-align:right;font-size:0.8em;color:#64748b;">$0</span>
+        </div>`;
+    });
+    document.getElementById('recVerDenoms').innerHTML = html;
+    recVer_updateTotal();
+    document.getElementById('modalRecVerificar').style.display = 'block';
+}
+
+function recVer_adj(v, sign) {
+    const inp = document.getElementById(`rv-${v}`);
+    inp.value = Math.max(0, (parseInt(inp.value) || 0) + sign);
+    recVer_updateTotal();
+}
+
+function recVer_updateTotal() {
+    let total = 0;
+    REC_DENOMS.forEach(v => {
+        const q   = parseInt(document.getElementById(`rv-${v}`).value) || 0;
+        const sub = q * v;
+        document.getElementById(`rv-sub-${v}`).textContent = formatearMoneda(sub);
+        total += sub;
+    });
+    const dif = total - _recVerMonto;
+    const totEl = document.getElementById('recVerTotal');
+    totEl.textContent = formatearMoneda(total);
+    totEl.style.color = dif === 0 ? '#10b981' : (dif > 0 ? '#f59e0b' : '#ef4444');
+    const difEl = document.getElementById('recVerDif');
+    difEl.textContent = dif === 0 ? '✅ Cuadra perfecto' : (dif > 0 ? `⚠️ Sobran ${formatearMoneda(dif)}` : `🚨 Faltan ${formatearMoneda(Math.abs(dif))}`);
+    difEl.style.color = dif === 0 ? '#10b981' : (dif > 0 ? '#d97706' : '#ef4444');
+}
+
+async function rec_confirmarVerificacion() {
+    if (!_recVerIdx) return;
+    const total = REC_DENOMS.reduce((s, v) => s + (parseInt(document.getElementById(`rv-${v}`).value) || 0) * v, 0);
+    const dif   = total - _recVerMonto;
+    if (dif !== 0) {
+        const msg = dif > 0
+            ? `El conteo tiene ${formatearMoneda(dif)} DE MÁS.`
+            : `El conteo tiene ${formatearMoneda(Math.abs(dif))} DE MENOS.`;
+        if (!confirm(`⚠️ ${msg}\n\nContado: ${formatearMoneda(total)}\nEsperado: ${formatearMoneda(_recVerMonto)}\n\n¿Confirmar de todas formas?`)) return;
+    }
+    const billetes = {};
+    REC_DENOMS.forEach(v => { const q = parseInt(document.getElementById(`rv-${v}`).value) || 0; if (q > 0) billetes[v] = q; });
+    document.getElementById('modalRecVerificar').style.display = 'none';
+    toggleLoader(true, 'Verificando...');
+    try {
+        await rec_postRec({ action: 'arqueado', id: _recVerIdx, billetes });
+        showToast('Recaudación verificada en caja ✅', 'success');
+        try { localStorage.removeItem(CACHE_KEY_REC); } catch(e) {}
+        cargarRecaudaciones();
+    } catch(e) {
+        showToast('Error al guardar verificación', 'error');
+    } finally { toggleLoader(false); }
+}

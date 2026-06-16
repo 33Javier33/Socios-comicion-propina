@@ -885,6 +885,30 @@
             </div>
         </div>
 
+        <!-- MODAL VERIFICAR RECAUDACIÓN EN CAJA -->
+        <div id="modalRecVerificar" class="modal">
+            <div class="modal-content" style="max-width:440px; margin-top:4%;">
+                <div class="modal-header">
+                    <h2 id="recVerTitulo" style="margin:0; font-size:1.05em;">Verificar en Caja</h2>
+                    <span class="close-modal" onclick="document.getElementById('modalRecVerificar').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div id="recVerInfo" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.9em;"></div>
+                    <div style="font-size:0.78em;font-weight:700;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Conteo de billetes</div>
+                    <div id="recVerDenoms"></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding:10px 14px;background:#1e293b;border-radius:8px;">
+                        <span style="color:rgba(255,255,255,0.7);font-size:0.85em;font-weight:700;">TOTAL CONTADO</span>
+                        <span id="recVerTotal" style="font-size:1.3em;font-weight:900;color:#10b981;">$0</span>
+                    </div>
+                    <div id="recVerDif" style="text-align:center;font-size:0.9em;font-weight:700;margin-top:8px;min-height:22px;"></div>
+                    <div style="display:flex;gap:10px;margin-top:16px;">
+                        <button id="recVerBtnConfirmar" onclick="rec_confirmarVerificacion()" class="btn-submit" style="flex:1;">✅ Confirmar verificación</button>
+                        <button onclick="document.getElementById('modalRecVerificar').style.display='none'" class="btn-submit" style="flex:1;background:#94a3b8;border:none;">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- PESTAÑA 3: RECAUDACIONES -->
         <div id="tab-recaudacion" class="tab-content">
             <!-- Acciones + Filtros Recaudación -->

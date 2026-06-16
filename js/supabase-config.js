@@ -454,6 +454,20 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             } catch (e) { return err(e.message); }
         }
 
+        // ── ARQUEADO: marcar recaudación como verificada en caja ─────
+        if (action === 'arqueado') {
+            try {
+                const { error } = await dbRec.from('recaudaciones').update({
+                    arqueado: true,
+                    billetes: body.billetes || {},
+                    arqueado_at: new Date().toISOString()
+                }).eq('id', body.id);
+                if (error) throw error;
+                _notificarCambio();
+                return succ();
+            } catch (e) { return err(e.message); }
+        }
+
         // ── UPDATE recaudacion (por UUID en sheetIndex) ──────────────
         if (action === 'update') {
             try {

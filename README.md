@@ -230,6 +230,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ---
 
+## Historial de Cambios
+
+#### 2026-06-16 — Verificación de recaudaciones en caja (arqueo individual)
+- Cada recaudación registrada (por tipo y fecha) muestra un botón "⚠️ Verificar" hasta que sea confirmada físicamente en caja.
+- Al presionar "Verificar", se abre un modal con contador de billetes por denominación (igual que el arqueo de caja, pero individual por recaudación).
+- El total contado se compara en tiempo real con el monto registrado; si no cuadra, se pide confirmación antes de guardar.
+- Al confirmar, la recaudación queda marcada como "✅ Verificado" y se guarda el desglose de billetes en Supabase (`billetes` JSONB).
+- Cambios en base de datos: columnas `arqueado` (bool), `billetes` (JSONB), `arqueado_at` (timestamp) en tabla `recaudaciones` del proyecto `lpulmjzboogixbdxxayo`.
+- Archivos modificados: `index.html` (modal), `recaudacion.js` (badge + funciones), `supabase-config.js` (handler action=arqueado).
+
+---
+
 ## Seguridad implementada
 
 - PIN por responsable sincronizado con Google Sheets
