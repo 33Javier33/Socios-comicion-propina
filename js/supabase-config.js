@@ -256,8 +256,32 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             const uuid = body.uuid;
             const tipo = (body.tipo || '').toLowerCase();
             const tbl = (tipo === 'anticipo' || tipo === 'anticipos') ? 'anticipos' : 'extras';
-            dbSoc.from(tbl).delete().eq('id', uuid)
-                .then(() => {}).catch(e => console.error('[supabase-config] borrar:', e));
+            const socioId = String(body.socioId || body.socio_id || '');
+            const fecha = body.fecha || '';
+            if (socioId && fecha) {
+                // Borrar por socio_id + fecha (el UUID de GAS ≠ id de Supabase)
+                dbSoc.from(tbl).delete().eq('socio_id', socioId).eq('fecha', fecha)
+                    .then(() => {}).catch(e => console.error('[supabase-config] borrar supabase:', e));
+            } else {
+                dbSoc.from(tbl).delete().eq('id', uuid)
+                    .then(() => {}).catch(e => console.error('[supabase-config] borrar supabase (fallback id):', e));
+            }
+            return _origFetch(url, options);
+        }
+
+        // ── reiniciarAnticipos → archivar en GAS y limpiar Supabase ───
+        if (action === 'reiniciarAnticipos') {
+            dbSoc.from('anticipos').delete().neq('id', '__never__')
+                .then(() => console.log('[supabase-config] anticipos limpiados de Supabase'))
+                .catch(e => console.error('[supabase-config] error limpiando anticipos:', e));
+            return _origFetch(url, options);
+        }
+
+        // ── reiniciarExtras → archivar en GAS y limpiar Supabase ──────
+        if (action === 'reiniciarExtras') {
+            dbSoc.from('extras').delete().neq('id', '__never__')
+                .then(() => console.log('[supabase-config] extras limpiados de Supabase'))
+                .catch(e => console.error('[supabase-config] error limpiando extras:', e));
             return _origFetch(url, options);
         }
 

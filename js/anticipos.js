@@ -630,7 +630,8 @@ async function cargarHistorialSocio(id) {
                     montoTotal: 0,
                     rawDate: new Date(_fechasTC[0] + 'T12:00:00'),
                     uuid: null,
-                    uuidsGrupo: _tcItems.map(e => e.uuid).filter(Boolean)
+                    uuidsGrupo: _tcItems.map(e => e.uuid).filter(Boolean),
+                    fechasGrupo: _tcItems.map(e => e.fecha)
                 }].sort((a, b) => b.rawDate - a.rawDate);
             } else {
                 listaDisplay = listaFinal;
@@ -879,13 +880,16 @@ function seleccionarMotivo(motivo) {
 
 function mostrarModalBorrar(item) {
     document.getElementById('modalConfirmarBorrar').style.display = 'block';
+    document.getElementById('borrarSocioId').value = document.getElementById('gestionSocioId').value || '';
     if (item.uuidsGrupo && item.uuidsGrupo.length > 0) {
         const detalle = item.detalles.join(', ');
         document.getElementById('txtDetalleBorrar').innerText = `¿Eliminar ${detalle}? Se borrarán ${item.uuidsGrupo.length} registros.`;
         document.getElementById('borrarUUID').value = JSON.stringify(item.uuidsGrupo);
+        document.getElementById('borrarFecha').value = JSON.stringify(item.fechasGrupo || [item.fecha]);
     } else {
         document.getElementById('txtDetalleBorrar').innerText = `¿Borrar registro del ${item.fecha} (${Array.from(item.tipos).join(',')})?`;
         document.getElementById('borrarUUID').value = item.uuid;
+        document.getElementById('borrarFecha').value = item.fecha || '';
     }
     document.getElementById('borrarTipo').value = item.montoTotal > 0 ? 'Anticipo' : 'Extra';
 }
@@ -893,6 +897,8 @@ function mostrarModalBorrar(item) {
 async function borrarItemConfirmado() {
     const uuidVal = document.getElementById('borrarUUID').value;
     const tipo = document.getElementById('borrarTipo').value;
+    const socioId = document.getElementById('borrarSocioId').value || '';
+    const fechaVal = document.getElementById('borrarFecha').value || '';
     if(!uuidVal) return alert("No se puede borrar (Falta ID)");
 
     toggleLoader(true, "Eliminando...");
@@ -903,8 +909,12 @@ async function borrarItemConfirmado() {
         try { const p = JSON.parse(uuidVal); uuids = Array.isArray(p) ? p : [uuidVal]; }
         catch(e) { uuids = [uuidVal]; }
 
-        for (const u of uuids) {
-            await callApiSocios('borrarMovimiento', { uuid: u, tipo });
+        let fechas;
+        try { const f = JSON.parse(fechaVal); fechas = Array.isArray(f) ? f : [fechaVal]; }
+        catch(e) { fechas = [fechaVal]; }
+
+        for (let i = 0; i < uuids.length; i++) {
+            await callApiSocios('borrarMovimiento', { uuid: uuids[i], tipo, socioId, fecha: fechas[i] || fechas[0] || '' });
         }
         showToast(uuids.length > 1 ? `${uuids.length} registros eliminados` : 'Eliminado correctamente', 'success');
         globalCacheAllData = null;
