@@ -221,6 +221,13 @@ function aq_realizarArqueo() {
     const espVal = Math.round(parseInt((espEl.textContent || '0').replace(/[^0-9-]/g, ''))) || 0;
     const dif = Math.round((total + aq_totalAnticipos) - espVal);
 
+    // Barra de total en tiempo real dentro del modal de conteo
+    const liveEl = document.getElementById('aq-conteo-total-live');
+    if (liveEl) {
+        liveEl.textContent = aq_fmt(total);
+        liveEl.style.color = total === 0 ? 'rgba(255,255,255,0.4)' : '#10b981';
+    }
+
     document.getElementById('aq-total-contado').textContent = aq_fmt(total);
     document.getElementById('aq-total-retiros').textContent = aq_fmt(aq_totalRetirado);
 
