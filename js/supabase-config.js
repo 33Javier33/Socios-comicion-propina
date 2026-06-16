@@ -329,81 +329,80 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             }
             if (!aqAction) aqAction = aqBody.action || '';
 
-            // GET getLast → devolver último estado guardado de arqueo_estado
+            // ID fijo para la única fila de estado del arqueo (evita UUID inválido en delete)
+            const _AQ_ID = '00000000-0000-0000-0000-000000000001';
+
+            // GET getLast → devolver estado guardado
             if (aqAction === 'getLast') {
-                try {
-                    const { data } = await dbSoc.from('arqueo_estado').select('*').order('fecha', { ascending: false }).limit(1);
-                    const row = data && data[0];
-                    if (row) {
-                        return _mockOk({ status: 'success', data: {
-                            conteoActual: row.conteo_actual || {},
-                            movimientoDisplay: row.movimiento_display || {},
-                            totalRetirado: Number(row.total_retirado || 0)
-                        }});
-                    }
-                    return _mockOk({ status: 'error', message: 'Sin datos guardados' });
-                } catch(e) { return _mockOk({ status: 'error', message: e.message }); }
+                const { data: row, error } = await dbSoc.from('arqueo_estado')
+                    .select('*').eq('id', _AQ_ID).maybeSingle();
+                if (error) return _mockOk({ status: 'error', message: error.message });
+                if (row) {
+                    return _mockOk({ status: 'success', data: {
+                        conteoActual: row.conteo_actual || {},
+                        movimientoDisplay: row.movimiento_display || {},
+                        totalRetirado: Number(row.total_retirado || 0)
+                    }});
+                }
+                return _mockOk({ status: 'error', message: 'Sin datos guardados' });
             }
 
             // GET getRetirosAnticipos → devolver todos los retiros registrados
             if (aqAction === 'getRetirosAnticipos') {
-                try {
-                    const { data } = await dbSoc.from('retiros_anticipos').select('*');
-                    const mapped = {};
-                    (data || []).forEach(r => {
-                        mapped[r.firma] = { nombre: r.nombre, monto: Number(r.monto), billetes: r.billetes || {} };
-                    });
-                    return _mockOk({ status: 'success', data: mapped });
-                } catch(e) { return _mockOk({ status: 'success', data: {} }); }
+                const { data, error } = await dbSoc.from('retiros_anticipos').select('*');
+                if (error) return _mockOk({ status: 'success', data: {} });
+                const mapped = {};
+                (data || []).forEach(r => {
+                    mapped[r.firma] = { nombre: r.nombre, monto: Number(r.monto), billetes: r.billetes || {} };
+                });
+                return _mockOk({ status: 'success', data: mapped });
             }
 
             // POST registrarRetiroAnticipo → upsert en retiros_anticipos
             if (aqAction === 'registrarRetiroAnticipo') {
-                try {
-                    await dbSoc.from('retiros_anticipos').upsert({
-                        firma: aqBody.firma,
-                        nombre: aqBody.nombre || '',
-                        monto: Number(aqBody.monto || 0),
-                        billetes: aqBody.billetes || {},
-                        responsable: aqBody.responsable || ''
-                    }, { onConflict: 'firma' });
-                    return _mockOk({ status: 'success' });
-                } catch(e) { return _mockOk({ status: 'error', message: e.message }); }
+                const { error } = await dbSoc.from('retiros_anticipos').upsert({
+                    firma: aqBody.firma,
+                    nombre: aqBody.nombre || '',
+                    monto: Number(aqBody.monto || 0),
+                    billetes: aqBody.billetes || {},
+                    responsable: aqBody.responsable || ''
+                }, { onConflict: 'firma' });
+                if (error) return _mockOk({ status: 'error', message: error.message });
+                return _mockOk({ status: 'success' });
             }
 
             // POST archive → guardar en arqueo_cierres y limpiar arqueo_estado
             if (aqAction === 'archive') {
-                try {
-                    await dbSoc.from('arqueo_cierres').insert({
-                        total_contado: Number(aqBody.totalContado || 0),
-                        diferencia: Number(aqBody.diferencia || 0),
-                        total_retirado: Number(aqBody.totalRetirado || 0),
-                        conteo_actual: aqBody.conteoActual || {},
-                        movimiento_display: aqBody.movimientoDisplay || {},
-                        divisor_planta: Number(aqBody.divisorPlanta || 1),
-                        divisor_pt: Number(aqBody.divisorPartTime || 1)
-                    });
-                    await dbSoc.from('arqueo_estado').delete().neq('id', '__never__');
-                    return _mockOk({ status: 'success' });
-                } catch(e) { return _mockOk({ status: 'error', message: e.message }); }
-            }
-
-            // POST default → guardar estado actual (una sola fila: borrar y reinsertar)
-            try {
-                await dbSoc.from('arqueo_estado').delete().neq('id', '__never__');
-                await dbSoc.from('arqueo_estado').insert({
+                const { error: insErr } = await dbSoc.from('arqueo_cierres').insert({
+                    total_contado: Number(aqBody.totalContado || 0),
+                    diferencia: Number(aqBody.diferencia || 0),
+                    total_retirado: Number(aqBody.totalRetirado || 0),
                     conteo_actual: aqBody.conteoActual || {},
                     movimiento_display: aqBody.movimientoDisplay || {},
-                    total_retirado: Number(aqBody.totalRetirado || 0),
-                    total_contado: Number(aqBody.totalContado || 0),
-                    total_esperado: Number(aqBody.totalEsperado || 0),
-                    total_anticipos: Number(aqBody.totalAnticiposNomina || 0),
-                    diferencia: Number(aqBody.diferencia || 0),
                     divisor_planta: Number(aqBody.divisorPlanta || 1),
                     divisor_pt: Number(aqBody.divisorPartTime || 1)
                 });
+                if (insErr) return _mockOk({ status: 'error', message: insErr.message });
+                await dbSoc.from('arqueo_estado').delete().eq('id', _AQ_ID);
                 return _mockOk({ status: 'success' });
-            } catch(e) { return _mockOk({ status: 'error', message: e.message }); }
+            }
+
+            // POST default → guardar/actualizar estado (upsert con ID fijo → siempre una sola fila)
+            const { error: upErr } = await dbSoc.from('arqueo_estado').upsert({
+                id: _AQ_ID,
+                fecha: new Date().toISOString(),
+                conteo_actual: aqBody.conteoActual || {},
+                movimiento_display: aqBody.movimientoDisplay || {},
+                total_retirado: Number(aqBody.totalRetirado || 0),
+                total_contado: Number(aqBody.totalContado || 0),
+                total_esperado: Number(aqBody.totalEsperado || 0),
+                total_anticipos: Number(aqBody.totalAnticiposNomina || 0),
+                diferencia: Number(aqBody.diferencia || 0),
+                divisor_planta: Number(aqBody.divisorPlanta || 1),
+                divisor_pt: Number(aqBody.divisorPartTime || 1)
+            }, { onConflict: 'id' });
+            if (upErr) return _mockOk({ status: 'error', message: upErr.message });
+            return _mockOk({ status: 'success' });
         }
 
         // Interceptar URL_RECAUDACIONES
