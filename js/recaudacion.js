@@ -424,13 +424,14 @@ async function rec_confirmarVerificacion() {
     document.getElementById('modalRecVerificar').style.display = 'none';
     toggleLoader(true, 'Verificando...');
     try {
-        await rec_postRec({ action: 'arqueado', id: _recVerIdx, billetes });
+        const result = await rec_postRec({ action: 'arqueado', id: _recVerIdx, billetes });
+        if (!result || result.status !== 'success') throw new Error(result?.message || 'Error en base de datos');
         _rec_volcarBilletesAArqueo(_recVerTipo, billetes);
         showToast('Recaudación verificada en caja ✅', 'success');
         try { localStorage.removeItem(CACHE_KEY_REC); } catch(e) {}
         cargarRecaudaciones();
     } catch(e) {
-        showToast('Error al guardar verificación', 'error');
+        showToast('Error al verificar: ' + e.message, 'error');
     } finally { toggleLoader(false); }
 }
 
