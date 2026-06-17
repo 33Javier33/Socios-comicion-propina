@@ -508,6 +508,81 @@ function migrarAnticiposDinamicos() {
 }
 
 // ==============================================================================
+// backfillAnticiposFaltantes() — importa a Supabase los meses que faltan
+// Seguro de correr múltiples veces: ignora duplicados por id
+// CÓMO USAR: abrir GAS editor → ejecutar esta función → revisar el log
+// ==============================================================================
+function backfillAnticiposFaltantes() {
+  Logger.log('================================================================');
+  Logger.log('BACKFILL: Anticipos_* → Supabase anticipos_historial');
+  Logger.log('Seguro de correr múltiples veces (ignora duplicados)');
+  Logger.log('================================================================');
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var hojas = ss.getSheets();
+  var totalHojas = 0, totalFilas = 0;
+
+  hojas.forEach(function(hoja) {
+    var nombre = hoja.getName();
+    if (!nombre.startsWith('Anticipos_') || nombre === HOJA_ANTICIPOS) return;
+    if (hoja.getLastRow() <= 1) return;
+
+    var d = hoja.getDataRange().getValues();
+    var periodo = nombre.replace('Anticipos_', '').replace(/_/g, ' ');
+    Logger.log('\n[HOJA] "' + nombre + '" — ' + (d.length - 1) + ' filas — período: ' + periodo);
+
+    var filas = [];
+    for (var i = 1; i < d.length; i++) {
+      var socioId = toStr(d[i][0]);
+      if (!socioId) continue;
+      var uid = toStr(d[i][5]) || Utilities.getUuid();
+      var fechaArch = d[i][8] instanceof Date ? formatFecha(d[i][8]) : null;
+      filas.push({
+        id: uid + '_' + periodo.replace(/ /g, '_'),
+        socio_id: socioId,
+        socio_nombre: toStr(d[i][1]) || null,
+        monto: toNum(d[i][3]),
+        fecha: formatFecha(d[i][2]),
+        estado: toStr(d[i][4]) || 'ARCHIVADO',
+        uuid_ref: uid,
+        responsable: toStr(d[i][6]) || null,
+        area_responsable: toStr(d[i][7]) || null,
+        periodo: periodo,
+        fecha_archivo: fechaArch
+      });
+    }
+
+    if (filas.length > 0) {
+      var url = SUPABASE_URL + '/rest/v1/anticipos_historial';
+      var res = UrlFetchApp.fetch(url, {
+        method: 'post',
+        contentType: 'application/json',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Prefer': 'return=minimal,resolution=ignore-duplicates'
+        },
+        payload: JSON.stringify(filas),
+        muteHttpExceptions: true
+      });
+      var code = res.getResponseCode();
+      if (code >= 200 && code < 300) {
+        Logger.log('[OK] ' + filas.length + ' filas insertadas (duplicados ignorados)');
+        totalFilas += filas.length;
+        totalHojas++;
+      } else {
+        Logger.log('[ERROR] HTTP ' + code + ' — ' + res.getContentText().substring(0, 200));
+      }
+    }
+    Utilities.sleep(300);
+  });
+
+  Logger.log('\n================================================================');
+  Logger.log('BACKFILL COMPLETADO: ' + totalHojas + ' hojas, ' + totalFilas + ' filas procesadas');
+  Logger.log('Ahora propi.solicitada leerá todos los meses desde Supabase.');
+  Logger.log('================================================================');
+}
+
+// ==============================================================================
 // migrarTodo() — migra las 12 tablas desde cero
 // ==============================================================================
 function migrarTodo() {
