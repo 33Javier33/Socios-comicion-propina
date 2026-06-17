@@ -99,21 +99,10 @@ function sincronizarActivos() {
   Logger.log('================================================================');
 }
 
+// NOTA: Las constantes HOJA_* (HOJA_SOCIOS, HOJA_ANTICIPOS, etc.) se toman del
+// script principal (Código.gs) — no se redeclaran aquí para evitar SyntaxError.
 var SUPABASE_URL = 'https://teemahksasdougehrcly.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlZW1haGtzYXNkb3VnZWhyY2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTkwNjIsImV4cCI6MjA5Njg3NTA2Mn0.EIQ7gRcwf3zYgvGESKw3s5lnZMABN_EuNWsrJK3L1zk';
-
-var HOJA_SOCIOS              = 'Socios';
-var HOJA_ANTICIPOS           = 'Anticipos';
-var HOJA_EXTRAS              = 'MovimientosExtras';
-var HOJA_SALDOS              = 'SaldosAnteriores';
-var HOJA_DIAS_PT             = 'DiasPartTime';
-var HOJA_CHAT_SOCIAL         = 'MensajesApp';
-var HOJA_ANTICIPOS_HISTORIAL = 'AnticiposGuardados';
-var HOJA_HISTORIAL_CONEX     = 'HistorialConexiones';
-var HOJA_AUDITORIA           = 'AuditoriaLogs';
-var HOJA_CREDENCIALES        = 'Credenciales';
-var HOJA_RETIROS_ANTICIPOS   = 'RetirosAnticipos';
-var HOJA_MATERIALES          = 'RecaudacionMateriales';
 
 // ==============================================================================
 // HELPERS
