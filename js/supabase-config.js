@@ -255,12 +255,34 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             return _origFetch(url, options);
         }
 
-        // ── reiniciarAnticipos → archivar en GAS y limpiar Supabase ───
+        // ── reiniciarAnticipos → archivar a historial en Supabase, luego limpiar ───
         if (action === 'reiniciarAnticipos') {
+            const periodo = (body.tabNombre || '').replace('Anticipos_', '') || 'ARCHIVADO';
+            // 1. Leer anticipos activos de Supabase
+            const { data: activos } = await dbSoc.from('anticipos').select('*');
+            // 2. Archivar a anticipos_historial antes de borrar
+            if (activos && activos.length > 0) {
+                const hoy = new Date().toISOString().substring(0, 10);
+                const histRows = activos.map(a => ({
+                    id: crypto.randomUUID(),
+                    socio_id: a.socio_id,
+                    fecha: a.fecha,
+                    monto: Number(a.monto),
+                    estado: 'ARCHIVADO',
+                    uuid_ref: a.id,
+                    responsable: a.responsable || null,
+                    periodo: periodo,
+                    fecha_archivo: hoy
+                }));
+                await dbSoc.from('anticipos_historial').insert(histRows)
+                    .catch(e => console.error('[sb] error archivando anticipos_historial:', e));
+            }
+            // 3. Llamar al GAS (archiva a Sheets y limpia la hoja)
+            const gasRes = await _origFetch(url, options);
+            // 4. Limpiar Supabase anticipos después de confirmar con GAS
             dbSoc.from('anticipos').delete().neq('id', '__never__')
-                .then(() => console.log('[supabase-config] anticipos limpiados de Supabase'))
-                .catch(e => console.error('[supabase-config] error limpiando anticipos:', e));
-            return _origFetch(url, options);
+                .catch(e => console.error('[sb] error limpiando anticipos:', e));
+            return gasRes;
         }
 
         // ── reiniciarExtras → archivar en GAS y limpiar Supabase ──────
@@ -280,6 +302,65 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             }).eq('id', body.uuid)
                 .then(() => {}).catch(e => console.error('[supabase-config] actualizar:', e));
             return _origFetch(url, options);
+        }
+
+        // ── registrarSaldoAnterior → actualizar saldos_socio en Supabase + GAS ──
+        if (action === 'registrarSaldoAnterior') {
+            const id = String(body.id || '');
+            const monto = Number(body.monto || 0);
+            const nombre = body.nombre || '';
+            if (id) {
+                dbSoc.from('saldos_socio').upsert(
+                    { id, nombre, monto, updated_at: new Date().toISOString() },
+                    { onConflict: 'id' }
+                ).catch(e => console.error('[sb] error upsert saldos_socio:', e));
+            }
+            return _origFetch(url, options);
+        }
+
+        // ── procesarCierreMensual → GAS hace el cierre; sincronizar saldos + anticipos a Supabase ──
+        if (action === 'procesarCierreMensual') {
+            // Archivar anticipos activos a historial antes del cierre
+            const { data: activosCierre } = await dbSoc.from('anticipos').select('*');
+            if (activosCierre && activosCierre.length > 0) {
+                const hoy = new Date().toISOString().substring(0, 10);
+                const mesLabel = new Date().toLocaleString('es-CL', { month: 'long', year: 'numeric' }).toUpperCase().replace(' ', '_');
+                const histRows = activosCierre.map(a => ({
+                    id: crypto.randomUUID(),
+                    socio_id: a.socio_id,
+                    fecha: a.fecha,
+                    monto: Number(a.monto),
+                    estado: 'ARCHIVADO',
+                    uuid_ref: a.id,
+                    responsable: a.responsable || null,
+                    periodo: `CIERRE_${mesLabel}`,
+                    fecha_archivo: hoy
+                }));
+                await dbSoc.from('anticipos_historial').insert(histRows)
+                    .catch(e => console.error('[sb] error archivando anticipos en cierre:', e));
+            }
+
+            const gasRes = await _origFetch(url, options);
+
+            // Limpiar anticipos activos de Supabase
+            dbSoc.from('anticipos').delete().neq('id', '__never__')
+                .catch(e => console.error('[sb] error limpiando anticipos tras cierre:', e));
+
+            // Sincronizar nuevos saldos anteriores a Supabase
+            const saldos = body.nuevosSaldosAnteriores || [];
+            if (saldos.length > 0) {
+                const rows = saldos.map(s => ({
+                    id: String(s.id),
+                    nombre: s.nombre || '',
+                    monto: Number(s.monto || 0),
+                    updated_at: new Date().toISOString()
+                }));
+                dbSoc.from('saldos_socio').upsert(rows, { onConflict: 'id' })
+                    .then(() => console.log('[sb] saldos sincronizados al cierre mensual'))
+                    .catch(e => console.error('[sb] error sinc. saldos cierre:', e));
+            }
+
+            return gasRes;
         }
 
         // ── updateSocio con Puntos → actualizar socios.puntos (misma tabla que lee propi.solicitada) ─
