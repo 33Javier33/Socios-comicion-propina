@@ -747,24 +747,8 @@ async function enviarAnticipo() {
     );
     if(!confirmar) return;
 
-    campoMonto.classList.add('input-ok');
-    toggleLoader(true);
-    try {
-        await callApiSocios('registrarBatchAnticipos', { detalleAnticipos: [{ id, nombre, fecha, monto: parseInt(monto), responsable: respIni, areaResponsable: respArea }] });
-        showToast('✅ Anticipo registrado — recuerda cuadrar el retiro en Arqueo de Caja', 'success');
-        // Invalidar caché para que próxima consulta traiga datos frescos
-        globalCacheAllData = null;
-        try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
-        campoMonto.value = '';
-        campoMonto.classList.remove('input-ok');
-        document.getElementById('fechaAnticipo').value = new Date().toISOString().split('T')[0];
-        campoMonto.focus();
-        cargarHistorialSocio(id);
-        if (typeof aq_fetchAnticipos === 'function') aq_fetchAnticipos(true);
-    } catch(e) {
-        campoMonto.classList.remove('input-ok');
-        showToast('Error al registrar anticipo', 'error');
-    } finally { toggleLoader(false); }
+    // Abrir modal de desglose de billetes antes de registrar
+    abrirDesgloseAnticipo({ id, nombre, fecha, monto, respIni, respArea, montoVis, fechaVis, campoMonto });
 }
 
 // Devuelve el último día disponible en globalMapaPuntosDia (fin del período activo)
@@ -1461,4 +1445,229 @@ function seleccionarSocio(id) {
 
     responsables_poblarSelector();
     cargarHistorialSocio(id);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DESGLOSE DE BILLETES + BOUCHER DE ANTICIPO
+// ══════════════════════════════════════════════════════════════════
+let _dsgData = null; // datos del anticipo pendiente de confirmar con desglose
+
+function abrirDesgloseAnticipo({ id, nombre, fecha, monto, respIni, respArea, montoVis, fechaVis, campoMonto }) {
+    _dsgData = { id, nombre, fecha, monto, respIni, respArea, campoMonto };
+
+    const modal = document.getElementById('modalDesgloseAnticipo');
+    document.getElementById('dsg-socio-info').innerHTML =
+        '<b>' + nombre + '</b><br>' +
+        '<span style="font-size:1.2em;color:#2563eb;">' + montoVis + '</span>' +
+        '<span style="font-size:0.85em;color:#6b7280;"> · ' + fechaVis + '</span>';
+
+    // Construir inputs por denominación
+    const fmt = n => new Intl.NumberFormat('es-CL', {style:'currency', currency:'CLP', maximumFractionDigits:0}).format(n);
+    let html = '';
+    AQ_DENOMINACIONES.forEach(d => {
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dotted #e5e7eb;">
+            <span style="flex:1;font-weight:700;font-size:0.9em;color:#374151;">${fmt(d)}</span>
+            <input type="number" id="dsg-bil-${d}" min="0" value="0"
+                   oninput="actualizarTotalDesglose()"
+                   onkeydown="dsgNavegar(event,${d})"
+                   style="width:64px;text-align:center;padding:6px 4px;border:1px solid #d1d5db;border-radius:6px;font-size:1em;font-weight:700;">
+            <span id="dsg-sub-${d}" style="width:90px;text-align:right;font-size:0.85em;color:#6b7280;">$0</span>
+        </div>`;
+    });
+    document.getElementById('dsg-billetes-grid').innerHTML = html;
+    document.getElementById('dsg-total-val').textContent = '$0';
+    const difEl = document.getElementById('dsg-diferencia');
+    difEl.textContent = 'Ingresa billetes — debe totalizar ' + montoVis;
+    difEl.style.color = '#6b7280';
+    difEl.style.background = '';
+    const btn = document.getElementById('btnConfirmarDesglose');
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+
+    modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('dsg-bil-20000')?.focus(), 120);
+}
+
+function dsgNavegar(e, denActual) {
+    if (e.key !== 'Enter' && e.key !== 'Tab') return;
+    e.preventDefault();
+    const idx = AQ_DENOMINACIONES.indexOf(denActual);
+    const siguiente = AQ_DENOMINACIONES[idx + 1];
+    if (siguiente) document.getElementById('dsg-bil-' + siguiente)?.focus();
+    else document.getElementById('btnConfirmarDesglose')?.focus();
+}
+
+function actualizarTotalDesglose() {
+    if (!_dsgData) return;
+    const fmt = n => new Intl.NumberFormat('es-CL', {style:'currency', currency:'CLP', maximumFractionDigits:0}).format(n);
+    let total = 0;
+    AQ_DENOMINACIONES.forEach(d => {
+        const cant = Math.max(0, parseInt(document.getElementById('dsg-bil-' + d)?.value || 0) || 0);
+        const sub = cant * d;
+        total += sub;
+        const subEl = document.getElementById('dsg-sub-' + d);
+        if (subEl) subEl.textContent = cant > 0 ? fmt(sub) : '$0';
+    });
+    const monto = _dsgData.monto;
+    const dif = total - monto;
+    document.getElementById('dsg-total-val').textContent = fmt(total);
+    const difEl = document.getElementById('dsg-diferencia');
+    const btn  = document.getElementById('btnConfirmarDesglose');
+    if (dif === 0) {
+        difEl.textContent = '✅ Monto exacto — listo para registrar';
+        difEl.style.color = '#059669';
+        difEl.style.background = '#f0fdf4';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    } else if (dif > 0) {
+        difEl.textContent = '⚠️ Excede en ' + fmt(dif);
+        difEl.style.color = '#dc2626';
+        difEl.style.background = '#fef2f2';
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+    } else {
+        difEl.textContent = '💰 Faltan ' + fmt(Math.abs(dif));
+        difEl.style.color = '#d97706';
+        difEl.style.background = '#fffbeb';
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+    }
+}
+
+function cancelarDesgloseAnticipo() {
+    _dsgData = null;
+    document.getElementById('modalDesgloseAnticipo').style.display = 'none';
+}
+
+async function confirmarDesgloseAnticipo() {
+    if (!_dsgData) return;
+    const { id, nombre, fecha, monto, respIni, respArea, campoMonto } = _dsgData;
+
+    // Recolectar billetes entregados
+    const billetes = {};
+    AQ_DENOMINACIONES.forEach(d => {
+        const cant = Math.max(0, parseInt(document.getElementById('dsg-bil-' + d)?.value || 0) || 0);
+        if (cant > 0) billetes[d] = cant;
+    });
+
+    cancelarDesgloseAnticipo();
+
+    if (campoMonto) campoMonto.classList.add('input-ok');
+    toggleLoader(true);
+    try {
+        await callApiSocios('registrarBatchAnticipos', {
+            detalleAnticipos: [{ id, nombre, fecha, monto, responsable: respIni, areaResponsable: respArea }]
+        });
+        showToast('✅ Anticipo registrado — generando boucher...', 'success');
+        globalCacheAllData = null;
+        try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
+        if (campoMonto) {
+            campoMonto.value = '';
+            campoMonto.classList.remove('input-ok');
+        }
+        const fechaInput = document.getElementById('fechaAnticipo');
+        if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
+        if (campoMonto) campoMonto.focus();
+        cargarHistorialSocio(id);
+        if (typeof aq_fetchAnticipos === 'function') aq_fetchAnticipos(true);
+        generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, billetes });
+    } catch(e) {
+        if (campoMonto) campoMonto.classList.remove('input-ok');
+        showToast('Error al registrar anticipo', 'error');
+    } finally { toggleLoader(false); }
+}
+
+function generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, billetes }) {
+    const fmt = n => new Intl.NumberFormat('es-CL', {style:'currency', currency:'CLP', maximumFractionDigits:0}).format(n);
+    const ahora = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const folio = 'ATC-' + ahora.getFullYear() + pad(ahora.getMonth()+1) + pad(ahora.getDate()) +
+                  '-' + pad(ahora.getHours()) + pad(ahora.getMinutes()) + pad(ahora.getSeconds()) +
+                  '-' + (respIni || 'SYS').replace(/[^A-Za-z0-9]/g, '');
+    const fp = fecha.split('-');
+    const fechaVis  = fp[2] + '/' + fp[1] + '/' + fp[0];
+    const fechaHora = fechaVis + ' ' + pad(ahora.getHours()) + ':' + pad(ahora.getMinutes());
+    const respVis   = respIni + (respArea ? ' / ' + respArea : '');
+
+    const filasHtml = Object.entries(billetes)
+        .sort((a, b) => Number(b[0]) - Number(a[0]))
+        .map(([den, cant]) => {
+            const sub = Number(den) * cant;
+            return '<tr>' +
+                '<td style="text-align:left;padding:3px 5px;">' + fmt(Number(den)) + '</td>' +
+                '<td style="text-align:center;padding:3px 5px;font-weight:900;">' + cant + '</td>' +
+                '<td style="text-align:right;padding:3px 5px;">' + fmt(sub) + '</td>' +
+                '</tr>';
+        }).join('');
+
+    const copia = tipo => `
+        <div class="copia">
+            <div class="copia-label">${tipo}</div>
+            <div style="text-align:center;margin-bottom:6px;">
+                <div style="font-size:13px;font-weight:900;letter-spacing:1px;">ANTICIPO DE PROPINA</div>
+                <div style="font-size:9px;color:#555;margin-top:2px;">FONDO SOLIDARIO — CASINO DE PUERTO VARAS</div>
+                <div style="font-size:8px;color:#888;margin-top:1px;">FOL: ${folio}</div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+                <tr><td class="f">SOCIO</td><td class="v">${nombre.toUpperCase()}</td></tr>
+                <tr><td class="f">ID</td><td class="v">${id}</td></tr>
+                <tr><td class="f">FECHA</td><td class="v">${fechaHora}</td></tr>
+                <tr><td class="f">MONTO</td><td class="v" style="font-size:14px;font-weight:900;">${fmt(monto)}</td></tr>
+                <tr><td class="f">ENCARGADO</td><td class="v">${respVis}</td></tr>
+            </table>
+            <div style="font-weight:900;font-size:10px;background:#000;color:#fff;padding:2px 5px;text-align:center;margin-bottom:4px;">DESGLOSE DE BILLETES</div>
+            <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+                <thead><tr style="background:#000;color:#fff;">
+                    <th style="padding:2px 5px;text-align:left;font-size:9px;">Billete</th>
+                    <th style="padding:2px 5px;text-align:center;font-size:9px;">Cant.</th>
+                    <th style="padding:2px 5px;text-align:right;font-size:9px;">Subtotal</th>
+                </tr></thead>
+                <tbody>${filasHtml}</tbody>
+                <tfoot><tr style="border-top:2px solid #000;">
+                    <td colspan="2" style="padding:3px 5px;font-weight:900;font-size:11px;">TOTAL ENTREGADO</td>
+                    <td style="padding:3px 5px;font-weight:900;font-size:11px;text-align:right;">${fmt(monto)}</td>
+                </tr></tfoot>
+            </table>
+            <div style="display:flex;gap:12px;margin-top:12px;">
+                <div style="flex:1;text-align:center;">
+                    <div style="border-top:1px solid #000;margin-bottom:3px;margin-top:20px;"></div>
+                    <div style="font-size:8px;font-weight:700;color:#555;">FIRMA SOCIO</div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                    <div style="border-top:1px solid #000;margin-bottom:3px;margin-top:20px;"></div>
+                    <div style="font-size:8px;font-weight:700;color:#555;">FIRMA ENCARGADO</div>
+                </div>
+            </div>
+        </div>`;
+
+    const html = `<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8">
+<title>Boucher Anticipo</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Courier New',Courier,monospace; font-size:11px; width:80mm; margin:0 auto; }
+.copia { padding:8px 6px 12px; border-bottom:2px dashed #000; page-break-inside:avoid; }
+.copia:last-child { border-bottom:none; }
+.copia-label { text-align:center; font-weight:900; font-size:10px; background:#000; color:#fff; padding:3px 5px; margin-bottom:8px; letter-spacing:2px; }
+.f { font-weight:700; width:34%; color:#333; padding:2px 0; vertical-align:top; }
+.v { color:#000; padding:2px 0; }
+@media print { @page { margin:2mm; size:80mm auto; } body { width:100%; } }
+</style>
+<script>window.onload=()=>setTimeout(()=>window.print(),400);<\/script>
+</head><body>
+${copia('★ COPIA SOCIO ★')}
+${copia('★ COPIA ADMINISTRACIÓN ★')}
+</body></html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+        win.document.write(html);
+        win.document.close();
+    } else {
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Boucher_Anticipo_' + nombre.replace(/ /g, '_') + '_' + fecha + '.html';
+        a.click();
+    }
 }

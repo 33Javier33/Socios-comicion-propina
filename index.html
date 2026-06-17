@@ -1693,6 +1693,35 @@
     </div>
 </div>
 
+<!-- Modal Desglose de Billetes — Anticipo -->
+<div id="modalDesgloseAnticipo" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:400px;max-height:92vh;overflow-y:auto;display:flex;flex-direction:column;">
+        <div class="modal-header" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);position:sticky;top:0;z-index:1;flex-shrink:0;">
+            <h2 style="color:white;margin:0;font-size:1.05em;">💸 Desglose de Billetes</h2>
+            <span class="close-modal" onclick="cancelarDesgloseAnticipo()" style="color:white;">&times;</span>
+        </div>
+        <div class="modal-body" style="flex:1;overflow-y:auto;">
+            <!-- Info del anticipo -->
+            <div id="dsg-socio-info" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;text-align:center;font-size:0.9em;color:#1e3a5f;line-height:1.6;"></div>
+            <div style="font-size:0.78em;color:#6b7280;text-align:center;margin-bottom:10px;">Ingresa la cantidad de billetes a entregar · <b>El total debe ser exacto</b></div>
+            <!-- Grid de denominaciones -->
+            <div id="dsg-billetes-grid"></div>
+            <!-- Totalizador -->
+            <div style="margin-top:14px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-size:0.85em;font-weight:700;color:#374151;">Total billetes</span>
+                    <span id="dsg-total-val" style="font-size:1.15em;font-weight:900;color:#1e3a5f;">$0</span>
+                </div>
+                <div id="dsg-diferencia" style="text-align:center;font-size:0.85em;font-weight:700;padding:5px 8px;border-radius:6px;transition:all 0.2s;"></div>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid #e5e7eb;flex-shrink:0;">
+            <button onclick="cancelarDesgloseAnticipo()" style="flex:1;padding:10px;background:white;border:1px solid #d1d5db;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.88em;color:#374151;">Cancelar</button>
+            <button id="btnConfirmarDesglose" onclick="confirmarDesgloseAnticipo()" disabled style="flex:2;padding:10px;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.88em;opacity:0.5;transition:opacity 0.2s;">✅ Registrar y Generar Boucher</button>
+        </div>
+    </div>
+</div>
+
 <!-- FAB global volver al inicio — fuera de cualquier contenedor para que position:fixed funcione siempre -->
 <button id="fabScrollTop" onclick="irAlInicio()" style="display:none;position:fixed;bottom:90px;right:18px;z-index:9999;background:#1e3a5f;color:white;border:none;border-radius:50px;padding:10px 18px;font-size:0.8em;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(30,58,95,0.45);align-items:center;gap:6px;white-space:nowrap;transition:opacity 0.2s;">⬆ Inicio</button>
 </body>
