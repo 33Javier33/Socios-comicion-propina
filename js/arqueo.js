@@ -27,6 +27,7 @@ async function aq_sincronizarSilencioso() {
             let h = '<table class="aq-table"><thead><tr><th>Tipo</th><th>Monto</th></tr></thead><tbody>';
             aq_desgloseEsperado.forEach(i => { h += '<tr><td>' + i.tipo + '</td><td>' + aq_fmt(i.monto/100) + '</td></tr>'; });
             document.getElementById('aq-desglose-esperado').innerHTML = h + '</tbody></table>';
+            aq_mostrarAvisoSinVerificar(resEsp.sinVerificar || []);
         }
         if(resAnt) {
             const objetoAnticipos = (resAnt.data && resAnt.data.anticipos) || resAnt.anticipos || (resAnt.result && resAnt.result.anticipos);
@@ -269,9 +270,21 @@ async function aq_fetchEsperadoData() {
         let h = '<table class="aq-table"><thead><tr><th>Tipo</th><th>Monto</th></tr></thead><tbody>';
         aq_desgloseEsperado.forEach(i => { h += `<tr><td>${i.tipo}</td><td>${aq_fmt(i.monto/100)}</td></tr>`; });
         document.getElementById('aq-desglose-esperado').innerHTML = h + '</tbody></table>';
+        aq_mostrarAvisoSinVerificar(data.sinVerificar || []);
         aq_fetchPuntosHistorial();
         aq_realizarArqueo();
     } catch(e) { console.error('Arqueo esperado error:', e); }
+}
+
+function aq_mostrarAvisoSinVerificar(sinVerificar) {
+    const el  = document.getElementById('aq-sin-verificar');
+    const msg = document.getElementById('aq-sin-verificar-msg');
+    const det = document.getElementById('aq-sin-verificar-det');
+    if (!el) return;
+    if (!sinVerificar.length) { el.style.display = 'none'; return; }
+    el.style.display = 'flex';
+    msg.textContent = `${sinVerificar.length} recaudación${sinVerificar.length > 1 ? 'es' : ''} sin ingresar a caja`;
+    det.textContent = sinVerificar.map(r => r.label).join('  ·  ');
 }
 
 async function aq_fetchPuntosHistorial() {

@@ -433,7 +433,9 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     tipo: r.tipo,
                     monto: Number(r.monto),
                     divisor: divMap[r.fecha] || null,
-                    registrado_por_nombre: r.registrado_por_nombre || null
+                    registrado_por_nombre: r.registrado_por_nombre || null,
+                    arqueado: r.arqueado === true,
+                    billetes: r.billetes || {}
                 }));
                 return succ(data);
             } catch (e) { return err(e.message); }
@@ -626,7 +628,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         if (!action) {
             try {
                 const [recRes, divRes] = await Promise.all([
-                    dbRec.from('recaudaciones').select('fecha, tipo, monto'),
+                    dbRec.from('recaudaciones').select('fecha, tipo, monto, arqueado'),
                     dbRec.from('divisores').select('fecha, valor').order('fecha', { ascending: false }).limit(1)
                 ]);
                 const recs = recRes.data || [];
@@ -650,7 +652,13 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 const desgloseEsperado = Object.entries(tiposMap)
                     .map(([tipo, monto]) => ({ tipo, monto: monto * 100 }));
 
-                return _mockOk({ totalAcumulado, totalLastDivisorDay, lastDivisor, lastDivisorDate, desgloseEsperado });
+                // Recaudaciones pendientes de verificar en caja
+                const sinVerificar = recs.filter(r => !r.arqueado).map(r => {
+                    const p = (r.fecha || '').split('-');
+                    return { tipo: r.tipo || 'Sin Tipo', fecha: r.fecha, label: `${r.tipo} (${p[2]}/${p[1]})` };
+                });
+
+                return _mockOk({ totalAcumulado, totalLastDivisorDay, lastDivisor, lastDivisorDate, desgloseEsperado, sinVerificar });
             } catch(e) {
                 return _mockOk({ totalAcumulado: 0, totalLastDivisorDay: 0, lastDivisor: 1, lastDivisorDate: '', desgloseEsperado: [] });
             }
