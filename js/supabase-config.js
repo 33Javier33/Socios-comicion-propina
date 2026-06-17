@@ -166,6 +166,47 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         }
     }
 
+    // ── CACHE getDatosSocio: localStorage 2 min + dirty flag post-escritura ─────
+    const _DATOS_TTL = 2 * 60 * 1000;
+    const _sociosDirty = new Set();
+    function _cacheDatosKey(id) { return `sc_datos_socio_${id}`; }
+    function _invalidarDatosSocio(id) { if (id) _sociosDirty.add(String(id)); }
+    function _invalidarTodosLosDatos() {
+        try {
+            Object.keys(localStorage).filter(k => k.startsWith('sc_datos_socio_')).forEach(k => localStorage.removeItem(k));
+        } catch(e) {}
+    }
+
+    async function _socGetDatosSocioHandler(url, options) {
+        let socioId = '';
+        try { socioId = new URLSearchParams(url.split('?')[1] || '').get('socioId') || ''; } catch(e) {}
+
+        const dirty = _sociosDirty.has(socioId);
+        if (dirty) _sociosDirty.delete(socioId);
+
+        if (!dirty) {
+            try {
+                const c = JSON.parse(localStorage.getItem(_cacheDatosKey(socioId)) || 'null');
+                if (c && Date.now() - c.ts < _DATOS_TTL) {
+                    // Refrescar en background
+                    _origFetch(url, options).then(r => r.json()).then(d => {
+                        if (d.status === 'success') {
+                            try { localStorage.setItem(_cacheDatosKey(socioId), JSON.stringify({ ts: Date.now(), d })); } catch(e) {}
+                        }
+                    }).catch(() => {});
+                    return _mockOk(c.d);
+                }
+            } catch(e) {}
+        }
+
+        const res = await _origFetch(url, options);
+        const d = await res.json();
+        if (d.status === 'success') {
+            try { localStorage.setItem(_cacheDatosKey(socioId), JSON.stringify({ ts: Date.now(), d })); } catch(e) {}
+        }
+        return _mockOk(d);
+    }
+
     // ── HANDLER: URL_SOCIOS POST (escrituras) ────────────────────────────────
     async function _socWriteHandler(url, options) {
         let body = {};
@@ -198,6 +239,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     }).catch(() => { _opGuardar('anticipo', datos); }); // cola si cae la red
                 }
             });
+            items.forEach(a => _invalidarDatosSocio(String(a.id)));
             if (offline) {
                 setTimeout(() => { if (typeof showToast === 'function') showToast('Sin conexión — anticipo guardado, se enviará al reconectar 📶', 'warning'); }, 300);
                 return _mockOk({ status: 'success', message: 'offline' });
@@ -230,6 +272,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     }).catch(() => { _opGuardar('extra', datos); }); // cola si cae la red
                 }
             });
+            items.forEach(e => _invalidarDatosSocio(String(e.id)));
             if (offline) {
                 setTimeout(() => { if (typeof showToast === 'function') showToast('Sin conexión — extra guardado, se enviará al reconectar 📶', 'warning'); }, 300);
                 return _mockOk({ status: 'success', message: 'offline' });
@@ -244,6 +287,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             const tbl = (tipo === 'anticipo' || tipo === 'anticipos') ? 'anticipos' : 'extras';
             const socioId = String(body.socioId || body.socio_id || '');
             const fecha = body.fecha || '';
+            _invalidarDatosSocio(socioId);
             if (socioId && fecha) {
                 // Borrar por socio_id + fecha (el UUID de GAS ≠ id de Supabase)
                 dbSoc.from(tbl).delete().eq('socio_id', socioId).eq('fecha', fecha)
@@ -278,6 +322,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     .catch(e => console.error('[sb] error archivando anticipos_historial:', e));
             }
             // 3. Llamar al GAS (archiva a Sheets y limpia la hoja)
+            _invalidarTodosLosDatos(); // reinicio de anticipos afecta a todos los socios
             const gasRes = await _origFetch(url, options);
             // 4. Limpiar Supabase anticipos después de confirmar con GAS
             dbSoc.from('anticipos').delete().neq('id', '__never__')
@@ -287,6 +332,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 
         // ── reiniciarExtras → archivar en GAS y limpiar Supabase ──────
         if (action === 'reiniciarExtras') {
+            _invalidarTodosLosDatos();
             dbSoc.from('extras').delete().neq('id', '__never__')
                 .then(() => console.log('[supabase-config] extras limpiados de Supabase'))
                 .catch(e => console.error('[supabase-config] error limpiando extras:', e));
@@ -295,6 +341,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 
         // ── actualizarAnticipo → actualizar en Supabase + GAS ─────────
         if (action === 'actualizarAnticipo') {
+            _invalidarTodosLosDatos(); // no tenemos socioId directo en el body
             dbSoc.from('anticipos').update({
                 fecha: body.fecha,
                 monto: Number(body.monto || 0),
@@ -309,6 +356,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             const id = String(body.id || '');
             const monto = Number(body.monto || 0);
             const nombre = body.nombre || '';
+            _invalidarDatosSocio(id);
             if (id) {
                 dbSoc.from('saldos_socio').upsert(
                     { id, nombre, monto, updated_at: new Date().toISOString() },
@@ -395,6 +443,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 let action = '';
                 try { action = new URLSearchParams(s.split('?')[1] || '').get('action') || ''; } catch(e) {}
                 if (action === 'getSocios') return _socGetSociosHandler(s, options);
+                if (action === 'getDatosSocio') return _socGetDatosSocioHandler(s, options);
                 return _origFetch(url, options);
             }
             return _socWriteHandler(s, options);
