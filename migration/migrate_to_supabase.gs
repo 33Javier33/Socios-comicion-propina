@@ -4,12 +4,100 @@
 // Proyecto Supabase: teemahksasdougehrcly
 //
 // FUNCIONES DISPONIBLES:
+//   sincronizarActivos()    → ⭐ CORRER AHORA: sincroniza anticipos y extras actuales de Sheets a Supabase
 //   migrarTodo()            → migra las 12 tablas principales
 //   migrarFaltantes()       → SOLO las que quedaron vacías (correr ahora)
 //   migrarAnticiposDinamicos() → hojas Anticipos_MAYO_2026, Anticipos_ABRIL_2026, etc.
+//   backfillAnticiposFaltantes() → importa meses archivados faltantes a anticipos_historial
 //   probarConexion()        → verifica que Supabase responde y qué hay en cada tabla
 //   diagnosticarHojas()     → lista todas las hojas y sus filas
 // ==============================================================================
+
+// ==============================================================================
+// sincronizarActivos() — ⭐ CORRER ESTA FUNCIÓN
+// Sincroniza la hoja "Anticipos" y "MovimientosExtras" actuales a Supabase.
+// Seguro de correr múltiples veces (ignora duplicados por UUID).
+// Después de esto, socios-comicion lee TODO desde Supabase (instantáneo).
+// ==============================================================================
+function sincronizarActivos() {
+  Logger.log('================================================================');
+  Logger.log('SINCRONIZAR ACTIVOS: Anticipos + Extras → Supabase');
+  Logger.log('Seguro de correr múltiples veces (ignora duplicados)');
+  Logger.log('================================================================');
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var tz = ss.getSpreadsheetTimeZone();
+
+  // 1. Anticipos activos (hoja "Anticipos")
+  Logger.log('\n--- Anticipos activos ---');
+  var sAnt = ss.getSheetByName(HOJA_ANTICIPOS);
+  var filasAnt = [];
+  if (sAnt && sAnt.getLastRow() > 1) {
+    var dAnt = sAnt.getDataRange().getValues();
+    for (var i = 1; i < dAnt.length; i++) {
+      var socioId = toStr(dAnt[i][0]);
+      if (!socioId) continue;
+      var uid = toStr(dAnt[i][5]) || Utilities.getUuid();
+      var fecha = dAnt[i][2] instanceof Date
+        ? Utilities.formatDate(dAnt[i][2], tz, 'yyyy-MM-dd') : toStr(dAnt[i][2]);
+      var resp = toStr(dAnt[i][6]) || '';
+      var area = toStr(dAnt[i][7]) || '';
+      filasAnt.push({
+        id: uid,
+        socio_id: socioId,
+        fecha: fecha,
+        monto: toNum(dAnt[i][3]),
+        responsable: (resp + (area ? ' ' + area : '')).trim() || null,
+        periodo: 'activo'
+      });
+    }
+  }
+  if (filasAnt.length === 0) {
+    Logger.log('[INFO] Hoja Anticipos vacía — nada que sincronizar');
+  } else {
+    Logger.log('Anticipos a sincronizar: ' + filasAnt.length);
+    var r1 = _supaPost('anticipos', filasAnt);
+    Logger.log(r1.ok ? '[OK] ' + filasAnt.length + ' anticipos procesados' : '[ERROR] HTTP ' + r1.code + ' — ' + r1.body.substring(0,200));
+  }
+
+  Utilities.sleep(400);
+
+  // 2. Extras/Ausencias activos (hoja "MovimientosExtras")
+  Logger.log('\n--- Extras/Ausencias activos ---');
+  var sExt = ss.getSheetByName(HOJA_EXTRAS);
+  var filasExt = [];
+  if (sExt && sExt.getLastRow() > 1) {
+    var dExt = sExt.getDataRange().getValues();
+    Logger.log('[DEBUG] Cabecera extras: ' + JSON.stringify(dExt[0]));
+    for (var j = 1; j < dExt.length; j++) {
+      var socioIdE = toStr(dExt[j][0]);
+      if (!socioIdE) continue;
+      var uidE = toStr(dExt[j][7]) || Utilities.getUuid();
+      var fechaE = dExt[j][2] instanceof Date
+        ? Utilities.formatDate(dExt[j][2], tz, 'yyyy-MM-dd') : toStr(dExt[j][2]);
+      filasExt.push({
+        id: uidE,
+        socio_id: socioIdE,
+        fecha: fechaE,
+        tipo: toStr(dExt[j][3]) || 'AUSENCIA',
+        monto: toNum(dExt[j][4]),
+        detalle: toStr(dExt[j][5]) || null,
+        periodo: 'activo'
+      });
+    }
+  }
+  if (filasExt.length === 0) {
+    Logger.log('[INFO] Hoja MovimientosExtras vacía — nada que sincronizar');
+  } else {
+    Logger.log('Extras a sincronizar: ' + filasExt.length);
+    var r2 = _supaPost('extras', filasExt);
+    Logger.log(r2.ok ? '[OK] ' + filasExt.length + ' extras procesados' : '[ERROR] HTTP ' + r2.code + ' — ' + r2.body.substring(0,200));
+  }
+
+  Logger.log('\n================================================================');
+  Logger.log('LISTO. Ahora socios-comicion lee desde Supabase (instantáneo).');
+  Logger.log('================================================================');
+}
 
 var SUPABASE_URL = 'https://teemahksasdougehrcly.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlZW1haGtzYXNkb3VnZWhyY2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTkwNjIsImV4cCI6MjA5Njg3NTA2Mn0.EIQ7gRcwf3zYgvGESKw3s5lnZMABN_EuNWsrJK3L1zk';

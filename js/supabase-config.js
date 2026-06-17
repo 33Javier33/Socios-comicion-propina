@@ -166,45 +166,52 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         }
     }
 
-    // ── CACHE getDatosSocio: localStorage 2 min + dirty flag post-escritura ─────
-    const _DATOS_TTL = 2 * 60 * 1000;
-    const _sociosDirty = new Set();
-    function _cacheDatosKey(id) { return `sc_datos_socio_${id}`; }
-    function _invalidarDatosSocio(id) { if (id) _sociosDirty.add(String(id)); }
-    function _invalidarTodosLosDatos() {
-        try {
-            Object.keys(localStorage).filter(k => k.startsWith('sc_datos_socio_')).forEach(k => localStorage.removeItem(k));
-        } catch(e) {}
-    }
+    // ── getDatosSocio: leer anticipos + extras + saldo desde Supabase (instantáneo) ──
+    function _invalidarDatosSocio(_id) { /* no-op: Supabase siempre tiene datos frescos */ }
+    function _invalidarTodosLosDatos() { /* no-op: Supabase siempre tiene datos frescos */ }
 
     async function _socGetDatosSocioHandler(url, options) {
         let socioId = '';
         try { socioId = new URLSearchParams(url.split('?')[1] || '').get('socioId') || ''; } catch(e) {}
 
-        const dirty = _sociosDirty.has(socioId);
-        if (dirty) _sociosDirty.delete(socioId);
+        try {
+            const [antRes, extRes, saldoRes] = await Promise.all([
+                dbSoc.from('anticipos').select('id, fecha, monto, responsable')
+                    .eq('socio_id', socioId).order('fecha', { ascending: false }),
+                dbSoc.from('extras').select('id, fecha, tipo, monto, detalle')
+                    .eq('socio_id', socioId).order('fecha', { ascending: false }),
+                dbSoc.from('saldos_socio').select('monto').eq('id', socioId).maybeSingle()
+            ]);
 
-        if (!dirty) {
-            try {
-                const c = JSON.parse(localStorage.getItem(_cacheDatosKey(socioId)) || 'null');
-                if (c && Date.now() - c.ts < _DATOS_TTL) {
-                    // Refrescar en background
-                    _origFetch(url, options).then(r => r.json()).then(d => {
-                        if (d.status === 'success') {
-                            try { localStorage.setItem(_cacheDatosKey(socioId), JSON.stringify({ ts: Date.now(), d })); } catch(e) {}
-                        }
-                    }).catch(() => {});
-                    return _mockOk(c.d);
-                }
-            } catch(e) {}
+            if (!antRes.error && !extRes.error) {
+                const anticipos = (antRes.data || []).map(a => ({
+                    fecha: a.fecha,
+                    cantidad: Number(a.monto),
+                    monto: Number(a.monto),
+                    uuid: a.id,
+                    responsable: a.responsable || '',
+                    areaResponsable: ''
+                }));
+                const extras = (extRes.data || []).map(e => ({
+                    fecha: e.fecha,
+                    tipo: e.tipo || '',
+                    monto: Number(e.monto),
+                    detalle: e.detalle || '',
+                    uuid: e.id
+                }));
+                const saldoAnterior = saldoRes.data ? Number(saldoRes.data.monto) : 0;
+
+                console.log('[SB-DATOS] Socio', socioId, '→', anticipos.length, 'anticipos,', extras.length, 'extras, saldo:', saldoAnterior);
+                return _mockOk({ status: 'success', data: { anticipos, extras, saldoAnterior, diasTrabajados: [] } });
+            }
+
+            console.warn('[SB-DATOS] Error Supabase, fallback a GAS:', antRes.error?.message || extRes.error?.message);
+        } catch(e) {
+            console.warn('[SB-DATOS] Excepción, fallback a GAS:', e.message);
         }
 
-        const res = await _origFetch(url, options);
-        const d = await res.json();
-        if (d.status === 'success') {
-            try { localStorage.setItem(_cacheDatosKey(socioId), JSON.stringify({ ts: Date.now(), d })); } catch(e) {}
-        }
-        return _mockOk(d);
+        // Fallback a GAS si Supabase falla
+        return _origFetch(url, options);
     }
 
     // ── HANDLER: URL_SOCIOS POST (escrituras) ────────────────────────────────
