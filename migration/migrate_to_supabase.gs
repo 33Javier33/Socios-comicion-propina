@@ -4,7 +4,8 @@
 // Proyecto Supabase: teemahksasdougehrcly
 //
 // FUNCIONES DISPONIBLES:
-//   sincronizarActivos()    → ⭐ CORRER AHORA: sincroniza anticipos y extras actuales de Sheets a Supabase
+//   sincronizarSaldos()     → ⭐ CORRER AHORA: fuerza actualización de saldos_socio desde SaldosAnteriores
+//   sincronizarActivos()    → sincroniza anticipos y extras actuales de Sheets a Supabase
 //   migrarTodo()            → migra las 12 tablas principales
 //   migrarFaltantes()       → SOLO las que quedaron vacías (correr ahora)
 //   migrarAnticiposDinamicos() → hojas Anticipos_MAYO_2026, Anticipos_ABRIL_2026, etc.
@@ -12,6 +13,85 @@
 //   probarConexion()        → verifica que Supabase responde y qué hay en cada tabla
 //   diagnosticarHojas()     → lista todas las hojas y sus filas
 // ==============================================================================
+
+// ==============================================================================
+// sincronizarSaldos() — ⭐ CORRER ESTA FUNCIÓN
+// Lee la hoja SaldosAnteriores y SOBREESCRIBE saldos_socio en Supabase.
+// Usa upsert (merge-duplicates) para actualizar incluso los ya existentes.
+// Seguro de correr múltiples veces.
+// ==============================================================================
+function sincronizarSaldos() {
+  Logger.log('================================================================');
+  Logger.log('SINCRONIZAR SALDOS: SaldosAnteriores → Supabase saldos_socio');
+  Logger.log('Usa upsert — sobreescribe valores existentes con los de la hoja');
+  Logger.log('================================================================');
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var s = ss.getSheetByName(HOJA_SALDOS);
+  if (!s || s.getLastRow() <= 1) {
+    Logger.log('[ERROR] Hoja "' + HOJA_SALDOS + '" no encontrada o vacía');
+    return;
+  }
+
+  var d = s.getDataRange().getValues();
+  Logger.log('[DEBUG] Cabecera: ' + JSON.stringify(d[0]));
+  Logger.log('[DEBUG] Primera fila: ' + JSON.stringify(d[1]));
+
+  var filas = [];
+  var seen = {};
+  for (var i = 1; i < d.length; i++) {
+    var id = toStr(d[i][0]);
+    if (!id) continue;
+    if (seen[id]) { Logger.log('[WARN] ID duplicado ignorado: ' + id); continue; }
+    seen[id] = true;
+    filas.push({
+      id: id,
+      nombre: toStr(d[i][1]),
+      monto: toNum(d[i][2]),
+      updated_at: new Date().toISOString()
+    });
+  }
+
+  if (filas.length === 0) {
+    Logger.log('[ERROR] No se encontraron filas con ID válido en la hoja');
+    return;
+  }
+
+  Logger.log('Socios a sincronizar: ' + filas.length);
+  Logger.log('[DEBUG] Primeros 3: ' + JSON.stringify(filas.slice(0, 3)));
+
+  // Upsert en lotes de 100
+  var BATCH = 100;
+  var ok = 0, err = 0;
+  for (var b = 0; b < filas.length; b += BATCH) {
+    var lote = filas.slice(b, b + BATCH);
+    var res = UrlFetchApp.fetch(SUPABASE_URL + '/rest/v1/saldos_socio', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Prefer': 'return=minimal,resolution=merge-duplicates'
+      },
+      payload: JSON.stringify(lote),
+      muteHttpExceptions: true
+    });
+    var code = res.getResponseCode();
+    if (code >= 200 && code < 300) {
+      ok += lote.length;
+      Logger.log('[OK] Lote ' + (Math.floor(b/BATCH)+1) + ': ' + lote.length + ' saldos actualizados');
+    } else {
+      err += lote.length;
+      Logger.log('[ERROR] Lote ' + (Math.floor(b/BATCH)+1) + ': HTTP ' + code + ' — ' + res.getContentText().substring(0, 300));
+    }
+    if (b + BATCH < filas.length) Utilities.sleep(300);
+  }
+
+  Logger.log('\n================================================================');
+  Logger.log('RESULTADO: ' + ok + ' actualizados, ' + err + ' con error');
+  if (ok > 0) Logger.log('✓ Supabase saldos_socio ahora refleja la hoja SaldosAnteriores');
+  Logger.log('================================================================');
+}
 
 // ==============================================================================
 // sincronizarActivos() — ⭐ CORRER ESTA FUNCIÓN
