@@ -632,39 +632,6 @@ function migrarFaltantes() {
 }
 
 // ==============================================================================
-// migrarAnticiposDinamicos() — migra Anticipos_MAYO_2026, Anticipos_ABRIL_2026, etc.
-// Se guardan en anticipos_historial con el período extraido del nombre de la hoja
-// ==============================================================================
-function migrarAnticiposDinamicos() {
-  Logger.log('=== MIGRANDO HOJAS DINÁMICAS Anticipos_* ===');
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var hojas = ss.getSheets();
-  var filas = [];
-  hojas.forEach(function(hoja) {
-    var nombre = hoja.getName();
-    if (!nombre.startsWith('Anticipos_') || nombre === HOJA_ANTICIPOS) return;
-    if (hoja.getLastRow() <= 1) return;
-    var d = hoja.getDataRange().getValues();
-    var periodo = nombre.replace('Anticipos_', '').replace(/_/g, ' ');
-    Logger.log('[LEYENDO] "' + nombre + '" — ' + (d.length-1) + ' filas — período: ' + periodo);
-    if (d.length > 1) Logger.log('[DEBUG] Cabecera: ' + JSON.stringify(d[0]));
-    for (var i = 1; i < d.length; i++) {
-      var socioId = toStr(d[i][0]);
-      if (!socioId) continue;
-      var uid = toStr(d[i][5]) || Utilities.getUuid();
-      filas.push({ id: uid + '_' + periodo.replace(/ /g,'_'),
-                   socio_id: socioId, monto: toNum(d[i][3]),
-                   fecha: formatFecha(d[i][2]), estado: toStr(d[i][4]),
-                   uuid_ref: uid, responsable: toStr(d[i][6]),
-                   periodo: periodo, fecha_archivo: null });
-    }
-  });
-  if (filas.length === 0) { Logger.log('[SKIP] No hay hojas Anticipos_* con datos'); return; }
-  Logger.log('Total registros a migrar: ' + filas.length);
-  supabaseInsert('anticipos_historial', filas);
-}
-
-// ==============================================================================
 // backfillAnticiposFaltantes() — importa a Supabase los meses que faltan
 // Seguro de correr múltiples veces: ignora duplicados por id
 // CÓMO USAR: abrir GAS editor → ejecutar esta función → revisar el log
