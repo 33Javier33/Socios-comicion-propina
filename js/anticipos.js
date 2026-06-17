@@ -1578,96 +1578,75 @@ async function confirmarDesgloseAnticipo() {
 }
 
 function generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, billetes }) {
-    const fmt = n => new Intl.NumberFormat('es-CL', {style:'currency', currency:'CLP', maximumFractionDigits:0}).format(n);
+    const fmt = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v);
     const ahora = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const folio = 'ATC-' + ahora.getFullYear() + pad(ahora.getMonth()+1) + pad(ahora.getDate()) +
-                  '-' + pad(ahora.getHours()) + pad(ahora.getMinutes()) + pad(ahora.getSeconds()) +
-                  '-' + (respIni || 'SYS').replace(/[^A-Za-z0-9]/g, '');
+    const _pad  = n => String(n).padStart(2, '0');
+
     const fp = fecha.split('-');
-    const fechaVis  = fp[2] + '/' + fp[1] + '/' + fp[0];
-    const fechaHora = fechaVis + ' ' + pad(ahora.getHours()) + ':' + pad(ahora.getMinutes());
-    const respVis   = respIni + (respArea ? ' / ' + respArea : '');
+    const fechaVis = fp[2] + '/' + fp[1] + '/' + fp[0];
+    const horaHoy  = _pad(ahora.getHours()) + ':' + _pad(ahora.getMinutes());
 
-    const filasHtml = Object.entries(billetes)
-        .sort((a, b) => Number(b[0]) - Number(a[0]))
-        .map(([den, cant]) => {
-            const sub = Number(den) * cant;
-            return '<tr>' +
-                '<td style="text-align:left;padding:3px 5px;">' + fmt(Number(den)) + '</td>' +
-                '<td style="text-align:center;padding:3px 5px;font-weight:900;">' + cant + '</td>' +
-                '<td style="text-align:right;padding:3px 5px;">' + fmt(sub) + '</td>' +
-                '</tr>';
-        }).join('');
+    // Folio único: ATC-AAAAMMDD-HHMMSS-INI
+    const folio = 'ATC-' + ahora.getFullYear() + _pad(ahora.getMonth()+1) + _pad(ahora.getDate())
+                + '-' + _pad(ahora.getHours()) + _pad(ahora.getMinutes()) + _pad(ahora.getSeconds())
+                + '-' + (respIni||'SYS').replace(/[^A-Za-z0-9]/g,'');
 
-    const copia = tipo => `
-        <div class="copia">
-            <div class="copia-label">${tipo}</div>
-            <div style="text-align:center;margin-bottom:6px;">
-                <div style="font-size:13px;font-weight:900;letter-spacing:1px;">ANTICIPO DE PROPINA</div>
-                <div style="font-size:9px;color:#555;margin-top:2px;">FONDO SOLIDARIO — CASINO DE PUERTO VARAS</div>
-                <div style="font-size:8px;color:#888;margin-top:1px;">FOL: ${folio}</div>
-            </div>
-            <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
-                <tr><td class="f">SOCIO</td><td class="v">${nombre.toUpperCase()}</td></tr>
-                <tr><td class="f">ID</td><td class="v">${id}</td></tr>
-                <tr><td class="f">FECHA</td><td class="v">${fechaHora}</td></tr>
-                <tr><td class="f">MONTO</td><td class="v" style="font-size:14px;font-weight:900;">${fmt(monto)}</td></tr>
-                <tr><td class="f">ENCARGADO</td><td class="v">${respVis}</td></tr>
-            </table>
-            <div style="font-weight:900;font-size:10px;background:#000;color:#fff;padding:2px 5px;text-align:center;margin-bottom:4px;">DESGLOSE DE BILLETES</div>
-            <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
-                <thead><tr style="background:#000;color:#fff;">
-                    <th style="padding:2px 5px;text-align:left;font-size:9px;">Billete</th>
-                    <th style="padding:2px 5px;text-align:center;font-size:9px;">Cant.</th>
-                    <th style="padding:2px 5px;text-align:right;font-size:9px;">Subtotal</th>
-                </tr></thead>
-                <tbody>${filasHtml}</tbody>
-                <tfoot><tr style="border-top:2px solid #000;">
-                    <td colspan="2" style="padding:3px 5px;font-weight:900;font-size:11px;">TOTAL ENTREGADO</td>
-                    <td style="padding:3px 5px;font-weight:900;font-size:11px;text-align:right;">${fmt(monto)}</td>
-                </tr></tfoot>
-            </table>
-            <div style="display:flex;gap:12px;margin-top:12px;">
-                <div style="flex:1;text-align:center;">
-                    <div style="border-top:1px solid #000;margin-bottom:3px;margin-top:20px;"></div>
-                    <div style="font-size:8px;font-weight:700;color:#555;">FIRMA SOCIO</div>
-                </div>
-                <div style="flex:1;text-align:center;">
-                    <div style="border-top:1px solid #000;margin-bottom:3px;margin-top:20px;"></div>
-                    <div style="font-size:8px;font-weight:700;color:#555;">FIRMA ENCARGADO</div>
-                </div>
-            </div>
-        </div>`;
+    const respVis = respIni + (respArea ? ' / ' + respArea : '');
 
-    const html = `<!DOCTYPE html><html lang="es"><head>
-<meta charset="UTF-8">
-<title>Boucher Anticipo</title>
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Courier New',Courier,monospace; font-size:11px; width:80mm; margin:0 auto; }
-.copia { padding:8px 6px 12px; border-bottom:2px dashed #000; page-break-inside:avoid; }
-.copia:last-child { border-bottom:none; }
-.copia-label { text-align:center; font-weight:900; font-size:10px; background:#000; color:#fff; padding:3px 5px; margin-bottom:8px; letter-spacing:2px; }
-.f { font-weight:700; width:34%; color:#333; padding:2px 0; vertical-align:top; }
-.v { color:#000; padding:2px 0; }
-@media print { @page { margin:2mm; size:80mm auto; } body { width:100%; } }
-</style>
-<script>window.onload=()=>setTimeout(()=>window.print(),400);<\/script>
-</head><body>
-${copia('★ COPIA SOCIO ★')}
-${copia('★ COPIA ADMINISTRACIÓN ★')}
-</body></html>`;
+    let filas = '';
+    Object.entries(billetes).sort((a,b) => Number(b[0]) - Number(a[0])).forEach(([den, cant], i) => {
+        if (!cant) return;
+        const sub = Number(den) * cant;
+        const bg  = i % 2 === 0 ? '#f0faf0' : 'white';
+        filas += '<tr style="background:' + bg + '">'
+            + '<td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:700;">' + fmt(Number(den)) + '</td>'
+            + '<td style="padding:4px 8px;border:1px solid #ccc;text-align:center;">' + cant + '</td>'
+            + '<td style="padding:4px 8px;border:1px solid #ccc;text-align:right;font-weight:700;">' + fmt(sub) + '</td>'
+            + '</tr>';
+    });
 
-    const win = window.open('', '_blank');
-    if (win) {
-        win.document.write(html);
-        win.document.close();
-    } else {
-        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'Boucher_Anticipo_' + nombre.replace(/ /g, '_') + '_' + fecha + '.html';
-        a.click();
+    const opcion = window.confirm('¿Cómo imprimir?\n\nOK → Una copia\nCancelar → Dos copias (corte manual)');
+
+    function bloqueAnticipo(etiqueta) {
+        return '<div class="copy-label">' + etiqueta + '</div>'
+            + '<div class="folio-badge">N° FOLIO: ' + folio + '</div>'
+            + '<div class="header"><h1>FONDO DE SOLIDARIDAD</h1><p>CASINO DE PTO. VARAS</p><p>LEY 17312 DEL 29/07/70</p><p><strong>PUERTO VARAS</strong></p></div>'
+            + '<div class="section-title">' + nombre.toUpperCase() + '</div>'
+            + '<div style="text-align:center;font-size:9px;color:#888;margin-bottom:2px;">ID Socio: ' + id + '</div>'
+            + '<div style="text-align:center;font-size:9px;color:#888;margin-bottom:8px;">' + fechaVis + ' ' + horaHoy + '</div>'
+            + '<table><thead><tr><th>BILLETE</th><th>CANTIDAD</th><th style="text-align:right">SUBTOTAL</th></tr></thead><tbody>' + filas + '</tbody></table>'
+            + '<div style="border-top:2px solid #000;margin-top:8px;padding-top:6px;display:flex;justify-content:space-between;font-size:13px;font-weight:900;">'
+            + '<span>TOTAL FINAL</span><span style="color:#d35400;">' + fmt(monto) + '</span></div>'
+            + '<div style="margin-top:12px;font-size:9px;line-height:1.4;"><strong>Responsable:</strong> ' + respVis + '</div>'
+            + '<div style="text-align:center;font-family:monospace;font-size:7px;color:#aaa;margin-top:3px;">FOLIO: ' + folio + '</div>'
+            + '<div class="footer">Emitido: ' + fechaVis + ' ' + horaHoy + ' | Sistema Fondo Solidario</div>';
     }
+
+    const htmlBase = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + nombre + '</title><style>'
+        + '*{margin:0;padding:0;box-sizing:border-box;}'
+        + 'body{font-family:Arial,sans-serif;font-size:11px;}'
+        + '.page{width:80mm;margin:0 auto;padding:8px;}'
+        + '.header{text-align:center;border:2px solid #000;padding:8px;margin-bottom:10px;}'
+        + '.header h1{font-size:13px;font-weight:bold;}'
+        + 'table{width:100%;border-collapse:collapse;margin:4px 0;}'
+        + 'th{background:#f0f0f0;padding:4px 8px;}'
+        + '.section-title{text-align:center;font-weight:bold;font-size:12px;margin-bottom:6px;}'
+        + '.copy-label{text-align:center;font-size:9px;font-weight:bold;background:#000;color:white;padding:3px;margin-bottom:8px;letter-spacing:2px;}'
+        + '.folio-badge{text-align:center;font-size:8px;font-family:monospace;background:#f4f6f7;border:1px dashed #aaa;padding:3px 6px;margin-bottom:6px;letter-spacing:0.5px;border-radius:3px;}'
+        + '.cut{border-top:2px dashed #000;margin:16px 0;text-align:center;font-size:9px;color:#aaa;padding-top:4px;}'
+        + '.footer{text-align:center;font-size:8px;color:#888;border-top:1px dashed #ccc;padding-top:5px;margin-top:6px;}'
+        + '</style></head><body><div class="page">';
+
+    let contenido;
+    if (opcion) {
+        contenido = htmlBase + bloqueAnticipo('★ ANTICIPO — ' + nombre.toUpperCase() + ' ★') + '</div></body></html>';
+    } else {
+        contenido = htmlBase
+            + bloqueAnticipo('★ COPIA SOCIO ★')
+            + '<div class="cut">✂ &nbsp; CORTAR AQUÍ &nbsp; ✂</div>'
+            + bloqueAnticipo('★ COPIA ADMINISTRACIÓN ★')
+            + '</div></body></html>';
+    }
+
+    printHTML(contenido, 'Anticipo ' + nombre + ' ' + fechaVis.replace(/\//g,'-'));
 }
