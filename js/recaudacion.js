@@ -196,12 +196,31 @@ function rec_abrirEditar(fecha, tipo, monto, idx) {
 function rec_abrirAgregar(fechaPredefinida) {
     const hoy = new Date().toISOString().split('T')[0];
     const fecha = fechaPredefinida || hoy;
+
+    // Tipos ya verificados para esa fecha → bloquear en el select
+    const tiposVerificados = new Set(
+        recDatosRaw
+            .filter(r => {
+                let f = r.fecha; if (f && f.includes('T')) f = f.split('T')[0];
+                return f === fecha && r.arqueado === true;
+            })
+            .map(r => r.tipo === 'Mesas' ? 'SalaDeJuegos' : r.tipo)
+    );
+
+    const sel = document.getElementById('recEditTipo');
+    Array.from(sel.options).forEach(opt => {
+        const bloqueado = tiposVerificados.has(opt.value);
+        opt.disabled = bloqueado;
+        opt.textContent = bloqueado ? `${opt.value} 🔒 En caja` : opt.value.replace(' 🔒 En caja', '');
+    });
+    // Seleccionar primer tipo disponible
+    sel.selectedIndex = Array.from(sel.options).findIndex(o => !o.disabled);
+
     document.getElementById('recModalTitulo').textContent = 'Nuevo Registro';
     document.getElementById('recBtnGuardar').dataset.modo = 'agregar';
     document.getElementById('recEditIdx').value = '';
     document.getElementById('recEditFechaHidden').value = fecha;
     document.getElementById('recEditFechaInput').value = fecha;
-    document.getElementById('recEditTipo').selectedIndex = 0;
     document.getElementById('recEditMonto').value = '';
     document.getElementById('modalRecEditar').style.display = 'block';
     setTimeout(() => document.getElementById('recEditMonto').focus(), 150);
@@ -215,6 +234,17 @@ async function rec_guardarCambio() {
     const raw   = document.getElementById('recEditMonto').value.replace(/\./g, '').replace(/,/g, '');
     const monto = parseInt(raw);
     if (!fecha || !monto || !tipo) return showToast('Completa todos los campos', 'error');
+
+    // Bloqueo de seguridad: no guardar si el tipo ya está verificado para esa fecha
+    if (modo === 'agregar') {
+        const tipoNorm = tipo === 'Mesas' ? 'SalaDeJuegos' : tipo;
+        const yaEnCaja = recDatosRaw.some(r => {
+            let f = r.fecha; if (f && f.includes('T')) f = f.split('T')[0];
+            const t = r.tipo === 'Mesas' ? 'SalaDeJuegos' : r.tipo;
+            return f === fecha && t === tipoNorm && r.arqueado === true;
+        });
+        if (yaEnCaja) return showToast(`${tipoNorm} ya fue ingresado a caja 🔒`, 'error');
+    }
 
     document.getElementById('modalRecEditar').style.display = 'none';
     toggleLoader(true, modo === 'editar' ? 'Actualizando...' : 'Guardando...');
