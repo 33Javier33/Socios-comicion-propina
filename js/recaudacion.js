@@ -116,6 +116,24 @@ function procesarDatosRecaudacion(datos, silent) {
                 const idx = reg !== undefined ? reg.originalIndex : 'null';
                 const regPor = reg?.registrado_por_nombre || null;
                 const esArqueado = reg?.arqueado === true;
+                const arqueadoAt = reg?.arqueado_at || null;
+                const billetesObj = reg?.billetes || {};
+                const billetesDetalle = Object.keys(billetesObj).length > 0
+                    ? Object.entries(billetesObj)
+                        .filter(([,v]) => Number(v) > 0)
+                        .sort(([a],[b]) => Number(b) - Number(a))
+                        .map(([den, cant]) => `${cant}×${formatearMoneda(Number(den))}`)
+                        .join(', ')
+                    : null;
+                const horaArqueado = arqueadoAt
+                    ? new Date(arqueadoAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+                    : null;
+                const detalleHtml = (billetesDetalle || horaArqueado)
+                    ? `<div style="font-size:0.68em;color:#64748b;margin-top:3px;line-height:1.4;">`
+                        + (billetesDetalle ? `<span>🪙 ${billetesDetalle}</span>` : '')
+                        + (horaArqueado ? `<span style="margin-left:${billetesDetalle ? '6px' : '0'};">🕐 ${horaArqueado}</span>` : '')
+                        + `</div>`
+                    : '';
                 const arqueadoBadge = esArqueado
                     ? `<span title="Ingresado a caja" style="background:#15803d;color:#fff;border-radius:5px;padding:2px 8px;font-size:0.78em;font-weight:700;cursor:default;">✅ En caja</span>`
                     : `<button onclick="rec_abrirVerificar('${idx}','${fecha}','${nombreTipo}',${valorTipo})" title="Verificar en caja" style="background:none;border:1px solid #f59e0b;color:#b45309;border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;font-weight:700;">⚠️ Verificar</button>`;
@@ -124,7 +142,7 @@ function procesarDatosRecaudacion(datos, silent) {
                     : `<button onclick="rec_abrirEditar('${fecha}','${nombreTipo}',${valorTipo},'${idx}')" style="background:none;border:1px solid var(--secondary);color:var(--secondary);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">✏️</button>`
                     + `<button onclick="rec_borrarFila('${idx}','${nombreTipo}','${fecha}')" style="background:none;border:1px solid var(--danger);color:var(--danger);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">🗑️</button>`;
                 tiposHtml += `<div class="type-item" data-tipo="${nombreTipo}">`
-                    + `<span class="type-name">${nombreTipo}${regPor ? `<br><small style="font-size:0.68em;color:#7f8c8d;font-weight:500">👤 ${regPor}</small>` : ''}</span>`
+                    + `<span class="type-name">${nombreTipo}${regPor ? `<br><small style="font-size:0.68em;color:#7f8c8d;font-weight:500">👤 ${regPor}</small>` : ''}${detalleHtml}</span>`
                     + `<span class="type-value">${formatearMoneda(valorTipo)}</span>`
                     + `<div style="display:flex;gap:3px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end;">`
                     + arqueadoBadge

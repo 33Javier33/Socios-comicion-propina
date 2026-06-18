@@ -268,15 +268,20 @@ async function aq_fetchEsperadoData() {
         document.getElementById('aq-divisor-date').textContent = "Fecha: " + data.lastDivisorDate;
         aq_desgloseEsperado = data.desgloseEsperado || [];
         const _sinVerif = data.sinVerificar || [];
-        const _esCuad = _sinVerif.length === 0;
-        let _fechaRec = data.lastDivisorDate || '';
+        const _lastDate = data.lastDivisorDate || '';
+        // Set de tipo|fecha pendientes de verificar en caja
+        const _noArqueado = new Set(_sinVerif.map(s => `${s.tipo}|${s.fecha}`));
+        let _fechaRec = _lastDate;
         if (_fechaRec.includes('-')) { const _p = _fechaRec.split('-'); if (_p.length === 3) _fechaRec = `${_p[2]}/${_p[1]}/${_p[0]}`; }
-        const _cuadBadge = _esCuad
-            ? `<span style="background:#dcfce7;color:#16a34a;border-radius:20px;padding:2px 9px;font-size:0.78em;font-weight:700;border:1px solid #bbf7d0;">✅ Cuadrado</span>`
-            : `<span style="background:#fee2e2;color:#dc2626;border-radius:20px;padding:2px 9px;font-size:0.78em;font-weight:700;border:1px solid #fecaca;">⚠️ Sin cuadrar</span>`;
-        let h = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:0.82em;"><span style="color:#64748b;font-weight:600;">📅 ${_fechaRec}</span>${_cuadBadge}</div>`;
-        h += '<table class="aq-table"><thead><tr><th>Tipo</th><th>Monto</th></tr></thead><tbody>';
-        aq_desgloseEsperado.forEach(i => { h += `<tr><td>${i.tipo}</td><td>${aq_fmt(i.monto/100)}</td></tr>`; });
+        let h = `<div style="font-size:0.82em;color:#64748b;font-weight:600;margin-bottom:8px;">📅 ${_fechaRec}</div>`;
+        h += '<table class="aq-table"><thead><tr><th>Tipo</th><th>Monto</th><th></th></tr></thead><tbody>';
+        aq_desgloseEsperado.forEach(i => {
+            const _pendiente = _noArqueado.has(`${i.tipo}|${_lastDate}`);
+            const _badge = _pendiente
+                ? `<span style="color:#dc2626;font-size:0.76em;font-weight:700;white-space:nowrap;">⚠️ falta agregar</span>`
+                : `<span style="color:#16a34a;font-size:0.76em;font-weight:700;white-space:nowrap;">✓ arqueado</span>`;
+            h += `<tr><td>${i.tipo}</td><td>${aq_fmt(i.monto/100)}</td><td>${_badge}</td></tr>`;
+        });
         document.getElementById('aq-desglose-esperado').innerHTML = h + '</tbody></table>';
         aq_mostrarAvisoSinVerificar(data.sinVerificar || []);
         aq_fetchPuntosHistorial();

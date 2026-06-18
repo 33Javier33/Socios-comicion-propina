@@ -596,6 +596,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     divisor: divMap[r.fecha] || null,
                     registrado_por_nombre: r.registrado_por_nombre || null,
                     arqueado: r.arqueado === true,
+                    arqueado_at: r.arqueado_at || null,
                     billetes: r.billetes || {}
                 }));
                 return succ(data);
