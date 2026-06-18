@@ -909,6 +909,17 @@
             </div>
         </div>
 
+        <!-- Modal detalle recaudación por tipo -->
+        <div id="modalRecDetalle" class="modal" onclick="if(event.target===this)this.style.display='none'">
+            <div class="modal-content" style="max-width:440px;margin-top:4%;max-height:90vh;overflow-y:auto;">
+                <div class="modal-header" style="background:#1e293b;">
+                    <h2 style="margin:0;font-size:1em;color:#fff;">🔍 Detalle de Recaudación</h2>
+                    <span class="close-modal" style="color:#fff;" onclick="document.getElementById('modalRecDetalle').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body" id="recDetalleCuerpo"></div>
+            </div>
+        </div>
+
         <!-- PESTAÑA 3: RECAUDACIONES -->
         <div id="tab-recaudacion" class="tab-content">
             <!-- Acciones + Filtros Recaudación -->

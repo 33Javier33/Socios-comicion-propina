@@ -118,22 +118,10 @@ function procesarDatosRecaudacion(datos, silent) {
                 const esArqueado = reg?.arqueado === true;
                 const arqueadoAt = reg?.arqueado_at || null;
                 const billetesObj = reg?.billetes || {};
-                const billetesDetalle = Object.keys(billetesObj).length > 0
-                    ? Object.entries(billetesObj)
-                        .filter(([,v]) => Number(v) > 0)
-                        .sort(([a],[b]) => Number(b) - Number(a))
-                        .map(([den, cant]) => `${cant}×${formatearMoneda(Number(den))}`)
-                        .join(', ')
-                    : null;
-                const horaArqueado = arqueadoAt
-                    ? new Date(arqueadoAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
-                    : null;
-                const detalleHtml = (billetesDetalle || horaArqueado)
-                    ? `<div style="font-size:0.68em;color:#64748b;margin-top:3px;line-height:1.4;">`
-                        + (billetesDetalle ? `<span>🪙 ${billetesDetalle}</span>` : '')
-                        + (horaArqueado ? `<span style="margin-left:${billetesDetalle ? '6px' : '0'};">🕐 ${horaArqueado}</span>` : '')
-                        + `</div>`
-                    : '';
+                const detDataStr = JSON.stringify({
+                    tipo: nombreTipo, fecha, monto: valorTipo,
+                    regPor, esArqueado, arqueadoAt, billetes: billetesObj
+                }).replace(/"/g, '&quot;');
                 const arqueadoBadge = esArqueado
                     ? `<span title="Ingresado a caja" style="background:#15803d;color:#fff;border-radius:5px;padding:2px 8px;font-size:0.78em;font-weight:700;cursor:default;">✅ En caja</span>`
                     : `<button onclick="rec_abrirVerificar('${idx}','${fecha}','${nombreTipo}',${valorTipo})" title="Verificar en caja" style="background:none;border:1px solid #f59e0b;color:#b45309;border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;font-weight:700;">⚠️ Verificar</button>`;
@@ -141,12 +129,14 @@ function procesarDatosRecaudacion(datos, silent) {
                     ? `<span title="Bloqueado — ya ingresado a caja" style="color:#94a3b8;font-size:0.78em;padding:2px 6px;cursor:not-allowed;">🔒</span>`
                     : `<button onclick="rec_abrirEditar('${fecha}','${nombreTipo}',${valorTipo},'${idx}')" style="background:none;border:1px solid var(--secondary);color:var(--secondary);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">✏️</button>`
                     + `<button onclick="rec_borrarFila('${idx}','${nombreTipo}','${fecha}')" style="background:none;border:1px solid var(--danger);color:var(--danger);border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">🗑️</button>`;
+                const detBtn = `<button onclick="event.stopPropagation();rec_abrirDetalle(${detDataStr})" title="Ver detalle" style="background:none;border:1px solid #cbd5e1;color:#64748b;border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.78em;">🔍</button>`;
                 tiposHtml += `<div class="type-item" data-tipo="${nombreTipo}">`
-                    + `<span class="type-name">${nombreTipo}${regPor ? `<br><small style="font-size:0.68em;color:#7f8c8d;font-weight:500">👤 ${regPor}</small>` : ''}${detalleHtml}</span>`
+                    + `<span class="type-name">${nombreTipo}${regPor ? `<br><small style="font-size:0.68em;color:#7f8c8d;font-weight:500">👤 ${regPor}</small>` : ''}</span>`
                     + `<span class="type-value">${formatearMoneda(valorTipo)}</span>`
                     + `<div style="display:flex;gap:3px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end;">`
                     + arqueadoBadge
                     + editBtns
+                    + detBtn
                     + `</div></div>`;
             });
 
@@ -530,4 +520,76 @@ function _rec_volcarBilletesAArqueo(tipo, billetes) {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ conteoActual: aqConteo, movimientoDisplay: aqMovi, totalRetirado: aqRet })
     }).catch(() => {});
+}
+
+function rec_abrirDetalle(d) {
+    const modal = document.getElementById('modalRecDetalle');
+    const f = d.fecha ? d.fecha.split('-') : [];
+    const fechaVis = f.length === 3 ? `${f[2]}/${f[1]}/${f[0]}` : (d.fecha || '-');
+    const TIPOS_LABEL = { SalaDeJuegos: '🎰 Sala de Juegos', EfectivoMDA: '💵 Efectivo MDA', TarjetaMDA: '💳 Tarjeta MDA', Boveda: '🏦 Bóveda' };
+    const tipoLabel = TIPOS_LABEL[d.tipo] || d.tipo;
+    const estadoHtml = d.esArqueado
+        ? `<span style="background:#dcfce7;color:#15803d;border-radius:20px;padding:3px 12px;font-size:0.85em;font-weight:700;border:1px solid #bbf7d0;">✅ Ingresado a caja</span>`
+        : `<span style="background:#fef3c7;color:#b45309;border-radius:20px;padding:3px 12px;font-size:0.85em;font-weight:700;border:1px solid #fde68a;">⚠️ Pendiente de verificación</span>`;
+    const horaArqueado = d.arqueadoAt
+        ? new Date(d.arqueadoAt).toLocaleString('es-CL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
+        : null;
+    const billetes = d.billetes || {};
+    const fillasBilletes = Object.entries(billetes)
+        .filter(([, v]) => Number(v) > 0)
+        .sort(([a], [b]) => Number(b) - Number(a));
+    let billetesHtml = '';
+    if (fillasBilletes.length > 0) {
+        let totalContado = 0;
+        let rows = '';
+        fillasBilletes.forEach(([den, cant]) => {
+            const sub = Number(den) * Number(cant);
+            totalContado += sub;
+            rows += `<tr>
+                <td style="padding:8px 10px;">${formatearMoneda(Number(den))}</td>
+                <td style="padding:8px 10px;text-align:center;">${cant}</td>
+                <td style="padding:8px 10px;text-align:right;font-weight:700;">${formatearMoneda(sub)}</td>
+            </tr>`;
+        });
+        billetesHtml = `
+            <div style="margin-top:16px;">
+                <div style="font-size:0.75em;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">🪙 Desglose de billetes</div>
+                <table style="width:100%;border-collapse:collapse;font-size:0.88em;">
+                    <thead><tr style="background:#f1f5f9;border-bottom:2px solid #e2e8f0;">
+                        <th style="padding:7px 10px;text-align:left;color:#64748b;font-weight:700;">Denominación</th>
+                        <th style="padding:7px 10px;text-align:center;color:#64748b;font-weight:700;">Cantidad</th>
+                        <th style="padding:7px 10px;text-align:right;color:#64748b;font-weight:700;">Subtotal</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                    <tfoot><tr style="background:#1e293b;border-radius:0 0 8px 8px;">
+                        <td colspan="2" style="padding:9px 10px;color:rgba(255,255,255,0.7);font-weight:700;font-size:0.85em;">TOTAL CONTADO</td>
+                        <td style="padding:9px 10px;text-align:right;color:#10b981;font-weight:900;font-size:1.05em;">${formatearMoneda(totalContado)}</td>
+                    </tr></tfoot>
+                </table>
+            </div>`;
+    }
+    document.getElementById('recDetalleCuerpo').innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+            <div>
+                <div style="font-size:1.1em;font-weight:900;color:#1e293b;">${tipoLabel}</div>
+                <div style="font-size:0.82em;color:#64748b;margin-top:2px;">📅 ${fechaVis}</div>
+            </div>
+            <div style="font-size:1.35em;font-weight:900;color:#1d4ed8;">${formatearMoneda(d.monto)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border-radius:8px;padding:8px 12px;">
+                <span style="font-size:0.82em;color:#64748b;font-weight:600;">Estado</span>
+                ${estadoHtml}
+            </div>
+            ${d.regPor ? `<div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border-radius:8px;padding:8px 12px;">
+                <span style="font-size:0.82em;color:#64748b;font-weight:600;">Registrado por</span>
+                <span style="font-size:0.88em;font-weight:700;">👤 ${d.regPor}</span>
+            </div>` : ''}
+            ${horaArqueado ? `<div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border-radius:8px;padding:8px 12px;">
+                <span style="font-size:0.82em;color:#64748b;font-weight:600;">Verificado el</span>
+                <span style="font-size:0.88em;font-weight:700;">🕐 ${horaArqueado}</span>
+            </div>` : ''}
+        </div>
+        ${billetesHtml}`;
+    modal.style.display = 'flex';
 }
