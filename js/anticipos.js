@@ -1415,9 +1415,17 @@ async function gestion_cargarTotalRemanentes() {
         el.style.color = total < 0 ? '#fca5a5' : '#e9d5ff';
         if (elPer && res.ultimaFecha) {
             const d = new Date(res.ultimaFecha);
-            const mes = d.toLocaleString('es-CL', { month: 'long' });
-            const anio = d.getFullYear();
-            elPer.textContent = `(cierre ${mes} ${anio})`;
+            const anio = d.getFullYear(), mes = d.getMonth();
+            let inicio, fin;
+            if (d.getDate() > 15) {
+                inicio = new Date(anio, mes, 15);
+                fin    = new Date(anio, mes + 1, 14);
+            } else {
+                inicio = new Date(anio, mes - 1, 15);
+                fin    = new Date(anio, mes, 14);
+            }
+            const fmt = dt => dt.toLocaleString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '');
+            elPer.textContent = `(${fmt(inicio)} – ${fmt(fin)} ${fin.getFullYear()})`;
         }
     } catch(e) {
         el.textContent = 'Error';
