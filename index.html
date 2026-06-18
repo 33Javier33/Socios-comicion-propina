@@ -1622,7 +1622,7 @@
                     </div>
                     <div style="background:#eaf4fb; padding:14px 16px;">
                         <p style="font-size:13px; line-height:1.75; color:#2c3e50; margin:0;">
-                            Hoy permite gestionar <strong>socios, anticipos, ausencias, montos recaudados y arqueo de caja</strong> — todo conectado en tiempo real a Google Sheets vía Apps Script. Sin servidores, sin costos de infraestructura, accesible desde cualquier dispositivo con navegador.
+                            Hoy permite gestionar <strong>socios, anticipos, ausencias, montos recaudados, arqueo de caja, materiales y gastos, auditoría y seguridad</strong> — respaldado en tiempo real por <strong>Supabase</strong> y <strong>Google Apps Script</strong>. Funciona como aplicación instalable (PWA) desde cualquier dispositivo, incluso sin conexión. Sin servidores propios, sin costos de infraestructura.
                         </p>
                     </div>
                 </div>
@@ -1633,29 +1633,52 @@
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                         <div style="background:#fff; border-radius:10px; padding:10px 12px; border:1px solid #e8d5f5;">
                             <div style="font-size:11px; font-weight:800; color:#9b59b6; margin-bottom:3px;">👥 Gestión de Socios</div>
-                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Registro, puntos, contratos y saldos individuales.</div>
+                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Registro, puntos, escalamientos, contratos y saldos individuales.</div>
                         </div>
                         <div style="background:#fff; border-radius:10px; padding:10px 12px; border:1px solid #d5f0e0;">
                             <div style="font-size:11px; font-weight:800; color:#27ae60; margin-bottom:3px;">📑 Anticipos y Ausencias</div>
-                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Control de movimientos por socio y período.</div>
+                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Registro, edición y eliminación de anticipos y ausencias por socio.</div>
                         </div>
                         <div style="background:#fff; border-radius:10px; padding:10px 12px; border:1px solid #d5e8f7;">
                             <div style="font-size:11px; font-weight:800; color:#3498db; margin-bottom:3px;">💵 Montos Recaudados</div>
-                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Registro diario de mesas, efectivo y tarjeta.</div>
+                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Registro diario por tipo, verificación en caja y detalle de billetes.</div>
                         </div>
                         <div style="background:#fff; border-radius:10px; padding:10px 12px; border:1px solid #fdebd0;">
                             <div style="font-size:11px; font-weight:800; color:#f39c12; margin-bottom:3px;">💰 Arqueo de Caja</div>
-                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Conteo físico, cuadre y emisión de reportes.</div>
+                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Conteo físico, estado cuadrado por tipo, retiro de anticipos y canje a bóveda.</div>
+                        </div>
+                        <div style="background:#fff; border-radius:10px; padding:10px 12px; border:1px solid #d5f0e0;">
+                            <div style="font-size:11px; font-weight:800; color:#16a34a; margin-bottom:3px;">🧾 Materiales y Gastos</div>
+                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Registro de ingresos y egresos del fondo por período 15–15.</div>
+                        </div>
+                        <div style="background:#fff; border-radius:10px; padding:10px 12px; border:1px solid #fecaca;">
+                            <div style="font-size:11px; font-weight:800; color:#dc2626; margin-bottom:3px;">🔒 Auditoría y Seguridad</div>
+                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">PIN personal por responsable, historial de acciones y trazabilidad completa.</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Tecnología -->
                 <div style="background:linear-gradient(135deg,#eaf4fb,#e8f8f0); border-radius:14px; padding:14px 16px; border:1px solid #d5e8f7;">
-                    <div style="font-size:10px; font-weight:800; color:#17a2b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">⚡ Tecnología</div>
-                    <p style="font-size:13px; line-height:1.7; color:#2c3e50; margin:0;">
-                        Desarrollado en <strong>HTML, CSS y JavaScript puro</strong>, integrado con <strong>Google Apps Script</strong> como backend y <strong>Google Sheets</strong> como base de datos. Funciona desde cualquier navegador sin instalaciones, con carga paralela de datos y sincronización en tiempo real.
-                    </p>
+                    <div style="font-size:10px; font-weight:800; color:#17a2b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px;">⚡ Tecnología</div>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <div style="display:flex; align-items:flex-start; gap:10px;">
+                            <span style="font-size:18px; flex-shrink:0;">🗄️</span>
+                            <div><strong style="font-size:12px; color:#1e293b;">Supabase</strong><div style="font-size:11px; color:#64748b; margin-top:1px;">Base de datos principal con sincronización en tiempo real entre dispositivos (Realtime + REST).</div></div>
+                        </div>
+                        <div style="display:flex; align-items:flex-start; gap:10px;">
+                            <span style="font-size:18px; flex-shrink:0;">⚙️</span>
+                            <div><strong style="font-size:12px; color:#1e293b;">Google Apps Script</strong><div style="font-size:11px; color:#64748b; margin-top:1px;">Backend serverless para procesos de cierre, notificaciones Telegram y compatibilidad con Sheets.</div></div>
+                        </div>
+                        <div style="display:flex; align-items:flex-start; gap:10px;">
+                            <span style="font-size:18px; flex-shrink:0;">📱</span>
+                            <div><strong style="font-size:12px; color:#1e293b;">PWA — Aplicación instalable</strong><div style="font-size:11px; color:#64748b; margin-top:1px;">Service Worker con caché offline. Se instala en iOS y Android como app nativa desde el navegador.</div></div>
+                        </div>
+                        <div style="display:flex; align-items:flex-start; gap:10px;">
+                            <span style="font-size:18px; flex-shrink:0;">💻</span>
+                            <div><strong style="font-size:12px; color:#1e293b;">HTML · CSS · JavaScript puro</strong><div style="font-size:11px; color:#64748b; margin-top:1px;">Sin frameworks. Sin build tools. Sin dependencias de terceros en runtime. Carga rápida en cualquier dispositivo.</div></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Firma -->

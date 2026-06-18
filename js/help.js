@@ -89,22 +89,25 @@ const BASE_CONOCIMIENTO = [
       pasos:['Selecciona un socio con contrato Planta (aparece la sección "Reportar Ausencia")','Selecciona el motivo: Enfermedad, Permiso, Falta injustificada u Otro','Indica la fecha de la ausencia','Presiona "Reportar Ausencia"'],
       nota:'Los socios Part-Time NO tienen ausencias — su cálculo se basa en los días marcados en el calendario.' },
 
-    { id:'a3', cat:'anticipos', titulo:'¿Cómo elimino un anticipo por error?', tags:['eliminar','borrar','anticipo','error','corregir'],
-      resp:'En la tabla de historial del socio, <strong>mantén presionado</strong> el registro que quieres eliminar durante 1 segundo.',
+    { id:'a3', cat:'anticipos', titulo:'¿Cómo edito o elimino un anticipo?', tags:['eliminar','borrar','anticipo','error','corregir','editar','modificar'],
+      resp:'En la tabla de historial del socio puedes <strong>editar</strong> (botón ✏️) o <strong>eliminar</strong> (mantén presionado 1 segundo) cualquier anticipo.',
       vista:`<div class="ayuda-vista">
-        <div class="ayuda-vista-titulo">🗑️ Eliminar un anticipo</div>
+        <div class="ayuda-vista-titulo">✏️ Editar o 🗑️ Eliminar un anticipo</div>
         <div class="ayuda-mini-card">
           <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;font-size:0.82em;">
-            <div>19/03</div><div style="color:#2980b9;font-weight:700;">Anticipo</div><div>Adelanto</div>
-            <div style="color:#e74c3c;font-weight:700;">-$50.000</div>
+            <div>19/03</div><div style="color:#2980b9;font-weight:700;">Anticipo</div><div style="font-size:0.75em;color:#555;">Adelanto</div>
+            <div style="display:flex;gap:4px;align-items:center;">
+              <span style="color:#e74c3c;font-weight:700;">-$50.000</span>
+              <span style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);color:#b45309;border-radius:6px;padding:2px 6px;font-size:0.85em;font-weight:700;">✏️</span>
+            </div>
           </div>
           <div style="margin-top:8px;padding:6px;background:#fff3cd;border-radius:6px;font-size:0.75em;text-align:center;">
-            👆 Mantén presionado 1 seg → aparece confirmación
+            👆 Mantén presionado 1 seg → eliminar · ✏️ → editar fecha, monto y responsable
           </div>
         </div>
       </div>`,
-      pasos:['Selecciona el socio','En la tabla inferior, localiza el anticipo a eliminar','Mantén presionado por 1 segundo','Confirma la eliminación en el diálogo'],
-      nota:'⚠️ Esta acción no se puede deshacer. Asegúrate antes de confirmar.' },
+      pasos:['Selecciona el socio en Anticipos y Ausencias','En la tabla inferior localiza el anticipo','Para <strong>editar</strong>: presiona el botón ✏️ — cambia fecha, monto o responsable y guarda','Para <strong>eliminar</strong>: mantén presionado 1 segundo y confirma en el diálogo'],
+      nota:'⚠️ La eliminación no se puede deshacer. Los cambios se sincronizan automáticamente en Supabase.' },
 
     { id:'a4', cat:'anticipos', titulo:'¿Qué es el Detalle de Anticipos (informe)?', tags:['detalle','informe','anticipos','reporte','imprimir','lista'],
       resp:'El botón <strong>📋 Detalle Anticipos</strong> genera un informe A4 completo con todos los anticipos del período, listo para imprimir o guardar como PDF.',
@@ -181,8 +184,8 @@ const BASE_CONOCIMIENTO = [
             <div style="border:1px solid #ddd;border-radius:5px;padding:5px 8px;margin-top:2px;color:#aaa;">Ej: 800 — dejar vacío si no se sabe</div></div>
         </div>
       </div>`,
-      pasos:['Presiona "➕ Nueva Recaudación" en la barra superior','Selecciona el tipo: Sala de Juegos, Efectivo MDA, Tarjeta MDA o Bóveda','Ingresa la fecha de la noche y el monto','El divisor es opcional — si no lo sabes, déjalo vacío y lo ingresas después desde la tarjeta del día','Presiona Guardar'],
-      nota:'Puedes ingresar varios tipos para el mismo día (ej: Mesas + Efectivo MDA + Bóveda). Cada uno va por separado.' },
+      pasos:['Presiona "➕ Nueva Recaudación" en la barra superior','Selecciona el tipo: Sala de Juegos, Efectivo MDA, Tarjeta MDA o Bóveda','Ingresa la fecha de la noche y el monto','El divisor es opcional — si no lo sabes, déjalo vacío y lo ingresas después desde la tarjeta del día','Presiona Guardar','Una vez ingresada, presiona <strong>⚠️ Verificar</strong> en la tarjeta del tipo para confirmar que el dinero fue ingresado físicamente a caja (conteo de billetes). Queda marcada como <strong>✅ En caja</strong>','Presiona 🔍 en cualquier tipo para ver el detalle: quién registró, cuándo se verificó y el desglose de billetes'],
+      nota:'Puedes ingresar varios tipos para el mismo día (ej: Mesas + Efectivo MDA + Bóveda). Cada uno se verifica por separado en caja.' },
 
     { id:'r2', cat:'recaudacion', titulo:'¿Qué es el divisor y por qué es crítico?', tags:['divisor','punto noche','cálculo','inflación','sin divisor'],
       resp:'El divisor define cuánto vale un punto esa noche. <strong>Sin divisor correcto, los cálculos se inflan</strong> y los socios recibirían montos incorrectos.',
@@ -241,8 +244,8 @@ const BASE_CONOCIMIENTO = [
           </div>
         </div>
       </div>`,
-      pasos:['Presiona "💵 Conteo" en la barra del arqueo','Ingresa cuántos billetes/monedas hay de cada denominación ($20.000, $10.000, etc.)','El total se calcula automáticamente','Presiona "✅ Realizar Arqueo" para ver si cuadra','Si hay diferencia: revisa retiros y anticipos ingresados antes de cerrar'],
-      nota:'Verde = cuadrado. Amarillo = sobrante. Rojo = faltante. Guarda con ☁️ Guardar para no perder el progreso.' },
+      pasos:['Presiona "💵 Conteo" en la barra del arqueo','Ingresa cuántos billetes/monedas hay de cada denominación ($20.000, $10.000, etc.) — el total se calcula automáticamente','Revisa la tabla de Recaudación Esperada: cada tipo (TarjetaMDA, EfectivoMDA, SalaDeJuegos) muestra si está <strong>✓ arqueado</strong> o <strong>⚠️ falta agregar</strong> según lo verificado en Montos Recaudados','Si hay diferencia en el resultado: revisa retiros y anticipos ingresados antes de cerrar','Guarda con ☁️ Guardar para no perder el progreso entre dispositivos'],
+      nota:'Verde = cuadrado. Amarillo = sobrante. Rojo = faltante. El estado por tipo (✓ arqueado / ⚠️ falta agregar) se actualiza automáticamente al verificar entradas en Montos Recaudados.' },
 
     { id:'aq2', cat:'arqueo', titulo:'¿Cómo funciona el Canje a Bóveda?', tags:['canje','bóveda','cambio','billetes','comprobante'],
       resp:'El <strong>💱 Canje</strong> se usa cuando necesitas cambiar billetes de una denominación a otra, solicitándolo a Bóveda. Genera un comprobante oficial.',
@@ -532,6 +535,28 @@ const BASE_CONOCIMIENTO = [
       </div>`,
       pasos:['<strong>Computador:</strong> el menú aparece como panel fijo a la izquierda, siempre visible','<strong>Móvil:</strong> la barra superior muestra la sección activa y el botón "☰ Secciones"','Para navegar en móvil: presiona "☰ Secciones" → el panel aparece desde abajo → toca la sección deseada → el panel se cierra','Para reordenar en móvil: con el drawer abierto, arrastra verticalmente las secciones','En computador: el cursor cambia a ⊹ (grab) al pasar sobre el menú, indicando que se puede arrastrar'],
       nota:'El drawer en móvil cubre automáticamente los botones flotantes (FABs) para evitar confusión.' },
+
+    { id:'tec1', cat:'config', titulo:'¿Qué tecnología usa el sistema por dentro?', tags:['supabase','PWA','offline','tecnología','tiempo real','apps script','base de datos','instalar'],
+      resp:'El sistema combina <strong>Supabase</strong> como base de datos en tiempo real, <strong>Google Apps Script</strong> para procesos de cierre y notificaciones, y funciona como <strong>PWA instalable</strong> en cualquier dispositivo.',
+      vista:`<div class="ayuda-vista">
+        <div class="ayuda-vista-titulo">⚡ Stack tecnológico</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="ayuda-mini-card" style="flex-direction:row;align-items:center;gap:10px;">
+            <span style="font-size:20px;">🗄️</span>
+            <div><div style="font-weight:700;font-size:0.85em;">Supabase</div><div style="font-size:0.75em;color:#7f8c8d;">Base de datos principal · sincronización Realtime entre dispositivos</div></div>
+          </div>
+          <div class="ayuda-mini-card" style="flex-direction:row;align-items:center;gap:10px;">
+            <span style="font-size:20px;">⚙️</span>
+            <div><div style="font-weight:700;font-size:0.85em;">Google Apps Script</div><div style="font-size:0.75em;color:#7f8c8d;">Backend serverless · cierres, notificaciones Telegram, respaldo en Sheets</div></div>
+          </div>
+          <div class="ayuda-mini-card" style="flex-direction:row;align-items:center;gap:10px;">
+            <span style="font-size:20px;">📱</span>
+            <div><div style="font-weight:700;font-size:0.85em;">PWA (Progressive Web App)</div><div style="font-size:0.75em;color:#7f8c8d;">Instálala desde Safari/Chrome · funciona offline con caché automático</div></div>
+          </div>
+        </div>
+      </div>`,
+      pasos:['Para instalar en iPhone: abre en Safari → botón Compartir → "Agregar a pantalla de inicio"','Para instalar en Android: abre en Chrome → menú ⋮ → "Instalar app" o "Agregar a pantalla de inicio"','Los datos se sincronizan en tiempo real entre todos los dispositivos vía Supabase','Si te quedas sin conexión, la app sigue funcionando con los datos en caché — los cambios se sincronizan al volver a conectarse'],
+      nota:'No se necesita instalarla para usarla — funciona directo desde el navegador. La instalación solo añade el ícono en la pantalla de inicio y mejora la experiencia.' },
 ];
 
 // ══════════════════════════════════════════════════════════
