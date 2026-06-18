@@ -515,6 +515,15 @@ function aq_crearBackupLocal() {
     localStorage.setItem(AQ_SK_BACKUP, JSON.stringify(historial));
 }
 
+function aq_resetearRetirado() {
+    if (aq_totalRetirado === 0) return;
+    if (!confirm('¿Volver el monto RETIRADO a $0?\n\nEsto solo reinicia el contador de retiros, no modifica el conteo de billetes.')) return;
+    aq_saveState();
+    aq_totalRetirado = 0;
+    localStorage.setItem(AQ_SK_RETIROS, '0');
+    aq_realizarArqueo();
+}
+
 function aq_resetear() {
     aq_conteo = {}; aq_movi = {}; aq_totalRetirado = 0;
     aq_histStates = []; aq_histIdx = -1;
