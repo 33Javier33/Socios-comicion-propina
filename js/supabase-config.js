@@ -328,10 +328,18 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 await dbSoc.from('anticipos_historial').insert(histRows)
                     .catch(e => console.error('[sb] error archivando anticipos_historial:', e));
             }
-            // 3. Llamar al GAS (archiva a Sheets y limpia la hoja)
+            // 3. Guardar snapshot de saldos_socio en saldos_cierre_mes antes de limpiar
+            dbSoc.from('saldos_socio').select('monto').then(({ data: snap }) => {
+                const totalSnap = (snap || []).reduce((s, r) => s + Number(r.monto || 0), 0);
+                dbSoc.from('saldos_cierre_mes').upsert(
+                    { id: crypto.randomUUID(), periodo, datos: { total: totalSnap, count: (snap || []).length } },
+                    { onConflict: 'periodo' }
+                ).catch(e => console.error('[sb] error guardando saldos_cierre_mes:', e));
+            });
+            // 4. Llamar al GAS (archiva a Sheets y limpia la hoja)
             _invalidarTodosLosDatos(); // reinicio de anticipos afecta a todos los socios
             const gasRes = await _origFetch(url, options);
-            // 4. Limpiar Supabase anticipos después de confirmar con GAS
+            // 5. Limpiar Supabase anticipos después de confirmar con GAS
             dbSoc.from('anticipos').delete().neq('id', '__never__')
                 .catch(e => console.error('[sb] error limpiando anticipos:', e));
             return gasRes;
@@ -477,12 +485,18 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 if (action === 'getDatosSocio') return _socGetDatosSocioHandler(s, options);
                 if (action === 'getTotalRemanentes') {
                     try {
-                        const { data } = await dbSoc.from('saldos_socio').select('monto, updated_at');
-                        const total = (data || []).reduce((sum, r) => sum + Number(r.monto || 0), 0);
-                        const fechas = (data || []).map(r => r.updated_at).filter(Boolean).sort();
+                        const [saldosRes, histRes] = await Promise.all([
+                            dbSoc.from('saldos_socio').select('monto, updated_at'),
+                            dbSoc.from('saldos_cierre_mes').select('periodo, datos, created_at')
+                                .order('created_at', { ascending: false }).limit(1)
+                        ]);
+                        const data = saldosRes.data || [];
+                        const total = data.reduce((sum, r) => sum + Number(r.monto || 0), 0);
+                        const fechas = data.map(r => r.updated_at).filter(Boolean).sort();
                         const ultimaFecha = fechas.length ? fechas[fechas.length - 1] : null;
-                        return _mockOk({ status: 'success', total, ultimaFecha });
-                    } catch(e) { return _mockOk({ status: 'success', total: 0, ultimaFecha: null }); }
+                        const periodoAnterior = (histRes.data || [])[0] || null;
+                        return _mockOk({ status: 'success', total, ultimaFecha, periodoAnterior });
+                    } catch(e) { return _mockOk({ status: 'success', total: 0, ultimaFecha: null, periodoAnterior: null }); }
                 }
                 return _origFetch(url, options);
             }

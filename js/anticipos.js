@@ -1406,6 +1406,7 @@ async function gestion_cargarTotalAnticipos() {
 async function gestion_cargarTotalRemanentes() {
     const el = document.getElementById('gestionTotalRemanentes');
     const elPer = document.getElementById('gestionPeriodoRemanentes');
+    const elAnt = document.getElementById('gestionRemAnteriores');
     if (!el) return;
     try {
         const res = await fetch(`${URL_SOCIOS}?action=getTotalRemanentes`).then(r => r.json());
@@ -1426,6 +1427,13 @@ async function gestion_cargarTotalRemanentes() {
             }
             const fmt = dt => dt.toLocaleString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '');
             elPer.textContent = `(${fmt(inicio)} – ${fmt(fin)} ${fin.getFullYear()})`;
+        }
+        if (elAnt && res.periodoAnterior) {
+            const pa = res.periodoAnterior;
+            const totalAnt = Number(pa.datos?.total || 0);
+            const label = (pa.periodo || '').replace(/_/g, ' ').toLowerCase();
+            elAnt.innerHTML = `<span style="opacity:0.7;">Período ant. (${label}):</span> <strong style="color:${totalAnt < 0 ? '#fca5a5' : '#c4b5fd'};">${formatearMoneda(totalAnt)}</strong>`;
+            elAnt.style.display = '';
         }
     } catch(e) {
         el.textContent = 'Error';
