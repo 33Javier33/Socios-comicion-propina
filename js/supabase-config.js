@@ -435,6 +435,30 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             return _origFetch(url, options);
         }
 
+        // ── getAllDataDesdeSheets → leer anticipos desde Supabase (consistencia con Arqueo de Caja) ──
+        if (action === 'getAllDataDesdeSheets') {
+            try {
+                const { data, error } = await dbSoc.from('anticipos')
+                    .select('socio_id, fecha, monto, responsable');
+                if (error) throw error;
+                const anticipos = {};
+                (data || []).forEach(a => {
+                    const id = String(a.socio_id);
+                    if (!anticipos[id]) anticipos[id] = [];
+                    anticipos[id].push({
+                        fecha: a.fecha,
+                        cantidad: Number(a.monto),
+                        monto: Number(a.monto),
+                        responsable: a.responsable || ''
+                    });
+                });
+                console.log('[SB] getAllDataDesdeSheets → Supabase:', Object.keys(anticipos).length, 'socios con anticipos');
+                return _mockOk({ status: 'success', data: { anticipos } });
+            } catch(e) {
+                console.warn('[SB] getAllDataDesdeSheets fallback a GAS:', e.message);
+            }
+        }
+
         // Cualquier otra acción POST de socios: pasar a GAS sin interceptar
         return _origFetch(url, options);
     }
