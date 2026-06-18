@@ -86,6 +86,7 @@ function switchTab(tabName) {
         });
         renderizarListaBusqueda();
         gestion_cargarTotalAnticipos();
+        gestion_cargarTotalRemanentes();
         cierresMes_render();
     }
     else if(tabName === 'recaudacion') { fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones(); }

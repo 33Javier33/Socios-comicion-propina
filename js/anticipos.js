@@ -1403,6 +1403,20 @@ async function gestion_cargarTotalAnticipos() {
     }
 }
 
+async function gestion_cargarTotalRemanentes() {
+    const el = document.getElementById('gestionTotalRemanentes');
+    if (!el) return;
+    try {
+        const res = await fetch(`${URL_SOCIOS}?action=getTotalRemanentes`).then(r => r.json());
+        const total = res.total !== undefined ? Number(res.total) : null;
+        if (total === null) { el.textContent = 'N/D'; return; }
+        el.textContent = formatearMoneda(total);
+        el.style.color = total < 0 ? '#fca5a5' : '#e9d5ff';
+    } catch(e) {
+        el.textContent = 'Error';
+    }
+}
+
 function seleccionarSocio(id) {
     const socio = cacheSocios.find(s => s.id === id);
     if (!socio) return;
