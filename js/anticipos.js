@@ -1405,6 +1405,7 @@ async function gestion_cargarTotalAnticipos() {
 
 async function gestion_cargarTotalRemanentes() {
     const el = document.getElementById('gestionTotalRemanentes');
+    const elPer = document.getElementById('gestionPeriodoRemanentes');
     if (!el) return;
     try {
         const res = await fetch(`${URL_SOCIOS}?action=getTotalRemanentes`).then(r => r.json());
@@ -1412,6 +1413,12 @@ async function gestion_cargarTotalRemanentes() {
         if (total === null) { el.textContent = 'N/D'; return; }
         el.textContent = formatearMoneda(total);
         el.style.color = total < 0 ? '#fca5a5' : '#e9d5ff';
+        if (elPer && res.ultimaFecha) {
+            const d = new Date(res.ultimaFecha);
+            const mes = d.toLocaleString('es-CL', { month: 'long' });
+            const anio = d.getFullYear();
+            elPer.textContent = `(cierre ${mes} ${anio})`;
+        }
     } catch(e) {
         el.textContent = 'Error';
     }

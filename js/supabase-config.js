@@ -477,10 +477,12 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 if (action === 'getDatosSocio') return _socGetDatosSocioHandler(s, options);
                 if (action === 'getTotalRemanentes') {
                     try {
-                        const { data } = await dbSoc.from('saldos_socio').select('monto');
+                        const { data } = await dbSoc.from('saldos_socio').select('monto, updated_at');
                         const total = (data || []).reduce((sum, r) => sum + Number(r.monto || 0), 0);
-                        return _mockOk({ status: 'success', total });
-                    } catch(e) { return _mockOk({ status: 'success', total: 0 }); }
+                        const fechas = (data || []).map(r => r.updated_at).filter(Boolean).sort();
+                        const ultimaFecha = fechas.length ? fechas[fechas.length - 1] : null;
+                        return _mockOk({ status: 'success', total, ultimaFecha });
+                    } catch(e) { return _mockOk({ status: 'success', total: 0, ultimaFecha: null }); }
                 }
                 return _origFetch(url, options);
             }
