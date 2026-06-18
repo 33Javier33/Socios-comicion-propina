@@ -322,7 +322,7 @@ function aq_calcularPeriodoActual() {
     const mes  = hoy.getMonth();
 
     let inicio, fin;
-    if (hoy.getDate() > 15) {
+    if (hoy.getDate() >= 15) {
         inicio = new Date(anio, mes, 15);
         fin    = new Date(anio, mes + 1, 14);
     } else {

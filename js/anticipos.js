@@ -1418,7 +1418,7 @@ async function gestion_cargarTotalRemanentes() {
             const d = new Date(res.ultimaFecha);
             const anio = d.getFullYear(), mes = d.getMonth();
             let inicio, fin;
-            if (d.getDate() > 15) {
+            if (d.getDate() >= 15) {
                 inicio = new Date(anio, mes, 15);
                 fin    = new Date(anio, mes + 1, 14);
             } else {
