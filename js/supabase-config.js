@@ -594,6 +594,30 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             return _origFetch(url, options);
         }
 
+        // ── guardarBatchDiasPartTime / guardarDiasPartTime → GAS primero + Supabase en background ──
+        if (action === 'guardarBatchDiasPartTime' || action === 'guardarDiasPartTime') {
+            const gasRes = await _origFetch(url, options);
+            // Actualizar dias_pt en Supabase en segundo plano (fire-and-forget)
+            Promise.resolve().then(async () => {
+                try {
+                    if (action === 'guardarBatchDiasPartTime') {
+                        // { socios: [{id, nombre}], dias: [...fechas] }
+                        const socioItems = body.socios || [];
+                        const diasNuevos = body.dias || [];
+                        for (const s of socioItems) {
+                            const { data: ex } = await dbSoc.from('dias_pt').select('dias').eq('socio_id', String(s.id)).maybeSingle();
+                            const merged = [...new Set([...((ex && Array.isArray(ex.dias)) ? ex.dias : []), ...diasNuevos])].sort();
+                            await dbSoc.from('dias_pt').upsert({ socio_id: String(s.id), dias: merged }, { onConflict: 'socio_id' });
+                        }
+                    } else {
+                        // guardarDiasPartTime: { id, dias: [] } — reiniciar días de un socio
+                        await dbSoc.from('dias_pt').upsert({ socio_id: String(body.id), dias: body.dias || [] }, { onConflict: 'socio_id' });
+                    }
+                } catch(e) { console.warn('[SB-DIAS-PT] upsert error:', e.message); }
+            });
+            return gasRes;
+        }
+
         // ── getAllDataDesdeSheets → leer anticipos y extras desde Supabase ──
         if (action === 'getAllDataDesdeSheets') {
             try {
@@ -779,6 +803,30 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 try { action = new URLSearchParams(s.split('?')[1] || '').get('action') || ''; } catch(e) {}
                 if (action === 'getSocios') return _socGetSociosHandler(s, options);
                 if (action === 'getDatosSocio') return _socGetDatosSocioHandler(s, options);
+                if (action === 'getDiasPartTime') {
+                    try {
+                        const { data, error } = await dbSoc.from('dias_pt').select('socio_id, dias');
+                        if (error) throw error;
+                        const r = {};
+                        for (const d of (data || [])) {
+                            if (!r[d.socio_id]) r[d.socio_id] = [];
+                            if (Array.isArray(d.dias)) r[d.socio_id].push(...d.dias);
+                        }
+                        if (data && data.length > 0) {
+                            // Background: refrescar GAS → upsert a Supabase para mantener sincronizado
+                            _origFetch(url, options).then(r2 => r2.json()).then(gasData => {
+                                if (gasData && gasData.status === 'success' && gasData.data) {
+                                    const rows = Object.entries(gasData.data).map(([sid, dias]) => ({
+                                        socio_id: String(sid), dias: Array.isArray(dias) ? dias : []
+                                    }));
+                                    if (rows.length > 0) dbSoc.from('dias_pt').upsert(rows, { onConflict: 'socio_id' }).catch(() => {});
+                                }
+                            }).catch(() => {});
+                            return _mockOk({ status: 'success', data: r });
+                        }
+                    } catch(e) { console.warn('[SB-DIAS-PT] error:', e.message); }
+                    return _origFetch(url, options);
+                }
                 if (action === 'getCredenciales') {
                     try {
                         const { data, error } = await dbSoc.from('responsable_creds').select('ini, area, pin');
