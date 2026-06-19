@@ -83,6 +83,37 @@ function auditoria_colorAccion(accion) {
     return entry ? entry[1] : { bg:'#f2f3f4', txt:'#717d7e' };
 }
 
+// Deriva una referencia legible a partir de la acción y el detalle
+function _audRef(r) {
+    const id     = r.idAfectado || '';
+    const accion = r.accion || '';
+    const det    = r.detalle || '';
+
+    // Canjes y Recibos ya tienen folio legible como idAfectado
+    if (accion === 'Imprimir Recibo' || accion === 'Canje') return id;
+
+    // Intentar extraer fecha ISO del campo detalle
+    const fechaM = det.match(/(\d{4}-(\d{2})-(\d{2}))/);
+    if (fechaM) {
+        const dd = fechaM[3], mm = fechaM[2];
+        const pre = accion.includes('Anticipo') ? 'ANT'
+                  : accion.includes('Material') ? 'MAT'
+                  : accion.includes('Extra')    ? 'EXT'
+                  : accion.includes('Saldo')    ? 'SAL'
+                  : accion.includes('Cierre')   ? 'CIERRE'
+                  : accion.includes('Reiniciar')? 'RST'
+                  : accion.includes('Socio')    ? 'SOC'
+                  : accion.split(' ').map(w => w[0]).join('').toUpperCase();
+        return `${pre} ${dd}/${mm}`;
+    }
+
+    // Fallback: prefijo de acción + primeros 6 chars de UUID
+    if (id.length > 8) {
+        return id.substring(0, 8) + '…';
+    }
+    return id || '—';
+}
+
 function auditoria_renderizar(datos) {
     const tbody = document.getElementById('auditoria-tabla-body');
     const countEl = document.getElementById('auditoria-count');
@@ -100,7 +131,7 @@ function auditoria_renderizar(datos) {
         const fechaVis = r.fecha ? r.fecha.replace('T',' ').substring(0,16) : '';
         const isRecibo = r.accion === 'Imprimir Recibo';
         const idFull   = r.idAfectado || '';
-        const idCorto  = (isRecibo || r.accion === 'Canje') ? idFull : idFull.substring(0,22);
+        const ref      = _audRef(r);
 
         const isCanje  = r.accion === 'Canje';
         let detalleHtml = r.detalle || '';
@@ -135,7 +166,7 @@ function auditoria_renderizar(datos) {
                 <span style="background:${c.bg};color:${c.txt};border-radius:6px;padding:3px 9px;font-size:0.78em;font-weight:700;white-space:nowrap;">${r.accion||''}</span>
             </td>
             <td style="padding:9px 10px;font-size:0.82em;color:#444;line-height:1.5;">${detalleHtml}${reimpBtn}</td>
-            <td style="padding:9px 10px;font-size:0.72em;color:#aaa;font-family:monospace;word-break:break-all;" title="${idFull}">${idCorto}</td>
+            <td style="padding:9px 10px;font-size:0.8em;font-weight:700;color:#2c3e50;white-space:nowrap;" title="${idFull}">${ref}</td>
         </tr>`;
     }).join('');
 }
@@ -305,7 +336,7 @@ function auditoria_informe(datosOverride, filtrosUsados) {
             <td style="font-weight:700;">${r.usuario||''}</td>
             <td style="color:${color};font-weight:700;">${r.accion||''}</td>
             <td>${detalleVis}</td>
-            <td style="font-family:monospace;font-size:7.5px;">${(r.idAfectado||'').substring(0,22)}</td>
+            <td style="font-weight:700;">${_audRef(r)}</td>
         </tr>`;
     }).join('');
 
@@ -383,7 +414,7 @@ tr:nth-child(even) td { background:#f8f9fa; }
     <th style="width:65px;">Usuario</th>
     <th style="width:95px;">Acción</th>
     <th>Detalle</th>
-    <th style="width:95px;">ID Afectado</th>
+    <th style="width:70px;">Referencia</th>
   </tr></thead>
   <tbody>${filas}</tbody>
 </table>
