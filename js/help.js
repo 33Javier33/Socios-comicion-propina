@@ -9,7 +9,7 @@ const BASE_CONOCIMIENTO = [
     { id:'s1', cat:'socios', titulo:'¿Qué es la sección Gestión de Socios?', tags:['socios','gestión','tarjetas','áreas','dashboard'],
       resp:'Es el <strong>panel central</strong> del sistema. Aquí ves todos los socios del Fondo Solidario organizados por área, con sus puntos, contrato y estado.',
       vista:`<div class="ayuda-vista">
-        <div class="ayuda-vista-titulo">📊 Así se ve el dashboard de socios</div>
+        <div class="ayuda-vista-titulo">📊 Así se ve el panel de socios</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
           <div style="background:white;border-radius:8px;padding:8px 12px;border-bottom:3px solid #3498db;text-align:center;flex:1;min-width:70px;">
             <div style="font-weight:900;font-size:1.1em;">42</div><div style="font-size:0.65em;color:#7f8c8d;">TOTAL SOCIOS</div>
@@ -35,7 +35,7 @@ const BASE_CONOCIMIENTO = [
           </div>
         </div>
       </div>`,
-      pasos:['Los 6 números del dashboard (Total Socios, Total Puntos, Pts Planta, S. Planta, S. Part-Time, Escalamientos) se actualizan solos al cargar','Presiona el nombre de cada área para desplegar las tarjetas de sus socios','Cada tarjeta muestra nombre, contrato, puntos actuales y botones de acción','El botón 🏆 Escalamientos te avisa quién sube puntos este mes o el próximo'],
+      pasos:['Los 6 números del panel (Total Socios, Total Puntos, Pts Planta, S. Planta, S. Part-Time, Escalamientos) se actualizan solos al cargar','Presiona el nombre de cada área para desplegar las tarjetas de sus socios','Cada tarjeta muestra nombre, contrato, puntos actuales y botones de acción','El botón 🏆 Escalamientos te avisa quién sube puntos este mes o el próximo'],
       nota:'Los socios con fecha de inicio de puntos en el futuro aparecen en la lista pero NO suman al total de puntos.' },
 
     { id:'s2', cat:'socios', titulo:'¿Cómo funciona el escalamiento de puntos?', tags:['escalamiento','puntos','años','tope','antigüedad'],
@@ -53,7 +53,7 @@ const BASE_CONOCIMIENTO = [
         <div class="ayuda-formula" style="margin-top:8px;">Puntos = 4 + (años × 2) → hasta el tope del área</div>
       </div>`,
       pasos:['El sistema calcula los puntos automáticamente según la fecha de ingreso','Cuando un socio cumple años en el trabajo, aparece en el panel 🏆 Escalamientos','Si ya llegó al tope de su área, el recibo muestra "TOPE MÁXIMO"','La fecha de inicio de puntos puede ser diferente a la de ingreso (ej: si tuvo un período sin puntos)'],
-      nota:'El 🏆 en el dashboard muestra quiénes escalan este mes, el mes pasado y el próximo.' },
+      nota:'El 🏆 en el panel muestra quiénes escalan este mes, el mes pasado y el próximo.' },
 
     { id:'s3', cat:'socios', titulo:'¿Cómo agrego o edito un socio?', tags:['agregar','nuevo','socio','registrar','editar'],
       resp:'Usa el botón <strong>➕ azul</strong> en la esquina inferior derecha para agregar. Para editar, abre la tarjeta del socio y usa el botón ✏️.',
@@ -204,10 +204,10 @@ const BASE_CONOCIMIENTO = [
           </div>
         </div>
         <div style="margin-top:6px;padding:6px;background:#fee2e2;border-radius:6px;font-size:0.78em;text-align:center;color:#c0392b;">
-          ⚠️ Los días sin divisor muestran badge rojo y NO suman al total
+          ⚠️ Los días sin divisor muestran indicador rojo y NO suman al total
         </div>
       </div>`,
-      pasos:['Si no ingresas divisor al crear, la tarjeta muestra ⚠️ badge rojo','Ese día no suma al Cierre de Punto (protección contra inflación)','Cuando conozcas el divisor, ingrésalo en el campo de la tarjeta del día','El sistema recalcula automáticamente al guardar'],
+      pasos:['Si no ingresas divisor al crear, la tarjeta muestra ⚠️ indicador rojo','Ese día no suma al Cierre de Punto (protección contra inflación)','Cuando conozcas el divisor, ingrésalo en el campo de la tarjeta del día','El sistema recalcula automáticamente al guardar'],
       nota:'El divisor lo define la comisión directiva según el criterio de cada mes. Consúltalo siempre antes de cerrar.' },
 
     { id:'r3', cat:'recaudacion', titulo:'¿Cómo uso los filtros de Montos Recaudados?', tags:['filtro','buscar','tipo','divisor','recaudación'],
@@ -345,7 +345,7 @@ const BASE_CONOCIMIENTO = [
       nota:'Si el sistema dice "Error al cargar datos" o "CORS", generalmente es un problema con los scripts de Google, no con las URLs en sí.' },
 
     { id:'c5', cat:'config', titulo:'¿Qué hago si olvidé el PIN de acceso?', tags:['olvidé','PIN','recuperar','clave','acceso','bloqueado'],
-      resp:'En la pantalla de login hay un enlace <strong>"¿Olvidaste el PIN?"</strong>. Al presionarlo, puedes ingresar la Clave de Recuperación para restablecer el acceso.',
+      resp:'En la pantalla de ingreso hay un enlace <strong>"¿Olvidaste el PIN?"</strong>. Al presionarlo, puedes ingresar la Clave de Recuperación para restablecer el acceso.',
       pasos:['En la pantalla de ingreso de PIN, presiona "¿Olvidaste el PIN?" (enlace pequeño bajo el campo)','Ingresa la Clave de Recuperación que configuraste','Si es correcta, podrás establecer un nuevo PIN','Si tampoco recuerdas la Clave de Recuperación, deberás editar el archivo HTML directamente'],
       nota:'⚠️ Si pierdes tanto el PIN como la Clave de Recuperación, contacta al administrador técnico del sistema. Por eso es vital guardar la clave en un lugar seguro.' },
 
@@ -366,9 +366,9 @@ const BASE_CONOCIMIENTO = [
             <span style="background:#fff3cd;color:#856404;border-radius:5px;padding:2px 8px;font-size:0.78em;font-weight:700;">🔓 PIN global</span>
           </div>
         </div>
-        <div class="ayuda-formula">Al seleccionar el nombre → el login muestra si usa PIN propio o global</div>
+        <div class="ayuda-formula">Al seleccionar el nombre → el acceso muestra si usa PIN propio o global</div>
       </div>`,
-      pasos:['Ve a <strong>⚙️ Configuración → Responsables autorizados</strong>','Cada responsable tiene un botón <strong>🔑 PIN</strong>','Presiona ese botón para desplegar el formulario de PIN personal','Escribe un PIN de 4 dígitos y confírmalo → presiona <strong>Guardar</strong>','El badge cambia de "🔓 PIN global" a "🔐 PIN propio"','Al ingresar al sistema, el usuario verá una indicación del tipo de PIN que debe usar'],
+      pasos:['Ve a <strong>⚙️ Configuración → Responsables autorizados</strong>','Cada responsable tiene un botón <strong>🔑 PIN</strong>','Presiona ese botón para desplegar el formulario de PIN personal','Escribe un PIN de 4 dígitos y confírmalo → presiona <strong>Guardar</strong>','El indicador cambia de "🔓 PIN global" a "🔐 PIN propio"','Al ingresar al sistema, el usuario verá una indicación del tipo de PIN que debe usar'],
       nota:'Los PINs personales se guardan en este dispositivo (localStorage). Si el responsable trabaja desde otro dispositivo, deberás configurar su PIN allí también.' },
 
     { id:'seg2', cat:'seguridad', titulo:'¿Qué es el Historial de Auditoría y para qué sirve?', tags:['auditoría','historial','logs','quién','eliminó','seguridad','registro','robo'],
@@ -447,13 +447,13 @@ const BASE_CONOCIMIENTO = [
             <div style="border:1px solid #ddd;border-radius:5px;padding:5px 8px;margin-top:2px;color:#aaa;">Cierre de mes Mayo</div></div>
         </div>
       </div>`,
-      pasos:['Presiona el botón verde <strong>"↑ Agregar Ingreso"</strong> en la sección Materiales','El modal se abre con el tipo <strong>INGRESO</strong> preseleccionado (verde activo)','Ingresa la fecha (por defecto hoy)','Escribe el monto sin puntos ni comas','Agrega una descripción opcional (ej: "Cierre de mes Mayo")','Presiona <strong>Guardar</strong> — el ingreso aparece en el historial del período'],
+      pasos:['Presiona el botón verde <strong>"↑ Agregar Ingreso"</strong> en la sección Materiales','La ventana se abre con el tipo <strong>INGRESO</strong> preseleccionado (verde activo)','Ingresa la fecha (por defecto hoy)','Escribe el monto sin puntos ni comas','Agrega una descripción opcional (ej: "Cierre de mes Mayo")','Presiona <strong>Guardar</strong> — el ingreso aparece en el historial del período'],
       nota:'El ingreso se asigna al período según su fecha: si el día es ≥15 va al mes actual, si es <15 va al período anterior. Queda en Auditoría como "Ingreso Material".' },
 
     { id:'mat3', cat:'materiales', titulo:'¿Cómo registro un Gasto de materiales?', tags:['gasto','egreso','compra','materiales','suministros','artículos'],
       resp:'Un <strong>Gasto</strong> es dinero que sale del fondo de materiales, como la compra de suministros, artículos de limpieza u otros insumos del casino.',
-      pasos:['Presiona el botón rojo <strong>"↓ Agregar Gasto"</strong> en la sección Materiales','El modal se abre con el tipo <strong>GASTO</strong> preseleccionado (rojo activo)','Ingresa la fecha del gasto','Escribe el monto','Agrega una descripción del gasto (ej: "Compra de materiales de limpieza")','Presiona <strong>Guardar</strong>'],
-      nota:'También puedes cambiar el tipo dentro del modal: si abriste "Ingreso" por error, presiona el botón GASTO para cambiarlo antes de guardar.' },
+      pasos:['Presiona el botón rojo <strong>"↓ Agregar Gasto"</strong> en la sección Materiales','La ventana se abre con el tipo <strong>GASTO</strong> preseleccionado (rojo activo)','Ingresa la fecha del gasto','Escribe el monto','Agrega una descripción del gasto (ej: "Compra de materiales de limpieza")','Presiona <strong>Guardar</strong>'],
+      nota:'También puedes cambiar el tipo dentro de la ventana: si abriste "Ingreso" por error, presiona el botón GASTO para cambiarlo antes de guardar.' },
 
     { id:'mat4', cat:'materiales', titulo:'¿Cómo funciona el período 15 a 15 en Materiales?', tags:['período','15','mes','materiales','navegar','histórico','ciclo'],
       resp:'Los movimientos se agrupan en períodos del <strong>día 15 de un mes al 14 del siguiente</strong>, siguiendo el mismo ciclo de la propina.',
@@ -506,7 +506,7 @@ const BASE_CONOCIMIENTO = [
       nota:'El orden se guarda por dispositivo en el almacenamiento local. Si accedes desde otro dispositivo, verás el orden predeterminado.' },
 
     { id:'nav2', cat:'config', titulo:'¿Cómo funciona el menú en computador y en móvil?', tags:['menú','lateral','sidebar','móvil','drawer','secciones','computador','pantalla'],
-      resp:'El menú se adapta al tamaño de pantalla: <strong>sidebar fijo</strong> en computador (≥900px) y <strong>drawer desde abajo</strong> en móvil.',
+      resp:'El menú se adapta al tamaño de pantalla: <strong>menú lateral fijo</strong> en computador (≥900px) y <strong>panel desde abajo</strong> en móvil.',
       vista:`<div class="ayuda-vista">
         <div class="ayuda-vista-titulo">📱 Móvil vs 🖥️ Computador</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:0.78em;">
@@ -533,13 +533,13 @@ const BASE_CONOCIMIENTO = [
           </div>
         </div>
       </div>`,
-      pasos:['<strong>Computador:</strong> el menú aparece como panel fijo a la izquierda, siempre visible','<strong>Móvil:</strong> la barra superior muestra la sección activa y el botón "☰ Secciones"','Para navegar en móvil: presiona "☰ Secciones" → el panel aparece desde abajo → toca la sección deseada → el panel se cierra','Para reordenar en móvil: con el drawer abierto, arrastra verticalmente las secciones','En computador: el cursor cambia a ⊹ (grab) al pasar sobre el menú, indicando que se puede arrastrar'],
-      nota:'El drawer en móvil cubre automáticamente los botones flotantes (FABs) para evitar confusión.' },
+      pasos:['<strong>Computador:</strong> el menú aparece como panel fijo a la izquierda, siempre visible','<strong>Móvil:</strong> la barra superior muestra la sección activa y el botón "☰ Secciones"','Para navegar en móvil: presiona "☰ Secciones" → el panel aparece desde abajo → toca la sección deseada → el panel se cierra','Para reordenar en móvil: con el panel de menú abierto, arrastra verticalmente las secciones','En computador: el cursor cambia a ⊹ al pasar sobre el menú, indicando que se puede arrastrar'],
+      nota:'El panel de menú en móvil cubre automáticamente los botones flotantes para evitar confusión.' },
 
     { id:'tec1', cat:'config', titulo:'¿Qué tecnología usa el sistema por dentro?', tags:['supabase','PWA','offline','tecnología','tiempo real','apps script','base de datos','instalar'],
       resp:'El sistema combina <strong>Supabase</strong> como base de datos en tiempo real, <strong>Google Apps Script</strong> para procesos de cierre y notificaciones, y funciona como <strong>PWA instalable</strong> en cualquier dispositivo.',
       vista:`<div class="ayuda-vista">
-        <div class="ayuda-vista-titulo">⚡ Stack tecnológico</div>
+        <div class="ayuda-vista-titulo">⚡ Tecnologías del sistema</div>
         <div style="display:flex;flex-direction:column;gap:6px;">
           <div class="ayuda-mini-card" style="flex-direction:row;align-items:center;gap:10px;">
             <span style="font-size:20px;">🗄️</span>
@@ -547,11 +547,11 @@ const BASE_CONOCIMIENTO = [
           </div>
           <div class="ayuda-mini-card" style="flex-direction:row;align-items:center;gap:10px;">
             <span style="font-size:20px;">⚙️</span>
-            <div><div style="font-weight:700;font-size:0.85em;">Google Apps Script</div><div style="font-size:0.75em;color:#7f8c8d;">Backend serverless · cierres, notificaciones Telegram, respaldo en Sheets</div></div>
+            <div><div style="font-weight:700;font-size:0.85em;">Google Apps Script</div><div style="font-size:0.75em;color:#7f8c8d;">Servicio en la nube · cierres, notificaciones Telegram, respaldo en Sheets</div></div>
           </div>
           <div class="ayuda-mini-card" style="flex-direction:row;align-items:center;gap:10px;">
             <span style="font-size:20px;">📱</span>
-            <div><div style="font-weight:700;font-size:0.85em;">PWA (Progressive Web App)</div><div style="font-size:0.75em;color:#7f8c8d;">Instálala desde Safari/Chrome · funciona offline con caché automático</div></div>
+            <div><div style="font-weight:700;font-size:0.85em;">Aplicación instalable (PWA)</div><div style="font-size:0.75em;color:#7f8c8d;">Instálala desde Safari/Chrome · funciona sin conexión con caché automático</div></div>
           </div>
         </div>
       </div>`,

@@ -154,7 +154,7 @@ function carpetas_eliminarCarpeta(idx) {
 }
 
 async function carpetas_exportarJson() {
-    toggleLoader(true, 'Preparando backup...');
+    toggleLoader(true, 'Preparando copia de seguridad...');
     try {
         const [resData, resNotes] = await Promise.all([
             fetch(`${URL_RECAUDACIONES}?action=get&t=${Date.now()}`).then(r => r.json()),
@@ -170,7 +170,7 @@ async function carpetas_exportarJson() {
         a.download = `BACKUP_RECAUDACION_${new Date().toISOString().slice(0, 10)}.json`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-        showToast('Backup descargado correctamente', 'success');
+        showToast('Copia de seguridad descargada correctamente', 'success');
     } catch(e) {
         showToast('Error al exportar', 'error');
     } finally {
@@ -189,8 +189,8 @@ async function carpetas_importarJson(e) {
     reader.onload = async (ev) => {
         try {
             const content = JSON.parse(ev.target.result);
-            if (!confirm('¿Restaurar este backup?\n\nSobrescribirá los datos actuales en la nube. Esta acción no se puede deshacer.')) { e.target.value = ''; return; }
-            toggleLoader(true, 'Restaurando backup...');
+            if (!confirm('¿Restaurar esta copia de seguridad?\n\nSobrescribirá los datos actuales en la nube. Esta acción no se puede deshacer.')) { e.target.value = ''; return; }
+            toggleLoader(true, 'Restaurando copia de seguridad...');
             await fetch(URL_RECAUDACIONES, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
