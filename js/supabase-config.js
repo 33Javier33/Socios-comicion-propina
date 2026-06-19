@@ -256,30 +256,25 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         }
         const action = body.action || '';
 
-        // ── registrarBatchAnticipos → escribir en Supabase vía REST directo + GAS ──
+        // ── registrarBatchAnticipos → Supabase primario, GAS respaldo en segundo plano ──
         if (action === 'registrarBatchAnticipos') {
             const items = body.detalleAnticipos || [];
-            const offline = !navigator.onLine;
-            items.forEach(a => {
-                const datos = {
-                    id: crypto.randomUUID(),
-                    socio_id: String(a.id),
-                    monto: Number(a.monto || 0),
-                    fecha: a.fecha,
-                    responsable: ((a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')).trim()
-                };
-                if (offline) {
-                    _opGuardar('anticipo', datos);
-                } else {
-                    _origFetch(_SB_URL_SOC + '/rest/v1/anticipos', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'apikey': _SB_KEY_SOC, 'Authorization': 'Bearer ' + _SB_KEY_SOC, 'Prefer': 'return=minimal' },
-                        body: JSON.stringify(datos)
-                    }).then(async r => {
-                        if (!r.ok) console.error('[sb] anticipo insert error:', await r.text());
-                    }).catch(() => { _opGuardar('anticipo', datos); }); // cola si cae la red
-                }
-            });
+            const rows = items.map(a => ({
+                id: crypto.randomUUID(),
+                socio_id: String(a.id),
+                monto: Number(a.monto || 0),
+                fecha: a.fecha,
+                responsable: ((a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')).trim()
+            }));
+
+            if (!navigator.onLine) {
+                rows.forEach(r => _opGuardar('anticipo', r));
+                items.forEach(a => _invalidarDatosSocio(String(a.id)));
+                setTimeout(() => { if (typeof showToast === 'function') showToast('Sin conexión — anticipo guardado, se enviará al reconectar 📶', 'warning'); }, 300);
+                return _mockOk({ status: 'success', message: 'offline' });
+            }
+
+            const { error: sbErr } = await dbSoc.from('anticipos').insert(rows);
             items.forEach(a => _invalidarDatosSocio(String(a.id)));
             const _totalAnt = items.reduce((s, a) => s + Number(a.monto || 0), 0);
             _sbAudit('Registrar Anticipo', {
@@ -295,38 +290,34 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     }))
                 }
             });
-            if (offline) {
-                setTimeout(() => { if (typeof showToast === 'function') showToast('Sin conexión — anticipo guardado, se enviará al reconectar 📶', 'warning'); }, 300);
-                return _mockOk({ status: 'success', message: 'offline' });
+            if (sbErr) {
+                console.error('[sb] registrarBatchAnticipos error:', sbErr.message);
+                return _origFetch(url, options); // fallback a GAS si Supabase falla
             }
-            return _origFetch(url, options);
+            _origFetch(url, options).catch(() => {}); // sync GAS en segundo plano
+            return _mockOk({ status: 'success', message: 'Anticipos guardados en Supabase' });
         }
 
-        // ── registrarBatchExtras → escribir en Supabase vía REST directo + GAS ──
+        // ── registrarBatchExtras → Supabase primario, GAS respaldo en segundo plano ──
         if (action === 'registrarBatchExtras') {
             const items = body.detalleExtras || [];
-            const offline = !navigator.onLine;
-            items.forEach(e => {
-                const datos = {
-                    id: crypto.randomUUID(),
-                    socio_id: String(e.id),
-                    fecha: e.fecha,
-                    tipo: e.tipo || 'extra',
-                    monto: Number(e.monto || 0),
-                    detalle: e.detalle || ''
-                };
-                if (offline) {
-                    _opGuardar('extra', datos);
-                } else {
-                    _origFetch(_SB_URL_SOC + '/rest/v1/extras', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'apikey': _SB_KEY_SOC, 'Authorization': 'Bearer ' + _SB_KEY_SOC, 'Prefer': 'return=minimal' },
-                        body: JSON.stringify(datos)
-                    }).then(async r => {
-                        if (!r.ok) console.error('[sb] extras insert error:', await r.text());
-                    }).catch(() => { _opGuardar('extra', datos); }); // cola si cae la red
-                }
-            });
+            const rows = items.map(e => ({
+                id: crypto.randomUUID(),
+                socio_id: String(e.id),
+                fecha: e.fecha,
+                tipo: e.tipo || 'extra',
+                monto: Number(e.monto || 0),
+                detalle: e.detalle || ''
+            }));
+
+            if (!navigator.onLine) {
+                rows.forEach(r => _opGuardar('extra', r));
+                items.forEach(e => _invalidarDatosSocio(String(e.id)));
+                setTimeout(() => { if (typeof showToast === 'function') showToast('Sin conexión — extra guardado, se enviará al reconectar 📶', 'warning'); }, 300);
+                return _mockOk({ status: 'success', message: 'offline' });
+            }
+
+            const { error: sbErr } = await dbSoc.from('extras').insert(rows);
             items.forEach(e => _invalidarDatosSocio(String(e.id)));
             const _tiposExt = [...new Set(items.map(e => e.tipo || 'extra'))].join(', ');
             _sbAudit('Registrar Extra', {
@@ -343,14 +334,15 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     }))
                 }
             });
-            if (offline) {
-                setTimeout(() => { if (typeof showToast === 'function') showToast('Sin conexión — extra guardado, se enviará al reconectar 📶', 'warning'); }, 300);
-                return _mockOk({ status: 'success', message: 'offline' });
+            if (sbErr) {
+                console.error('[sb] registrarBatchExtras error:', sbErr.message);
+                return _origFetch(url, options); // fallback a GAS si Supabase falla
             }
-            return _origFetch(url, options);
+            _origFetch(url, options).catch(() => {}); // sync GAS en segundo plano
+            return _mockOk({ status: 'success', message: 'Extras guardados en Supabase' });
         }
 
-        // ── borrarMovimiento → borrar de Supabase + GAS ───────────────
+        // ── borrarMovimiento → Supabase primario, GAS respaldo en segundo plano ──
         if (action === 'borrarMovimiento') {
             const uuid = body.uuid;
             const tipo = (body.tipo || '').toLowerCase();
@@ -363,15 +355,14 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 idAfectado: uuid || (socioId + '_' + fecha),
                 datos: { tipo, socio_id: socioId, fecha, uuid }
             });
-            if (socioId && fecha) {
-                // Borrar por socio_id + fecha (el UUID de GAS ≠ id de Supabase)
-                dbSoc.from(tbl).delete().eq('socio_id', socioId).eq('fecha', fecha)
-                    .then(() => {}).catch(e => console.error('[supabase-config] borrar supabase:', e));
-            } else {
-                dbSoc.from(tbl).delete().eq('id', uuid)
-                    .then(() => {}).catch(e => console.error('[supabase-config] borrar supabase (fallback id):', e));
-            }
-            return _origFetch(url, options);
+            // Borrar en Supabase (por socio_id+fecha o por id)
+            const query = (socioId && fecha)
+                ? dbSoc.from(tbl).delete().eq('socio_id', socioId).eq('fecha', fecha)
+                : dbSoc.from(tbl).delete().eq('id', uuid);
+            const { error: sbErr } = await query;
+            if (sbErr) console.error('[sb] borrarMovimiento error:', sbErr.message);
+            _origFetch(url, options).catch(() => {}); // sync GAS en segundo plano
+            return _mockOk({ status: 'success', message: 'Eliminado en Supabase' });
         }
 
         // ── reiniciarAnticipos → archivar a historial en Supabase, luego limpiar ───
@@ -429,26 +420,26 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             return _origFetch(url, options);
         }
 
-        // ── actualizarAnticipo → actualizar en Supabase + GAS ─────────
+        // ── actualizarAnticipo → Supabase primario, GAS respaldo en segundo plano ──
         if (action === 'actualizarAnticipo') {
-            _invalidarTodosLosDatos(); // no tenemos socioId directo en el body
+            _invalidarTodosLosDatos();
+            const updData = {
+                fecha: body.fecha,
+                monto: Number(body.monto || 0),
+                responsable: ((body.responsable || '') + (body.areaResponsable ? ' ' + body.areaResponsable : '')).trim()
+            };
             _sbAudit('Actualizar Anticipo', {
                 detalle: `Fecha: ${body.fecha} | Monto: $${Number(body.monto || 0).toLocaleString('es-CL')}`,
                 idAfectado: body.uuid,
-                datos: {
-                    uuid: body.uuid,
-                    fecha: body.fecha,
-                    monto: Number(body.monto || 0),
-                    responsable: ((body.responsable || '') + (body.areaResponsable ? ' ' + body.areaResponsable : '')).trim()
-                }
+                datos: { uuid: body.uuid, ...updData }
             });
-            dbSoc.from('anticipos').update({
-                fecha: body.fecha,
-                monto: Number(body.monto || 0),
-                responsable: (body.responsable || '') + (body.areaResponsable ? ' ' + body.areaResponsable : '')
-            }).eq('id', body.uuid)
-                .then(() => {}).catch(e => console.error('[supabase-config] actualizar:', e));
-            return _origFetch(url, options);
+            const { error: sbErr } = await dbSoc.from('anticipos').update(updData).eq('id', body.uuid);
+            if (sbErr) {
+                console.error('[sb] actualizarAnticipo error:', sbErr.message);
+                return _origFetch(url, options); // fallback a GAS si Supabase falla
+            }
+            _origFetch(url, options).catch(() => {}); // sync GAS en segundo plano
+            return _mockOk({ status: 'success', message: 'Anticipo actualizado en Supabase' });
         }
 
         // ── registrarSaldoAnterior → actualizar saldos_socio en Supabase (primario) ──
