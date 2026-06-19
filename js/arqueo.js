@@ -418,7 +418,7 @@ function aq_crearBackupLocal() {
     const totalCaja = Math.round(aq_calcTotal());
     const espVal = Math.round(parseInt((document.getElementById('aq-esperadoDisplay').textContent || '0').replace(/[^0-9-]/g, ''))) || 0;
     const dif = Math.round((totalCaja + aq_totalAnticipos) - espVal);
-    const backup = { fecha: new Date().toLocaleString(), totalContado: totalCaja, esperado: espVal, anticipos: Math.round(aq_totalAnticipos), retiros: Math.round(aq_totalRetirado), diferencia: dif, conteo: JSON.parse(JSON.stringify(aq_conteo)), rastros: JSON.parse(JSON.stringify(aq_movi)) };
+    const backup = { fecha: new Date().toLocaleString(), totalContado: totalCaja, esperado: espVal, anticipos: Math.round(aq_totalAnticipos), retiros: aq_calcRetiradoTotal(), diferencia: dif, conteo: JSON.parse(JSON.stringify(aq_conteo)), rastros: JSON.parse(JSON.stringify(aq_movi)) };
     let historial = JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || [];
     historial.unshift(backup);
     if(historial.length > 20) historial.pop();
@@ -568,7 +568,7 @@ async function aq_guardarEnNube() {
     toggleLoader(true, 'Guardando arqueo...');
     const espVal = Math.round(parseInt((document.getElementById('aq-esperadoDisplay').textContent||'0').replace(/[^0-9-]/g,''))) || 0;
     const totalCaja = Math.round(aq_calcTotal());
-    const payload = { conteoActual: aq_conteo, totalRetirado: Math.round(aq_totalRetirado), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
+    const payload = { conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
     try {
         const resp = await fetch(AQ_URL_POST, { method: 'POST', body: JSON.stringify(payload) });
         const json = await resp.json();
@@ -582,7 +582,7 @@ async function aq_archivarEnNube() {
     toggleLoader(true, 'Archivando...');
     const espVal = Math.round(parseInt((document.getElementById('aq-esperadoDisplay').textContent||'0').replace(/[^0-9-]/g,''))) || 0;
     const totalCaja = Math.round(aq_calcTotal());
-    const payload = { action: 'archive', conteoActual: aq_conteo, totalRetirado: Math.round(aq_totalRetirado), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
+    const payload = { action: 'archive', conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
     try {
         const resp = await fetch(AQ_URL_POST + '?action=archive', { method: 'POST', body: JSON.stringify(payload) });
         const json = await resp.json();
