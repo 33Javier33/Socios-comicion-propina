@@ -232,6 +232,23 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-06-19 — "Acerca de": énfasis en el propósito del sistema para operadores del fondo
+- Nuevo bloque destacado "Para qué sirve este sistema" que explica claramente la misión: control de socios, anticipos, ausencias, recaudaciones diarias y arqueo de billetes, todo guardado en Supabase para que el siguiente encargado encuentre el historial intacto sin empezar desde cero con planillas Excel.
+- Archivos modificados: `index.html`.
+
+#### 2026-06-19 — Carpetas archivadas sincronizadas con Supabase
+- Las carpetas que se archivan ahora se guardan en Supabase (`periodos_archivados`) además de localStorage.
+- El archivero detecta carpetas que solo están en el navegador (localStorage) y muestra un aviso con botón "Subir a Supabase" para sincronizarlas.
+- Cada carpeta muestra indicador ☁️ (en Supabase) o 💾 (solo local).
+- Los snapshots de carpeta incluyen desglose de billetes de recaudaciones (`billetes` JSONB) y desglose de billetes de retiros de anticipos (`retiros_anticipos`), permitiendo recuperar ese detalle desde carpetas archivadas.
+- Archivos modificados: `js/carpetas.js`, `js/supabase-config.js`.
+
+#### 2026-06-19 — Corrección: editar saldo anterior no guardaba los cambios
+- El botón de editar saldo anterior en Anticipos y Ausencias fallaba silenciosamente: el upsert a Supabase no era esperado (await faltante) y la respuesta llegaba antes que la escritura, mostrando el valor antiguo.
+- Fix: se añadió `await` al upsert de `saldos_socio`, se devuelve respuesta inmediatamente desde Supabase (sin esperar a GAS), y GAS se sincroniza en segundo plano.
+- También se aplicó política RLS en Supabase para permitir escritura anónima en `saldos_socio` y `periodos_archivados`.
+- Archivos modificados: `js/supabase-config.js`.
+
 #### 2026-06-18 — Auditoría completa en Supabase con mucho más detalle
 - Todos los movimientos del sistema ahora se registran en Supabase (`auditoria` table) con datos estructurados en `datos_extra` (JSONB).
 - Nuevas acciones auditadas que antes no existían: Acceso, Cierre de Sesión, Registrar Recaudación, Actualizar Recaudación, Eliminar Recaudación, Verificar Recaudación, Actualizar Divisor, Retiro Anticipo, Cierre Arqueo, Cambiar PIN Global, Cambiar PIN Personal, Cambiar Clave Recuperación, Actualizar Configuración, Eliminar Credencial.

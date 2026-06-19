@@ -444,24 +444,29 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             return _origFetch(url, options);
         }
 
-        // ── registrarSaldoAnterior → actualizar saldos_socio en Supabase + GAS ──
+        // ── registrarSaldoAnterior → actualizar saldos_socio en Supabase (primario) ──
         if (action === 'registrarSaldoAnterior') {
             const id = String(body.id || '');
             const monto = Number(body.monto || 0);
             const nombre = body.nombre || '';
             _invalidarDatosSocio(id);
             if (id) {
-                dbSoc.from('saldos_socio').upsert(
+                const { error: sbErr } = await dbSoc.from('saldos_socio').upsert(
                     { id, nombre, monto, updated_at: new Date().toISOString() },
                     { onConflict: 'id' }
-                ).catch(e => console.error('[sb] error upsert saldos_socio:', e));
-                _sbAudit('Registrar Saldo Anterior', {
-                    detalle: `Socio: ${nombre} | Monto: $${monto.toLocaleString('es-CL')}`,
-                    idAfectado: id,
-                    datos: { socio_id: id, nombre, monto }
-                });
+                );
+                if (!sbErr) {
+                    _sbAudit('Registrar Saldo Anterior', {
+                        detalle: `Socio: ${nombre} | Monto: $${monto.toLocaleString('es-CL')}`,
+                        idAfectado: id,
+                        datos: { socio_id: id, nombre, monto }
+                    });
+                    _origFetch(url, options).catch(() => {}); // sync GAS en segundo plano
+                    return _mockOk({ status: 'success', message: 'Saldo actualizado en Supabase' });
+                }
+                console.error('[sb] error upsert saldos_socio:', sbErr.message);
             }
-            return _origFetch(url, options);
+            return _origFetch(url, options); // fallback a GAS
         }
 
         // ── procesarCierreMensual → GAS hace el cierre; sincronizar saldos + anticipos a Supabase ──
