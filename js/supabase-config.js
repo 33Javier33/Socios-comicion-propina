@@ -201,6 +201,18 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     // Cuando es true, 0 anticipos por socio es respuesta real (no fallback a GAS)
     let _sbHasAnticipos = localStorage.getItem('_sb_ants_ok') === '1';
 
+    // Verificación inmediata al cargar: ¿hay anticipos en Supabase? (~150ms, antes de cualquier click)
+    if (!_sbHasAnticipos) {
+        dbSoc.from('anticipos').select('id', { count: 'exact', head: true })
+            .then(({ count }) => {
+                if (count > 0) {
+                    _sbHasAnticipos = true;
+                    localStorage.setItem('_sb_ants_ok', '1');
+                    console.log('[SB] anticipos detectados en Supabase →', count, 'filas');
+                }
+            }).catch(() => {});
+    }
+
     // ── Migración automática Sheets → Supabase (se ejecuta una vez cuando Supabase está vacío) ──
     let _migrEnProceso = false;
     async function _migrarGasASupabase(gasJson) {
@@ -226,19 +238,27 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     extRows.push({ socio_id: String(socioId), fecha, tipo: e.tipo, monto: Number(e.monto || 0), detalle: e.detalle || '' });
                 });
             });
-            if (antRows.length === 0 && extRows.length === 0) return;
+            if (antRows.length === 0 && extRows.length === 0) {
+                // Sin datos en GAS: marcar igual para que getDatosSocio no llame GAS indefinidamente
+                _sbHasAnticipos = true;
+                localStorage.setItem('_sb_ants_ok', '1');
+                return;
+            }
             console.log('[SB-MIGR] Migrando', antRows.length, 'anticipos y', extRows.length, 'extras desde Sheets...');
             for (let i = 0; i < antRows.length; i += 500) {
-                const { error } = await dbSoc.from('anticipos').insert(antRows.slice(i, i + 500));
-                if (error) { console.warn('[SB-MIGR] Error anticipos:', error.message); return; }
+                const batch = antRows.slice(i, i + 500).map(r => ({ ...r, id: crypto.randomUUID() }));
+                const { error } = await dbSoc.from('anticipos').insert(batch);
+                if (error) console.warn('[SB-MIGR] Error anticipos lote', i, ':', error.message);
             }
             for (let i = 0; i < extRows.length; i += 500) {
-                const { error } = await dbSoc.from('extras').insert(extRows.slice(i, i + 500));
-                if (error) { console.warn('[SB-MIGR] Error extras:', error.message); }
+                const batch = extRows.slice(i, i + 500).map(r => ({ ...r, id: crypto.randomUUID() }));
+                const { error } = await dbSoc.from('extras').insert(batch);
+                if (error) console.warn('[SB-MIGR] Error extras lote', i, ':', error.message);
             }
-            console.log('[SB-MIGR] ✅ Migración completa:', antRows.length, 'anticipos,', extRows.length, 'extras');
+            // Marcar siempre aunque haya habido algún error parcial: la verificación de startup lo confirmará
             _sbHasAnticipos = true;
             localStorage.setItem('_sb_ants_ok', '1');
+            console.log('[SB-MIGR] ✅ Migración completa:', antRows.length, 'anticipos,', extRows.length, 'extras');
             if (typeof showToast === 'function') showToast('✅ Anticipos migrados a Supabase (' + antRows.length + ')', 'success');
         } catch(e) {
             console.warn('[SB-MIGR]', e.message);
