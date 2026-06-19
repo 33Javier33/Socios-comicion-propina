@@ -197,6 +197,10 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     }
     window.sbAuditLog = _sbAudit;
 
+    // ── Flag: indica que Supabase ya tiene anticipos (post-migración) ──
+    // Cuando es true, 0 anticipos por socio es respuesta real (no fallback a GAS)
+    let _sbHasAnticipos = localStorage.getItem('_sb_ants_ok') === '1';
+
     // ── Migración automática Sheets → Supabase (se ejecuta una vez cuando Supabase está vacío) ──
     let _migrEnProceso = false;
     async function _migrarGasASupabase(gasJson) {
@@ -233,6 +237,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 if (error) { console.warn('[SB-MIGR] Error extras:', error.message); }
             }
             console.log('[SB-MIGR] ✅ Migración completa:', antRows.length, 'anticipos,', extRows.length, 'extras');
+            _sbHasAnticipos = true;
+            localStorage.setItem('_sb_ants_ok', '1');
             if (typeof showToast === 'function') showToast('✅ Anticipos migrados a Supabase (' + antRows.length + ')', 'success');
         } catch(e) {
             console.warn('[SB-MIGR]', e.message);
@@ -274,8 +280,10 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 
                 console.log('[SB-DATOS] Socio', socioId, '→', anticipos.length, 'anticipos,', extras.length, 'extras, saldo:', saldoAnterior);
 
-                // Si anticipos/extras no están en Supabase → consultar GAS (Sheets) y combinar con saldo de Supabase
-                if (anticipos.length === 0 && extras.length === 0) {
+                // Si anticipos/extras no están en Supabase:
+                // - Si ya sabemos que Supabase tiene datos globales (_sbHasAnticipos): este socio genuinamente no tiene → retornar vacío (rápido)
+                // - Si Supabase todavía no tiene datos (pre-migración): consultar GAS
+                if (anticipos.length === 0 && extras.length === 0 && !_sbHasAnticipos) {
                     console.log('[SB-DATOS] Sin anticipos/extras en Supabase para', socioId, '→ consultando GAS y combinando saldo');
                     try {
                         const gasResp = await _origFetch(url, options);
@@ -662,6 +670,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     }
                     return _mockOk(gasJson || { status: 'error', message: 'Sin datos' });
                 }
+                // Supabase tiene datos → marcar flag para que getDatosSocio no llame a GAS
+                if (!_sbHasAnticipos) { _sbHasAnticipos = true; localStorage.setItem('_sb_ants_ok', '1'); }
                 // Formato idéntico al que devuelve GAS: { status, anticipos, extras }
                 return _mockOk({ status: 'success', anticipos, extras });
             } catch(e) {
