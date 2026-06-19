@@ -490,7 +490,7 @@ function aq_confirmarRetiroAnticipo() {
         const cant = parseInt(document.getElementById('aq-ra-' + d)?.value || 0) || 0;
         if (cant > 0) {
             aq_conteo[d] = (aq_conteo[d] || 0) - cant;
-            aq_movi[d] = (aq_movi[d] ? aq_movi[d] + ', ' : '') + `-${cant}`;
+            aq_movi[d] = (aq_movi[d] || '') + `-${cant}`;
             billetes[d] = cant;
         }
     });
