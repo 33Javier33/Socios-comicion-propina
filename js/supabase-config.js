@@ -229,6 +229,13 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 const saldoAnterior = saldoRes.data ? Number(saldoRes.data.monto) : 0;
 
                 console.log('[SB-DATOS] Socio', socioId, '→', anticipos.length, 'anticipos,', extras.length, 'extras, saldo:', saldoAnterior);
+
+                // Si Supabase está vacío para este socio, caer a GAS para leer desde Sheets
+                if (anticipos.length === 0 && extras.length === 0 && saldoAnterior === 0) {
+                    console.log('[SB-DATOS] Sin datos en Supabase para', socioId, '→ consultando GAS');
+                    return _origFetch(url, options);
+                }
+
                 return _mockOk({ status: 'success', data: { anticipos, extras, saldoAnterior, diasTrabajados: [] } });
             }
 
@@ -536,14 +543,16 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             return _origFetch(url, options);
         }
 
-        // ── getAllDataDesdeSheets → leer anticipos desde Supabase (consistencia con Arqueo de Caja) ──
+        // ── getAllDataDesdeSheets → leer anticipos y extras desde Supabase ──
         if (action === 'getAllDataDesdeSheets') {
             try {
-                const { data, error } = await dbSoc.from('anticipos')
-                    .select('socio_id, fecha, monto, responsable');
-                if (error) throw error;
+                const [antRes, extRes] = await Promise.all([
+                    dbSoc.from('anticipos').select('socio_id, fecha, monto, responsable'),
+                    dbSoc.from('extras').select('socio_id, fecha, tipo, monto, detalle')
+                ]);
+                if (antRes.error) throw antRes.error;
                 const anticipos = {};
-                (data || []).forEach(a => {
+                (antRes.data || []).forEach(a => {
                     const id = String(a.socio_id);
                     if (!anticipos[id]) anticipos[id] = [];
                     anticipos[id].push({
@@ -553,8 +562,25 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         responsable: a.responsable || ''
                     });
                 });
-                console.log('[SB] getAllDataDesdeSheets → Supabase:', Object.keys(anticipos).length, 'socios con anticipos');
-                return _mockOk({ status: 'success', data: { anticipos } });
+                const extras = {};
+                (extRes.data || []).forEach(e => {
+                    const id = String(e.socio_id);
+                    if (!extras[id]) extras[id] = [];
+                    extras[id].push({
+                        fecha: e.fecha,
+                        tipo: e.tipo || '',
+                        monto: Number(e.monto),
+                        detalle: e.detalle || ''
+                    });
+                });
+                console.log('[SB] getAllDataDesdeSheets → anticipos:', Object.keys(anticipos).length, 'socios | extras:', Object.keys(extras).length, 'socios');
+                // Si Supabase está vacío, caer a GAS (datos aún en Sheets)
+                if (Object.keys(anticipos).length === 0 && Object.keys(extras).length === 0) {
+                    console.log('[SB] getAllDataDesdeSheets: Supabase vacío → consultando GAS');
+                    return _origFetch(url, options);
+                }
+                // Formato idéntico al que devuelve GAS: { status, anticipos, extras }
+                return _mockOk({ status: 'success', anticipos, extras });
             } catch(e) {
                 console.warn('[SB] getAllDataDesdeSheets fallback a GAS:', e.message);
             }
