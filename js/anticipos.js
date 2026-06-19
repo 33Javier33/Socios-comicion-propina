@@ -1589,6 +1589,9 @@ async function confirmarDesgloseAnticipo() {
 
     cancelarDesgloseAnticipo();
 
+    // Registrar billetes como retiro en el conteo de caja (arqueo)
+    if (typeof aq_aplicarBilletesAnticipo === 'function') aq_aplicarBilletesAnticipo(billetes);
+
     if (campoMonto) campoMonto.classList.add('input-ok');
     toggleLoader(true);
     try {

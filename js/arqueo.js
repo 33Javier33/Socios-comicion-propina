@@ -245,13 +245,6 @@ function aq_realizarArqueo() {
     AQ_DENOMINACIONES.forEach(v => { if(aq_conteo[v] > 0) { any = true; h += `<tr><td>${aq_fmt(v)}</td><td>${aq_conteo[v]}</td><td>${aq_fmt(v*aq_conteo[v])}</td></tr>`; } });
     document.getElementById('aq-desglose-contado').innerHTML = any ? h + '</tbody></table>' : '<p style="color:#7f8c8d; text-align:center;">Sin ingresos.</p>';
 
-    // Indicador de anticipos sin cuadre de retiro
-    const _regAnt = aq_getRetirosAnticiposRegistrados();
-    const _pendTotal = aqAnticiposListaPeriodo.filter(a => !_regAnt[a.firma]).reduce((s, a) => s + a.monto, 0);
-    const elPend = document.getElementById('aq-pendiente-retiro');
-    const elPendVal = document.getElementById('aq-pendiente-retiro-val');
-    if (elPend) elPend.style.display = _pendTotal > 0 ? 'flex' : 'none';
-    if (elPendVal) elPendVal.textContent = aq_fmt(_pendTotal);
 }
 
 async function aq_fetchEsperadoData() {
@@ -389,133 +382,31 @@ async function aq_fetchAnticipos(silent = false) {
             const finVis   = fin.split('-').reverse().join('/');
             document.getElementById('aq-total-anticipos').textContent =
                 aq_fmt(aq_totalAnticipos) + ' (' + inicioVis + ' → ' + finVis + ')';
-            aq_renderPendientesAnticipo();
         }
     } catch(e) {}
     finally { if(!silent) aq_realizarArqueo(); }
-
-    // Sincronizar retiros desde la nube en segundo plano (sin bloquear)
-    setTimeout(aq_sincronizarRetirosNube, 800);
 }
 
-async function aq_sincronizarRetirosNube() {
-    try {
-        const res = await fetch(AQ_URL_POST + '?action=getRetirosAnticipos');
-        const retJson = await res.json();
-        if (retJson.status === 'success' && retJson.data) {
-            aqRetirosAnticiposNube = retJson.data;
-            let local = {};
-            try { local = JSON.parse(localStorage.getItem(AQ_SK_RETIROS_ANTICIPOS)) || {}; } catch(e) {}
-            const merged = Object.assign({}, aqRetirosAnticiposNube, local);
-            localStorage.setItem(AQ_SK_RETIROS_ANTICIPOS, JSON.stringify(merged));
-            aq_renderPendientesAnticipo();
-        }
-    } catch(e) {}
-}
-
-function aq_getRetirosAnticiposRegistrados() {
-    let local = {};
-    try { local = JSON.parse(localStorage.getItem(AQ_SK_RETIROS_ANTICIPOS)) || {}; } catch(e) {}
-    return Object.assign({}, aqRetirosAnticiposNube, local);
-}
-
-function aq_renderPendientesAnticipo() {
-    const container = document.getElementById('aq-anticipos-pendientes');
-    if (!container) return;
-    const registrados = aq_getRetirosAnticiposRegistrados();
-    const pendientes = aqAnticiposListaPeriodo.filter(a => !registrados[a.firma]);
-    if (pendientes.length === 0) { container.style.display = 'none'; return; }
-    const totalPend = pendientes.reduce((s, a) => s + a.monto, 0);
-    let html = `<div style="font-weight:800;color:#dc2626;font-size:0.88em;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
-        <span>⚠️ Anticipos sin retiro de caja (${pendientes.length})</span>
-        <span style="font-size:1em;">${aq_fmt(totalPend)}</span>
-    </div><div style="display:flex;flex-direction:column;gap:7px;">`;
-    pendientes.forEach(a => {
-        const fp = a.fecha.split('-'); const fechaVis = `${fp[2]}/${fp[1]}`;
-        html += `<div style="display:flex;justify-content:space-between;align-items:center;background:white;border-radius:8px;padding:9px 12px;border:1px solid #fca5a5;">
-            <div>
-                <div style="font-weight:700;font-size:0.88em;color:#1e293b;">${a.nombre}</div>
-                <div style="font-size:0.75em;color:#7f8c8d;">${fechaVis} · ${aq_fmt(a.monto)}</div>
-            </div>
-            <button onclick='aq_abrirRetiroAnticipo(${JSON.stringify(a).replace(/'/g,"&#39;")})' style="background:#dc2626;color:white;border:none;border-radius:6px;padding:6px 12px;font-size:0.78em;font-weight:700;cursor:pointer;white-space:nowrap;">💵 Cuadrar</button>
-        </div>`;
+function aq_aplicarBilletesAnticipo(billetes) {
+    if (!billetes || Object.keys(billetes).length === 0) return;
+    // Cargar estado actual desde localStorage si aq_conteo aún no fue inicializado
+    if (Object.keys(aq_conteo).length === 0) {
+        try { const c = localStorage.getItem(AQ_SK_CONTEO); if (c) aq_conteo = JSON.parse(c); } catch(e) {}
+    }
+    if (Object.keys(aq_movi).length === 0) {
+        try { const m = localStorage.getItem(AQ_SK_MOVI); if (m) aq_movi = JSON.parse(m); } catch(e) {}
+    }
+    Object.entries(billetes).forEach(([d, cant]) => {
+        const den = Number(d); const n = Number(cant);
+        if (!den || !n) return;
+        aq_conteo[den] = (aq_conteo[den] || 0) - n;
+        aq_movi[den] = (aq_movi[den] || '') + `-${n}`;
     });
-    html += '</div>';
-    container.innerHTML = html;
-    container.style.display = 'block';
+    try { localStorage.setItem(AQ_SK_CONTEO, JSON.stringify(aq_conteo)); } catch(e) {}
+    try { localStorage.setItem(AQ_SK_MOVI, JSON.stringify(aq_movi)); } catch(e) {}
+    try { if (typeof aq_render === 'function') aq_render(); } catch(e) {}
 }
 
-function aq_abrirRetiroAnticipo(item) {
-    aq_retiroAnticipoPendiente = item;
-    document.getElementById('aq-retAnt-titulo').textContent = item.nombre + ' — ' + aq_fmt(item.monto);
-    document.getElementById('aq-retAnt-objetivo').textContent = aq_fmt(item.monto);
-    const form = document.getElementById('aq-retAnt-form');
-    let html = '';
-    AQ_DENOMINACIONES.forEach(d => {
-        html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;">
-            <span style="min-width:68px;font-weight:600;font-size:0.85em;">${aq_fmt(d)}</span>
-            <input type="number" min="0" id="aq-ra-${d}" value="" placeholder="0" oninput="aq_actualizarTotalRetiroAnticipo()"
-                style="width:56px;padding:4px 6px;border:1px solid #ddd;border-radius:5px;font-size:0.88em;text-align:center;">
-            <span id="aq-ra-sub-${d}" style="font-size:0.78em;color:#7f8c8d;min-width:68px;">$0</span>
-        </div>`;
-    });
-    form.innerHTML = html;
-    aq_actualizarTotalRetiroAnticipo();
-    document.getElementById('aq-modalRetiroAnticipo').style.display = 'block';
-}
-
-function aq_actualizarTotalRetiroAnticipo() {
-    let total = 0;
-    AQ_DENOMINACIONES.forEach(d => {
-        const cant = parseInt(document.getElementById('aq-ra-' + d)?.value || 0) || 0;
-        const sub = cant * d; total += sub;
-        const subEl = document.getElementById('aq-ra-sub-' + d);
-        if (subEl) subEl.textContent = sub > 0 ? aq_fmt(sub) : '$0';
-    });
-    const objetivo = aq_retiroAnticipoPendiente ? aq_retiroAnticipoPendiente.monto : 0;
-    const dif = total - objetivo;
-    const totalEl = document.getElementById('aq-retAnt-total');
-    const difEl = document.getElementById('aq-retAnt-dif');
-    const btn = document.getElementById('aq-retAnt-confirmar');
-    if (totalEl) { totalEl.textContent = aq_fmt(total); totalEl.style.color = dif === 0 ? '#10b981' : '#ef4444'; }
-    if (difEl) { difEl.textContent = dif === 0 ? '✓ Exacto' : (dif > 0 ? '+' + aq_fmt(dif) : aq_fmt(dif)); difEl.style.color = dif === 0 ? '#10b981' : '#ef4444'; }
-    if (btn) btn.disabled = dif !== 0;
-}
-
-function aq_confirmarRetiroAnticipo() {
-    if (!aq_retiroAnticipoPendiente) return;
-    const item = aq_retiroAnticipoPendiente;
-    const billetes = {};
-    AQ_DENOMINACIONES.forEach(d => {
-        const cant = parseInt(document.getElementById('aq-ra-' + d)?.value || 0) || 0;
-        if (cant > 0) {
-            aq_conteo[d] = (aq_conteo[d] || 0) - cant;
-            aq_movi[d] = (aq_movi[d] || '') + `-${cant}`;
-            billetes[d] = cant;
-        }
-    });
-    aq_totalRetirado += item.monto;
-
-    // Guardar en localStorage
-    let local = {};
-    try { local = JSON.parse(localStorage.getItem(AQ_SK_RETIROS_ANTICIPOS)) || {}; } catch(e) {}
-    local[item.firma] = { nombre: item.nombre, monto: item.monto, billetes };
-    localStorage.setItem(AQ_SK_RETIROS_ANTICIPOS, JSON.stringify(local));
-
-    // Guardar en nube (sin bloquear) — usa el script de arqueo
-    const responsable = (() => { try { const s = JSON.parse(localStorage.getItem('fs_sesion_responsable')); return s ? (s.ini + '|' + s.area) : ''; } catch(e) { return ''; } })();
-    fetch(AQ_URL_POST, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'registrarRetiroAnticipo', firma: item.firma, nombre: item.nombre, monto: item.monto, billetes, responsable }) })
-        .then(r => r.json())
-        .then(r => { if (r.status === 'success') aqRetirosAnticiposNube[item.firma] = { nombre: item.nombre, monto: item.monto, billetes }; })
-        .catch(() => {});
-
-    aq_saveState();
-    aq_renderPendientesAnticipo();
-    aq_realizarArqueo();
-    document.getElementById('aq-modalRetiroAnticipo').style.display = 'none';
-    aq_retiroAnticipoPendiente = null;
-    showToast('✅ Retiro de anticipo registrado en caja', 'success');
-}
 
 function aq_crearBackupLocal() {
     const totalCaja = Math.round(aq_calcTotal());

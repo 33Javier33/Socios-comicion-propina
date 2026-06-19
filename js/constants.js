@@ -70,10 +70,8 @@ let globalMapaPuntosDia = {};
 let globalFechasAusenciaSocioActual = new Set();
 let globalTieneTerminoContrato = false;
 
-// Arqueo: lista plana de anticipos del período y anticipo en espera de retiro
+// Arqueo: lista plana de anticipos del período
 let aqAnticiposListaPeriodo = [];
-let aq_retiroAnticipoPendiente = null;
-let aqRetirosAnticiposNube = {}; // retiros sincronizados desde Google Sheets
 let selectedDaysPT = [];
 let globalDiasPT = {};
 
