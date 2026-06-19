@@ -201,17 +201,20 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     // Cuando es true, 0 anticipos por socio es respuesta real (no fallback a GAS)
     let _sbHasAnticipos = localStorage.getItem('_sb_ants_ok') === '1';
 
-    // Verificación inmediata al cargar: ¿hay anticipos en Supabase? (~150ms, antes de cualquier click)
-    if (!_sbHasAnticipos) {
-        dbSoc.from('anticipos').select('id', { count: 'exact', head: true })
-            .then(({ count }) => {
-                if (count > 0) {
-                    _sbHasAnticipos = true;
-                    localStorage.setItem('_sb_ants_ok', '1');
-                    console.log('[SB] anticipos detectados en Supabase →', count, 'filas');
-                }
-            }).catch(() => {});
-    }
+    // Verificar siempre al cargar: sincroniza el flag con el estado real de la tabla.
+    // Si la tabla está vacía (período reiniciado o migración fallida), resetea el flag
+    // para que getDatosSocio vuelva a usar GAS y la migración se re-dispare.
+    dbSoc.from('anticipos').select('id', { count: 'exact', head: true })
+        .then(({ count }) => {
+            if (count > 0) {
+                _sbHasAnticipos = true;
+                localStorage.setItem('_sb_ants_ok', '1');
+            } else {
+                _sbHasAnticipos = false;
+                localStorage.removeItem('_sb_ants_ok');
+                console.log('[SB] anticipos vacíos → flag reseteado, getDatosSocio usará GAS');
+            }
+        }).catch(() => {});
 
     // ── Migración automática Sheets → Supabase (se ejecuta una vez cuando Supabase está vacío) ──
     let _migrEnProceso = false;
@@ -239,27 +242,33 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 });
             });
             if (antRows.length === 0 && extRows.length === 0) {
-                // Sin datos en GAS: marcar igual para que getDatosSocio no llame GAS indefinidamente
-                _sbHasAnticipos = true;
-                localStorage.setItem('_sb_ants_ok', '1');
+                // GAS sin anticipos en el período actual (inicio de período limpio)
+                // NO marcar el flag: el startup check lo confirmará en el siguiente reload
                 return;
             }
             console.log('[SB-MIGR] Migrando', antRows.length, 'anticipos y', extRows.length, 'extras desde Sheets...');
+            let _migrOk = false;
             for (let i = 0; i < antRows.length; i += 500) {
                 const batch = antRows.slice(i, i + 500).map(r => ({ ...r, id: crypto.randomUUID() }));
                 const { error } = await dbSoc.from('anticipos').insert(batch);
                 if (error) console.warn('[SB-MIGR] Error anticipos lote', i, ':', error.message);
+                else _migrOk = true;
             }
             for (let i = 0; i < extRows.length; i += 500) {
                 const batch = extRows.slice(i, i + 500).map(r => ({ ...r, id: crypto.randomUUID() }));
                 const { error } = await dbSoc.from('extras').insert(batch);
                 if (error) console.warn('[SB-MIGR] Error extras lote', i, ':', error.message);
+                else _migrOk = true;
             }
-            // Marcar siempre aunque haya habido algún error parcial: la verificación de startup lo confirmará
-            _sbHasAnticipos = true;
-            localStorage.setItem('_sb_ants_ok', '1');
-            console.log('[SB-MIGR] ✅ Migración completa:', antRows.length, 'anticipos,', extRows.length, 'extras');
-            if (typeof showToast === 'function') showToast('✅ Anticipos migrados a Supabase (' + antRows.length + ')', 'success');
+            // Solo marcar flag si al menos un lote se insertó correctamente
+            if (_migrOk) {
+                _sbHasAnticipos = true;
+                localStorage.setItem('_sb_ants_ok', '1');
+                console.log('[SB-MIGR] ✅ Migración completa:', antRows.length, 'anticipos,', extRows.length, 'extras');
+                if (typeof showToast === 'function') showToast('✅ Anticipos migrados a Supabase (' + antRows.length + ')', 'success');
+            } else {
+                console.warn('[SB-MIGR] ⚠️ Todos los lotes fallaron — flag NO activado, se reintentará');
+            }
         } catch(e) {
             console.warn('[SB-MIGR]', e.message);
         } finally {
@@ -490,8 +499,9 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             // 4. Llamar al GAS (archiva a Sheets y limpia la hoja)
             _invalidarTodosLosDatos(); // reinicio de anticipos afecta a todos los socios
             const gasRes = await _origFetch(url, options);
-            // 5. Limpiar Supabase anticipos después de confirmar con GAS
+            // 5. Limpiar Supabase anticipos después de confirmar con GAS y resetear flag
             dbSoc.from('anticipos').delete().neq('id', '__never__')
+                .then(() => { _sbHasAnticipos = false; localStorage.removeItem('_sb_ants_ok'); })
                 .catch(e => console.error('[sb] error limpiando anticipos:', e));
             return gasRes;
         }
