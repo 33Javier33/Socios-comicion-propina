@@ -166,9 +166,13 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         }
     }
 
-    // ── getDatosSocio: leer anticipos + extras + saldo desde Supabase (instantáneo) ──
-    function _invalidarDatosSocio(_id) { /* no-op: Supabase siempre tiene datos frescos */ }
-    function _invalidarTodosLosDatos() { /* no-op: Supabase siempre tiene datos frescos */ }
+    // ── Caché rápida de todos los anticipos+extras (se llena desde getAllDataDesdeSheets) ──
+    // Permite servir getDatosSocio sin red adicional cuando ya tenemos los datos globales.
+    let _allDataCache = null; // { anticipos: {id:[...]}, extras: {id:[...]}, ts: number }
+    const _ALL_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+    function _invalidarDatosSocio(_id) { _allDataCache = null; }
+    function _invalidarTodosLosDatos() { _allDataCache = null; }
 
     // ── Helper: registrar evento de auditoría en Supabase (fire-and-forget) ────
     async function _sbAudit(accion, extra = {}) {
@@ -280,6 +284,37 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         let socioId = '';
         try { socioId = new URLSearchParams(url.split('?')[1] || '').get('socioId') || ''; } catch(e) {}
 
+        // ── Ruta rápida: usar caché de getAllDataDesdeSheets (ya disponible desde precargarTodo) ──
+        if (_allDataCache && (Date.now() - _allDataCache.ts < _ALL_CACHE_TTL)) {
+            try {
+                const antCache = _allDataCache.anticipos[socioId] || [];
+                const extCache = _allDataCache.extras[socioId] || [];
+                const anticipos = antCache.map(a => ({
+                    fecha: a.fecha || '',
+                    cantidad: Number(a.cantidad || a.monto || 0),
+                    monto: Number(a.cantidad || a.monto || 0),
+                    uuid: a.uuid || '',
+                    responsable: a.responsable || '',
+                    areaResponsable: ''
+                })).sort((a, b) => b.fecha.localeCompare(a.fecha));
+                const extras = extCache.map(e => ({
+                    fecha: e.fecha || '',
+                    tipo: e.tipo || '',
+                    monto: Number(e.monto || 0),
+                    detalle: e.detalle || '',
+                    uuid: e.uuid || ''
+                })).sort((a, b) => b.fecha.localeCompare(a.fecha));
+                // saldoAnterior desde Supabase (tabla pequeña, muy rápido)
+                const { data: saldoData } = await dbSoc.from('saldos_socio').select('monto').eq('id', socioId).maybeSingle();
+                const saldoAnterior = saldoData ? Number(saldoData.monto) : 0;
+                console.log('[SB-DATOS] Socio', socioId, '→', anticipos.length, 'ant (caché rápida), saldo:', saldoAnterior);
+                return _mockOk({ status: 'success', data: { anticipos, extras, saldoAnterior, diasTrabajados: [] } });
+            } catch(e) {
+                console.warn('[SB-DATOS] caché rápida error, usando Supabase:', e.message);
+            }
+        }
+
+        // ── Ruta normal: consultar Supabase directamente ──
         try {
             const [antRes, extRes, saldoRes] = await Promise.all([
                 dbSoc.from('anticipos').select('id, fecha, monto, responsable')
@@ -309,11 +344,9 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 
                 console.log('[SB-DATOS] Socio', socioId, '→', anticipos.length, 'anticipos,', extras.length, 'extras, saldo:', saldoAnterior);
 
-                // Si anticipos/extras no están en Supabase:
-                // - Si ya sabemos que Supabase tiene datos globales (_sbHasAnticipos): este socio genuinamente no tiene → retornar vacío (rápido)
-                // - Si Supabase todavía no tiene datos (pre-migración): consultar GAS
+                // Sin datos en Supabase y sin caché → fallback a GAS (pre-migración)
                 if (anticipos.length === 0 && extras.length === 0 && !_sbHasAnticipos) {
-                    console.log('[SB-DATOS] Sin anticipos/extras en Supabase para', socioId, '→ consultando GAS y combinando saldo');
+                    console.log('[SB-DATOS] Sin anticipos en Supabase para', socioId, '→ GAS fallback');
                     try {
                         const gasResp = await _origFetch(url, options);
                         const gasJson = await gasResp.json();
@@ -323,7 +356,6 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                                 data: {
                                     anticipos: gasJson.data.anticipos || [],
                                     extras: gasJson.data.extras || [],
-                                    // Supabase saldo tiene prioridad sobre GAS si existe
                                     saldoAnterior: saldoAnterior > 0 ? saldoAnterior : Number(gasJson.data.saldoAnterior || 0),
                                     diasTrabajados: gasJson.data.diasTrabajados || []
                                 }
@@ -660,8 +692,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         if (action === 'getAllDataDesdeSheets') {
             try {
                 const [antRes, extRes] = await Promise.all([
-                    dbSoc.from('anticipos').select('socio_id, fecha, monto, responsable'),
-                    dbSoc.from('extras').select('socio_id, fecha, tipo, monto, detalle')
+                    dbSoc.from('anticipos').select('id, socio_id, fecha, monto, responsable'),
+                    dbSoc.from('extras').select('id, socio_id, fecha, tipo, monto, detalle')
                 ]);
                 if (antRes.error) throw antRes.error;
                 const anticipos = {};
@@ -672,6 +704,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         fecha: a.fecha,
                         cantidad: Number(a.monto),
                         monto: Number(a.monto),
+                        uuid: a.id,          // UUID Supabase para edición/borrado
                         responsable: a.responsable || ''
                     });
                 });
@@ -683,7 +716,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         fecha: e.fecha,
                         tipo: e.tipo || '',
                         monto: Number(e.monto),
-                        detalle: e.detalle || ''
+                        detalle: e.detalle || '',
+                        uuid: e.id
                     });
                 });
                 console.log('[SB] getAllDataDesdeSheets → anticipos:', Object.keys(anticipos).length, 'socios | extras:', Object.keys(extras).length, 'socios');
@@ -696,11 +730,14 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         gasJson = await gasResp.json();
                     } catch(e) { console.warn('[SB] GAS error:', e.message); }
                     if (gasJson && gasJson.status === 'success') {
+                        // Guardar GAS data en caché para que getDatosSocio sea instantáneo
+                        _allDataCache = { anticipos: gasJson.anticipos || {}, extras: gasJson.extras || {}, ts: Date.now() };
                         _migrarGasASupabase(gasJson); // no-await: segundo plano
                     }
                     return _mockOk(gasJson || { status: 'error', message: 'Sin datos' });
                 }
-                // Supabase tiene datos → marcar flag para que getDatosSocio no llame a GAS
+                // Supabase tiene datos → poblar caché rápida y marcar flag
+                _allDataCache = { anticipos, extras, ts: Date.now() };
                 if (!_sbHasAnticipos) { _sbHasAnticipos = true; localStorage.setItem('_sb_ants_ok', '1'); }
                 // Formato idéntico al que devuelve GAS: { status, anticipos, extras }
                 return _mockOk({ status: 'success', anticipos, extras });
