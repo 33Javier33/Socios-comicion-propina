@@ -230,10 +230,26 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 
                 console.log('[SB-DATOS] Socio', socioId, '→', anticipos.length, 'anticipos,', extras.length, 'extras, saldo:', saldoAnterior);
 
-                // Si Supabase está vacío para este socio, caer a GAS para leer desde Sheets
-                if (anticipos.length === 0 && extras.length === 0 && saldoAnterior === 0) {
-                    console.log('[SB-DATOS] Sin datos en Supabase para', socioId, '→ consultando GAS');
-                    return _origFetch(url, options);
+                // Si anticipos/extras no están en Supabase → consultar GAS (Sheets) y combinar con saldo de Supabase
+                if (anticipos.length === 0 && extras.length === 0) {
+                    console.log('[SB-DATOS] Sin anticipos/extras en Supabase para', socioId, '→ consultando GAS y combinando saldo');
+                    try {
+                        const gasResp = await _origFetch(url, options);
+                        const gasJson = await gasResp.json();
+                        if (gasJson.status === 'success' && gasJson.data) {
+                            return _mockOk({
+                                status: 'success',
+                                data: {
+                                    anticipos: gasJson.data.anticipos || [],
+                                    extras: gasJson.data.extras || [],
+                                    // Supabase saldo tiene prioridad sobre GAS si existe
+                                    saldoAnterior: saldoAnterior > 0 ? saldoAnterior : Number(gasJson.data.saldoAnterior || 0),
+                                    diasTrabajados: gasJson.data.diasTrabajados || []
+                                }
+                            });
+                        }
+                    } catch(e) { console.warn('[SB-DATOS] GAS fallback error:', e.message); }
+                    return _mockOk({ status: 'success', data: { anticipos: [], extras: [], saldoAnterior, diasTrabajados: [] } });
                 }
 
                 return _mockOk({ status: 'success', data: { anticipos, extras, saldoAnterior, diasTrabajados: [] } });
