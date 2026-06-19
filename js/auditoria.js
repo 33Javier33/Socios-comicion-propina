@@ -137,18 +137,30 @@ function auditoria_renderizar(datos) {
         let detalleHtml = r.detalle || '';
         let reimpBtn    = '';
         if (isRecibo) {
-            try {
-                const snap = JSON.parse(r.detalle);
+            // Supabase: snapshot completo en _extra; Sheets: JSON en detalle
+            let snap = null;
+            if (r._extra && r._extra.folio) {
+                snap = r._extra;
+            } else {
+                try { snap = JSON.parse(r.detalle); } catch(e) {}
+            }
+            if (snap && snap.folio) {
                 auditoriaSnapshots[snap.folio] = snap;
                 detalleHtml = `<strong style="font-size:0.9em;">${snap.nombre||''}</strong><br>
                     <span style="font-size:0.78em;color:#555;">Período: ${snap.periodo||''}</span><br>
                     <span style="font-size:0.78em;">A Pagar: <b>${snap.aPagar||''}</b> &nbsp;|&nbsp; Puntos: ${snap.puntos||''}</span>`;
                 reimpBtn = `<button onclick="auditoria_reimprimirRecibo('${snap.folio}')"
                     style="margin-top:4px;background:#1a3a8a;color:white;border:none;border-radius:5px;padding:3px 10px;font-size:0.76em;cursor:pointer;">🖨 Reimprimir</button>`;
-            } catch(e) { /* deja detalle crudo */ }
+            }
         } else if (isCanje) {
-            try {
-                const snap = JSON.parse(r.detalle);
+            // Supabase: snapshot completo en _extra; Sheets: JSON en detalle
+            let snap = null;
+            if (r._extra && r._extra.folio) {
+                snap = r._extra;
+            } else {
+                try { snap = JSON.parse(r.detalle); } catch(e) {}
+            }
+            if (snap && snap.folio) {
                 auditoriaSnapshots[snap.folio] = snap;
                 const fmtM = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
                 detalleHtml = `<strong style="font-size:0.9em;">${snap.nombre||''}</strong><br>
@@ -156,7 +168,7 @@ function auditoria_renderizar(datos) {
                     <span style="font-size:0.78em;">Total: <b>${fmtM(snap.total)}</b></span>`;
                 reimpBtn = `<button onclick="auditoria_reimprimirCanje('${snap.folio}')"
                     style="margin-top:4px;background:#1b5e20;color:white;border:none;border-radius:5px;padding:3px 10px;font-size:0.76em;cursor:pointer;">🖨 Reimprimir</button>`;
-            } catch(e) { /* deja detalle crudo */ }
+            }
         }
 
         return `<tr class="aud-row">
@@ -320,15 +332,11 @@ function auditoria_informe(datosOverride, filtrosUsados) {
 
         let detalleVis = r.detalle || '';
         if (r.accion === 'Imprimir Recibo') {
-            try {
-                const snap = JSON.parse(r.detalle);
-                detalleVis = `Socio: ${snap.nombre||''} | Período: ${snap.periodo||''} | A Pagar: ${snap.aPagar||''} | Puntos: ${snap.puntos||''}`;
-            } catch(e) {}
+            const snap = (r._extra && r._extra.folio) ? r._extra : (() => { try { return JSON.parse(r.detalle); } catch(e) { return null; } })();
+            if (snap) detalleVis = `Socio: ${snap.nombre||''} | Período: ${snap.periodo||''} | A Pagar: ${snap.aPagar||''} | Puntos: ${snap.puntos||''}`;
         } else if (r.accion === 'Canje') {
-            try {
-                const snap = JSON.parse(r.detalle);
-                detalleVis = `${snap.nombre||''} | ${snap.fecha||''} ${snap.hora||''} | Resp: ${snap.responsable||''} | Total: ${fmtM(snap.total)}`;
-            } catch(e) {}
+            const snap = (r._extra && r._extra.folio) ? r._extra : (() => { try { return JSON.parse(r.detalle); } catch(e) { return null; } })();
+            if (snap) detalleVis = `${snap.nombre||''} | ${snap.fecha||''} ${snap.hora||''} | Resp: ${snap.responsable||''} | Total: ${fmtM(snap.total)}`;
         }
 
         return `<tr>

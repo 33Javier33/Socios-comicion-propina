@@ -170,6 +170,33 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     function _invalidarDatosSocio(_id) { /* no-op: Supabase siempre tiene datos frescos */ }
     function _invalidarTodosLosDatos() { /* no-op: Supabase siempre tiene datos frescos */ }
 
+    // ── Helper: registrar evento de auditoría en Supabase (fire-and-forget) ────
+    async function _sbAudit(accion, extra = {}) {
+        try {
+            const respRaw = sessionStorage.getItem('fs_sesion_responsable') || '';
+            const parts = respRaw.split('|');
+            const usuario = extra.usuario || (parts[0]
+                ? parts[0] + (parts[1] ? ' (' + parts[1] + ')' : '')
+                : 'Sistema');
+            await dbSoc.from('auditoria').insert({
+                usuario,
+                accion,
+                area: extra.area || parts[1] || null,
+                folio: extra.folio || null,
+                snapshot_antes: extra.antes || null,
+                snapshot_despues: extra.despues || null,
+                datos_extra: {
+                    detalle: extra.detalle || '',
+                    id_afectado: extra.idAfectado || extra.folio || '',
+                    ...(extra.datos || {})
+                }
+            });
+        } catch(e) {
+            console.warn('[SB-AUDIT]', e.message);
+        }
+    }
+    window.sbAuditLog = _sbAudit;
+
     async function _socGetDatosSocioHandler(url, options) {
         let socioId = '';
         try { socioId = new URLSearchParams(url.split('?')[1] || '').get('socioId') || ''; } catch(e) {}
@@ -247,6 +274,20 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 }
             });
             items.forEach(a => _invalidarDatosSocio(String(a.id)));
+            const _totalAnt = items.reduce((s, a) => s + Number(a.monto || 0), 0);
+            _sbAudit('Registrar Anticipo', {
+                detalle: `${items.length} anticipo(s) — Total: $${_totalAnt.toLocaleString('es-CL')}`,
+                datos: {
+                    cantidad: items.length,
+                    total_monto: _totalAnt,
+                    socios: items.map(a => ({
+                        id: a.id,
+                        nombre: ((a.nombre || '') + ' ' + (a.apellido || '')).trim(),
+                        monto: Number(a.monto || 0),
+                        fecha: a.fecha
+                    }))
+                }
+            });
             if (offline) {
                 setTimeout(() => { if (typeof showToast === 'function') showToast('Sin conexión — anticipo guardado, se enviará al reconectar 📶', 'warning'); }, 300);
                 return _mockOk({ status: 'success', message: 'offline' });
@@ -280,6 +321,21 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 }
             });
             items.forEach(e => _invalidarDatosSocio(String(e.id)));
+            const _tiposExt = [...new Set(items.map(e => e.tipo || 'extra'))].join(', ');
+            _sbAudit('Registrar Extra', {
+                detalle: `${items.length} extra(s)/ausencia(s) — Tipos: ${_tiposExt}`,
+                datos: {
+                    cantidad: items.length,
+                    socios: items.map(e => ({
+                        id: e.id,
+                        nombre: ((e.nombre || '') + ' ' + (e.apellido || '')).trim(),
+                        tipo: e.tipo,
+                        monto: Number(e.monto || 0),
+                        fecha: e.fecha,
+                        detalle: e.detalle || ''
+                    }))
+                }
+            });
             if (offline) {
                 setTimeout(() => { if (typeof showToast === 'function') showToast('Sin conexión — extra guardado, se enviará al reconectar 📶', 'warning'); }, 300);
                 return _mockOk({ status: 'success', message: 'offline' });
@@ -295,6 +351,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             const socioId = String(body.socioId || body.socio_id || '');
             const fecha = body.fecha || '';
             _invalidarDatosSocio(socioId);
+            _sbAudit('Eliminar ' + (tipo.includes('anticipo') ? 'Anticipo' : 'Extra'), {
+                detalle: `Fecha: ${fecha} | Socio ID: ${socioId}`,
+                idAfectado: uuid || (socioId + '_' + fecha),
+                datos: { tipo, socio_id: socioId, fecha, uuid }
+            });
             if (socioId && fecha) {
                 // Borrar por socio_id + fecha (el UUID de GAS ≠ id de Supabase)
                 dbSoc.from(tbl).delete().eq('socio_id', socioId).eq('fecha', fecha)
@@ -336,6 +397,10 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     { onConflict: 'periodo' }
                 ).catch(e => console.error('[sb] error guardando saldos_cierre_mes:', e));
             });
+            _sbAudit('Reiniciar Anticipos', {
+                detalle: `Período archivado: ${periodo} | ${activos?.length || 0} anticipos`,
+                datos: { periodo, cantidad_archivada: activos?.length || 0 }
+            });
             // 4. Llamar al GAS (archiva a Sheets y limpia la hoja)
             _invalidarTodosLosDatos(); // reinicio de anticipos afecta a todos los socios
             const gasRes = await _origFetch(url, options);
@@ -348,6 +413,9 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         // ── reiniciarExtras → archivar en GAS y limpiar Supabase ──────
         if (action === 'reiniciarExtras') {
             _invalidarTodosLosDatos();
+            _sbAudit('Reiniciar Extras', {
+                detalle: 'Extras del período limpiados'
+            });
             dbSoc.from('extras').delete().neq('id', '__never__')
                 .then(() => console.log('[supabase-config] extras limpiados de Supabase'))
                 .catch(e => console.error('[supabase-config] error limpiando extras:', e));
@@ -357,6 +425,16 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         // ── actualizarAnticipo → actualizar en Supabase + GAS ─────────
         if (action === 'actualizarAnticipo') {
             _invalidarTodosLosDatos(); // no tenemos socioId directo en el body
+            _sbAudit('Actualizar Anticipo', {
+                detalle: `Fecha: ${body.fecha} | Monto: $${Number(body.monto || 0).toLocaleString('es-CL')}`,
+                idAfectado: body.uuid,
+                datos: {
+                    uuid: body.uuid,
+                    fecha: body.fecha,
+                    monto: Number(body.monto || 0),
+                    responsable: ((body.responsable || '') + (body.areaResponsable ? ' ' + body.areaResponsable : '')).trim()
+                }
+            });
             dbSoc.from('anticipos').update({
                 fecha: body.fecha,
                 monto: Number(body.monto || 0),
@@ -377,6 +455,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     { id, nombre, monto, updated_at: new Date().toISOString() },
                     { onConflict: 'id' }
                 ).catch(e => console.error('[sb] error upsert saldos_socio:', e));
+                _sbAudit('Registrar Saldo Anterior', {
+                    detalle: `Socio: ${nombre} | Monto: $${monto.toLocaleString('es-CL')}`,
+                    idAfectado: id,
+                    datos: { socio_id: id, nombre, monto }
+                });
             }
             return _origFetch(url, options);
         }
@@ -403,6 +486,12 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     .catch(e => console.error('[sb] error archivando anticipos en cierre:', e));
             }
 
+            const saldos = body.nuevosSaldosAnteriores || [];
+            _sbAudit('Cierre Mensual', {
+                detalle: `${activosCierre?.length || 0} anticipos archivados | ${saldos.length} saldos actualizados`,
+                datos: { anticipos_archivados: activosCierre?.length || 0, saldos_actualizados: saldos.length }
+            });
+
             const gasRes = await _origFetch(url, options);
 
             // Limpiar anticipos activos de Supabase
@@ -410,7 +499,6 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 .catch(e => console.error('[sb] error limpiando anticipos tras cierre:', e));
 
             // Sincronizar nuevos saldos anteriores a Supabase
-            const saldos = body.nuevosSaldosAnteriores || [];
             if (saldos.length > 0) {
                 const rows = saldos.map(s => ({
                     id: String(s.id),
@@ -488,6 +576,14 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     { onConflict: 'clave' }
                 );
                 if (error) throw error;
+                // Auditar cambio de config — NUNCA registrar el valor de PIN o clave
+                if (body.clave === 'pin') {
+                    _sbAudit('Cambiar PIN Global', { detalle: 'PIN global del sistema actualizado', datos: { clave: 'pin' } });
+                } else if (body.clave === 'clave_recup') {
+                    _sbAudit('Cambiar Clave Recuperación', { detalle: 'Clave de recuperación del sistema actualizada', datos: { clave: 'clave_recup' } });
+                } else {
+                    _sbAudit('Actualizar Configuración', { detalle: `Parámetro "${body.clave}" actualizado`, datos: { clave: body.clave } });
+                }
                 return _mockOk({ status: 'success' });
             } catch(e) {
                 return _mockOk({ status: 'error', message: e.message });
@@ -502,6 +598,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     { onConflict: 'ini,area' }
                 );
                 if (error) throw error;
+                // Auditar — NUNCA registrar el valor del PIN
+                _sbAudit('Cambiar PIN Personal', {
+                    detalle: `PIN personal actualizado para ${body.ini} (${body.area})`,
+                    datos: { ini: body.ini, area: body.area }
+                });
                 return _mockOk({ status: 'success' });
             } catch(e) {
                 console.warn('[SB-CREDS] setCredencial error:', e.message);
@@ -515,6 +616,10 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 const { error } = await dbSoc.from('responsable_creds')
                     .delete().eq('ini', body.ini).eq('area', body.area);
                 if (error) throw error;
+                _sbAudit('Eliminar Credencial', {
+                    detalle: `Credencial eliminada para ${body.ini} (${body.area})`,
+                    datos: { ini: body.ini, area: body.area }
+                });
                 return _mockOk({ status: 'success' });
             } catch(e) {
                 console.warn('[SB-CREDS] deleteCredencial error:', e.message);
@@ -533,7 +638,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         if (typeof URL_SOCIOS !== 'undefined' && s.startsWith(URL_SOCIOS)) {
             const method = (options.method || 'GET').toUpperCase();
             if (method !== 'POST') {
-                // GET: interceptar getSocios para mergear puntos de Supabase
+                // GET: interceptar según action
                 let action = '';
                 try { action = new URLSearchParams(s.split('?')[1] || '').get('action') || ''; } catch(e) {}
                 if (action === 'getSocios') return _socGetSociosHandler(s, options);
@@ -573,6 +678,54 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         const periodoAnterior = (histRes.data || [])[0] || null;
                         return _mockOk({ status: 'success', total, ultimaFecha, periodoAnterior });
                     } catch(e) { return _mockOk({ status: 'success', total: 0, ultimaFecha: null, periodoAnterior: null }); }
+                }
+                if (action === 'getAuditoria') {
+                    try {
+                        const [sbRes, gasRaw] = await Promise.allSettled([
+                            dbSoc.from('auditoria')
+                                .select('id, usuario, accion, area, folio, snapshot_antes, snapshot_despues, datos_extra, created_at')
+                                .order('created_at', { ascending: false })
+                                .limit(1000),
+                            _origFetch(url, options).then(r => r.json())
+                        ]);
+                        const sbRows = (sbRes.status === 'fulfilled' && !sbRes.value.error)
+                            ? (sbRes.value.data || []) : [];
+                        const sbNorm = sbRows.map(r => ({
+                            fecha: r.created_at,
+                            usuario: r.usuario || '',
+                            accion: r.accion || '',
+                            detalle: (r.datos_extra && r.datos_extra.detalle) || '',
+                            idAfectado: (r.datos_extra && r.datos_extra.id_afectado) || r.folio || '',
+                            _fuente: 'supabase',
+                            _extra: r.datos_extra || {},
+                            _antes: r.snapshot_antes,
+                            _despues: r.snapshot_despues,
+                            area: r.area || ''
+                        }));
+                        // Solo traer de GAS registros anteriores al inicio de auditoría en Supabase
+                        const CUTOFF = '2026-06-18';
+                        const gasData = (gasRaw.status === 'fulfilled' && gasRaw.value?.status === 'success')
+                            ? (gasRaw.value.data || []) : [];
+                        const sbFolios = new Set(sbNorm.map(r => r.idAfectado).filter(Boolean));
+                        const gasNorm = gasData
+                            .filter(r => (r.fecha || '').substring(0, 10) < CUTOFF)
+                            .map(r => ({
+                                fecha: r.fecha,
+                                usuario: r.usuario || '',
+                                accion: r.accion || '',
+                                detalle: r.detalle || '',
+                                idAfectado: r.idAfectado || '',
+                                _fuente: 'sheets'
+                            }))
+                            .filter(r => !r.idAfectado || !sbFolios.has(r.idAfectado));
+                        const merged = [...sbNorm, ...gasNorm]
+                            .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                        console.log('[SB-AUDIT] getAuditoria →', sbNorm.length, 'Supabase +', gasNorm.length, 'Sheets');
+                        return _mockOk({ status: 'success', data: merged });
+                    } catch(e) {
+                        console.error('[SB-AUDIT] getAuditoria error:', e.message);
+                    }
+                    return _origFetch(url, options);
                 }
                 return _origFetch(url, options);
             }
@@ -629,6 +782,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     responsable: aqBody.responsable || ''
                 }, { onConflict: 'firma' });
                 if (error) { console.error('[AQ-SB] registrarRetiro error:', error.message); return _mockOk({ status: 'error', message: error.message }); }
+                _sbAudit('Retiro Anticipo', {
+                    idAfectado: aqBody.firma,
+                    detalle: `Socio: ${aqBody.nombre || ''} | Monto: $${Number(aqBody.monto || 0).toLocaleString('es-CL')}`,
+                    datos: { firma: aqBody.firma, nombre: aqBody.nombre, monto: Number(aqBody.monto || 0), billetes: aqBody.billetes }
+                });
                 return _mockOk({ status: 'success' });
             }
 
@@ -644,6 +802,14 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     divisor_pt: Number(aqBody.divisorPartTime || 1)
                 });
                 if (insErr) return _mockOk({ status: 'error', message: insErr.message });
+                _sbAudit('Cierre Arqueo', {
+                    detalle: `Total contado: $${Number(aqBody.totalContado || 0).toLocaleString('es-CL')} | Diferencia: $${Number(aqBody.diferencia || 0).toLocaleString('es-CL')}`,
+                    datos: {
+                        total_contado: Number(aqBody.totalContado || 0),
+                        diferencia: Number(aqBody.diferencia || 0),
+                        total_retirado: Number(aqBody.totalRetirado || 0)
+                    }
+                });
                 await dbSoc.from('arqueo_estado').delete().eq('periodo', 'actual');
                 return _mockOk({ status: 'success' });
             }
@@ -712,6 +878,10 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     monto: Number(body.monto) || 0
                 });
                 if (error) throw error;
+                _sbAudit('Registrar Recaudación', {
+                    detalle: `Fecha: ${body.fecha} | Tipo: ${body.tipo || 'Sin Tipo'} | Monto: $${Number(body.monto || 0).toLocaleString('es-CL')}`,
+                    datos: { fecha: body.fecha, tipo: body.tipo, monto: Number(body.monto || 0) }
+                });
                 _notificarCambio();
                 return succ();
             } catch (e) { return err(e.message); }
@@ -726,6 +896,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     arqueado_at: new Date().toISOString()
                 }).eq('id', body.id);
                 if (error) throw error;
+                _sbAudit('Verificar Recaudación', {
+                    idAfectado: body.id,
+                    detalle: `Recaudación verificada en caja | ID: ${String(body.id || '').substring(0, 8)}`,
+                    datos: { id: body.id, billetes: body.billetes }
+                });
                 _notificarCambio();
                 return succ();
             } catch (e) { return err(e.message); }
@@ -741,6 +916,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     monto: Number(body.monto) || 0
                 }).eq('id', id);
                 if (error) throw error;
+                _sbAudit('Actualizar Recaudación', {
+                    idAfectado: id,
+                    detalle: `Fecha: ${body.fecha} | Tipo: ${body.tipo || 'Sin Tipo'} | Monto: $${Number(body.monto || 0).toLocaleString('es-CL')}`,
+                    datos: { id, fecha: body.fecha, tipo: body.tipo, monto: Number(body.monto || 0) }
+                });
                 _notificarCambio();
                 return succ();
             } catch (e) { return err(e.message); }
@@ -752,6 +932,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 const id = body.index;
                 const { error } = await dbRec.from('recaudaciones').delete().eq('id', id);
                 if (error) throw error;
+                _sbAudit('Eliminar Recaudación', {
+                    idAfectado: id,
+                    detalle: `Recaudación eliminada | ID: ${String(id || '').substring(0, 8)}`,
+                    datos: { id }
+                });
                 _notificarCambio();
                 return succ();
             } catch (e) { return err(e.message); }
@@ -766,6 +951,10 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     valor: Number(body.divisor)
                 }, { onConflict: 'fecha' });
                 if (error) throw error;
+                _sbAudit('Actualizar Divisor', {
+                    detalle: `Fecha: ${body.fecha} | Divisor: ${body.divisor}`,
+                    datos: { fecha: body.fecha, divisor: Number(body.divisor) }
+                });
                 _notificarCambio();
                 return succ();
             } catch (e) { return err(e.message); }

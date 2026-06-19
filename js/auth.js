@@ -44,6 +44,19 @@ function intentarLogin() {
         errEl.textContent = 'PIN incorrecto. Inténtalo de nuevo.';
         sessionStorage.setItem(SESSION_KEY, 'ok');
         sessionStorage.setItem(SESION_RESP_KEY, respVal);
+        // Auditar inicio de sesión (diferido para que sbAuditLog esté disponible)
+        setTimeout(() => {
+            if (typeof window.sbAuditLog === 'function') {
+                window.sbAuditLog('Acceso', {
+                    usuario: respVal,
+                    detalle: 'Inicio de sesión exitoso',
+                    datos: {
+                        responsable: respVal,
+                        metodo: pinNube ? 'pin_personal_nube' : (pinLocal ? 'pin_personal_local' : 'pin_global')
+                    }
+                });
+            }
+        }, 600);
         const overlay = document.getElementById('loginOverlay');
         overlay.style.transition = 'opacity 0.4s';
         overlay.style.opacity = '0';
@@ -94,6 +107,15 @@ let inactividadInterval = null;
 let tiempoRestante = INACTIVIDAD_MS;
 
 function cerrarSesion(silencioso = false) {
+    // Auditar cierre de sesión antes de limpiar sessionStorage
+    const _sesResp = sessionStorage.getItem('fs_sesion_responsable') || '';
+    if (_sesResp && typeof window.sbAuditLog === 'function') {
+        window.sbAuditLog('Cierre de Sesión', {
+            usuario: _sesResp,
+            detalle: silencioso ? 'Cierre automático por inactividad (15 min)' : 'Cierre de sesión manual',
+            datos: { motivo: silencioso ? 'inactividad' : 'manual' }
+        });
+    }
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(SESION_RESP_KEY);
     const respBadge = document.getElementById('sesionRespBadge');

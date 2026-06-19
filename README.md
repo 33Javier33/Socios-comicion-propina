@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-06-18 — Auditoría completa en Supabase con mucho más detalle
+- Todos los movimientos del sistema ahora se registran en Supabase (`auditoria` table) con datos estructurados en `datos_extra` (JSONB).
+- Nuevas acciones auditadas que antes no existían: Acceso, Cierre de Sesión, Registrar Recaudación, Actualizar Recaudación, Eliminar Recaudación, Verificar Recaudación, Actualizar Divisor, Retiro Anticipo, Cierre Arqueo, Cambiar PIN Global, Cambiar PIN Personal, Cambiar Clave Recuperación, Actualizar Configuración, Eliminar Credencial.
+- Para canje e impresión de recibo: se guarda el snapshot completo en Supabase además del registro en Google Sheets (que se mantiene para historial).
+- `getAuditoria` ahora devuelve registros combinados: Supabase (todos, desde hoy) + Google Sheets (solo antes del 2026-06-18 como historial).
+- Canjes y recibos en Supabase guardan el snapshot completo en `datos_extra`, permitiendo reimpresión desde registros de Supabase.
+- Archivos modificados: `js/supabase-config.js`, `js/auth.js`, `js/canje.js`, `js/reports.js`, `js/auditoria.js`.
+
 #### 2026-06-18 — Traducción completa al español de la interfaz
 - Reemplazados todos los términos en inglés visibles al usuario en `help.js`, `index.html` y `carpetas.js`.
 - dashboard → panel, badge → indicador, login → ingreso/acceso, modal → ventana, sidebar → menú lateral, drawer → panel de menú, FABs → botones flotantes, serverless → servicio en la nube, offline → sin conexión, Backups → Respaldos, backup → copia de seguridad.

@@ -495,7 +495,7 @@ async function imprimirReciboSocio() {
 
     printHTML(contenido, fileName);
 
-    // Registrar en auditoría (no bloquea la impresión)
+    // Registrar en auditoría — GAS (historial Sheets) + Supabase (detalle completo)
     const _audUsuario = (_resp.ini || '') + (_resp.area ? ' (' + _resp.area + ')' : '');
     callApiSocios('logAccionAuditoria', {
         usuario: _audUsuario,
@@ -503,4 +503,13 @@ async function imprimirReciboSocio() {
         detalle: JSON.stringify(reciboSnapshot),
         idAfectado: folio
     }).catch(() => {});
+    if (typeof window.sbAuditLog === 'function') {
+        window.sbAuditLog('Imprimir Recibo', {
+            folio,
+            usuario: _audUsuario,
+            detalle: `${nombreSocio} | Período: ${periodoStr} | A Pagar: ${aPagar} | Puntos: ${puntos}`,
+            idAfectado: folio,
+            datos: { socioId: id, periodo: periodoStr, aPagar, puntos, area, contrato }
+        });
+    }
 }

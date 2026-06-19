@@ -148,7 +148,7 @@ async function canje_imprimir() {
     printHTML(contenido, nomInput + ' ' + fechaVis.replace(/\//g,'-'));
     canje_cerrarModal();
 
-    // Registrar en auditoría (no bloquea la impresión)
+    // Registrar en auditoría — GAS (historial Sheets) + Supabase (detalle completo)
     const _audUsuario = (_resp.ini || '') + (_resp.area ? ' (' + _resp.area + ')' : '');
     callApiSocios('logAccionAuditoria', {
         usuario: _audUsuario,
@@ -156,4 +156,13 @@ async function canje_imprimir() {
         detalle: JSON.stringify(canjeSnapshot),
         idAfectado: folio
     }).catch(() => {});
+    if (typeof window.sbAuditLog === 'function') {
+        window.sbAuditLog('Canje', {
+            folio,
+            usuario: _audUsuario,
+            detalle: `${nomInput} | ${fechaVis} | Total: $${total.toLocaleString('es-CL')}`,
+            idAfectado: folio,
+            datos: canjeSnapshot
+        });
+    }
 }
