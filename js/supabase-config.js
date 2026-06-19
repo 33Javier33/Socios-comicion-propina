@@ -197,6 +197,50 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     }
     window.sbAuditLog = _sbAudit;
 
+    // ── Migración automática Sheets → Supabase (se ejecuta una vez cuando Supabase está vacío) ──
+    let _migrEnProceso = false;
+    async function _migrarGasASupabase(gasJson) {
+        if (_migrEnProceso) return;
+        _migrEnProceso = true;
+        try {
+            const rawAnts = gasJson.anticipos || {};
+            const rawExt  = gasJson.extras   || {};
+            const antRows = [];
+            Object.entries(rawAnts).forEach(([socioId, lista]) => {
+                (Array.isArray(lista) ? lista : []).forEach(a => {
+                    const monto = Number(a.cantidad || a.monto || 0);
+                    const fecha = String(a.fecha || '').substring(0, 10);
+                    if (!fecha || monto <= 0) return;
+                    antRows.push({ socio_id: String(socioId), fecha, monto, responsable: a.responsable || '' });
+                });
+            });
+            const extRows = [];
+            Object.entries(rawExt).forEach(([socioId, lista]) => {
+                (Array.isArray(lista) ? lista : []).forEach(e => {
+                    const fecha = String(e.fecha || '').substring(0, 10);
+                    if (!fecha || !e.tipo) return;
+                    extRows.push({ socio_id: String(socioId), fecha, tipo: e.tipo, monto: Number(e.monto || 0), detalle: e.detalle || '' });
+                });
+            });
+            if (antRows.length === 0 && extRows.length === 0) return;
+            console.log('[SB-MIGR] Migrando', antRows.length, 'anticipos y', extRows.length, 'extras desde Sheets...');
+            for (let i = 0; i < antRows.length; i += 500) {
+                const { error } = await dbSoc.from('anticipos').insert(antRows.slice(i, i + 500));
+                if (error) { console.warn('[SB-MIGR] Error anticipos:', error.message); return; }
+            }
+            for (let i = 0; i < extRows.length; i += 500) {
+                const { error } = await dbSoc.from('extras').insert(extRows.slice(i, i + 500));
+                if (error) { console.warn('[SB-MIGR] Error extras:', error.message); }
+            }
+            console.log('[SB-MIGR] ✅ Migración completa:', antRows.length, 'anticipos,', extRows.length, 'extras');
+            if (typeof showToast === 'function') showToast('✅ Anticipos migrados a Supabase (' + antRows.length + ')', 'success');
+        } catch(e) {
+            console.warn('[SB-MIGR]', e.message);
+        } finally {
+            _migrEnProceso = false;
+        }
+    }
+
     async function _socGetDatosSocioHandler(url, options) {
         let socioId = '';
         try { socioId = new URLSearchParams(url.split('?')[1] || '').get('socioId') || ''; } catch(e) {}
@@ -581,10 +625,18 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     });
                 });
                 console.log('[SB] getAllDataDesdeSheets → anticipos:', Object.keys(anticipos).length, 'socios | extras:', Object.keys(extras).length, 'socios');
-                // Si Supabase está vacío, caer a GAS (datos aún en Sheets)
+                // Si Supabase está vacío → consultar GAS y migrar automáticamente
                 if (Object.keys(anticipos).length === 0 && Object.keys(extras).length === 0) {
-                    console.log('[SB] getAllDataDesdeSheets: Supabase vacío → consultando GAS');
-                    return _origFetch(url, options);
+                    console.log('[SB] Supabase vacío → GAS + auto-migración');
+                    let gasJson = null;
+                    try {
+                        const gasResp = await _origFetch(url, options);
+                        gasJson = await gasResp.json();
+                    } catch(e) { console.warn('[SB] GAS error:', e.message); }
+                    if (gasJson && gasJson.status === 'success') {
+                        _migrarGasASupabase(gasJson); // no-await: segundo plano
+                    }
+                    return _mockOk(gasJson || { status: 'error', message: 'Sin datos' });
                 }
                 // Formato idéntico al que devuelve GAS: { status, anticipos, extras }
                 return _mockOk({ status: 'success', anticipos, extras });
