@@ -171,8 +171,32 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     let _allDataCache = null; // { anticipos: {id:[...]}, extras: {id:[...]}, ts: number }
     const _ALL_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
+    // Pre-cargar desde localStorage al inicializar — así getDatosSocio es instantáneo
+    // incluso en el primer click, antes de que getAllDataDesdeSheets termine su llamada a red.
+    try {
+        const _lsRaw = localStorage.getItem('fondo_cache_all_data');
+        if (_lsRaw) {
+            const _lsParsed = JSON.parse(_lsRaw);
+            if (_lsParsed && _lsParsed.ts && (Date.now() - _lsParsed.ts) < _ALL_CACHE_TTL) {
+                _allDataCache = { anticipos: _lsParsed.data.anticipos || {}, extras: _lsParsed.data.extras || {}, ts: _lsParsed.ts };
+                console.log('[SB] _allDataCache pre-cargado desde localStorage');
+            }
+        }
+    } catch(e) {}
+
+    // ── Caché rápida de saldos anteriores (tabla pequeña, 67 filas) ──
+    // Pre-carga en background; getDatosSocio lo usa para evitar un roundtrip por socio.
+    let _saldosCache = null; // { socioId: monto }
+    dbSoc.from('saldos_socio').select('id, monto')
+        .then(({ data }) => {
+            if (data && data.length > 0) {
+                _saldosCache = {};
+                data.forEach(s => { _saldosCache[String(s.id)] = Number(s.monto); });
+            }
+        }).catch(() => {});
+
     function _invalidarDatosSocio(_id) { _allDataCache = null; }
-    function _invalidarTodosLosDatos() { _allDataCache = null; }
+    function _invalidarTodosLosDatos() { _allDataCache = null; _saldosCache = null; }
 
     // ── Helper: registrar evento de auditoría en Supabase (fire-and-forget) ────
     async function _sbAudit(accion, extra = {}) {
@@ -234,7 +258,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     const monto = Number(a.cantidad || a.monto || 0);
                     const fecha = String(a.fecha || '').substring(0, 10);
                     if (!fecha || monto <= 0) return;
-                    antRows.push({ socio_id: String(socioId), fecha, monto, responsable: a.responsable || '' });
+                    antRows.push({ socio_id: String(socioId), fecha, monto, responsable: a.responsable || '', autor: a.responsable || 'MIGRACIÓN' });
                 });
             });
             const extRows = [];
@@ -242,7 +266,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 (Array.isArray(lista) ? lista : []).forEach(e => {
                     const fecha = String(e.fecha || '').substring(0, 10);
                     if (!fecha || !e.tipo) return;
-                    extRows.push({ socio_id: String(socioId), fecha, tipo: e.tipo, monto: Number(e.monto || 0), detalle: e.detalle || '' });
+                    extRows.push({ socio_id: String(socioId), fecha, tipo: e.tipo, monto: Number(e.monto || 0), detalle: e.detalle || '', autor: e.responsable || 'MIGRACIÓN' });
                 });
             });
             if (antRows.length === 0 && extRows.length === 0) {
@@ -304,9 +328,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     detalle: e.detalle || '',
                     uuid: e.uuid || ''
                 })).sort((a, b) => b.fecha.localeCompare(a.fecha));
-                // saldoAnterior desde Supabase (tabla pequeña, muy rápido)
-                const { data: saldoData } = await dbSoc.from('saldos_socio').select('monto').eq('id', socioId).maybeSingle();
-                const saldoAnterior = saldoData ? Number(saldoData.monto) : 0;
+                // saldoAnterior desde caché en memoria (sin red) o Supabase si no está listo
+                const saldoAnterior = _saldosCache
+                    ? (_saldosCache[socioId] !== undefined ? _saldosCache[socioId] : 0)
+                    : await dbSoc.from('saldos_socio').select('monto').eq('id', socioId).maybeSingle()
+                        .then(({ data }) => data ? Number(data.monto) : 0).catch(() => 0);
                 console.log('[SB-DATOS] Socio', socioId, '→', anticipos.length, 'ant (caché rápida), saldo:', saldoAnterior);
                 return _mockOk({ status: 'success', data: { anticipos, extras, saldoAnterior, diasTrabajados: [] } });
             } catch(e) {
@@ -393,7 +419,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 socio_id: String(a.id),
                 monto: Number(a.monto || 0),
                 fecha: a.fecha,
-                responsable: ((a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')).trim()
+                responsable: ((a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')).trim(),
+                autor: ((a.responsable || '') + (a.areaResponsable ? ' ' + a.areaResponsable : '')).trim() || 'SISTEMA'
             }));
 
             if (!navigator.onLine) {
@@ -436,7 +463,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 fecha: e.fecha,
                 tipo: e.tipo || 'extra',
                 monto: Number(e.monto || 0),
-                detalle: e.detalle || ''
+                detalle: e.detalle || '',
+                autor: ((e.responsable || '') + (e.areaResponsable ? ' ' + e.areaResponsable : '')).trim() || 'SISTEMA'
             }));
 
             if (!navigator.onLine) {
@@ -578,6 +606,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             const monto = Number(body.monto || 0);
             const nombre = body.nombre || '';
             _invalidarDatosSocio(id);
+            if (_saldosCache) _saldosCache[id] = monto; // actualizar caché en memoria
             if (id) {
                 const { error: sbErr } = await dbSoc.from('saldos_socio').upsert(
                     { id, nombre, monto, updated_at: new Date().toISOString() },
