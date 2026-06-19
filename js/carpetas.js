@@ -77,9 +77,47 @@ function carpetas_verArchivo(idx) {
         const tiposHtml = regs.map(r => {
             let t = r.tipo || 'Sin Tipo';
             if (t === 'Mesas') t = 'SalaDeJuegos';
-            return `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:0.85em;">
-                <span style="font-weight:700;color:var(--secondary);">${t}</span>
-                <span style="font-weight:700;">${formatearMoneda(r.monto)}</span>
+            const arqueado = r.arqueado;
+            const badgeHtml = arqueado
+                ? `<span style="background:#dcfce7;color:#15803d;font-size:0.7em;font-weight:700;padding:2px 7px;border-radius:10px;">✅ En caja</span>`
+                : `<span style="background:#fef9c3;color:#92400e;font-size:0.7em;font-weight:700;padding:2px 7px;border-radius:10px;">⚠️ Pendiente</span>`;
+            const registradoPor = r.registrado_por_nombre
+                ? `<span style="font-size:0.72em;color:#64748b;">👤 ${r.registrado_por_nombre}</span>`
+                : '';
+            const arqueadoAt = (arqueado && r.arqueado_at)
+                ? `<span style="font-size:0.72em;color:#64748b;">🕐 ${new Date(r.arqueado_at).toLocaleString('es-CL', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>`
+                : '';
+            const billetes = Array.isArray(r.billetes) ? r.billetes.filter(b => Number(b.cantidad) > 0) : [];
+            const billetesHtml = billetes.length > 0
+                ? `<div style="margin-top:6px;background:#f8fafc;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.75em;">
+                        <thead><tr style="background:#e2e8f0;">
+                            <th style="padding:4px 8px;text-align:left;font-weight:700;color:#475569;">Denom.</th>
+                            <th style="padding:4px 8px;text-align:center;font-weight:700;color:#475569;">Cant.</th>
+                            <th style="padding:4px 8px;text-align:right;font-weight:700;color:#475569;">Subtotal</th>
+                        </tr></thead>
+                        <tbody>${billetes.map((b, i) => {
+                            const sub = Number(b.denominacion || 0) * Number(b.cantidad || 0);
+                            return `<tr style="border-top:1px solid #f0f0f0;${i%2===1?'background:#fafafa;':''}">
+                                <td style="padding:3px 8px;color:#334155;">${formatearMoneda(b.denominacion)}</td>
+                                <td style="padding:3px 8px;text-align:center;color:#334155;">${b.cantidad}</td>
+                                <td style="padding:3px 8px;text-align:right;font-weight:600;color:#1e293b;">${formatearMoneda(sub)}</td>
+                            </tr>`;
+                        }).join('')}</tbody>
+                        <tfoot><tr style="background:#1e293b;">
+                            <td colspan="2" style="padding:4px 8px;color:#94a3b8;font-size:0.85em;font-weight:700;">Total billetes</td>
+                            <td style="padding:4px 8px;text-align:right;color:white;font-weight:800;">${formatearMoneda(billetes.reduce((s,b)=>s+Number(b.denominacion||0)*Number(b.cantidad||0),0))}</td>
+                        </tr></tfoot>
+                    </table>
+                  </div>`
+                : '';
+            return `<div style="padding:10px 0;border-bottom:1px solid #f0f0f0;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+                    <span style="font-weight:700;color:var(--secondary);font-size:0.85em;">${t}</span>
+                    <span style="font-weight:700;font-size:0.85em;">${formatearMoneda(r.monto)}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${badgeHtml}${registradoPor}${arqueadoAt}</div>
+                ${billetesHtml}
             </div>`;
         }).join('');
 
