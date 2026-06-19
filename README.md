@@ -232,6 +232,52 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-06-18 — Traducción completa al español de la interfaz
+- Reemplazados todos los términos en inglés visibles al usuario en `help.js`, `index.html` y `carpetas.js`.
+- dashboard → panel, badge → indicador, login → ingreso/acceso, modal → ventana, sidebar → menú lateral, drawer → panel de menú, FABs → botones flotantes, serverless → servicio en la nube, offline → sin conexión, Backups → Respaldos, backup → copia de seguridad.
+
+#### 2026-06-18 — Auditoría: referencia legible en lugar de UUID
+- La columna "ID Afectado" ahora muestra una referencia descriptiva derivada del tipo de acción y la fecha del detalle (ej: `ANT 17/06`, `MAT 15/06`).
+- Los canjes y recibos siguen mostrando su folio completo (ya era legible).
+- El UUID completo queda disponible como tooltip al pasar el cursor.
+- Columna renombrada a "Referencia" en tabla y en informe de impresión.
+- Archivos modificados: `js/auditoria.js`, `index.html`.
+
+#### 2026-06-18 — Configuración del sistema sincronizada con Supabase
+- PIN global, clave de recuperación y lista de responsables ahora se guardan en Supabase y se cargan al iniciar la sesión en cualquier dispositivo.
+- PINs personales de responsables redirigidos de Google Apps Script a Supabase (`responsable_creds`).
+- Nuevas tablas en Supabase (`teemahksasdougehrcly`): `config_sistema` (clave/valor) y `responsable_creds` (ini/area/pin).
+- Nuevos interceptores en `supabase-config.js`: `getConfig`, `setConfig`, `getCredenciales`, `setCredencial`, `deleteCredencial`.
+- Nueva función `cfg_cargarDesdeSupabase()` en `config.js` que sincroniza al iniciar.
+- Archivos modificados: `js/supabase-config.js`, `js/config.js`, `js/app-init.js`.
+
+#### 2026-06-18 — Archivo de recaudaciones con detalle completo
+- El visor de carpetas archivadas ahora muestra por cada tipo: estado arqueado (✅ En caja / ⚠️ Pendiente), quién registró la entrada (`registrado_por_nombre`), hora de verificación (`arqueado_at`) y tabla de billetes con denominación × cantidad → subtotal.
+- Todos estos campos ya estaban en el snapshot guardado; solo se actualizó la visualización.
+- Archivos modificados: `js/carpetas.js`.
+
+#### 2026-06-18 — Corrección bug período 15→14 (día 15 asignado incorrectamente)
+- El día 15 se asignaba al período anterior en lugar del actual por usar `d > 15` en lugar de `d >= 15`.
+- Fix aplicado en tres archivos: `js/materiales.js`, `js/arqueo.js`, `js/anticipos.js`.
+
+#### 2026-06-18 — Total remanentes entre socios en banner de Anticipos
+- Nuevo dato en el banner morado: total de remanentes de todos los socios con el período (formato 15→14) y el período anterior como dato secundario.
+- Datos leídos desde `saldos_socio` y `saldos_cierre_mes` en Supabase.
+- Al reiniciar anticipos se guarda un snapshot en `saldos_cierre_mes` para el historial.
+- Archivos modificados: `js/anticipos.js`, `js/supabase-config.js`, `index.html`.
+
+#### 2026-06-18 — Detalle de recaudación en modal (botón 🔍)
+- El desglose de billetes, estado verificado, registrado por y hora de verificación se movieron a un modal accesible con el botón 🔍 en cada tipo de recaudación.
+- Antes aparecían inline en la tarjeta del día, ahora solo se muestran al solicitar el detalle.
+- Archivos modificados: `js/recaudacion.js`, `index.html`.
+
+#### 2026-06-18 — Arqueo de caja: anticipos desde Supabase + mejoras de visualización
+- El arqueo ahora lee los anticipos directamente desde Supabase (misma fuente que la sección Anticipos y Ausencias) en lugar de Google Sheets.
+- En la columna de movimientos solo aparece la cantidad (`-1`) sin nombre ni paréntesis.
+- La tabla de desglose esperado muestra fecha y estado ✓ arqueado / ⚠️ falta agregar por tipo, actualizado en tiempo real.
+- Eliminado el botón "Realizar Arqueo" que ya no funcionaba.
+- Archivos modificados: `js/arqueo.js`, `js/supabase-config.js`, `index.html`.
+
 #### 2026-06-16 — Verificación de recaudaciones en caja (arqueo individual)
 - Cada recaudación registrada (por tipo y fecha) muestra un botón "⚠️ Verificar" hasta que sea confirmada físicamente en caja.
 - Al presionar "Verificar", se abre un modal con contador de billetes por denominación (igual que el arqueo de caja, pero individual por recaudación).
