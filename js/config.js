@@ -6,6 +6,37 @@ function cfg_getClaveRecup() {
     return localStorage.getItem(CLAVE_RECUP_KEY) || CLAVE_RECUP;
 }
 
+// Carga PIN, clave recuperación y responsables desde Supabase al inicio
+async function cfg_cargarDesdeSupabase() {
+    try {
+        const res = await callApiSocios('getConfig');
+        if (res.status !== 'success') return;
+        const cfg = res.data || {};
+        // PIN global
+        if (cfg.pin) {
+            localStorage.setItem(PIN_KEY, cfg.pin);
+        }
+        // Clave de recuperación
+        if (cfg.clave_recup) {
+            localStorage.setItem(CLAVE_RECUP_KEY, cfg.clave_recup);
+        }
+        // Responsables (solo sobreescribe si Supabase tiene datos)
+        if (cfg.responsables) {
+            try {
+                const lista = JSON.parse(cfg.responsables);
+                if (Array.isArray(lista) && lista.length > 0) {
+                    localStorage.setItem(RESP_KEY, JSON.stringify(lista));
+                    responsables_poblarLoginSelector();
+                    if (document.getElementById('cfg-responsables-lista')) cfg_renderResponsables();
+                }
+            } catch(e) {}
+        }
+        console.log('[CFG-SB] Configuración cargada desde Supabase');
+    } catch(e) {
+        // Silencioso — usa localStorage como fallback
+    }
+}
+
 function cfg_limpiarCampos() {
     ['cfg-pin-actual','cfg-pin-nuevo','cfg-pin-confirmar',
      'cfg-clave-actual','cfg-clave-nueva','cfg-clave-confirmar'].forEach(id => {
@@ -47,6 +78,9 @@ function cfg_cambiarPin() {
     document.getElementById('cfg-pin-nuevo').value = '';
     document.getElementById('cfg-pin-confirmar').value = '';
     showToast('PIN cambiado exitosamente', 'success');
+    // Sincronizar con Supabase en segundo plano
+    callApiSocios('setConfig', { clave: 'pin', valor: nuevo })
+        .catch(e => console.warn('[CFG-SB] Error guardando PIN:', e));
 }
 
 function cfg_cambiarClave() {
@@ -78,6 +112,9 @@ function cfg_cambiarClave() {
     document.getElementById('cfg-clave-nueva').value = '';
     document.getElementById('cfg-clave-confirmar').value = '';
     showToast('Clave de recuperación cambiada', 'success');
+    // Sincronizar con Supabase en segundo plano
+    callApiSocios('setConfig', { clave: 'clave_recup', valor: nueva })
+        .catch(e => console.warn('[CFG-SB] Error guardando clave_recup:', e));
 }
 
 // ══════════════════════════════════════════════════════════
@@ -90,6 +127,10 @@ function responsables_cargar() {
 }
 function responsables_guardar(lista) {
     try { localStorage.setItem(RESP_KEY, JSON.stringify(lista)); } catch(e) {}
+    // Sincronizar con Supabase en segundo plano (sin PINs para no duplicar con responsable_creds)
+    const listaSinPins = lista.map(({ ini, area }) => ({ ini, area }));
+    callApiSocios('setConfig', { clave: 'responsables', valor: JSON.stringify(listaSinPins) })
+        .catch(e => console.warn('[CFG-SB] Error guardando responsables:', e));
 }
 
 function responsables_poblarSelector() {

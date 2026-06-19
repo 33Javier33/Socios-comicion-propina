@@ -43,7 +43,8 @@ function iniciarApp() {
 async function precargarTodo() {
     fetchSociosDeGoogle();
     cargarRecaudaciones(true);
-    cargarCredenciales(); // PINs personales desde Google Sheets
+    cargarCredenciales(); // PINs personales desde Supabase (responsable_creds)
+    cfg_cargarDesdeSupabase(); // PIN global, clave recuperación y responsables desde Supabase
 
     await Promise.allSettled([
         fetch(URL_RECAUDACIONES + '?action=getNotes&t=' + Date.now())

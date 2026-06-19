@@ -467,6 +467,61 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             }
         }
 
+        // ── getConfig: leer configuración del sistema desde Supabase ──
+        if (action === 'getConfig') {
+            try {
+                const { data, error } = await dbSoc.from('config_sistema').select('clave, valor');
+                if (error) throw error;
+                const cfg = {};
+                (data || []).forEach(r => { cfg[r.clave] = r.valor; });
+                return _mockOk({ status: 'success', data: cfg });
+            } catch(e) {
+                return _mockOk({ status: 'error', message: e.message });
+            }
+        }
+
+        // ── setConfig: guardar clave/valor en config_sistema ──────────
+        if (action === 'setConfig') {
+            try {
+                const { error } = await dbSoc.from('config_sistema').upsert(
+                    { clave: body.clave, valor: String(body.valor || ''), updated_at: new Date().toISOString() },
+                    { onConflict: 'clave' }
+                );
+                if (error) throw error;
+                return _mockOk({ status: 'success' });
+            } catch(e) {
+                return _mockOk({ status: 'error', message: e.message });
+            }
+        }
+
+        // ── setCredencial: guardar PIN personal de responsable en Supabase ──
+        if (action === 'setCredencial') {
+            try {
+                const { error } = await dbSoc.from('responsable_creds').upsert(
+                    { ini: body.ini, area: body.area, pin: String(body.pin || ''), updated_at: new Date().toISOString() },
+                    { onConflict: 'ini,area' }
+                );
+                if (error) throw error;
+                return _mockOk({ status: 'success' });
+            } catch(e) {
+                console.warn('[SB-CREDS] setCredencial error:', e.message);
+                return _origFetch(url, options); // fallback a GAS
+            }
+        }
+
+        // ── deleteCredencial: eliminar PIN personal de responsable ────
+        if (action === 'deleteCredencial') {
+            try {
+                const { error } = await dbSoc.from('responsable_creds')
+                    .delete().eq('ini', body.ini).eq('area', body.area);
+                if (error) throw error;
+                return _mockOk({ status: 'success' });
+            } catch(e) {
+                console.warn('[SB-CREDS] deleteCredencial error:', e.message);
+                return _origFetch(url, options); // fallback a GAS
+            }
+        }
+
         // Cualquier otra acción POST de socios: pasar a GAS sin interceptar
         return _origFetch(url, options);
     }
@@ -483,6 +538,27 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 try { action = new URLSearchParams(s.split('?')[1] || '').get('action') || ''; } catch(e) {}
                 if (action === 'getSocios') return _socGetSociosHandler(s, options);
                 if (action === 'getDatosSocio') return _socGetDatosSocioHandler(s, options);
+                if (action === 'getCredenciales') {
+                    try {
+                        const { data, error } = await dbSoc.from('responsable_creds').select('ini, area, pin');
+                        if (error) throw error;
+                        return _mockOk({ status: 'success', data: data || [] });
+                    } catch(e) {
+                        console.warn('[SB-CREDS] getCredenciales error, fallback GAS:', e.message);
+                        return _origFetch(url, options);
+                    }
+                }
+                if (action === 'getConfig') {
+                    try {
+                        const { data, error } = await dbSoc.from('config_sistema').select('clave, valor');
+                        if (error) throw error;
+                        const cfg = {};
+                        (data || []).forEach(r => { cfg[r.clave] = r.valor; });
+                        return _mockOk({ status: 'success', data: cfg });
+                    } catch(e) {
+                        return _mockOk({ status: 'error', message: e.message });
+                    }
+                }
                 if (action === 'getTotalRemanentes') {
                     try {
                         const [saldosRes, histRes] = await Promise.all([
