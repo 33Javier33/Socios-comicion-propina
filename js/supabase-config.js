@@ -841,6 +841,18 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         totalRetirado: Number(row.total_retirado || 0)
                     }});
                 }
+                // Fallback: cargar el último cierre archivado si no hay estado activo
+                const { data: cierre } = await dbSoc.from('arqueo_cierres')
+                    .select('conteo_actual,movimiento_display,total_retirado')
+                    .order('fecha', { ascending: false }).limit(1).maybeSingle();
+                if (cierre) {
+                    return _mockOk({ status: 'success', data: {
+                        conteoActual: cierre.conteo_actual || {},
+                        movimientoDisplay: cierre.movimiento_display || {},
+                        totalRetirado: Number(cierre.total_retirado || 0),
+                        esArchivado: true
+                    }});
+                }
                 return _mockOk({ status: 'error', message: 'Sin datos guardados' });
             }
 

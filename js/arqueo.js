@@ -556,7 +556,12 @@ async function aq_recuperarDeNube() {
             aq_conteo = json.data.conteoActual || {};
             aq_movi = json.data.movimientoDisplay || {};
             aq_totalRetirado = json.data.totalRetirado || 0;
-            aq_generarCampos(); showToast('✅ Datos cargados desde nube', 'success');
+            aq_generarCampos();
+            if (json.data.esArchivado) {
+                showToast('⚠️ Cargado desde el último cierre archivado (no hay estado activo)', 'warning');
+            } else {
+                showToast('✅ Datos cargados desde nube', 'success');
+            }
         } else {
             showToast('Sin datos guardados en la nube', 'warning');
         }
@@ -564,7 +569,7 @@ async function aq_recuperarDeNube() {
 }
 
 async function aq_guardarEnNube() {
-    if(!confirm('☁️ ¿Subir arqueo y reiniciar?')) return;
+    if(!confirm('☁️ ¿Guardar arqueo en la nube?\n\nEl estado actual queda disponible para cargar desde otro dispositivo.')) return;
     toggleLoader(true, 'Guardando arqueo...');
     const espVal = Math.round(parseInt((document.getElementById('aq-esperadoDisplay').textContent||'0').replace(/[^0-9-]/g,''))) || 0;
     const totalCaja = Math.round(aq_calcTotal());
@@ -572,7 +577,7 @@ async function aq_guardarEnNube() {
     try {
         const resp = await fetch(AQ_URL_POST, { method: 'POST', body: JSON.stringify(payload) });
         const json = await resp.json();
-        if(json.status === 'success') { aq_crearBackupLocal(); showToast('✅ Guardado exitosamente', 'success'); aq_resetear(); }
+        if(json.status === 'success') { aq_crearBackupLocal(); showToast('✅ Guardado en la nube', 'success'); }
         else { showToast('Error al guardar: ' + (json.message || 'desconocido'), 'error'); }
     } catch(e) { showToast('Error al guardar: ' + e.message, 'error'); } finally { toggleLoader(false); }
 }
