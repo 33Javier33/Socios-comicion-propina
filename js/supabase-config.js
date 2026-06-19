@@ -658,6 +658,52 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             }
         }
 
+        // ── getHistorialAnticiposSocio → leer anticipos archivados desde Supabase ──
+        if (action === 'getHistorialAnticiposSocio') {
+            const idSocio = String(body.idSocio || '');
+            const nombreSocio = String(body.nombreSocio || '');
+            try {
+                const { data, error } = await dbSoc.from('anticipos_historial')
+                    .select('socio_id, fecha, monto, estado, responsable, periodo')
+                    .eq('socio_id', idSocio)
+                    .order('fecha', { ascending: false });
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    // Sin datos en Supabase → intentar GAS (historial antiguo en Sheets)
+                    return _origFetch(url, options);
+                }
+
+                // Agrupar por periodo → formato tab = Anticipos_MES_AÑO
+                const grupos = {};
+                data.forEach(r => {
+                    // periodo viene como CIERRE_JUNIO_2026 → tab = Anticipos_JUNIO_2026
+                    const tab = (r.periodo || 'SIN_PERIODO').replace(/^CIERRE_/, 'Anticipos_');
+                    if (!grupos[tab]) grupos[tab] = [];
+                    grupos[tab].push({
+                        tab,
+                        idSocio: r.socio_id,
+                        nombre: nombreSocio,
+                        fecha: r.fecha || '',
+                        monto: Number(r.monto || 0),
+                        estado: r.estado || '',
+                        responsable: r.responsable || '',
+                        areaResponsable: ''
+                    });
+                });
+
+                const resultado = Object.entries(grupos)
+                    .map(([tab, registros]) => ({ tab, registros }))
+                    .sort((a, b) => b.tab.localeCompare(a.tab));
+
+                console.log('[SB] getHistorialAnticiposSocio →', resultado.length, 'períodos para', idSocio);
+                return _mockOk({ status: 'success', data: resultado });
+            } catch(e) {
+                console.warn('[SB] getHistorialAnticiposSocio fallback GAS:', e.message);
+                return _origFetch(url, options);
+            }
+        }
+
         // Cualquier otra acción POST de socios: pasar a GAS sin interceptar
         return _origFetch(url, options);
     }
