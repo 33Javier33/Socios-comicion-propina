@@ -2,6 +2,17 @@
 // AUDITORÍA — Historial de acciones del sistema
 // ============================================================
 
+function _audFmtFecha(fechaStr) {
+    if (!fechaStr) return '';
+    try {
+        return new Date(fechaStr).toLocaleString('es-CL', {
+            timeZone: 'America/Santiago',
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    } catch(e) { return fechaStr.replace('T', ' ').substring(0, 16); }
+}
+
 let auditoriaCache = [];
 let audFiltroUsuario = '';
 let audFiltroAccion  = '';
@@ -128,7 +139,7 @@ function auditoria_renderizar(datos) {
 
     tbody.innerHTML = datos.map(r => {
         const c = auditoria_colorAccion(r.accion);
-        const fechaVis = r.fecha ? r.fecha.replace('T',' ').substring(0,16) : '';
+        const fechaVis = _audFmtFecha(r.fecha);
         const isRecibo = r.accion === 'Imprimir Recibo';
         const idFull   = r.idAfectado || '';
         const ref      = _audRef(r);
@@ -314,7 +325,7 @@ function auditoria_informe(datosOverride, filtrosUsados) {
     const datos = datosOverride || auditoria_filtrarDatos();
     if (!datos.length) return showToast('No hay registros para imprimir', 'error');
 
-    const fmt  = f => f ? f.replace('T',' ').substring(0,16) : '';
+    const fmt  = f => _audFmtFecha(f);
     const fmtM = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
     const hoy  = new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
     const MESES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
