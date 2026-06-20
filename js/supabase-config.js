@@ -910,26 +910,36 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 if (action === 'getSocios') return _socGetSociosHandler(s, options);
                 if (action === 'getDatosSocio') return _socGetDatosSocioHandler(s, options);
                 if (action === 'getDiasPartTime') {
+                    // Fetch Supabase + GAS en paralelo para cubrir TODOS los socios PT
+                    // GAS es fuente de verdad (donde el usuario guarda); Supabase es cache rápida.
+                    // Si Supabase tiene datos para un socio, esos anulan GAS (son más recientes).
                     try {
-                        const { data, error } = await dbSoc.from('dias_pt').select('socio_id, dias');
-                        if (error) throw error;
+                        const [sbResult, gasResult] = await Promise.allSettled([
+                            dbSoc.from('dias_pt').select('socio_id, dias'),
+                            _origFetch(url, options).then(r2 => r2.json())
+                        ]);
                         const r = {};
-                        for (const d of (data || [])) {
-                            if (!r[d.socio_id]) r[d.socio_id] = [];
-                            if (Array.isArray(d.dias)) r[d.socio_id].push(...d.dias);
+                        // Paso 1: GAS como base (cubre todos los socios Part-Time)
+                        const gasData = gasResult.status === 'fulfilled' ? gasResult.value : null;
+                        if (gasData && gasData.status === 'success' && gasData.data) {
+                            Object.entries(gasData.data).forEach(([sid, dias]) => {
+                                r[String(sid)] = Array.isArray(dias) ? [...new Set(dias)].sort() : [];
+                            });
                         }
-                        if (data && data.length > 0) {
-                            // Background: refrescar GAS → upsert a Supabase para mantener sincronizado
-                            _origFetch(url, options).then(r2 => r2.json()).then(gasData => {
-                                if (gasData && gasData.status === 'success' && gasData.data) {
-                                    const rows = Object.entries(gasData.data).map(([sid, dias]) => ({
-                                        socio_id: String(sid), dias: Array.isArray(dias) ? dias : []
-                                    }));
-                                    if (rows.length > 0) dbSoc.from('dias_pt').upsert(rows, { onConflict: 'socio_id' }).catch(() => {});
-                                }
-                            }).catch(() => {});
-                            return _mockOk({ status: 'success', data: r });
+                        // Paso 2: Supabase anula GAS para socios con datos más recientes
+                        const sbData = sbResult.status === 'fulfilled' ? (sbResult.value.data || []) : [];
+                        for (const d of sbData) {
+                            if (Array.isArray(d.dias)) r[d.socio_id] = [...new Set(d.dias)].sort();
                         }
+                        // Background: sincronizar socios GAS que aún no están en Supabase
+                        if (gasData && gasData.status === 'success' && gasData.data) {
+                            const sbIds = new Set(sbData.map(d => d.socio_id));
+                            const nuevoRows = Object.entries(gasData.data)
+                                .filter(([sid]) => !sbIds.has(String(sid)) && Array.isArray(gasData.data[sid]))
+                                .map(([sid, dias]) => ({ socio_id: String(sid), dias: [...new Set(dias)].sort() }));
+                            if (nuevoRows.length > 0) dbSoc.from('dias_pt').upsert(nuevoRows, { onConflict: 'socio_id' }).catch(() => {});
+                        }
+                        return _mockOk({ status: 'success', data: r });
                     } catch(e) { console.warn('[SB-DIAS-PT] error:', e.message); }
                     return _origFetch(url, options);
                 }
