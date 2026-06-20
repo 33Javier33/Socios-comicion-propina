@@ -1062,16 +1062,18 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 return _mockOk({ status: 'error', message: 'Sin datos guardados' });
             }
 
-            // GET getRetirosAnticipos
-            // Tabla retiros_anticipos: firma(TEXT unique), socio_nombre(TEXT), monto(NUMERIC), billetes(JSONB)
+            // GET getRetirosAnticipos — lista para desglose de anticipos
             if (aqAction === 'getRetirosAnticipos') {
-                const { data, error } = await dbSoc.from('retiros_anticipos').select('firma,socio_nombre,monto,billetes');
-                if (error) { console.error('[AQ-SB] getRetirosAnticipos error:', error.message); return _mockOk({ status: 'success', data: {} }); }
-                const mapped = {};
-                (data || []).forEach(r => {
-                    mapped[r.firma] = { nombre: r.socio_nombre, monto: Number(r.monto), billetes: r.billetes || {} };
-                });
-                return _mockOk({ status: 'success', data: mapped });
+                const limit = parseInt(aqBody?.limit || 0) || 200;
+                const offset = parseInt(aqBody?.offset || 0) || 0;
+                let q = dbSoc.from('retiros_anticipos')
+                    .select('firma,socio_nombre,socio_id,monto,billetes,responsable,fecha,created_at')
+                    .order('created_at', { ascending: false })
+                    .range(offset, offset + limit - 1);
+                if (aqBody?.socio_id) q = q.eq('socio_id', aqBody.socio_id);
+                const { data, error } = await q;
+                if (error) { console.error('[AQ-SB] getRetirosAnticipos error:', error.message); return _mockOk({ status: 'success', data: [] }); }
+                return _mockOk({ status: 'success', data: data || [] });
             }
 
             // POST registrarRetiroAnticipo
@@ -1079,9 +1081,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 const { error } = await dbSoc.from('retiros_anticipos').upsert({
                     firma: aqBody.firma,
                     socio_nombre: aqBody.nombre || '',
+                    socio_id: aqBody.socio_id || null,
                     monto: Number(aqBody.monto || 0),
                     billetes: aqBody.billetes || {},
-                    responsable: aqBody.responsable || ''
+                    responsable: aqBody.responsable || '',
+                    fecha: aqBody.fecha || null
                 }, { onConflict: 'firma' });
                 if (error) { console.error('[AQ-SB] registrarRetiro error:', error.message); return _mockOk({ status: 'error', message: error.message }); }
                 _sbAudit('Retiro Anticipo', {

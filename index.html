@@ -74,6 +74,7 @@
         <div class="nav-tabs">
             <button class="nav-btn active" data-tab="registro" onclick="switchTab('registro')">Gestión de Socios</button>
             <button class="nav-btn" data-tab="gestion" onclick="switchTab('gestion')">Anticipos y Ausencias</button>
+            <button class="nav-btn" data-tab="desglose" onclick="switchTab('desglose')">💸 Desglose Anticipos</button>
             <button class="nav-btn" data-tab="recaudacion" onclick="switchTab('recaudacion')">Montos Recaudados</button>
             <button class="nav-btn" data-tab="arqueo" onclick="switchTab('arqueo')">💰 Arqueo de Caja</button>
             <button class="nav-btn" data-tab="notas" onclick="switchTab('notas')">📝 Notas Admin</button>
@@ -569,6 +570,53 @@
                 </div>
                 <div id="mensajeSeleccion" style="display:flex; justify-content:center; align-items:center; color:#7f8c8d; height:300px; background:white; border-radius:12px;">Selecciona un socio para gestionar.</div>
             </div>
+        </div>
+
+        <!-- PESTAÑA: DESGLOSE DE ANTICIPOS -->
+        <div id="tab-desglose" class="tab-content">
+
+            <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                <div>
+                    <div style="color:white;font-weight:800;font-size:1em;">💸 Desglose de Anticipos</div>
+                    <div style="color:#bfdbfe;font-size:0.78em;margin-top:2px;">Historial de anticipos con detalle de billetes entregados</div>
+                </div>
+                <button onclick="dsg_cargarHistorial(true)" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.5);border-radius:8px;padding:8px 16px;font-weight:700;font-size:0.82em;cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                    🔄 Actualizar
+                </button>
+            </div>
+
+            <!-- Filtros -->
+            <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:14px 16px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+                <div style="flex:1;min-width:160px;">
+                    <label style="font-size:0.75em;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:5px;">Buscar socio</label>
+                    <input type="text" id="dsg-filtro-nombre" placeholder="Nombre del socio..." oninput="dsg_filtrar()" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.88em;box-sizing:border-box;">
+                </div>
+                <div style="flex:1;min-width:130px;">
+                    <label style="font-size:0.75em;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:5px;">Desde</label>
+                    <input type="date" id="dsg-filtro-desde" onchange="dsg_filtrar()" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.88em;box-sizing:border-box;">
+                </div>
+                <div style="flex:1;min-width:130px;">
+                    <label style="font-size:0.75em;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:5px;">Hasta</label>
+                    <input type="date" id="dsg-filtro-hasta" onchange="dsg_filtrar()" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.88em;box-sizing:border-box;">
+                </div>
+                <button onclick="dsg_limpiarFiltros()" style="padding:8px 14px;background:white;border:1px solid #d1d5db;border-radius:8px;font-size:0.82em;font-weight:700;color:#6b7280;cursor:pointer;white-space:nowrap;height:36px;">✕ Limpiar</button>
+            </div>
+
+            <!-- Resumen -->
+            <div id="dsg-resumen" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:0.82em;color:#1e40af;font-weight:700;"></div>
+
+            <!-- Lista de registros -->
+            <div id="dsg-lista" style="display:flex;flex-direction:column;gap:10px;">
+                <div style="text-align:center;padding:40px;color:#94a3b8;font-size:0.9em;">Cargando desgloses...</div>
+            </div>
+
+            <!-- Sin datos -->
+            <div id="dsg-vacio" style="display:none;text-align:center;padding:60px 20px;color:#94a3b8;">
+                <div style="font-size:2.5em;margin-bottom:10px;">💸</div>
+                <div style="font-weight:700;font-size:0.95em;margin-bottom:6px;color:#64748b;">Sin registros de desglose</div>
+                <div style="font-size:0.82em;">Los desgloses aparecerán aquí cada vez que se registre un anticipo con detalle de billetes.</div>
+            </div>
+
         </div>
 
         <!-- MODAL CARPETA ARCHIVADA -->
@@ -1519,6 +1567,7 @@
     <script src="js/socios.js"></script>
     <script src="js/puntos.js"></script>
     <script src="js/anticipos.js"></script>
+    <script src="js/desglose-anticipos.js"></script>
     <script src="js/batch-dias-pt.js"></script>
     <script src="js/recaudacion.js"></script>
     <script src="js/arqueo.js"></script>

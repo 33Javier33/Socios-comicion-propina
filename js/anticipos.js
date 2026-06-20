@@ -1589,6 +1589,13 @@ async function confirmarDesgloseAnticipo() {
 
     cancelarDesgloseAnticipo();
 
+    // Generar folio único aquí para usarlo en boucher y en Supabase
+    const _ahoraFolio = new Date();
+    const _padF = n => String(n).padStart(2, '0');
+    const folio = 'ATC-' + _ahoraFolio.getFullYear() + _padF(_ahoraFolio.getMonth()+1) + _padF(_ahoraFolio.getDate())
+        + '-' + _padF(_ahoraFolio.getHours()) + _padF(_ahoraFolio.getMinutes()) + _padF(_ahoraFolio.getSeconds())
+        + '-' + (respIni||'SYS').replace(/[^A-Za-z0-9]/g,'');
+
     // Registrar billetes como retiro en el conteo de caja (arqueo)
     if (typeof aq_aplicarBilletesAnticipo === 'function') aq_aplicarBilletesAnticipo(billetes);
 
@@ -1598,6 +1605,23 @@ async function confirmarDesgloseAnticipo() {
         await callApiSocios('registrarBatchAnticipos', {
             detalleAnticipos: [{ id, nombre, fecha, monto, responsable: respIni, areaResponsable: respArea }]
         });
+        // Guardar desglose de billetes en Supabase (tabla retiros_anticipos)
+        try {
+            await fetch(AQ_URL_POST, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'registrarRetiroAnticipo',
+                    firma: folio,
+                    nombre,
+                    socio_id: id,
+                    monto,
+                    fecha,
+                    billetes,
+                    responsable: respIni + (respArea ? ' ' + respArea : '')
+                })
+            });
+        } catch(e2) { console.warn('[DSG] Error guardando desglose:', e2.message); }
+
         showToast('✅ Anticipo registrado — generando boucher...', 'success');
         globalCacheAllData = null;
         try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
@@ -1610,14 +1634,15 @@ async function confirmarDesgloseAnticipo() {
         if (campoMonto) campoMonto.focus();
         cargarHistorialSocio(id);
         if (typeof aq_fetchAnticipos === 'function') aq_fetchAnticipos(true);
-        generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, billetes });
+        generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, billetes, folio });
+        if (typeof dsg_onNuevoAnticipo === 'function') dsg_onNuevoAnticipo({ firma: folio, socio_nombre: nombre, socio_id: id, monto, fecha, billetes, responsable: respIni + (respArea ? ' ' + respArea : ''), created_at: new Date().toISOString() });
     } catch(e) {
         if (campoMonto) campoMonto.classList.remove('input-ok');
         showToast('Error al registrar anticipo', 'error');
     } finally { toggleLoader(false); }
 }
 
-function generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, billetes }) {
+function generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, billetes, folio: folioParam }) {
     const fmt = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v);
     const ahora = new Date();
     const _pad  = n => String(n).padStart(2, '0');
@@ -1626,10 +1651,10 @@ function generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, b
     const fechaVis = fp[2] + '/' + fp[1] + '/' + fp[0];
     const horaHoy  = _pad(ahora.getHours()) + ':' + _pad(ahora.getMinutes());
 
-    // Folio único: ATC-AAAAMMDD-HHMMSS-INI
-    const folio = 'ATC-' + ahora.getFullYear() + _pad(ahora.getMonth()+1) + _pad(ahora.getDate())
+    // Usar folio recibido (generado antes de guardar) o generar uno nuevo como fallback
+    const folio = folioParam || ('ATC-' + ahora.getFullYear() + _pad(ahora.getMonth()+1) + _pad(ahora.getDate())
                 + '-' + _pad(ahora.getHours()) + _pad(ahora.getMinutes()) + _pad(ahora.getSeconds())
-                + '-' + (respIni||'SYS').replace(/[^A-Za-z0-9]/g,'');
+                + '-' + (respIni||'SYS').replace(/[^A-Za-z0-9]/g,''));
 
     const respVis = respIni + (respArea ? ' / ' + respArea : '');
 

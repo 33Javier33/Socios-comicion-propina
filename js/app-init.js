@@ -97,6 +97,7 @@ function switchTab(tabName) {
     else if(tabName === 'auditoria') { fabRec.style.display = 'none'; aq_detenerSync(); auditoria_cargar(); }
     else if(tabName === 'carpetas') { fabRec.style.display = 'none'; aq_detenerSync(); carpetas_renderArchivero(); }
     else if(tabName === 'materiales') { fabRec.style.display = 'none'; document.getElementById('fabMatAgregar').style.display = 'flex'; aq_detenerSync(); mat_cargar(); }
+    else if(tabName === 'desglose') { fabRec.style.display = 'none'; aq_detenerSync(); if(typeof dsg_cargarHistorial === 'function' && _dsgRegistros.length === 0) dsg_cargarHistorial(); }
 }
 
 // ── Sidebar + drag-to-reorder ────────────────────────────────
