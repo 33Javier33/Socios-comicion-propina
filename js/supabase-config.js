@@ -184,6 +184,10 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         }
     } catch(e) {}
 
+    // ── Caché de sesión para días PT desde GAS ──
+    // Evita llamar GAS en cada getDiasPartTime; se llena la primera vez y persiste en memoria.
+    let _diasPtGasCache = null;
+
     // ── Caché rápida de saldos anteriores (tabla pequeña, 67 filas) ──
     // Pre-carga en background; getDatosSocio lo usa para evitar un roundtrip por socio.
     let _saldosCache = null; // { socioId: monto }
@@ -924,39 +928,37 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 if (action === 'getSocios') return _socGetSociosHandler(s, options);
                 if (action === 'getDatosSocio') return _socGetDatosSocioHandler(s, options);
                 if (action === 'getDiasPartTime') {
-                    // Fetch Supabase + GAS en paralelo para cubrir TODOS los socios PT
-                    // GAS es fuente de verdad (donde el usuario guarda); Supabase es cache rápida.
-                    // Si Supabase tiene datos para un socio, esos anulan GAS (son más recientes).
-                    try {
-                        const [sbResult, gasResult] = await Promise.allSettled([
-                            dbSoc.from('dias_pt').select('socio_id, dias'),
-                            _origFetch(url, options).then(r2 => r2.json())
-                        ]);
-                        const r = {};
-                        // Paso 1: GAS como base (cubre todos los socios Part-Time)
-                        const gasData = gasResult.status === 'fulfilled' ? gasResult.value : null;
-                        if (gasData && gasData.status === 'success' && gasData.data) {
-                            Object.entries(gasData.data).forEach(([sid, dias]) => {
-                                r[String(sid)] = Array.isArray(dias) ? [...new Set(dias)].sort() : [];
-                            });
-                        }
-                        // Paso 2: Supabase anula GAS para socios con datos más recientes
-                        const sbData = sbResult.status === 'fulfilled' ? (sbResult.value.data || []) : [];
-                        for (const d of sbData) {
-                            if (Array.isArray(d.dias)) r[d.socio_id] = [...new Set(d.dias)].sort();
-                        }
-                        // Background: INSERT socios GAS con días reales que no están en Supabase
-                        // (no se sincronizan socios con días vacíos para no pisar resets)
-                        if (gasData && gasData.status === 'success' && gasData.data) {
-                            const sbIds = new Set(sbData.map(d => d.socio_id));
-                            const nuevoRows = Object.entries(gasData.data)
-                                .filter(([sid, dias]) => !sbIds.has(String(sid)) && Array.isArray(dias) && dias.length > 0)
-                                .map(([sid, dias]) => ({ socio_id: String(sid), dias: [...new Set(dias)].sort() }));
-                            if (nuevoRows.length > 0) dbSoc.from('dias_pt').insert(nuevoRows).catch(() => {});
-                        }
-                        return _mockOk({ status: 'success', data: r });
-                    } catch(e) { console.warn('[SB-DIAS-PT] error:', e.message); }
-                    return _origFetch(url, options);
+                    // Supabase responde inmediatamente (no bloquea carga post-login).
+                    // GAS solo en background la primera vez de la sesión: si hay socios PT
+                    // faltantes en Supabase, los agrega y dispara un refresh único.
+                    const { data: sbData } = await dbSoc.from('dias_pt').select('socio_id, dias');
+                    const r = {};
+                    const sbIds = new Set();
+                    for (const d of (sbData || [])) {
+                        if (Array.isArray(d.dias)) { r[d.socio_id] = [...new Set(d.dias)].sort(); sbIds.add(d.socio_id); }
+                    }
+                    // Completar con cache de sesión GAS (socios no escritos aún en Supabase)
+                    if (_diasPtGasCache) {
+                        Object.entries(_diasPtGasCache).forEach(([sid, dias]) => {
+                            if (!sbIds.has(sid) && Array.isArray(dias) && dias.length > 0) r[sid] = dias;
+                        });
+                    } else {
+                        // Primera carga: GAS en background, sync a Supabase y refresh si hay faltantes
+                        _origFetch(url, options).then(r2 => r2.json()).then(async gasData => {
+                            if (!gasData || gasData.status !== 'success' || !gasData.data) return;
+                            _diasPtGasCache = gasData.data;
+                            // Insertar en Supabase los que faltan (con días reales, no vacíos)
+                            const faltantes = Object.entries(gasData.data)
+                                .filter(([sid, dias]) => !sbIds.has(String(sid)) && Array.isArray(dias) && dias.length > 0);
+                            if (faltantes.length > 0) {
+                                const rows = faltantes.map(([sid, dias]) => ({ socio_id: sid, dias: [...new Set(dias)].sort() }));
+                                dbSoc.from('dias_pt').insert(rows).catch(() => {});
+                                // Refrescar socios para que el admin vea los días PT correctos
+                                if (typeof actualizarSociosSilencioso === 'function') actualizarSociosSilencioso();
+                            }
+                        }).catch(() => {});
+                    }
+                    return _mockOk({ status: 'success', data: r });
                 }
                 if (action === 'getCredenciales') {
                     try {
@@ -995,52 +997,49 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     } catch(e) { return _mockOk({ status: 'success', total: 0, ultimaFecha: null, periodoAnterior: null }); }
                 }
                 if (action === 'getAuditoria') {
+                    // Supabase responde de inmediato con registros recientes.
+                    // Registros anteriores al CUTOFF se cargan desde GAS en background
+                    // y se entregan en un segundo render (typeof renderAuditoria).
+                    const CUTOFF = '2026-06-18';
+                    let sbNorm = [];
                     try {
-                        const [sbRes, gasRaw] = await Promise.allSettled([
-                            dbSoc.from('auditoria')
-                                .select('id, usuario, accion, area, folio, snapshot_antes, snapshot_despues, datos_extra, created_at')
-                                .order('created_at', { ascending: false })
-                                .limit(1000),
-                            _origFetch(url, options).then(r => r.json())
-                        ]);
-                        const sbRows = (sbRes.status === 'fulfilled' && !sbRes.value.error)
-                            ? (sbRes.value.data || []) : [];
-                        const sbNorm = sbRows.map(r => ({
-                            fecha: r.created_at,
-                            usuario: r.usuario || '',
-                            accion: r.accion || '',
-                            detalle: (r.datos_extra && r.datos_extra.detalle) || '',
-                            idAfectado: (r.datos_extra && r.datos_extra.id_afectado) || r.folio || '',
-                            _fuente: 'supabase',
-                            _extra: r.datos_extra || {},
-                            _antes: r.snapshot_antes,
-                            _despues: r.snapshot_despues,
-                            area: r.area || ''
-                        }));
-                        // Solo traer de GAS registros anteriores al inicio de auditoría en Supabase
-                        const CUTOFF = '2026-06-18';
-                        const gasData = (gasRaw.status === 'fulfilled' && gasRaw.value?.status === 'success')
-                            ? (gasRaw.value.data || []) : [];
-                        const sbFolios = new Set(sbNorm.map(r => r.idAfectado).filter(Boolean));
-                        const gasNorm = gasData
-                            .filter(r => (r.fecha || '').substring(0, 10) < CUTOFF)
-                            .map(r => ({
-                                fecha: r.fecha,
+                        const { data: sbRows, error } = await dbSoc.from('auditoria')
+                            .select('id, usuario, accion, area, folio, snapshot_antes, snapshot_despues, datos_extra, created_at')
+                            .order('created_at', { ascending: false })
+                            .limit(1000);
+                        if (!error) {
+                            sbNorm = (sbRows || []).map(r => ({
+                                fecha: r.created_at,
                                 usuario: r.usuario || '',
                                 accion: r.accion || '',
-                                detalle: r.detalle || '',
-                                idAfectado: r.idAfectado || '',
-                                _fuente: 'sheets'
-                            }))
+                                detalle: (r.datos_extra && r.datos_extra.detalle) || '',
+                                idAfectado: (r.datos_extra && r.datos_extra.id_afectado) || r.folio || '',
+                                _fuente: 'supabase',
+                                _extra: r.datos_extra || {},
+                                _antes: r.snapshot_antes,
+                                _despues: r.snapshot_despues,
+                                area: r.area || ''
+                            }));
+                        }
+                    } catch(e) { console.warn('[SB-AUDIT] Supabase error:', e.message); }
+                    // GAS en background: agrega registros históricos pre-cutoff si los hay
+                    _origFetch(url, options).then(r => r.json()).then(gasRaw => {
+                        if (!gasRaw || gasRaw.status !== 'success') return;
+                        const sbFolios = new Set(sbNorm.map(r => r.idAfectado).filter(Boolean));
+                        const gasNorm = (gasRaw.data || [])
+                            .filter(r => (r.fecha || '').substring(0, 10) < CUTOFF)
+                            .map(r => ({ fecha: r.fecha, usuario: r.usuario || '', accion: r.accion || '', detalle: r.detalle || '', idAfectado: r.idAfectado || '', _fuente: 'sheets' }))
                             .filter(r => !r.idAfectado || !sbFolios.has(r.idAfectado));
-                        const merged = [...sbNorm, ...gasNorm]
-                            .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-                        console.log('[SB-AUDIT] getAuditoria →', sbNorm.length, 'Supabase +', gasNorm.length, 'Sheets');
-                        return _mockOk({ status: 'success', data: merged });
-                    } catch(e) {
-                        console.error('[SB-AUDIT] getAuditoria error:', e.message);
-                    }
-                    return _origFetch(url, options);
+                        if (gasNorm.length > 0) {
+                            const merged = [...sbNorm, ...gasNorm].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                            // Actualizar el cache global de auditoría y re-renderizar si está abierto
+                            if (typeof auditoriaCache !== 'undefined') auditoriaCache = merged;
+                            if (typeof auditoria_filtrarDatos === 'function' && typeof auditoria_renderizar === 'function') {
+                                auditoria_renderizar(auditoria_filtrarDatos());
+                            }
+                        }
+                    }).catch(() => {});
+                    return _mockOk({ status: 'success', data: sbNorm });
                 }
                 return _origFetch(url, options);
             }
