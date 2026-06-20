@@ -697,23 +697,35 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         if (action === 'guardarBatchDiasPartTime' || action === 'guardarDiasPartTime') {
             const gasRes = await _origFetch(url, options);
             if (action === 'guardarDiasPartTime') {
-                // Sincrónico: evita race condition donde getDiasPartTime lee Supabase
-                // antes de que se actualice y sobreescribe con datos viejos.
+                // Sincrónico + DELETE→INSERT: elimina filas viejas (incluyendo duplicados)
+                // antes de insertar el nuevo estado. Funciona sin restricción UNIQUE.
                 try {
-                    await dbSoc.from('dias_pt').upsert({ socio_id: String(body.id), dias: body.dias || [] }, { onConflict: 'socio_id' });
-                } catch(e) { console.warn('[SB-DIAS-PT] upsert error:', e.message); }
+                    await dbSoc.from('dias_pt').delete().eq('socio_id', String(body.id));
+                    const diasToSave = body.dias || [];
+                    if (diasToSave.length > 0) {
+                        await dbSoc.from('dias_pt').insert({ socio_id: String(body.id), dias: diasToSave });
+                    }
+                } catch(e) { console.warn('[SB-DIAS-PT] delete/insert error:', e.message); }
             } else {
-                // guardarBatchDiasPartTime: fire-and-forget (puede ser muchos socios)
+                // guardarBatchDiasPartTime: fire-and-forget con DELETE→INSERT por socio
                 Promise.resolve().then(async () => {
                     try {
                         const socioItems = body.socios || [];
                         const diasNuevos = body.dias || [];
                         for (const s of socioItems) {
-                            const { data: ex } = await dbSoc.from('dias_pt').select('dias').eq('socio_id', String(s.id)).maybeSingle();
-                            const merged = [...new Set([...((ex && Array.isArray(ex.dias)) ? ex.dias : []), ...diasNuevos])].sort();
-                            await dbSoc.from('dias_pt').upsert({ socio_id: String(s.id), dias: merged }, { onConflict: 'socio_id' });
+                            // Leer filas existentes (puede haber duplicados → reduce en vez de maybeSingle)
+                            const { data: exRows } = await dbSoc.from('dias_pt').select('dias').eq('socio_id', String(s.id));
+                            const diasExistentes = (exRows || []).reduce((acc, row) => {
+                                if (Array.isArray(row.dias)) acc.push(...row.dias);
+                                return acc;
+                            }, []);
+                            const merged = [...new Set([...diasExistentes, ...diasNuevos])].sort();
+                            await dbSoc.from('dias_pt').delete().eq('socio_id', String(s.id));
+                            if (merged.length > 0) {
+                                await dbSoc.from('dias_pt').insert({ socio_id: String(s.id), dias: merged });
+                            }
                         }
-                    } catch(e) { console.warn('[SB-DIAS-PT] upsert error:', e.message); }
+                    } catch(e) { console.warn('[SB-DIAS-PT] batch error:', e.message); }
                 });
             }
             return gasRes;
@@ -933,13 +945,14 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         for (const d of sbData) {
                             if (Array.isArray(d.dias)) r[d.socio_id] = [...new Set(d.dias)].sort();
                         }
-                        // Background: sincronizar socios GAS que aún no están en Supabase
+                        // Background: INSERT socios GAS con días reales que no están en Supabase
+                        // (no se sincronizan socios con días vacíos para no pisar resets)
                         if (gasData && gasData.status === 'success' && gasData.data) {
                             const sbIds = new Set(sbData.map(d => d.socio_id));
                             const nuevoRows = Object.entries(gasData.data)
-                                .filter(([sid]) => !sbIds.has(String(sid)) && Array.isArray(gasData.data[sid]))
+                                .filter(([sid, dias]) => !sbIds.has(String(sid)) && Array.isArray(dias) && dias.length > 0)
                                 .map(([sid, dias]) => ({ socio_id: String(sid), dias: [...new Set(dias)].sort() }));
-                            if (nuevoRows.length > 0) dbSoc.from('dias_pt').upsert(nuevoRows, { onConflict: 'socio_id' }).catch(() => {});
+                            if (nuevoRows.length > 0) dbSoc.from('dias_pt').insert(nuevoRows).catch(() => {});
                         }
                         return _mockOk({ status: 'success', data: r });
                     } catch(e) { console.warn('[SB-DIAS-PT] error:', e.message); }
