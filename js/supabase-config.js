@@ -693,14 +693,19 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             return _origFetch(url, options);
         }
 
-        // ── guardarBatchDiasPartTime / guardarDiasPartTime → GAS primero + Supabase en background ──
+        // ── guardarBatchDiasPartTime / guardarDiasPartTime → GAS primero + Supabase ──
         if (action === 'guardarBatchDiasPartTime' || action === 'guardarDiasPartTime') {
             const gasRes = await _origFetch(url, options);
-            // Actualizar dias_pt en Supabase en segundo plano (fire-and-forget)
-            Promise.resolve().then(async () => {
+            if (action === 'guardarDiasPartTime') {
+                // Sincrónico: evita race condition donde getDiasPartTime lee Supabase
+                // antes de que se actualice y sobreescribe con datos viejos.
                 try {
-                    if (action === 'guardarBatchDiasPartTime') {
-                        // { socios: [{id, nombre}], dias: [...fechas] }
+                    await dbSoc.from('dias_pt').upsert({ socio_id: String(body.id), dias: body.dias || [] }, { onConflict: 'socio_id' });
+                } catch(e) { console.warn('[SB-DIAS-PT] upsert error:', e.message); }
+            } else {
+                // guardarBatchDiasPartTime: fire-and-forget (puede ser muchos socios)
+                Promise.resolve().then(async () => {
+                    try {
                         const socioItems = body.socios || [];
                         const diasNuevos = body.dias || [];
                         for (const s of socioItems) {
@@ -708,12 +713,9 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                             const merged = [...new Set([...((ex && Array.isArray(ex.dias)) ? ex.dias : []), ...diasNuevos])].sort();
                             await dbSoc.from('dias_pt').upsert({ socio_id: String(s.id), dias: merged }, { onConflict: 'socio_id' });
                         }
-                    } else {
-                        // guardarDiasPartTime: { id, dias: [] } — reiniciar días de un socio
-                        await dbSoc.from('dias_pt').upsert({ socio_id: String(body.id), dias: body.dias || [] }, { onConflict: 'socio_id' });
-                    }
-                } catch(e) { console.warn('[SB-DIAS-PT] upsert error:', e.message); }
-            });
+                    } catch(e) { console.warn('[SB-DIAS-PT] upsert error:', e.message); }
+                });
+            }
             return gasRes;
         }
 
