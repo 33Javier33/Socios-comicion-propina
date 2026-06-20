@@ -1033,11 +1033,13 @@ async function cerrarMesSocio() {
     toggleLoader(true, 'Cerrando mes...');
     try {
         await callApiSocios('registrarSaldoAnterior', { id, nombre, monto: remanente });
-        cierresMes_registrar(id, nombre, aPagar, remanente);
+        // Preguntar si cobró en este momento (antes de imprimir)
+        const cobraAhora = confirm(`¿${nombre} está cobrando ahora?\n\n✅ Aceptar → 💵 Cobrado\n❌ Cancelar → 📩 Queda en sobre`);
+        cierresMes_registrar(id, nombre, aPagar, remanente, cobraAhora ? 'cobrado' : 'en_sobre');
         cierresMes_render();
         document.getElementById('gestionSocioSaldoAnt').value = remanente;
         cargarHistorialSocio(id);
-        showToast(`✅ Mes cerrado. A Pagar: ${fmtM(aPagar)} · Remanente: ${signo}${fmtM(remanente)}`, 'success');
+        showToast(`✅ Mes cerrado · ${cobraAhora ? '💵 Cobrado' : '📩 En sobre'} · A Pagar: ${fmtM(aPagar)} · Rem: ${signo}${fmtM(remanente)}`, 'success');
         await imprimirReciboSocio();
     } catch(e) {
         showToast('Error al cerrar mes', 'error');
@@ -1057,12 +1059,21 @@ function cierresMes_obtener() {
     try { return JSON.parse(localStorage.getItem(cierresMes_getClave()) || '[]'); } catch { return []; }
 }
 
-function cierresMes_registrar(id, nombre, aPagar, remanente) {
+function cierresMes_registrar(id, nombre, aPagar, remanente, estadoCobro = 'en_sobre') {
     const lista = cierresMes_obtener();
     const idx = lista.findIndex(c => c.id === id);
-    const entry = { id, nombre, aPagar, remanente, fechaCierre: new Date().toISOString() };
+    const entry = { id, nombre, aPagar, remanente, fechaCierre: new Date().toISOString(), estadoCobro };
     if (idx >= 0) lista[idx] = entry; else lista.push(entry);
     localStorage.setItem(cierresMes_getClave(), JSON.stringify(lista));
+}
+
+function cierresMes_actualizarEstado(id, estadoCobro) {
+    const lista = cierresMes_obtener();
+    const idx = lista.findIndex(c => c.id === id);
+    if (idx < 0) return;
+    lista[idx].estadoCobro = estadoCobro;
+    localStorage.setItem(cierresMes_getClave(), JSON.stringify(lista));
+    cierresMes_render();
 }
 
 function toggleCierreMes() {
@@ -1086,15 +1097,17 @@ function cierresMes_render(refocusBuscador = false) {
     const total = cacheSocios.length;
     const nCerrados = cacheSocios.filter(s => cerradosIds.has(s.id)).length;
     const nPendientes = total - nCerrados;
+    const nCobrados = cerrados.filter(c => c.estadoCobro === 'cobrado').length;
+    const nEnSobre = cerrados.filter(c => c.estadoCobro !== 'cobrado').length;
     const allClosed = nCerrados === total && total > 0;
 
-    badge.textContent = `${nCerrados}/${total} cerrados`;
+    badge.textContent = `${nCerrados}/${total} · 💵${nCobrados} 📩${nEnSobre}`;
     badge.style.background = allClosed ? '#16a34a' : (nCerrados > 0 ? '#f59e0b' : '#dc2626');
 
     if (!body || body.style.display === 'none') return;
 
     const fmtM = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
-    let pendientesHtml = '', cerradosHtml = '';
+    let pendientesHtml = '', sobreHtml = '', cobradosHtml = '';
     const filtro = (_cierreMesFiltro || '').toLowerCase().trim();
 
     const sociosFiltrados = filtro
@@ -1103,20 +1116,7 @@ function cierresMes_render(refocusBuscador = false) {
 
     sociosFiltrados.forEach(s => {
         const c = cerrados.find(x => x.id === s.id);
-        if (c) {
-            const fecha = new Date(c.fechaCierre).toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-            cerradosHtml += `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid #f0fdf4;background:white;">
-                <span style="font-size:1.05em;">✅</span>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-weight:700;font-size:0.83em;color:#15803d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.nombre} ${s.apellido}</div>
-                    <div style="font-size:0.7em;color:#64748b;">${s.area} · ${fecha}</div>
-                </div>
-                <div style="text-align:right;flex-shrink:0;">
-                    <div style="font-weight:800;color:#15803d;font-size:0.82em;">${fmtM(c.aPagar)}</div>
-                    <div style="color:#64748b;font-size:0.7em;">rem: ${fmtM(c.remanente)}</div>
-                </div>
-            </div>`;
-        } else {
+        if (!c) {
             pendientesHtml += `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid #fef2f2;background:white;">
                 <span style="font-size:1.05em;">⏳</span>
                 <div style="flex:1;min-width:0;">
@@ -1125,26 +1125,50 @@ function cierresMes_render(refocusBuscador = false) {
                 </div>
                 <button onclick="cierresMes_ejecutarCierreSocio('${s.id}')" style="background:#dc2626;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:0.75em;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🔒 Cerrar</button>
             </div>`;
+        } else {
+            const fecha = new Date(c.fechaCierre).toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+            const esCobrado = c.estadoCobro === 'cobrado';
+            const row = `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid ${esCobrado?'#f0fdf4':'#fef9c3'};background:white;">
+                <span style="font-size:1.05em;">${esCobrado?'💵':'📩'}</span>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:700;font-size:0.83em;color:${esCobrado?'#15803d':'#92400e'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.nombre} ${s.apellido}</div>
+                    <div style="font-size:0.7em;color:#64748b;">${s.area} · ${fecha}</div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;margin-right:6px;">
+                    <div style="font-weight:800;color:${esCobrado?'#15803d':'#92400e'};font-size:0.82em;">${fmtM(c.aPagar)}</div>
+                    <div style="color:#64748b;font-size:0.7em;">rem: ${fmtM(c.remanente)}</div>
+                </div>
+                <button onclick="cierresMes_actualizarEstado('${s.id}','${esCobrado?'en_sobre':'cobrado'}')"
+                    title="${esCobrado?'Pasar a en sobre':'Marcar como cobrado'}"
+                    style="background:${esCobrado?'#fef3c7':'#dcfce7'};color:${esCobrado?'#92400e':'#15803d'};border:1px solid ${esCobrado?'#fde68a':'#bbf7d0'};border-radius:6px;padding:4px 8px;font-size:0.72em;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+                    ${esCobrado?'📩':'💵'}
+                </button>
+            </div>`;
+            if (esCobrado) cobradosHtml += row; else sobreHtml += row;
         }
     });
 
-    // Contar pendientes/cerrados dentro del filtro actual
-    const nCerradosFiltro = sociosFiltrados.filter(s => cerradosIds.has(s.id)).length;
-    const nPendientesFiltro = sociosFiltrados.length - nCerradosFiltro;
+    const nPendientesFiltro = sociosFiltrados.filter(s => !cerradosIds.has(s.id)).length;
+    const nSobreFiltro   = sociosFiltrados.filter(s => { const c = cerrados.find(x=>x.id===s.id); return c && c.estadoCobro !== 'cobrado'; }).length;
+    const nCobradosFiltro = sociosFiltrados.filter(s => { const c = cerrados.find(x=>x.id===s.id); return c && c.estadoCobro === 'cobrado'; }).length;
 
     body.innerHTML = `
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;text-align:center;">
-                <div style="font-size:1.6em;font-weight:900;color:#16a34a;">${nCerrados}</div>
-                <div style="font-size:0.7em;text-transform:uppercase;font-weight:700;color:#15803d;letter-spacing:0.04em;">Cerrados</div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:60px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 10px;text-align:center;">
+                <div style="font-size:1.5em;font-weight:900;color:#dc2626;">${nPendientes}</div>
+                <div style="font-size:0.68em;text-transform:uppercase;font-weight:700;color:#991b1b;letter-spacing:0.04em;">⏳ Pendiente</div>
             </div>
-            <div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;text-align:center;">
-                <div style="font-size:1.6em;font-weight:900;color:#dc2626;">${nPendientes}</div>
-                <div style="font-size:0.7em;text-transform:uppercase;font-weight:700;color:#991b1b;letter-spacing:0.04em;">Pendientes</div>
+            <div style="flex:1;min-width:60px;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;text-align:center;">
+                <div style="font-size:1.5em;font-weight:900;color:#b45309;">${nEnSobre}</div>
+                <div style="font-size:0.68em;text-transform:uppercase;font-weight:700;color:#92400e;letter-spacing:0.04em;">📩 En Sobre</div>
             </div>
-            <div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;text-align:center;">
-                <div style="font-size:1.6em;font-weight:900;color:#1d4ed8;">${total}</div>
-                <div style="font-size:0.7em;text-transform:uppercase;font-weight:700;color:#1e40af;letter-spacing:0.04em;">Total</div>
+            <div style="flex:1;min-width:60px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 10px;text-align:center;">
+                <div style="font-size:1.5em;font-weight:900;color:#16a34a;">${nCobrados}</div>
+                <div style="font-size:0.68em;text-transform:uppercase;font-weight:700;color:#15803d;letter-spacing:0.04em;">💵 Cobrado</div>
+            </div>
+            <div style="flex:1;min-width:60px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;text-align:center;">
+                <div style="font-size:1.5em;font-weight:900;color:#1d4ed8;">${total}</div>
+                <div style="font-size:0.68em;text-transform:uppercase;font-weight:700;color:#1e40af;letter-spacing:0.04em;">Total</div>
             </div>
         </div>
         <div style="position:relative;margin-bottom:12px;">
@@ -1153,18 +1177,15 @@ function cierresMes_render(refocusBuscador = false) {
                 style="width:100%;box-sizing:border-box;padding:8px 32px 8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.87em;outline:none;">
             ${_cierreMesFiltro ? `<button onclick="_cierreMesFiltro='';cierresMes_render(true);" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1em;line-height:1;">✕</button>` : ''}
         </div>
-        ${!filtro ? (allClosed
-            ? `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:linear-gradient(135deg,#8e44ad,#6c3483);color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">🏁 Todos cobrados — Archivar Anticipos y Empezar Nuevo Mes</button>`
-            : `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:linear-gradient(135deg,#d97706,#b45309);color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">📦 Archivar todos los anticipos y empezar nuevo mes${nPendientes > 0 ? ' ⚠️ ('+nPendientes+' pendientes)' : ''}</button>`
-        ) : ''}
-        ${!pendientesHtml && !cerradosHtml && filtro ? `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.85em;">Sin resultados para "${_cierreMesFiltro}"</div>` : ''}
+        ${!filtro ? `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:${allClosed?'linear-gradient(135deg,#8e44ad,#6c3483)':'linear-gradient(135deg,#d97706,#b45309)'};color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">${allClosed?'🏁 Todos cerrados — Archivar y Empezar Nuevo Mes':'📦 Archivar anticipos y empezar nuevo mes'}${nPendientes > 0 ? ' ⚠️ ('+nPendientes+' pendientes)' : ''}</button>` : ''}
+        ${!pendientesHtml && !sobreHtml && !cobradosHtml && filtro ? `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.85em;">Sin resultados para "${_cierreMesFiltro}"</div>` : ''}
         ${pendientesHtml ? `<div style="font-weight:700;font-size:0.77em;color:#991b1b;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">⏳ Pendientes (${nPendientesFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #fecaca;margin-bottom:12px;">${pendientesHtml}</div>` : ''}
-        ${cerradosHtml ? `<div style="font-weight:700;font-size:0.77em;color:#15803d;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">✅ Cerrados (${nCerradosFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #bbf7d0;">${cerradosHtml}</div>` : ''}
+        ${sobreHtml ? `<div style="font-weight:700;font-size:0.77em;color:#92400e;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">📩 En Sobre (${nSobreFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #fde68a;margin-bottom:12px;">${sobreHtml}</div>` : ''}
+        ${cobradosHtml ? `<div style="font-weight:700;font-size:0.77em;color:#15803d;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">💵 Cobrados (${nCobradosFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #bbf7d0;margin-bottom:12px;">${cobradosHtml}</div>` : ''}
         <div style="margin-top:10px;text-align:right;">
             <button onclick="if(confirm('¿Reiniciar el seguimiento local? Los datos en Google Sheets no se borran.')){localStorage.removeItem(cierresMes_getClave());cierresMes_render();}" style="background:none;border:1px solid #cbd5e1;border-radius:6px;padding:3px 10px;font-size:0.73em;color:#64748b;cursor:pointer;">↺ Reiniciar seguimiento</button>
         </div>`;
 
-    // Restaurar foco tras reconstruir innerHTML (solo cuando viene del buscador)
     if (refocusBuscador) {
         requestAnimationFrame(() => {
             const inp = document.getElementById('cierreMesBuscador');
@@ -1213,9 +1234,10 @@ async function cierresMes_ejecutarCierreSocio(socioId) {
         }
 
         await callApiSocios('registrarSaldoAnterior', { id: socio.id, nombre: `${socio.nombre} ${socio.apellido}`, monto: remanente });
-        cierresMes_registrar(socio.id, `${socio.nombre} ${socio.apellido}`, aPagar, remanente);
+        const cobraAhora = confirm(`¿${socio.nombre} está cobrando ahora?\n\n✅ Aceptar → 💵 Cobrado\n❌ Cancelar → 📩 Queda en sobre`);
+        cierresMes_registrar(socio.id, `${socio.nombre} ${socio.apellido}`, aPagar, remanente, cobraAhora ? 'cobrado' : 'en_sobre');
         cierresMes_render();
-        showToast(`✅ ${socio.nombre} — A Pagar: ${fmtM(aPagar)} · Remanente: ${fmtM(remanente)}`, 'success');
+        showToast(`✅ ${socio.nombre} — ${cobraAhora ? '💵 Cobrado' : '📩 En sobre'} · A Pagar: ${fmtM(aPagar)} · Rem: ${fmtM(remanente)}`, 'success');
         const idActivo = document.getElementById('gestionSocioId').value;
         if (idActivo === socio.id) { document.getElementById('gestionSocioSaldoAnt').value = remanente; cargarHistorialSocio(socio.id); }
     } catch(e) {
