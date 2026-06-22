@@ -85,6 +85,8 @@ async function actualizarSociosSilencioso() {
             verificarEscalamientos();
             setTimeout(notificarEscalamientosMes, 1500);
         } else { showToast('Error: ' + res.message, 'error'); }
+        // Actualizar tarjeta Total Puntos PT con los días y socios ya cargados
+        if (typeof recalcularTotalPT === 'function') recalcularTotalPT();
     } catch (e) { console.error(e); showToast('Error de conexión', 'error'); } finally { toggleLoader(false); }
 }
 

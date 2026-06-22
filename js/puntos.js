@@ -85,6 +85,7 @@ async function guardarDiasTrabajados() {
     try {
         await callApiSocios('guardarDiasPartTime', { id, nombre, dias: selectedDaysPT });
         globalDiasPT[id] = [...selectedDaysPT];
+        if (typeof recalcularTotalPT === 'function') recalcularTotalPT();
         showToast('Días actualizados', 'success');
         cerrarModalCalendario();
         cargarHistorialSocio(id);

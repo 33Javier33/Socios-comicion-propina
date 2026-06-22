@@ -171,6 +171,23 @@ function procesarDatosRecaudacion(datos, silent) {
         });
     }
     const elTP = document.getElementById('recTotalPuntos'); if(elTP) elTP.innerText = formatearMoneda(sumaPuntosGlobal);
+    recalcularTotalPT();
+}
+
+// Suma el valor ganado por todos los socios Part-Time según sus días batch y el divisor.
+// Fórmula por socio: Σ (globalMapaPuntosDia[día] × socio.puntos) para cada día trabajado.
+function recalcularTotalPT() {
+    const el = document.getElementById('recTotalPuntosPT');
+    if (!el) return;
+    if (!globalMapaPuntosDia || !globalDiasPT || !cacheSocios || !cacheSocios.length) { el.innerText = '$0'; return; }
+    let total = 0;
+    cacheSocios.filter(s => s.contrato === 'Part-Time').forEach(s => {
+        (globalDiasPT[s.id] || []).forEach(d => {
+            const vp = globalMapaPuntosDia[d];
+            if (vp) total += vp * (s.puntos || 1);
+        });
+    });
+    el.innerText = formatearMoneda(total);
 }
 
 function rec_postRec(data) {

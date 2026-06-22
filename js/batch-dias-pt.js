@@ -260,6 +260,7 @@ async function batchPT_guardarDias() {
                 const existentes = globalDiasPT[id] || [];
                 globalDiasPT[id] = [...new Set([...existentes, ...diasGuardados])].sort();
             });
+            if (typeof recalcularTotalPT === 'function') recalcularTotalPT();
             batchPTSociosSeleccionados = [];
             batchPTDiasSeleccionados = [];
             if (idActivo && sociosGuardados.includes(idActivo)) {
@@ -350,6 +351,7 @@ async function ejecutarReiniciarDiasPT() {
             errores++;
         }
     }
+    if (typeof recalcularTotalPT === 'function') recalcularTotalPT();
 
     toggleLoader(false);
     if (errores === 0) {
