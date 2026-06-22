@@ -188,6 +188,18 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     // Evita llamar GAS en cada getDiasPartTime; se llena la primera vez y persiste en memoria.
     let _diasPtGasCache = null;
 
+    // Período actual para la columna NOT NULL `periodo` de dias_pt.
+    // La lectura no filtra por período; sirve solo para satisfacer la restricción y trazabilidad.
+    function _periodoActualDiasPt() {
+        try {
+            if (typeof aq_calcularPeriodoActual === 'function') {
+                const { inicio, fin } = aq_calcularPeriodoActual();
+                if (inicio && fin) return `${inicio}_${fin}`;
+            }
+        } catch(e) {}
+        return '';
+    }
+
     // ── Caché rápida de saldos anteriores (tabla pequeña, 67 filas) ──
     // Pre-carga en background; getDatosSocio lo usa para evitar un roundtrip por socio.
     let _saldosCache = null; // { socioId: monto }
@@ -700,34 +712,31 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         // ── guardarBatchDiasPartTime / guardarDiasPartTime → GAS primero + Supabase ──
         if (action === 'guardarBatchDiasPartTime' || action === 'guardarDiasPartTime') {
             const gasRes = await _origFetch(url, options);
+            const periodo = _periodoActualDiasPt();
             if (action === 'guardarDiasPartTime') {
-                // Sincrónico + DELETE→INSERT: elimina filas viejas (incluyendo duplicados)
-                // antes de insertar el nuevo estado. Funciona sin restricción UNIQUE.
+                // upsert por socio_id (UNIQUE): reemplaza días por el nuevo estado.
+                // Reset (dias: []) mantiene la fila con array vacío → la lectura lo cuenta
+                // como "sin días" y evita que GAS lo vuelva a agregar en background.
                 try {
-                    await dbSoc.from('dias_pt').delete().eq('socio_id', String(body.id));
-                    const diasToSave = body.dias || [];
-                    if (diasToSave.length > 0) {
-                        await dbSoc.from('dias_pt').insert({ socio_id: String(body.id), dias: diasToSave });
-                    }
-                } catch(e) { console.warn('[SB-DIAS-PT] delete/insert error:', e.message); }
+                    await dbSoc.from('dias_pt').upsert(
+                        { socio_id: String(body.id), dias: body.dias || [], periodo },
+                        { onConflict: 'socio_id' }
+                    );
+                } catch(e) { console.warn('[SB-DIAS-PT] upsert error:', e.message); }
             } else {
-                // guardarBatchDiasPartTime: fire-and-forget con DELETE→INSERT por socio
+                // guardarBatchDiasPartTime: fire-and-forget, merge con días existentes
                 Promise.resolve().then(async () => {
                     try {
                         const socioItems = body.socios || [];
                         const diasNuevos = body.dias || [];
                         for (const s of socioItems) {
-                            // Leer filas existentes (puede haber duplicados → reduce en vez de maybeSingle)
-                            const { data: exRows } = await dbSoc.from('dias_pt').select('dias').eq('socio_id', String(s.id));
-                            const diasExistentes = (exRows || []).reduce((acc, row) => {
-                                if (Array.isArray(row.dias)) acc.push(...row.dias);
-                                return acc;
-                            }, []);
+                            const { data: ex } = await dbSoc.from('dias_pt').select('dias').eq('socio_id', String(s.id)).maybeSingle();
+                            const diasExistentes = (ex && Array.isArray(ex.dias)) ? ex.dias : [];
                             const merged = [...new Set([...diasExistentes, ...diasNuevos])].sort();
-                            await dbSoc.from('dias_pt').delete().eq('socio_id', String(s.id));
-                            if (merged.length > 0) {
-                                await dbSoc.from('dias_pt').insert({ socio_id: String(s.id), dias: merged });
-                            }
+                            await dbSoc.from('dias_pt').upsert(
+                                { socio_id: String(s.id), dias: merged, periodo },
+                                { onConflict: 'socio_id' }
+                            );
                         }
                     } catch(e) { console.warn('[SB-DIAS-PT] batch error:', e.message); }
                 });
@@ -951,8 +960,9 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                             const faltantes = Object.entries(gasData.data)
                                 .filter(([sid, dias]) => !sbIds.has(String(sid)) && Array.isArray(dias) && dias.length > 0);
                             if (faltantes.length > 0) {
-                                const rows = faltantes.map(([sid, dias]) => ({ socio_id: sid, dias: [...new Set(dias)].sort() }));
-                                dbSoc.from('dias_pt').insert(rows).catch(() => {});
+                                const periodo = _periodoActualDiasPt();
+                                const rows = faltantes.map(([sid, dias]) => ({ socio_id: sid, dias: [...new Set(dias)].sort(), periodo }));
+                                dbSoc.from('dias_pt').upsert(rows, { onConflict: 'socio_id' }).catch(() => {});
                                 // Refrescar socios para que el admin vea los días PT correctos
                                 if (typeof actualizarSociosSilencioso === 'function') actualizarSociosSilencioso();
                             }
