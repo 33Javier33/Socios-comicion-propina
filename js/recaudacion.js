@@ -174,19 +174,22 @@ function procesarDatosRecaudacion(datos, silent) {
     recalcularTotalPT();
 }
 
-// Suma el valor ganado por todos los socios Part-Time según sus días batch y el divisor.
-// Fórmula por socio: Σ (globalMapaPuntosDia[día] × socio.puntos) para cada día trabajado.
+// Total Puntos PT: suma de (recaudación / divisor) para cada día único marcado como PT batch.
+// Se toman todos los días registrados en globalDiasPT (unión de todos los socios PT),
+// sin duplicar días aunque varios socios coincidan en la misma fecha.
 function recalcularTotalPT() {
     const el = document.getElementById('recTotalPuntosPT');
     if (!el) return;
-    if (!globalMapaPuntosDia || !globalDiasPT || !cacheSocios || !cacheSocios.length) { el.innerText = '$0'; return; }
-    let total = 0;
+    if (!globalMapaPuntosDia || !globalDiasPT || !cacheSocios) { el.innerText = '$0'; return; }
+    const diasUnicos = new Set();
     cacheSocios.filter(s => s.contrato === 'Part-Time').forEach(s => {
-        (globalDiasPT[s.id] || []).forEach(d => {
-            const vp = globalMapaPuntosDia[d];
-            if (vp) total += vp * (s.puntos || 1);
-        });
+        (globalDiasPT[s.id] || []).forEach(d => diasUnicos.add(d));
     });
+    let total = 0;
+    for (const dia of diasUnicos) {
+        const vp = globalMapaPuntosDia[dia];
+        if (vp) total += vp;
+    }
     el.innerText = formatearMoneda(total);
 }
 
