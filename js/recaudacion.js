@@ -172,6 +172,7 @@ function procesarDatosRecaudacion(datos, silent) {
     }
     const elTP = document.getElementById('recTotalPuntos'); if(elTP) elTP.innerText = formatearMoneda(sumaPuntosGlobal);
     recalcularTotalPT();
+    recalcularRemanentes();
 }
 
 // Total Puntos PT: suma de (recaudación / divisor) para cada día único marcado como PT batch.
@@ -191,6 +192,28 @@ function recalcularTotalPT() {
         if (vp) total += vp;
     }
     el.innerText = formatearMoneda(total);
+}
+
+async function recalcularRemanentes() {
+    const el = document.getElementById('recTotalRemanentes');
+    const elInfo = document.getElementById('recRemanentesInfo');
+    if (!el) return;
+    try {
+        const res = await callApiSocios('getTotalRemanentes');
+        const total = res.total !== undefined ? Number(res.total) : null;
+        if (total === null) { el.textContent = 'N/D'; return; }
+        el.textContent = formatearMoneda(total);
+        el.style.color = total < 0 ? '#dc2626' : '#7c3aed';
+        if (elInfo && res.ultimaFecha) {
+            const d = new Date(res.ultimaFecha);
+            const anio = d.getFullYear(), mes = d.getMonth();
+            let inicio, fin;
+            if (d.getDate() >= 15) { inicio = new Date(anio, mes, 15); fin = new Date(anio, mes + 1, 14); }
+            else { inicio = new Date(anio, mes - 1, 15); fin = new Date(anio, mes, 14); }
+            const fmt = dt => dt.toLocaleString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '');
+            elInfo.textContent = `Período: ${fmt(inicio)} – ${fmt(fin)} ${fin.getFullYear()}`;
+        }
+    } catch(e) { if (el) el.textContent = 'N/D'; }
 }
 
 function rec_postRec(data) {

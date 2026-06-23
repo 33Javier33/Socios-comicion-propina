@@ -1040,6 +1040,7 @@ async function cerrarMesSocio() {
         document.getElementById('gestionSocioSaldoAnt').value = remanente;
         cargarHistorialSocio(id);
         showToast(`✅ Mes cerrado · ${cobraAhora ? '💵 Cobrado' : '📩 En sobre'} · A Pagar: ${fmtM(aPagar)} · Rem: ${signo}${fmtM(remanente)}`, 'success');
+        if (typeof recalcularRemanentes === 'function') recalcularRemanentes();
         await imprimirReciboSocio();
     } catch(e) {
         showToast('Error al cerrar mes', 'error');
@@ -1410,6 +1411,7 @@ async function ejecutarCierreTodos() {
 
     const idActivo = document.getElementById('gestionSocioId').value;
     if (idActivo) cargarHistorialSocio(idActivo);
+    if (typeof recalcularRemanentes === 'function') recalcularRemanentes();
 }
 
 async function gestion_cargarTotalAnticipos() {
