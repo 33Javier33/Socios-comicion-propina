@@ -179,6 +179,9 @@ function procesarDatosRecaudacion(datos, silent) {
     recalcularTotalPT();
     recalcularRemanentes();
     recalcularAnticipos();
+    // Re-aplicar filtros activos después de cada render (incluye recarga silenciosa)
+    const hayFiltros = recFiltroFechas.length > 0 || recFiltroTipo || recFiltroSinDiv || recFiltroConDiv;
+    if (hayFiltros) { filtrarRecaudacion(); if (document.getElementById('rec-filtro-panel')?.style.display === 'block') recFiltroCalRenderMes(); }
 }
 
 // Total Puntos PT: suma de (recaudación / divisor) para cada día único marcado como PT batch.
@@ -394,7 +397,7 @@ function filtrarRecaudacion() {
     let visibles = 0;
     cards.forEach(card => {
         let ok = true;
-        if (recFiltroFecha && card.getAttribute('data-fecha') !== recFiltroFecha) ok = false;
+        if (recFiltroFechas.length > 0 && !recFiltroFechas.includes(card.getAttribute('data-fecha'))) ok = false;
         if (ok && recFiltroSinDiv && card.getAttribute('data-divisor')!=='no') ok=false;
         if (ok && recFiltroConDiv && card.getAttribute('data-divisor')!=='si') ok=false;
         if (ok && recFiltroTipo) {
@@ -414,7 +417,7 @@ function filtrarRecaudacion() {
     });
     const info=document.getElementById('rec-filtro-info');
     const total=cards.length;
-    const hayFiltro = recFiltroFecha || recFiltroTipo || recFiltroSinDiv || recFiltroConDiv;
+    const hayFiltro = recFiltroFechas.length > 0 || recFiltroTipo || recFiltroSinDiv || recFiltroConDiv;
     if(info) info.textContent = hayFiltro ? 'Mostrando '+visibles+' de '+total+' días' : '';
     rec_actualizarFiltroToggle();
 }
@@ -423,7 +426,7 @@ function rec_setTipo(tipo,btn) { recFiltroTipo=tipo; document.querySelectorAll('
 function rec_toggleSinDivisor(btn) { recFiltroSinDiv=!recFiltroSinDiv; recFiltroConDiv=false; btn.classList.toggle('activo-warn',recFiltroSinDiv); const c2=document.getElementById('chipConDivisor'); if(c2){c2.classList.remove('activo-ok','activo');} filtrarRecaudacion(); }
 function rec_toggleConDivisor(btn) { recFiltroConDiv=!recFiltroConDiv; recFiltroSinDiv=false; btn.classList.toggle('activo-ok',recFiltroConDiv); const c2=document.getElementById('chipSinDivisor'); if(c2){c2.classList.remove('activo-warn','activo');} filtrarRecaudacion(); }
 function rec_limpiarFiltros() {
-    recFiltroTipo=''; recFiltroSinDiv=false; recFiltroConDiv=false; recFiltroFecha='';
+    recFiltroTipo=''; recFiltroSinDiv=false; recFiltroConDiv=false; recFiltroFechas=[];
     document.querySelectorAll('.rec-filtro-chip[data-tipo]').forEach(b=>b.classList.remove('activo'));
     const p=document.querySelector('.rec-filtro-chip[data-tipo=""]'); if(p) p.classList.add('activo');
     const s=document.getElementById('chipSinDivisor'); const cv=document.getElementById('chipConDivisor');
@@ -477,7 +480,7 @@ function recFiltroCalRenderMes() {
     for (let d = 1; d <= diasEnMes; d++) {
         const fechaISO = anio + '-' + String(mes+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
         const tieneData = fechasDisponibles.has(fechaISO);
-        const selec = recFiltroFecha === fechaISO;
+        const selec = recFiltroFechas.includes(fechaISO);
 
         const cell = document.createElement('div');
         cell.className = 'rfcal-day ' + (tieneData ? (selec ? 'rfcal-sel' : 'rfcal-has') : 'rfcal-empty');
@@ -485,7 +488,9 @@ function recFiltroCalRenderMes() {
 
         if (tieneData) {
             cell.onclick = () => {
-                recFiltroFecha = selec ? '' : fechaISO;
+                const idx = recFiltroFechas.indexOf(fechaISO);
+                if (idx >= 0) recFiltroFechas.splice(idx, 1);
+                else recFiltroFechas.push(fechaISO);
                 filtrarRecaudacion();
                 recFiltroCalRenderMes();
             };
@@ -497,8 +502,8 @@ function recFiltroCalRenderMes() {
 function rec_actualizarFiltroToggle() {
     const badge  = document.getElementById('rec-filtro-badge');
     const toggle = document.getElementById('rec-filtro-toggle');
-    const count  = (recFiltroFecha?1:0) + (recFiltroTipo?1:0) + (recFiltroSinDiv?1:0) + (recFiltroConDiv?1:0);
-    if (badge)  { badge.style.display = count > 0 ? 'inline-flex' : 'none'; badge.textContent = count + (count===1?' filtro':' filtros'); }
+    const count  = (recFiltroFechas.length>0?1:0) + (recFiltroTipo?1:0) + (recFiltroSinDiv?1:0) + (recFiltroConDiv?1:0);
+    if (badge)  { badge.style.display = count > 0 ? 'inline-flex' : 'none'; badge.textContent = recFiltroFechas.length > 0 ? recFiltroFechas.length + (recFiltroFechas.length===1?' día':' días') + (count>1?' +':''): count + (count===1?' filtro':' filtros'); }
     if (toggle) { toggle.classList.toggle('filtro-activo', count > 0); }
 }
 

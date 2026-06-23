@@ -98,7 +98,7 @@ let gestionSocioAnticiposActuales = []; // fechas ISO de anticipos del socio act
 let recFiltroTipo    = '';
 let recFiltroSinDiv  = false;
 let recFiltroConDiv  = false;
-let recFiltroFecha   = '';
+let recFiltroFechas  = [];
 let _recFiltroCalFecha = new Date();
 
 // Ayuda
