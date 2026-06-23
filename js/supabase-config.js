@@ -1443,12 +1443,29 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     .map(([tipo, monto]) => ({ tipo, monto: monto * 100 }));
 
                 // Recaudaciones pendientes de verificar en caja
-                const sinVerificar = recs.filter(r => !r.arqueado).map(r => {
+                const pendientes = recs.filter(r => !r.arqueado);
+                const sinVerificar = pendientes.map(r => {
                     const p = (r.fecha || '').split('-');
                     return { tipo: r.tipo || 'Sin Tipo', fecha: r.fecha, label: `${r.tipo} (${p[2]}/${p[1]})` };
                 });
 
-                return _mockOk({ totalAcumulado, totalLastDivisorDay, lastDivisor, lastDivisorDate, desgloseEsperado, sinVerificar });
+                // Desglose de pendientes agrupado por fecha (con montos reales)
+                const _pfMap = {};
+                pendientes.forEach(r => {
+                    const f = r.fecha || '';
+                    if (!_pfMap[f]) _pfMap[f] = {};
+                    const t = r.tipo || 'Sin Tipo';
+                    _pfMap[f][t] = (_pfMap[f][t] || 0) + Number(r.monto || 0);
+                });
+                const desglosePorFecha = Object.entries(_pfMap)
+                    .sort(([a], [b]) => b.localeCompare(a))
+                    .map(([fecha, tipos]) => ({
+                        fecha,
+                        tipos: Object.entries(tipos).map(([tipo, monto]) => ({ tipo, monto: monto * 100 })),
+                        total: Object.values(tipos).reduce((s, m) => s + m, 0) * 100
+                    }));
+
+                return _mockOk({ totalAcumulado, totalLastDivisorDay, lastDivisor, lastDivisorDate, desgloseEsperado, sinVerificar, desglosePorFecha });
             } catch(e) {
                 return _mockOk({ totalAcumulado: 0, totalLastDivisorDay: 0, lastDivisor: 1, lastDivisorDate: '', desgloseEsperado: [] });
             }

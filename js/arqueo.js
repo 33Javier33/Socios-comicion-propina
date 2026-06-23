@@ -24,11 +24,10 @@ async function aq_sincronizarSilencioso() {
             document.getElementById('aq-punto-del-dia').textContent = aq_fmt(totDay / divisor);
             document.getElementById('aq-divisor-date').textContent = 'Fecha: ' + resEsp.lastDivisorDate;
             aq_desgloseEsperado = resEsp.desgloseEsperado || [];
-            const _svSync   = resEsp.sinVerificar || [];
-            const _ldSync   = resEsp.lastDivisorDate || '';
-            const _noAqSync = new Set(_svSync.map(s => `${s.tipo}|${s.fecha}`));
-            const _faltSync = aq_desgloseEsperado.filter(i => _noAqSync.has(`${i.tipo}|${_ldSync}`)).reduce((s,i) => s + i.monto/100, 0);
-            document.getElementById('aq-desglose-esperado').innerHTML = aq_renderDesglose(aq_desgloseEsperado, _svSync, _ldSync);
+            const _svSync  = resEsp.sinVerificar || [];
+            const _dpfSync = resEsp.desglosePorFecha || [];
+            const _faltSync = _dpfSync.reduce((s, d) => s + d.total / 100, 0);
+            document.getElementById('aq-desglose-esperado').innerHTML = aq_renderDesglose(_dpfSync);
             aq_mostrarAvisoSinVerificar(_svSync, _faltSync);
         }
         if(resAnt) {
@@ -268,62 +267,40 @@ async function aq_fetchEsperadoData() {
         document.getElementById('aq-punto-del-dia').textContent = aq_fmt(totDay / ultimoDivisor);
         document.getElementById('aq-divisor-date').textContent = "Fecha: " + data.lastDivisorDate;
         aq_desgloseEsperado = data.desgloseEsperado || [];
-        const _sinVerif   = data.sinVerificar || [];
-        const _lastDate   = data.lastDivisorDate || '';
-        const _noArqueado = new Set(_sinVerif.map(s => `${s.tipo}|${s.fecha}`));
-        const _totalFalt  = aq_desgloseEsperado.filter(i => _noArqueado.has(`${i.tipo}|${_lastDate}`)).reduce((s,i) => s + i.monto/100, 0);
-        document.getElementById('aq-desglose-esperado').innerHTML = aq_renderDesglose(aq_desgloseEsperado, _sinVerif, _lastDate);
+        const _sinVerif  = data.sinVerificar || [];
+        const _dpf       = data.desglosePorFecha || [];
+        const _totalFalt = _dpf.reduce((s, d) => s + d.total / 100, 0);
+        document.getElementById('aq-desglose-esperado').innerHTML = aq_renderDesglose(_dpf);
         aq_mostrarAvisoSinVerificar(_sinVerif, _totalFalt);
         aq_fetchPuntosHistorial();
         aq_realizarArqueo();
     } catch(e) { console.error('Arqueo esperado error:', e); }
 }
 
-function aq_renderDesglose(desglose, sinVerificar, lastDate) {
-    let fechaVis = lastDate || '';
-    if (fechaVis.includes('-')) { const p = fechaVis.split('-'); if (p.length === 3) fechaVis = `${p[2]}/${p[1]}/${p[0]}`; }
-
-    const noArqueado = new Set((sinVerificar || []).map(s => `${s.tipo}|${s.fecha}`));
-    const faltantes  = desglose.filter(i =>  noArqueado.has(`${i.tipo}|${lastDate}`));
-    const ingresados = desglose.filter(i => !noArqueado.has(`${i.tipo}|${lastDate}`));
-    const totalFaltante  = faltantes.reduce((s, i) => s + i.monto / 100, 0);
-    const totalIngresado = ingresados.reduce((s, i) => s + i.monto / 100, 0);
-
-    let h = `<div style="font-size:0.8em;color:#64748b;font-weight:600;margin-bottom:10px;">📅 Última noche: <strong style="color:#374151;">${fechaVis}</strong></div>`;
-
-    if (faltantes.length > 0) {
-        h += `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:12px;margin-bottom:10px;">`;
-        h += `<div style="font-size:0.72em;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">⚠️ Falta ingresar a caja</div>`;
-        faltantes.forEach(i => {
-            h += `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #fee2e2;">
-                <span style="font-weight:600;color:#991b1b;font-size:0.88em;">${i.tipo}</span>
+function aq_renderDesglose(desglosePorFecha) {
+    if (!desglosePorFecha || !desglosePorFecha.length) {
+        return `<p style="color:#94a3b8;font-size:0.85em;text-align:center;padding:10px 0;">Sin recaudaciones pendientes ✓</p>`;
+    }
+    let h = `<div style="font-size:0.72em;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">⚠️ Falta ingresar a caja</div>`;
+    desglosePorFecha.forEach(({ fecha, tipos, total }) => {
+        let fVis = fecha;
+        if (fVis.includes('-')) { const p = fVis.split('-'); if (p.length === 3) fVis = `${p[2]}/${p[1]}/${p[0]}`; }
+        h += `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:11px;margin-bottom:10px;">`;
+        h += `<div style="font-size:0.8em;font-weight:800;color:#b91c1c;margin-bottom:7px;">📅 ${fVis}</div>`;
+        tipos.forEach(i => {
+            h += `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #fee2e2;">
+                <span style="font-weight:600;color:#991b1b;font-size:0.87em;">${i.tipo}</span>
                 <span style="font-weight:800;color:#dc2626;">${aq_fmt(i.monto / 100)}</span>
             </div>`;
         });
-        h += `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0 0;margin-top:2px;">
-            <span style="font-weight:800;color:#dc2626;font-size:0.85em;">TOTAL FALTANTE</span>
-            <span style="font-weight:900;color:#dc2626;font-size:1.05em;">${aq_fmt(totalFaltante)}</span>
-        </div>`;
-        h += `</div>`;
-    }
-
-    if (ingresados.length > 0) {
-        h += `<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px;">`;
-        h += `<div style="font-size:0.72em;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">✓ Ingresados a caja</div>`;
-        ingresados.forEach(i => {
-            h += `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #dcfce7;">
-                <span style="color:#166534;font-size:0.88em;">${i.tipo}</span>
-                <span style="font-weight:700;color:#15803d;">${aq_fmt(i.monto / 100)}</span>
+        if (tipos.length > 1) {
+            h += `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0 0;">
+                <span style="font-size:0.78em;color:#dc2626;font-weight:700;">Total del día</span>
+                <span style="font-weight:900;color:#dc2626;">${aq_fmt(total / 100)}</span>
             </div>`;
-        });
-        h += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 0;margin-top:2px;">
-            <span style="color:#166534;font-size:0.8em;font-weight:600;">Subtotal ingresado</span>
-            <span style="font-weight:700;color:#15803d;font-size:0.88em;">${aq_fmt(totalIngresado)}</span>
-        </div>`;
+        }
         h += `</div>`;
-    }
-
-    if (!desglose.length) h += `<p style="color:#94a3b8;font-size:0.85em;text-align:center;">Sin datos de recaudación.</p>`;
+    });
     return h;
 }
 
