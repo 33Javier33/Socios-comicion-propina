@@ -24,42 +24,44 @@ let auditoriaSnapshots = {};
 async function auditoria_cargar() {
     toggleLoader(true, 'Cargando auditoría...');
     try {
-        const [resAudit, resMat] = await Promise.allSettled([
-            callApiSocios('getAuditoria'),
-            callApiSocios('getAllMaterialesDesdeSheets')
-        ]);
-
-        let audData = [];
-        if (resAudit.status === 'fulfilled' && resAudit.value?.status === 'success') {
-            audData = resAudit.value.data || [];
-        } else {
+        // Supabase responde de inmediato — renderizar sin esperar GAS
+        const resAudit = await callApiSocios('getAuditoria');
+        if (!resAudit || resAudit.status !== 'success') {
             showToast('Error cargando auditoría', 'error');
+            return;
         }
+        auditoriaCache = (resAudit.data || []).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        auditoria_actualizarStats();
+        auditoria_renderizar(auditoria_filtrarDatos());
+        toggleLoader(false);
 
-        // Fusionar materiales que aún no tienen entrada en AuditoriaLogs
-        const auditUUIDs = new Set(audData.map(r => r.idAfectado).filter(Boolean));
-        if (resMat.status === 'fulfilled') {
-            const mats = resMat.value?.data || [];
+        // Cargar materiales desde GAS en background y fusionar cuando lleguen
+        callApiSocios('getAllMaterialesDesdeSheets').then(resMat => {
+            const mats = resMat?.data || [];
+            if (!mats.length) return;
+            const auditUUIDs = new Set(auditoriaCache.map(r => r.idAfectado).filter(Boolean));
+            let huboNuevos = false;
             mats.forEach(m => {
                 if (!m.uuid || auditUUIDs.has(m.uuid)) return;
                 const accion = m.tipo === 'Ingreso' ? 'Ingreso Material' : 'Gasto Material';
                 const monto  = (m.monto || 0).toLocaleString('es-CL');
-                audData.push({
+                auditoriaCache.push({
                     fecha:      (m.fecha || '') + 'T00:00:00',
                     usuario:    m.responsable || 'Sistema',
                     accion,
                     detalle:    `Fecha: ${m.fecha} | Monto: $${monto}${m.nota ? ' | ' + m.nota : ''}`,
                     idAfectado: m.uuid
                 });
+                huboNuevos = true;
             });
-        }
-
-        auditoriaCache = audData.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-        auditoria_actualizarStats();
-        auditoria_renderizar(auditoria_filtrarDatos());
+            if (huboNuevos) {
+                auditoriaCache.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                auditoria_actualizarStats();
+                auditoria_renderizar(auditoria_filtrarDatos());
+            }
+        }).catch(() => {});
     } catch(e) {
         showToast('Error de conexión', 'error');
-    } finally {
         toggleLoader(false);
     }
 }
