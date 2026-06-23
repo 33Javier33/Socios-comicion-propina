@@ -334,8 +334,22 @@ function aq_mostrarAvisoSinVerificar(sinVerificar, totalFaltante) {
     if (!el) return;
     if (!sinVerificar.length) { el.style.display = 'none'; return; }
     el.style.display = 'flex';
-    if (msg) msg.textContent = `${sinVerificar.length} recaudación${sinVerificar.length > 1 ? 'es' : ''} sin ingresar a caja`;
-    if (det) det.textContent = totalFaltante > 0 ? `Falta ingresar: ${aq_fmt(totalFaltante)}` : sinVerificar.map(r => r.label).join(' · ');
+
+    const n = sinVerificar.length;
+    if (msg) msg.textContent = `${n} recaudación${n > 1 ? 'es' : ''} sin ingresar a caja${totalFaltante > 0 ? ' — Falta: ' + aq_fmt(totalFaltante) : ''}`;
+
+    // Agrupar por fecha, orden descendente
+    const porFecha = {};
+    sinVerificar.forEach(r => {
+        if (!porFecha[r.fecha]) porFecha[r.fecha] = [];
+        porFecha[r.fecha].push(r.tipo);
+    });
+    const lineas = Object.keys(porFecha).sort((a, b) => b.localeCompare(a)).map(f => {
+        const p = f.split('-');
+        const fVis = p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : f;
+        return `<span style="font-weight:700;">📅 ${fVis}:</span> ${porFecha[f].join(' · ')}`;
+    });
+    if (det) det.innerHTML = lineas.join('<br>');
 }
 
 async function aq_fetchPuntosHistorial() {
