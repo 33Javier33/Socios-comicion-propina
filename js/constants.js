@@ -101,6 +101,9 @@ let recFiltroConDiv  = false;
 let recFiltroFechas  = [];
 let _recFiltroCalFecha = new Date();
 
+// Datos agrupados por fecha (populado en procesarDatosRecaudacion)
+let globalRecGrupos = {};
+
 // Ayuda
 let ayudaFiltroActivo = '';
 

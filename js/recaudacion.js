@@ -60,6 +60,7 @@ function procesarDatosRecaudacion(datos, silent) {
         }
     });
 
+    globalRecGrupos = grupos;
     const fechasOrdenadas = Object.keys(grupos).sort((a,b) => new Date(b) - new Date(a));
 
     let sumaPuntosGlobal = 0;
@@ -392,6 +393,48 @@ function rec_copiarReporte(fecha) {
         .catch(() => showToast('No se pudo copiar (sin permisos)', 'error'));
 }
 
+function rec_actualizarStatsPorFechas(fechas) {
+    const dias = fechas.length > 0 ? fechas : Object.keys(globalRecGrupos);
+    let totalPuntos = 0, granTotal = 0;
+    const diasConDiv = dias.filter(d => globalRecGrupos[d] && globalRecGrupos[d].divisor !== null);
+    diasConDiv.forEach(d => {
+        totalPuntos += globalMapaPuntosDia[d] || 0;
+        granTotal   += globalRecGrupos[d].totalDia;
+    });
+    // También sumar días sin divisor al granTotal
+    dias.filter(d => globalRecGrupos[d] && globalRecGrupos[d].divisor === null)
+        .forEach(d => { granTotal += globalRecGrupos[d].totalDia; });
+
+    const ultimoDia = dias.filter(d => globalRecGrupos[d]).sort((a,b) => new Date(b)-new Date(a))[0];
+
+    const elTP = document.getElementById('recTotalPuntos');
+    const elGT = document.getElementById('recGranTotal');
+    const elUD = document.getElementById('recTotalUltimoDia');
+    const elFU = document.getElementById('recFechaUltimoDia');
+    const elDV = document.getElementById('recDivisorActual');
+
+    if (elTP) elTP.innerText = formatearMoneda(totalPuntos);
+    if (elGT) elGT.innerText = formatearMoneda(granTotal);
+    if (ultimoDia && globalRecGrupos[ultimoDia]) {
+        const p = ultimoDia.split('-');
+        if (elUD) elUD.innerText = formatearMoneda(globalRecGrupos[ultimoDia].totalDia);
+        if (elFU) elFU.innerText = `${p[2]}/${p[1]}/${p[0]}`;
+        if (elDV) elDV.innerText = globalRecGrupos[ultimoDia].divisor !== null ? globalRecGrupos[ultimoDia].divisor : 'Sin divisor';
+    }
+
+    // Total Puntos PT: días PT que estén en la selección
+    const elPT = document.getElementById('recTotalPuntosPT');
+    if (elPT && globalDiasPT && cacheSocios) {
+        const diasUnicosPT = new Set();
+        cacheSocios.filter(s => s.contrato === 'Part-Time').forEach(s => {
+            (globalDiasPT[s.id] || []).forEach(d => { if (dias.includes(d)) diasUnicosPT.add(d); });
+        });
+        let totalPT = 0;
+        diasUnicosPT.forEach(d => { if (globalMapaPuntosDia[d]) totalPT += globalMapaPuntosDia[d]; });
+        elPT.innerText = formatearMoneda(totalPT);
+    }
+}
+
 function filtrarRecaudacion() {
     const cards = document.querySelectorAll('.date-card');
     let visibles = 0;
@@ -420,6 +463,9 @@ function filtrarRecaudacion() {
     const hayFiltro = recFiltroFechas.length > 0 || recFiltroTipo || recFiltroSinDiv || recFiltroConDiv;
     if(info) info.textContent = hayFiltro ? 'Mostrando '+visibles+' de '+total+' días' : '';
     rec_actualizarFiltroToggle();
+    // Recalcular tarjetas según días visibles
+    const fechasVisibles = recFiltroFechas.length > 0 ? recFiltroFechas : [];
+    rec_actualizarStatsPorFechas(fechasVisibles);
 }
 
 function rec_setTipo(tipo,btn) { recFiltroTipo=tipo; document.querySelectorAll('.rec-filtro-chip[data-tipo]').forEach(b=>b.classList.remove('activo')); btn.classList.add('activo'); filtrarRecaudacion(); }
