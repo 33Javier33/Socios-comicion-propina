@@ -239,6 +239,7 @@
         .type-value { font-weight: bold; color: #333; }
 
         @media (max-width: 768px) { .gestion-layout { grid-template-columns: 1fr; } .action-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .stat-card { padding: 14px 12px; } .stat-value { font-size: 1.1em; } }
 
         /* Botones motivo ausencia */
         .btn-motivo { padding: 5px 11px; border: 1px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); color: #fca5a5; border-radius: 20px; cursor: pointer; font-size: 0.76em; font-weight: 600; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
