@@ -12,8 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Poblar selector inmediatamente con lo que haya en localStorage
     responsables_poblarLoginSelector();
     // Refrescar lista de responsables y credenciales desde Supabase en background.
-    // Si localStorage estaba vacío o desactualizado, el selector se re-pobla solo
-    // sin que el usuario tenga que recargar la página.
+    // sbCargarResponsables lee config_sistema directamente (sin pasar por GAS).
+    // Si localStorage estaba vacío o desactualizado, el selector se re-pobla solo.
+    if (typeof window.sbCargarResponsables === 'function') window.sbCargarResponsables();
     cfg_cargarDesdeSupabase().catch(() => {});
     cargarCredenciales().catch(() => {});
     // Enfocar PIN
@@ -50,6 +51,7 @@ async function precargarTodo() {
     cargarRecaudaciones(true);
     cargarCredenciales(); // PINs personales desde Supabase (responsable_creds)
     cfg_cargarDesdeSupabase(); // PIN global, clave recuperación y responsables desde Supabase
+    if (typeof window.sbSyncResponsables === 'function') window.sbSyncResponsables();
 
     await Promise.allSettled([
         fetch(URL_RECAUDACIONES + '?action=getNotes&t=' + Date.now())

@@ -187,6 +187,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     // ── Caché de sesión para días PT desde GAS ──
     // Evita llamar GAS en cada getDiasPartTime; se llena la primera vez y persiste en memoria.
     let _diasPtGasCache = null;
+    let _materialesGasCache = null;
 
     // Período actual para la columna NOT NULL `periodo` de dias_pt.
     // La lectura no filtra por período; sirve solo para satisfacer la restricción y trazabilidad.
@@ -920,6 +921,46 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             }
         }
 
+        // ── registrarMaterial → Supabase primario, GAS en background ──
+        if (action === 'registrarMaterial') {
+            const uuid = 'mat-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+            const row = {
+                uuid,
+                fecha:       body.fecha       || null,
+                tipo:        body.tipo         || '',
+                monto:       Number(body.monto || 0),
+                nota:        body.nota         || null,
+                responsable: body.responsable  || null,
+                periodo:     body.periodo      || null,
+                estado:      'activo'
+            };
+            try {
+                const { error } = await dbSoc.from('materiales').insert(row);
+                if (error) throw error;
+                _origFetch(url, options).catch(() => {});
+                return _mockOk({ status: 'success', uuid });
+            } catch(e) {
+                console.warn('[SB-MAT] registrarMaterial error:', e.message);
+                return _origFetch(url, options);
+            }
+        }
+
+        // ── borrarMaterial → soft delete en Supabase, GAS en background ──
+        if (action === 'borrarMaterial') {
+            const matUuid = body.uuid || '';
+            if (!matUuid) return _mockOk({ status: 'error', message: 'uuid requerido' });
+            try {
+                const { error } = await dbSoc.from('materiales')
+                    .update({ estado: 'borrado' }).eq('uuid', matUuid);
+                if (error) throw error;
+                _origFetch(url, options).catch(() => {});
+                return _mockOk({ status: 'success' });
+            } catch(e) {
+                console.warn('[SB-MAT] borrarMaterial error:', e.message);
+                return _origFetch(url, options);
+            }
+        }
+
         // Cualquier otra acción POST de socios: pasar a GAS sin interceptar
         return _origFetch(url, options);
     }
@@ -1051,6 +1092,78 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     }).catch(() => {});
                     return _mockOk({ status: 'success', data: sbNorm });
                 }
+                // ── getAllMaterialesDesdeSheets → Supabase fast path ──
+                if (action === 'getAllMaterialesDesdeSheets') {
+                    let sbMat = [];
+                    try {
+                        const { data: matRows, error: matErr } = await dbSoc.from('materiales')
+                            .select('id, uuid, fecha, tipo, monto, nota, responsable, periodo, estado')
+                            .neq('estado', 'borrado')
+                            .order('fecha', { ascending: false });
+                        if (!matErr) {
+                            sbMat = (matRows || []).map(r => ({
+                                uuid: r.uuid || r.id, fecha: r.fecha || '', tipo: r.tipo || '',
+                                monto: Number(r.monto || 0), nota: r.nota || '',
+                                responsable: r.responsable || '', periodo: r.periodo || '', estado: r.estado || 'activo'
+                            }));
+                        }
+                    } catch(e) { console.warn('[SB-MAT] read error:', e.message); }
+
+                    function _matMapGas(g) {
+                        return { uuid: g.uuid, fecha: g.fecha || '', tipo: g.tipo || '',
+                            monto: Number(g.monto || 0), nota: g.nota || '',
+                            responsable: g.responsable || '', periodo: g.periodo || '', estado: 'activo' };
+                    }
+
+                    // Supabase tiene datos → devolver inmediatamente, verificar GAS en background una vez por sesión
+                    if (sbMat.length > 0) {
+                        if (_materialesGasCache === null) {
+                            _materialesGasCache = 'loading';
+                            _origFetch(url, options).then(r => r.json()).then(async gasRaw => {
+                                _materialesGasCache = 'done';
+                                if (!gasRaw || gasRaw.status !== 'success') return;
+                                const gasItems = (gasRaw.data || []).filter(g => g.uuid && g.estado !== 'borrado');
+                                const sbUuids = new Set(sbMat.map(r => r.uuid));
+                                const faltantes = gasItems.filter(g => !sbUuids.has(g.uuid));
+                                if (faltantes.length === 0) return;
+                                const rows = faltantes.map(g => ({
+                                    uuid: g.uuid, fecha: g.fecha || null, tipo: g.tipo || '',
+                                    monto: Number(g.monto || 0), nota: g.nota || null,
+                                    responsable: g.responsable || null, periodo: g.periodo || null, estado: 'activo'
+                                }));
+                                await dbSoc.from('materiales').upsert(rows, { onConflict: 'uuid' });
+                                if (typeof matDatos !== 'undefined' && typeof mat_render === 'function') {
+                                    matDatos = [...faltantes.map(_matMapGas), ...matDatos];
+                                    mat_render();
+                                }
+                            }).catch(() => { _materialesGasCache = null; });
+                        }
+                        return _mockOk({ status: 'success', data: sbMat });
+                    }
+
+                    // Primera vez: Supabase vacío → esperar GAS, guardar en background
+                    _materialesGasCache = 'loading';
+                    try {
+                        const gasRes = await _origFetch(url, options);
+                        const gasRaw = await gasRes.json();
+                        _materialesGasCache = 'done';
+                        if (!gasRaw || gasRaw.status !== 'success') return _mockOk({ status: 'success', data: [] });
+                        const gasItems = (gasRaw.data || []).filter(g => g.uuid && g.estado !== 'borrado');
+                        if (gasItems.length > 0) {
+                            const rows = gasItems.map(g => ({
+                                uuid: g.uuid, fecha: g.fecha || null, tipo: g.tipo || '',
+                                monto: Number(g.monto || 0), nota: g.nota || null,
+                                responsable: g.responsable || null, periodo: g.periodo || null, estado: 'activo'
+                            }));
+                            dbSoc.from('materiales').upsert(rows, { onConflict: 'uuid' }).catch(() => {});
+                        }
+                        return _mockOk({ status: 'success', data: gasItems.map(_matMapGas) });
+                    } catch(e) {
+                        _materialesGasCache = null;
+                        return _mockOk({ status: 'success', data: [] });
+                    }
+                }
+
                 return _origFetch(url, options);
             }
             return _socWriteHandler(s, options);
@@ -1501,6 +1614,38 @@ window.addEventListener('load', () => {
         } catch(e) {}
     }, 3000); // esperar 3s para que la app cargue y showToast esté disponible
 });
+
+// ── Helpers globales para responsables desde Supabase ────────────────────────────
+window.sbCargarResponsables = async function() {
+    try {
+        const { data, error } = await dbSoc.from('config_sistema')
+            .select('valor').eq('clave', 'responsables').maybeSingle();
+        if (error || !data || !data.valor) return;
+        const lista = JSON.parse(data.valor);
+        if (!Array.isArray(lista) || lista.length === 0) return;
+        localStorage.setItem('fondo_responsables', JSON.stringify(lista));
+        if (typeof responsables_poblarLoginSelector === 'function') responsables_poblarLoginSelector();
+        console.log('[SB-RESP] Responsables cargados desde Supabase:', lista.length);
+    } catch(e) {}
+};
+
+window.sbSyncResponsables = async function() {
+    try {
+        const { data } = await dbSoc.from('config_sistema')
+            .select('clave').eq('clave', 'responsables').maybeSingle();
+        if (data) return; // ya existen en Supabase
+        const localStr = localStorage.getItem('fondo_responsables');
+        if (!localStr) return;
+        const lista = JSON.parse(localStr);
+        if (!Array.isArray(lista) || lista.length === 0) return;
+        const listaSinPins = lista.map(function(r) { return { ini: r.ini, area: r.area }; });
+        await dbSoc.from('config_sistema').upsert(
+            { clave: 'responsables', valor: JSON.stringify(listaSinPins), updated_at: new Date().toISOString() },
+            { onConflict: 'clave' }
+        );
+        console.log('[SB-RESP] Responsables sincronizados a Supabase:', listaSinPins.length);
+    } catch(e) {}
+};
 
 // ── Realtime broadcast: recargar UI cuando otra app cambia datos ───────────────
 window.addEventListener('load', () => {
