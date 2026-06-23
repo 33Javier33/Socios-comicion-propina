@@ -213,10 +213,10 @@ function mat_render_desglose_mensual(año, datos) {
             const partes = (r.fecha || '').split('-');
             const diaStr = partes[2] ? partes[2] + '/' + partes[1] : '';
             const desc   = r.nota || r.tipo;
-            return `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-top:1px solid #f1f5f9;">
+            return `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-top:1px solid #d1d5db;">
                 <span style="color:${color};font-weight:900;font-size:0.75em;width:12px;flex-shrink:0;">${icon}</span>
-                <span style="color:#64748b;font-size:0.7em;min-width:34px;flex-shrink:0;">${diaStr}</span>
-                <span style="flex:1;color:#334155;font-size:0.72em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${desc}">${desc}</span>
+                <span style="color:#374151;font-size:0.72em;font-weight:700;min-width:34px;flex-shrink:0;">${diaStr}</span>
+                <span style="flex:1;color:#111827;font-size:0.72em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${desc}">${desc}</span>
                 <span style="color:${color};font-weight:700;font-size:0.72em;white-space:nowrap;">${signo}${formatearMoneda(mat_monto(r))}</span>
             </div>`;
         }).join('');

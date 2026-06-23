@@ -122,9 +122,9 @@ function _dsgRenderCard(r) {
     const densSorted = Object.entries(billetes).sort((a, b) => Number(b[0]) - Number(a[0]));
     if (densSorted.length > 0) {
         billetesHtml = densSorted.map(([den, cant]) =>
-            `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:#f8fafc;border-radius:6px;font-size:0.82em;">
+            `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:#f1f5f9;border-radius:6px;font-size:0.82em;border:1px solid #d1d5db;">
                 <span style="font-weight:700;color:#1e3a5f;">${fmt(Number(den))}</span>
-                <span style="color:#64748b;">× ${cant}</span>
+                <span style="font-weight:600;color:#374151;">× ${cant}</span>
                 <span style="font-weight:800;color:#0f172a;">${fmt(Number(den) * Number(cant))}</span>
             </div>`
         ).join('');
