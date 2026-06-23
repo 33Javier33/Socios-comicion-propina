@@ -24,10 +24,12 @@ async function aq_sincronizarSilencioso() {
             document.getElementById('aq-punto-del-dia').textContent = aq_fmt(totDay / divisor);
             document.getElementById('aq-divisor-date').textContent = 'Fecha: ' + resEsp.lastDivisorDate;
             aq_desgloseEsperado = resEsp.desgloseEsperado || [];
-            let h = '<table class="aq-table"><thead><tr><th>Tipo</th><th>Monto</th></tr></thead><tbody>';
-            aq_desgloseEsperado.forEach(i => { h += '<tr><td>' + i.tipo + '</td><td>' + aq_fmt(i.monto/100) + '</td></tr>'; });
-            document.getElementById('aq-desglose-esperado').innerHTML = h + '</tbody></table>';
-            aq_mostrarAvisoSinVerificar(resEsp.sinVerificar || []);
+            const _svSync   = resEsp.sinVerificar || [];
+            const _ldSync   = resEsp.lastDivisorDate || '';
+            const _noAqSync = new Set(_svSync.map(s => `${s.tipo}|${s.fecha}`));
+            const _faltSync = aq_desgloseEsperado.filter(i => _noAqSync.has(`${i.tipo}|${_ldSync}`)).reduce((s,i) => s + i.monto/100, 0);
+            document.getElementById('aq-desglose-esperado').innerHTML = aq_renderDesglose(aq_desgloseEsperado, _svSync, _ldSync);
+            aq_mostrarAvisoSinVerificar(_svSync, _faltSync);
         }
         if(resAnt) {
             const objetoAnticipos = (resAnt.data && resAnt.data.anticipos) || resAnt.anticipos || (resAnt.result && resAnt.result.anticipos);
@@ -266,37 +268,74 @@ async function aq_fetchEsperadoData() {
         document.getElementById('aq-punto-del-dia').textContent = aq_fmt(totDay / ultimoDivisor);
         document.getElementById('aq-divisor-date').textContent = "Fecha: " + data.lastDivisorDate;
         aq_desgloseEsperado = data.desgloseEsperado || [];
-        const _sinVerif = data.sinVerificar || [];
-        const _lastDate = data.lastDivisorDate || '';
-        // Set de tipo|fecha pendientes de verificar en caja
+        const _sinVerif   = data.sinVerificar || [];
+        const _lastDate   = data.lastDivisorDate || '';
         const _noArqueado = new Set(_sinVerif.map(s => `${s.tipo}|${s.fecha}`));
-        let _fechaRec = _lastDate;
-        if (_fechaRec.includes('-')) { const _p = _fechaRec.split('-'); if (_p.length === 3) _fechaRec = `${_p[2]}/${_p[1]}/${_p[0]}`; }
-        let h = `<div style="font-size:0.82em;color:#64748b;font-weight:600;margin-bottom:8px;">📅 ${_fechaRec}</div>`;
-        h += '<table class="aq-table"><thead><tr><th>Tipo</th><th>Monto</th><th></th></tr></thead><tbody>';
-        aq_desgloseEsperado.forEach(i => {
-            const _pendiente = _noArqueado.has(`${i.tipo}|${_lastDate}`);
-            const _badge = _pendiente
-                ? `<span style="color:#dc2626;font-size:0.76em;font-weight:700;white-space:nowrap;">⚠️ falta agregar</span>`
-                : `<span style="color:#16a34a;font-size:0.76em;font-weight:700;white-space:nowrap;">✓ arqueado</span>`;
-            h += `<tr><td>${i.tipo}</td><td>${aq_fmt(i.monto/100)}</td><td>${_badge}</td></tr>`;
-        });
-        document.getElementById('aq-desglose-esperado').innerHTML = h + '</tbody></table>';
-        aq_mostrarAvisoSinVerificar(data.sinVerificar || []);
+        const _totalFalt  = aq_desgloseEsperado.filter(i => _noArqueado.has(`${i.tipo}|${_lastDate}`)).reduce((s,i) => s + i.monto/100, 0);
+        document.getElementById('aq-desglose-esperado').innerHTML = aq_renderDesglose(aq_desgloseEsperado, _sinVerif, _lastDate);
+        aq_mostrarAvisoSinVerificar(_sinVerif, _totalFalt);
         aq_fetchPuntosHistorial();
         aq_realizarArqueo();
     } catch(e) { console.error('Arqueo esperado error:', e); }
 }
 
-function aq_mostrarAvisoSinVerificar(sinVerificar) {
+function aq_renderDesglose(desglose, sinVerificar, lastDate) {
+    let fechaVis = lastDate || '';
+    if (fechaVis.includes('-')) { const p = fechaVis.split('-'); if (p.length === 3) fechaVis = `${p[2]}/${p[1]}/${p[0]}`; }
+
+    const noArqueado = new Set((sinVerificar || []).map(s => `${s.tipo}|${s.fecha}`));
+    const faltantes  = desglose.filter(i =>  noArqueado.has(`${i.tipo}|${lastDate}`));
+    const ingresados = desglose.filter(i => !noArqueado.has(`${i.tipo}|${lastDate}`));
+    const totalFaltante  = faltantes.reduce((s, i) => s + i.monto / 100, 0);
+    const totalIngresado = ingresados.reduce((s, i) => s + i.monto / 100, 0);
+
+    let h = `<div style="font-size:0.8em;color:#64748b;font-weight:600;margin-bottom:10px;">📅 Última noche: <strong style="color:#374151;">${fechaVis}</strong></div>`;
+
+    if (faltantes.length > 0) {
+        h += `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:12px;margin-bottom:10px;">`;
+        h += `<div style="font-size:0.72em;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">⚠️ Falta ingresar a caja</div>`;
+        faltantes.forEach(i => {
+            h += `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #fee2e2;">
+                <span style="font-weight:600;color:#991b1b;font-size:0.88em;">${i.tipo}</span>
+                <span style="font-weight:800;color:#dc2626;">${aq_fmt(i.monto / 100)}</span>
+            </div>`;
+        });
+        h += `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0 0;margin-top:2px;">
+            <span style="font-weight:800;color:#dc2626;font-size:0.85em;">TOTAL FALTANTE</span>
+            <span style="font-weight:900;color:#dc2626;font-size:1.05em;">${aq_fmt(totalFaltante)}</span>
+        </div>`;
+        h += `</div>`;
+    }
+
+    if (ingresados.length > 0) {
+        h += `<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px;">`;
+        h += `<div style="font-size:0.72em;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">✓ Ingresados a caja</div>`;
+        ingresados.forEach(i => {
+            h += `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #dcfce7;">
+                <span style="color:#166534;font-size:0.88em;">${i.tipo}</span>
+                <span style="font-weight:700;color:#15803d;">${aq_fmt(i.monto / 100)}</span>
+            </div>`;
+        });
+        h += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 0;margin-top:2px;">
+            <span style="color:#166534;font-size:0.8em;font-weight:600;">Subtotal ingresado</span>
+            <span style="font-weight:700;color:#15803d;font-size:0.88em;">${aq_fmt(totalIngresado)}</span>
+        </div>`;
+        h += `</div>`;
+    }
+
+    if (!desglose.length) h += `<p style="color:#94a3b8;font-size:0.85em;text-align:center;">Sin datos de recaudación.</p>`;
+    return h;
+}
+
+function aq_mostrarAvisoSinVerificar(sinVerificar, totalFaltante) {
     const el  = document.getElementById('aq-sin-verificar');
     const msg = document.getElementById('aq-sin-verificar-msg');
     const det = document.getElementById('aq-sin-verificar-det');
     if (!el) return;
     if (!sinVerificar.length) { el.style.display = 'none'; return; }
     el.style.display = 'flex';
-    msg.textContent = `${sinVerificar.length} recaudación${sinVerificar.length > 1 ? 'es' : ''} sin ingresar a caja`;
-    det.textContent = sinVerificar.map(r => r.label).join('  ·  ');
+    if (msg) msg.textContent = `${sinVerificar.length} recaudación${sinVerificar.length > 1 ? 'es' : ''} sin ingresar a caja`;
+    if (det) det.textContent = totalFaltante > 0 ? `Falta ingresar: ${aq_fmt(totalFaltante)}` : sinVerificar.map(r => r.label).join(' · ');
 }
 
 async function aq_fetchPuntosHistorial() {
