@@ -78,6 +78,10 @@ function procesarDatosRecaudacion(datos, silent) {
     (document.getElementById('recGranTotal')||{}).innerText = formatearMoneda(granTotal);
 
     const ultimaFechaReal = fechasOrdenadas[0];
+    if (ultimaFechaReal) {
+        const p = ultimaFechaReal.split('-');
+        _recFiltroCalFecha = new Date(parseInt(p[0]), parseInt(p[1])-1, 1);
+    }
 
     if (ultimaFechaReal && grupos[ultimaFechaReal]) {
         const ultDia = grupos[ultimaFechaReal];
@@ -145,6 +149,7 @@ function procesarDatosRecaudacion(datos, silent) {
             card.setAttribute('data-search', `${fechaVisual} ${dia.totalDia} ${Object.keys(dia.tipos).join(' ')} ${nombreDia}`);
             card.setAttribute('data-tipos', Object.keys(dia.tipos).join(','));
             card.setAttribute('data-divisor', dia.divisor !== null ? 'si' : 'no');
+            card.setAttribute('data-fecha', fecha);
             card.innerHTML = `
                 <div class="date-header">
                     <div>
@@ -385,13 +390,11 @@ function rec_copiarReporte(fecha) {
 }
 
 function filtrarRecaudacion() {
-    const texto = (document.getElementById('filtroRecaudacion')||{}).value||'';
-    const t = texto.toLowerCase().trim();
     const cards = document.querySelectorAll('.date-card');
     let visibles = 0;
     cards.forEach(card => {
         let ok = true;
-        if (t) { const s=(card.getAttribute('data-search')||'').toLowerCase(); if(!s.includes(t)) ok=false; }
+        if (recFiltroFecha && card.getAttribute('data-fecha') !== recFiltroFecha) ok = false;
         if (ok && recFiltroSinDiv && card.getAttribute('data-divisor')!=='no') ok=false;
         if (ok && recFiltroConDiv && card.getAttribute('data-divisor')!=='si') ok=false;
         if (ok && recFiltroTipo) {
@@ -410,13 +413,94 @@ function filtrarRecaudacion() {
         if(ok) visibles++;
     });
     const info=document.getElementById('rec-filtro-info');
-    if(info){ const total=cards.length; info.textContent=(visibles<total||recFiltroTipo||t)?'Mostrando '+visibles+' de '+total+' días'+(recFiltroTipo?' · Tipo: '+recFiltroTipo:''):''; }
+    const total=cards.length;
+    const hayFiltro = recFiltroFecha || recFiltroTipo || recFiltroSinDiv || recFiltroConDiv;
+    if(info) info.textContent = hayFiltro ? 'Mostrando '+visibles+' de '+total+' días' : '';
+    rec_actualizarFiltroToggle();
 }
 
 function rec_setTipo(tipo,btn) { recFiltroTipo=tipo; document.querySelectorAll('.rec-filtro-chip[data-tipo]').forEach(b=>b.classList.remove('activo')); btn.classList.add('activo'); filtrarRecaudacion(); }
 function rec_toggleSinDivisor(btn) { recFiltroSinDiv=!recFiltroSinDiv; recFiltroConDiv=false; btn.classList.toggle('activo-warn',recFiltroSinDiv); const c2=document.getElementById('chipConDivisor'); if(c2){c2.classList.remove('activo-ok','activo');} filtrarRecaudacion(); }
 function rec_toggleConDivisor(btn) { recFiltroConDiv=!recFiltroConDiv; recFiltroSinDiv=false; btn.classList.toggle('activo-ok',recFiltroConDiv); const c2=document.getElementById('chipSinDivisor'); if(c2){c2.classList.remove('activo-warn','activo');} filtrarRecaudacion(); }
-function rec_limpiarFiltros() { recFiltroTipo=''; recFiltroSinDiv=false; recFiltroConDiv=false; const inp=document.getElementById('filtroRecaudacion'); if(inp) inp.value=''; document.querySelectorAll('.rec-filtro-chip[data-tipo]').forEach(b=>b.classList.remove('activo')); const p=document.querySelector('.rec-filtro-chip[data-tipo=""]'); if(p) p.classList.add('activo'); const s=document.getElementById('chipSinDivisor'); const cv=document.getElementById('chipConDivisor'); if(s){s.classList.remove('activo-warn','activo');} if(cv){cv.classList.remove('activo-ok','activo');} document.querySelectorAll('.date-card').forEach(card=>{card.style.display='block'; card.querySelectorAll('.type-item').forEach(f=>f.style.display='');}); const info=document.getElementById('rec-filtro-info'); if(info) info.textContent=''; }
+function rec_limpiarFiltros() {
+    recFiltroTipo=''; recFiltroSinDiv=false; recFiltroConDiv=false; recFiltroFecha='';
+    document.querySelectorAll('.rec-filtro-chip[data-tipo]').forEach(b=>b.classList.remove('activo'));
+    const p=document.querySelector('.rec-filtro-chip[data-tipo=""]'); if(p) p.classList.add('activo');
+    const s=document.getElementById('chipSinDivisor'); const cv=document.getElementById('chipConDivisor');
+    if(s){s.classList.remove('activo-warn','activo');} if(cv){cv.classList.remove('activo-ok','activo');}
+    document.querySelectorAll('.date-card').forEach(card=>{card.style.display='block'; card.querySelectorAll('.type-item').forEach(f=>f.style.display='');});
+    const info=document.getElementById('rec-filtro-info'); if(info) info.textContent='';
+    recFiltroCalRenderMes();
+    rec_actualizarFiltroToggle();
+}
+
+function rec_toggleFiltroPanel() {
+    const panel = document.getElementById('rec-filtro-panel');
+    const chevron = document.getElementById('rec-filtro-chevron');
+    const toggle = document.getElementById('rec-filtro-toggle');
+    const open = panel.style.display === 'block';
+    panel.style.display = open ? 'none' : 'block';
+    chevron.style.transform = open ? '' : 'rotate(180deg)';
+    toggle.classList.toggle('panel-abierto', !open);
+    if (!open) recFiltroCalRenderMes();
+}
+
+function recFiltroCalCambiar(delta) {
+    _recFiltroCalFecha = new Date(_recFiltroCalFecha.getFullYear(), _recFiltroCalFecha.getMonth() + delta, 1);
+    recFiltroCalRenderMes();
+}
+
+function recFiltroCalRenderMes() {
+    const anio = _recFiltroCalFecha.getFullYear();
+    const mes  = _recFiltroCalFecha.getMonth();
+    const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const elLabel = document.getElementById('recFiltroCalMesAnio');
+    if (!elLabel) return;
+    elLabel.textContent = MESES[mes] + ' ' + anio;
+
+    const fechasDisponibles = new Set();
+    document.querySelectorAll('.date-card[data-fecha]').forEach(c => fechasDisponibles.add(c.getAttribute('data-fecha')));
+
+    const grid = document.getElementById('recFiltroCalGrid');
+    grid.innerHTML = '';
+
+    const primerDia  = new Date(anio, mes, 1).getDay();
+    const offsetLunes = primerDia === 0 ? 6 : primerDia - 1;
+    const diasEnMes  = new Date(anio, mes + 1, 0).getDate();
+
+    for (let i = 0; i < offsetLunes; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'rfcal-day';
+        grid.appendChild(empty);
+    }
+
+    for (let d = 1; d <= diasEnMes; d++) {
+        const fechaISO = anio + '-' + String(mes+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+        const tieneData = fechasDisponibles.has(fechaISO);
+        const selec = recFiltroFecha === fechaISO;
+
+        const cell = document.createElement('div');
+        cell.className = 'rfcal-day ' + (tieneData ? (selec ? 'rfcal-sel' : 'rfcal-has') : 'rfcal-empty');
+        cell.textContent = d;
+
+        if (tieneData) {
+            cell.onclick = () => {
+                recFiltroFecha = selec ? '' : fechaISO;
+                filtrarRecaudacion();
+                recFiltroCalRenderMes();
+            };
+        }
+        grid.appendChild(cell);
+    }
+}
+
+function rec_actualizarFiltroToggle() {
+    const badge  = document.getElementById('rec-filtro-badge');
+    const toggle = document.getElementById('rec-filtro-toggle');
+    const count  = (recFiltroFecha?1:0) + (recFiltroTipo?1:0) + (recFiltroSinDiv?1:0) + (recFiltroConDiv?1:0);
+    if (badge)  { badge.style.display = count > 0 ? 'inline-flex' : 'none'; badge.textContent = count + (count===1?' filtro':' filtros'); }
+    if (toggle) { toggle.classList.toggle('filtro-activo', count > 0); }
+}
 
 function rec_irAlInicio() { irAlInicio(); }
 function rec_initScrollFab() {}

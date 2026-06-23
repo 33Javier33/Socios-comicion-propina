@@ -241,6 +241,16 @@
         @media (max-width: 768px) { .gestion-layout { grid-template-columns: 1fr; } .action-grid { grid-template-columns: 1fr; } }
         @media (max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .stat-card { padding: 14px 12px; } .stat-value { font-size: 1.1em; } }
 
+        /* Calendario filtro recaudación */
+        .rfcal-hdr { text-align:center; font-size:0.65em; font-weight:700; color:#94a3b8; padding:2px 0; }
+        .rfcal-day { text-align:center; padding:5px 2px; border-radius:6px; font-size:0.75em; font-weight:600; min-height:26px; display:flex; align-items:center; justify-content:center; }
+        .rfcal-has { background:#dbeafe; color:#1d4ed8; cursor:pointer; }
+        .rfcal-has:hover { background:#bfdbfe; }
+        .rfcal-sel { background:var(--primary); color:white !important; cursor:pointer; }
+        .rfcal-empty { color:#cbd5e1; }
+        #rec-filtro-toggle.filtro-activo { border-color:var(--primary); border-bottom-left-radius:0; border-bottom-right-radius:0; }
+        #rec-filtro-toggle.panel-abierto:not(.filtro-activo) { border-bottom-left-radius:0; border-bottom-right-radius:0; }
+
         /* Botones motivo ausencia */
         .btn-motivo { padding: 5px 11px; border: 1px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); color: #fca5a5; border-radius: 20px; cursor: pointer; font-size: 0.76em; font-weight: 600; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
         .btn-motivo:hover, .btn-motivo.activo { background: var(--danger); color: white; border-color: var(--danger); }

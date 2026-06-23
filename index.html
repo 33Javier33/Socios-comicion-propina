@@ -981,23 +981,45 @@
 
                 <button onclick="document.getElementById('modalMantenimiento').style.display='flex'" class="btn-action" style="background:#e2e8f0;color:#475569;width:auto;padding:8px 14px;font-weight:700;">⚙️ Mantenimiento</button>
             </div>
-            <div style="background:#f8f9fa;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:18px;">
-                <div style="display:flex;gap:8px;margin-bottom:10px;">
-                    <input type="text" id="filtroRecaudacion" placeholder="🔍 Buscar por fecha, día o monto..." oninput="filtrarRecaudacion()" onkeyup="filtrarRecaudacion()" style="flex:1;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:0.9em;font-family:'DM Sans',sans-serif;outline:none;">
-                    <button onclick="rec_limpiarFiltros()" style="background:none;border:1px solid #ddd;border-radius:8px;padding:7px 12px;font-size:0.8em;color:#7f8c8d;cursor:pointer;white-space:nowrap;">✕ Limpiar</button>
+            <!-- Filtro collapsible -->
+            <div id="rec-filtro-toggle" onclick="rec_toggleFiltroPanel()" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f8f9fa;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;margin-bottom:10px;user-select:none;transition:border-color 0.2s,border-radius 0.2s;">
+                <span style="font-size:0.88em;font-weight:700;color:#374151;">🔍 Filtrar</span>
+                <span id="rec-filtro-badge" style="display:none;background:var(--primary);color:white;font-size:0.68em;font-weight:700;padding:2px 8px;border-radius:20px;"></span>
+                <span id="rec-filtro-chevron" style="margin-left:auto;color:#7f8c8d;font-size:0.78em;transition:transform 0.2s;">▼</span>
+            </div>
+            <div id="rec-filtro-panel" style="display:none;background:#f8f9fa;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:14px;margin-bottom:18px;margin-top:-4px;">
+                <!-- Mini calendario -->
+                <div style="margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                        <button onclick="event.stopPropagation();recFiltroCalCambiar(-1)" style="background:none;border:1px solid #ddd;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:0.85em;color:#374151;">◀</button>
+                        <span id="recFiltroCalMesAnio" style="font-weight:700;font-size:0.85em;color:#374151;"></span>
+                        <button onclick="event.stopPropagation();recFiltroCalCambiar(1)" style="background:none;border:1px solid #ddd;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:0.85em;color:#374151;">▶</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">
+                        <div class="rfcal-hdr">L</div><div class="rfcal-hdr">M</div><div class="rfcal-hdr">M</div><div class="rfcal-hdr">J</div><div class="rfcal-hdr">V</div><div class="rfcal-hdr">S</div><div class="rfcal-hdr">D</div>
+                    </div>
+                    <div id="recFiltroCalGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;"></div>
                 </div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                    <span style="font-size:0.75em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Tipo:</span>
+                <!-- Tipo -->
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+                    <span style="font-size:0.72em;color:#7f8c8d;font-weight:700;text-transform:uppercase;white-space:nowrap;">Tipo:</span>
                     <button class="rec-filtro-chip activo" data-tipo="" onclick="rec_setTipo('',this)">Todos</button>
-                    <button class="rec-filtro-chip" data-tipo="SalaDeJuegos" onclick="rec_setTipo('SalaDeJuegos',this)">🎰 Sala de Juegos</button>
-                    <button class="rec-filtro-chip" data-tipo="EfectivoMDA" onclick="rec_setTipo('EfectivoMDA',this)">💵 Efectivo MDA</button>
-                    <button class="rec-filtro-chip" data-tipo="TarjetaMDA" onclick="rec_setTipo('TarjetaMDA',this)">💳 Tarjeta MDA</button>
+                    <button class="rec-filtro-chip" data-tipo="SalaDeJuegos" onclick="rec_setTipo('SalaDeJuegos',this)">🎰 Sala</button>
+                    <button class="rec-filtro-chip" data-tipo="EfectivoMDA" onclick="rec_setTipo('EfectivoMDA',this)">💵 MDA Ef.</button>
+                    <button class="rec-filtro-chip" data-tipo="TarjetaMDA" onclick="rec_setTipo('TarjetaMDA',this)">💳 MDA Tj.</button>
                     <button class="rec-filtro-chip" data-tipo="Boveda" onclick="rec_setTipo('Boveda',this)">🏦 Bóveda</button>
-                    <span style="margin-left:8px;font-size:0.75em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Divisor:</span>
+                </div>
+                <!-- Divisor -->
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+                    <span style="font-size:0.72em;color:#7f8c8d;font-weight:700;text-transform:uppercase;white-space:nowrap;">Divisor:</span>
                     <button class="rec-filtro-chip" id="chipSinDivisor" onclick="rec_toggleSinDivisor(this)">⚠️ Sin divisor</button>
                     <button class="rec-filtro-chip" id="chipConDivisor" onclick="rec_toggleConDivisor(this)">✅ Con divisor</button>
                 </div>
-                <div id="rec-filtro-info" style="font-size:0.78em;color:#7f8c8d;margin-top:8px;min-height:14px;"></div>
+                <!-- Info + Limpiar -->
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div id="rec-filtro-info" style="font-size:0.78em;color:#7f8c8d;min-height:14px;"></div>
+                    <button onclick="event.stopPropagation();rec_limpiarFiltros()" style="background:none;border:1px solid #ddd;border-radius:8px;padding:5px 12px;font-size:0.8em;color:#7f8c8d;cursor:pointer;white-space:nowrap;">✕ Limpiar</button>
+                </div>
             </div>
 
             <hr style="border:0; border-top:1px solid #ddd; margin:30px 0;">
