@@ -173,6 +173,7 @@ function procesarDatosRecaudacion(datos, silent) {
     const elTP = document.getElementById('recTotalPuntos'); if(elTP) elTP.innerText = formatearMoneda(sumaPuntosGlobal);
     recalcularTotalPT();
     recalcularRemanentes();
+    recalcularAnticipos();
 }
 
 // Total Puntos PT: suma de (recaudación / divisor) para cada día único marcado como PT batch.
@@ -192,6 +193,16 @@ function recalcularTotalPT() {
         if (vp) total += vp;
     }
     el.innerText = formatearMoneda(total);
+}
+
+async function recalcularAnticipos() {
+    const el = document.getElementById('recTotalAnticipos');
+    if (!el) return;
+    try {
+        const allData = await fetchAllDataCached();
+        const total = aq_filtrarAnticiposPeriodo(allData.anticipos || {});
+        el.textContent = formatearMoneda(total);
+    } catch(e) { if (el) el.textContent = 'N/D'; }
 }
 
 async function recalcularRemanentes() {

@@ -1658,6 +1658,7 @@ async function confirmarDesgloseAnticipo() {
         if (campoMonto) campoMonto.focus();
         cargarHistorialSocio(id);
         if (typeof aq_fetchAnticipos === 'function') aq_fetchAnticipos(true);
+        if (typeof recalcularAnticipos === 'function') recalcularAnticipos();
         generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, billetes, folio });
         if (typeof dsg_onNuevoAnticipo === 'function') dsg_onNuevoAnticipo({ firma: folio, socio_nombre: nombre, socio_id: id, monto, fecha, billetes, responsable: respIni + (respArea ? ' ' + respArea : ''), created_at: new Date().toISOString() });
     } catch(e) {
