@@ -1122,7 +1122,7 @@ function cierresMes_render(refocusBuscador = false) {
                 <span style="font-size:1.05em;">⏳</span>
                 <div style="flex:1;min-width:0;">
                     <div style="font-weight:700;font-size:0.83em;color:#991b1b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.nombre} ${s.apellido}</div>
-                    <div style="font-size:0.7em;color:#64748b;">${s.area} · Pendiente</div>
+                    <div style="font-size:0.7em;color:#374151;font-weight:600;">${s.area} · Pendiente</div>
                 </div>
                 <button onclick="cierresMes_ejecutarCierreSocio('${s.id}')" style="background:#dc2626;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:0.75em;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🔒 Cerrar</button>
             </div>`;
@@ -1133,11 +1133,11 @@ function cierresMes_render(refocusBuscador = false) {
                 <span style="font-size:1.05em;">${esCobrado?'💵':'📩'}</span>
                 <div style="flex:1;min-width:0;">
                     <div style="font-weight:700;font-size:0.83em;color:${esCobrado?'#15803d':'#92400e'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.nombre} ${s.apellido}</div>
-                    <div style="font-size:0.7em;color:#64748b;">${s.area} · ${fecha}</div>
+                    <div style="font-size:0.7em;color:#374151;font-weight:600;">${s.area} · ${fecha}</div>
                 </div>
                 <div style="text-align:right;flex-shrink:0;margin-right:6px;">
                     <div style="font-weight:800;color:${esCobrado?'#15803d':'#92400e'};font-size:0.82em;">${fmtM(c.aPagar)}</div>
-                    <div style="color:#64748b;font-size:0.7em;">rem: ${fmtM(c.remanente)}</div>
+                    <div style="color:#374151;font-size:0.7em;">rem: ${fmtM(c.remanente)}</div>
                 </div>
                 <button onclick="cierresMes_actualizarEstado('${s.id}','${esCobrado?'en_sobre':'cobrado'}')"
                     title="${esCobrado?'Pasar a en sobre':'Marcar como cobrado'}"

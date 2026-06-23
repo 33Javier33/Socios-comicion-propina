@@ -129,12 +129,12 @@ async function carpetas_renderArchivero() {
         <div style="background:white;border-radius:12px;padding:16px;margin-bottom:10px;border:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
             <div>
                 <div style="font-weight:800;font-size:0.9em;color:#1e293b;">📁 ${arc.rango}</div>
-                <div style="font-size:0.72em;color:#7f8c8d;margin-top:4px;">
+                <div style="font-size:0.72em;color:#374151;font-weight:600;margin-top:4px;">
                     Rec: <strong>${arc.totalRec}</strong> &nbsp;·&nbsp; Puntos: <strong>${arc.totalPtos}</strong>
                 </div>
                 <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
                     ${sbBadge}
-                    ${arc.fechaArchivo ? '<span style="font-size:0.68em;color:#94a3b8;">Archivado: ' + new Date(arc.fechaArchivo).toLocaleString('es-CL') + '</span>' : ''}
+                    ${arc.fechaArchivo ? '<span style="font-size:0.68em;color:#4b5563;">Archivado: ' + new Date(arc.fechaArchivo).toLocaleString('es-CL') + '</span>' : ''}
                 </div>
             </div>
             <div style="display:flex;gap:6px;">
@@ -196,9 +196,9 @@ function carpetas_verArchivo(idx) {
                 ? `<span style="background:#dcfce7;color:#15803d;font-size:0.7em;font-weight:700;padding:2px 7px;border-radius:10px;">✅ En caja</span>`
                 : `<span style="background:#fef9c3;color:#92400e;font-size:0.7em;font-weight:700;padding:2px 7px;border-radius:10px;">⚠️ Pendiente</span>`;
             const registradoPor = r.registrado_por_nombre
-                ? `<span style="font-size:0.72em;color:#64748b;">👤 ${r.registrado_por_nombre}</span>` : '';
+                ? `<span style="font-size:0.72em;color:#374151;font-weight:600;">👤 ${r.registrado_por_nombre}</span>` : '';
             const arqueadoAt = (arqueado && r.arqueado_at)
-                ? `<span style="font-size:0.72em;color:#64748b;">🕐 ${new Date(r.arqueado_at).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>` : '';
+                ? `<span style="font-size:0.72em;color:#374151;font-weight:600;">🕐 ${new Date(r.arqueado_at).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>` : '';
 
             const billetes = _carpetas_normBilletes(r.billetes);
             const billetesHtml = billetes.length > 0
@@ -218,7 +218,7 @@ function carpetas_verArchivo(idx) {
                             </tr>`;
                         }).join('')}</tbody>
                         <tfoot><tr style="background:#1e293b;">
-                            <td colspan="2" style="padding:4px 8px;color:#94a3b8;font-size:0.85em;font-weight:700;">Total billetes</td>
+                            <td colspan="2" style="padding:4px 8px;color:#374151;font-size:0.85em;font-weight:700;">Total billetes</td>
                             <td style="padding:4px 8px;text-align:right;color:white;font-weight:800;">${formatearMoneda(billetes.reduce((s,b)=>s+Number(b.denominacion||0)*Number(b.cantidad||0),0))}</td>
                         </tr></tfoot>
                     </table></div>` : '';
@@ -244,7 +244,7 @@ function carpetas_verArchivo(idx) {
                 </div>
                 <div style="padding:0 16px;">${tiposHtml}</div>
                 <div style="background:#f8fafc;padding:10px 16px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:0.8em;">
-                    <span style="color:#7f8c8d;">Divisor: <strong>${divVal || '—'}</strong></span>
+                    <span style="color:#374151;">Divisor: <strong>${divVal || '—'}</strong></span>
                     <span style="color:#f59e0b;font-weight:800;">Punto Noche: ${formatearMoneda(puntoNoche)}</span>
                 </div>
             </div>`;
@@ -279,13 +279,13 @@ function carpetas_verArchivo(idx) {
                                     <td style="padding:4px 8px;text-align:right;color:white;font-weight:800;">${formatearMoneda(bils.reduce((s,b)=>s+Number(b.denominacion||0)*Number(b.cantidad||0),0))}</td>
                                 </tr></tfoot>
                             </table></div>`
-                        : `<span style="font-size:0.75em;color:#94a3b8;">Sin desglose</span>`;
+                        : `<span style="font-size:0.75em;color:#4b5563;">Sin desglose</span>`;
                     return `<div style="background:white;border:1px solid #e9d5ff;border-radius:10px;padding:12px;margin-bottom:8px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                             <span style="font-weight:700;color:#6d28d9;font-size:0.85em;">👤 ${ret.socio_nombre || ret.nombre || '—'}</span>
                             <span style="font-weight:800;color:#1e293b;font-size:0.9em;">${formatearMoneda(ret.monto)}</span>
                         </div>
-                        ${ret.responsable ? `<div style="font-size:0.72em;color:#64748b;margin-bottom:4px;">Resp: ${ret.responsable}</div>` : ''}
+                        ${ret.responsable ? `<div style="font-size:0.72em;color:#374151;font-weight:600;margin-bottom:4px;">Resp: ${ret.responsable}</div>` : ''}
                         ${bilsHtml}
                     </div>`;
                 }).join('')}

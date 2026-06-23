@@ -138,8 +138,8 @@ function _dsgRenderCard(r) {
         <div style="padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;border-bottom:1px solid #f1f5f9;">
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:800;font-size:0.95em;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_htmlEsc(r.socio_nombre || '—')}</div>
-                <div style="font-size:0.75em;color:#64748b;margin-top:2px;">${fechaVis}${horaVis ? ' · ' + horaVis : ''}${r.responsable ? ' · ' + _htmlEsc(r.responsable) : ''}</div>
-                <div style="font-size:0.72em;color:#94a3b8;font-family:monospace;margin-top:2px;">${_htmlEsc(r.firma || '')}</div>
+                <div style="font-size:0.75em;color:#374151;font-weight:600;margin-top:2px;">${fechaVis}${horaVis ? ' · ' + horaVis : ''}${r.responsable ? ' · ' + _htmlEsc(r.responsable) : ''}</div>
+                <div style="font-size:0.72em;color:#4b5563;font-family:monospace;margin-top:2px;">${_htmlEsc(r.firma || '')}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
                 <div style="font-size:1.1em;font-weight:900;color:#1e3a5f;">${fmt(Number(r.monto || 0))}</div>

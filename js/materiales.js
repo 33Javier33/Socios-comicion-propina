@@ -109,7 +109,7 @@ function mat_render() {
         const montoColor = esIngreso ? '#10b981' : '#ef4444';
         const montoSigno = esIngreso ? '+' : '-';
         const fechaDisplay = r.fecha ? r.fecha.split('-').reverse().join('/') : '';
-        const notaDisplay = r.nota ? `<div style="font-size:0.78em;color:#7f8c8d;margin-top:2px;">${r.nota}</div>` : '';
+        const notaDisplay = r.nota ? `<div style="font-size:0.78em;color:#374151;margin-top:2px;">${r.nota}</div>` : '';
         return `<div style="background:white;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
             <span style="background:${badgeBg};color:${badgeColor};font-size:0.65em;font-weight:800;padding:3px 7px;border-radius:5px;letter-spacing:0.04em;white-space:nowrap;">${r.tipo.toUpperCase()}</span>
             <div style="flex:1;min-width:0;">
