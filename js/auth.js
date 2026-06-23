@@ -44,6 +44,7 @@ function intentarLogin() {
         errEl.textContent = 'PIN incorrecto. Inténtalo de nuevo.';
         sessionStorage.setItem(SESSION_KEY, 'ok');
         sessionStorage.setItem(SESION_RESP_KEY, respVal);
+        localStorage.setItem(LAST_RESP_KEY, respVal);
         // Auditar inicio de sesión (diferido para que sbAuditLog esté disponible)
         setTimeout(() => {
             if (typeof window.sbAuditLog === 'function') {

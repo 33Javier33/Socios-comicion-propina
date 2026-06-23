@@ -398,11 +398,15 @@ function responsables_poblarLoginSelector() {
     const sel = document.getElementById('loginResponsable');
     if (!sel) return;
     const lista = responsables_cargar();
+    const ultimo = localStorage.getItem(LAST_RESP_KEY) || '';
     sel.innerHTML = '<option value="">— Selecciona tu nombre —</option>';
     lista.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r.ini + '|' + r.area;
         opt.textContent = r.ini + ' (' + r.area + ')';
+        if (opt.value === ultimo) opt.selected = true;
         sel.appendChild(opt);
     });
+    // Actualizar hint de PIN si quedó un responsable preseleccionado
+    if (ultimo && typeof actualizarHintPin === 'function') actualizarHintPin();
 }

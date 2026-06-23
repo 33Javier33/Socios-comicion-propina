@@ -9,9 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
         iniciarApp();
         return;
     }
-    // Poblar selector de responsables
+    // Poblar selector inmediatamente con lo que haya en localStorage
     responsables_poblarLoginSelector();
-    // Si no hay sesión, mostrar login y enfocar PIN
+    // Refrescar lista de responsables y credenciales desde Supabase en background.
+    // Si localStorage estaba vacío o desactualizado, el selector se re-pobla solo
+    // sin que el usuario tenga que recargar la página.
+    cfg_cargarDesdeSupabase().catch(() => {});
+    cargarCredenciales().catch(() => {});
+    // Enfocar PIN
     setTimeout(() => document.getElementById('pinInput').focus(), 300);
 });
 
