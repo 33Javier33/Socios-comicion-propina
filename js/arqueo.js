@@ -91,6 +91,8 @@ function aq_initSiNoIniciado() {
             }
         } catch(e) {}
     }
+    // Mostrar inmediatamente desde localStorage, sin esperar la nube
+    if(sc || sm) aq_generarCampos();
     aq_fetchEsperadoData();
     aq_fetchAnticipos();
     aq_recuperarDeNube(true);
@@ -586,10 +588,28 @@ async function aq_recuperarDeNube(silencioso = false) {
         let datos = null;
         if(typeof window.sbCargarArqueo === 'function') {
             datos = await window.sbCargarArqueo();
-        } else {
-            const res = await fetch(AQ_URL_POST + '?action=getLast');
-            const json = await res.json();
-            if(json.status === 'success') datos = json.data;
+        }
+        // Supabase vacío → caer a GAS y migrar en background
+        if(!datos) {
+            try {
+                const res = await fetch(AQ_URL_POST + '?action=getLast');
+                const json = await res.json();
+                if(json.status === 'success' && json.data) {
+                    datos = json.data;
+                    // Migrar a Supabase para futuros accesos
+                    if(typeof window.sbGuardarArqueo === 'function') {
+                        window.sbGuardarArqueo({
+                            conteoActual: datos.conteoActual || {},
+                            movimientoDisplay: datos.movimientoDisplay || {},
+                            totalRetirado: datos.totalRetirado || 0,
+                            totalContado: 0, totalEsperado: 0,
+                            totalAnticiposNomina: 0, diferencia: 0,
+                            divisorPlanta: '1', divisorPartTime: '1'
+                        }).then(() => console.log('[AQ] Datos migrados de GAS a Supabase'))
+                          .catch(() => {});
+                    }
+                }
+            } catch(e) {}
         }
         if(datos && datos.conteoActual !== undefined) {
             aq_conteo = datos.conteoActual || {};
