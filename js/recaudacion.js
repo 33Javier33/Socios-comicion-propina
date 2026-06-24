@@ -56,7 +56,7 @@ function procesarDatosRecaudacion(datos, silent) {
         if (item.divisor) {
             let strDivisor = String(item.divisor).replace(',', '.');
             let valDivisor = parseFloat(strDivisor);
-            if (valDivisor > 1) { grupos[fecha].divisor = grupos[fecha].divisor === null ? valDivisor : Math.max(grupos[fecha].divisor, valDivisor); }
+            if (valDivisor > 0) { grupos[fecha].divisor = grupos[fecha].divisor === null ? valDivisor : Math.max(grupos[fecha].divisor, valDivisor); }
         }
     });
 
@@ -102,8 +102,8 @@ function procesarDatosRecaudacion(datos, silent) {
             const DIAS_SEMANA = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
             const fechaObj = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
             const nombreDia = DIAS_SEMANA[fechaObj.getDay()];
-            const divisor = parseFloat(dia.divisor) || 1;
-            const puntoNoche = dia.totalDia / divisor;
+            const divisor = (dia.divisor !== null && dia.divisor !== undefined) ? parseFloat(dia.divisor) : null;
+            const puntoNoche = divisor ? dia.totalDia / divisor : null;
             let tiposHtml = '';
 
             const ordenCategorias = ['SalaDeJuegos', 'EfectivoMDA', 'TarjetaMDA', 'Boveda'];
@@ -155,7 +155,7 @@ function procesarDatosRecaudacion(datos, silent) {
                 <div class="date-header">
                     <div>
                         <div class="date-title"><span style="font-size:0.7em;font-weight:700;color:white;background:var(--secondary);padding:2px 8px;border-radius:10px;margin-right:6px;">${nombreDia}</span>📅 ${fechaVisual}</div>
-                        <div style="margin-top:4px;"><span class="date-point-badge">Punto Noche: ${formatearMoneda(puntoNoche)}</span></div>
+                        <div style="margin-top:4px;"><span class="date-point-badge">${puntoNoche !== null ? 'Punto Noche: ' + formatearMoneda(puntoNoche) : 'Sin divisor'}</span></div>
                     </div>
                     <div class="date-total"><small style="display:block;font-size:0.6em;color:#7f8c8d;font-weight:normal;">RECAUDADO</small>${formatearMoneda(dia.totalDia)}</div>
                 </div>
@@ -163,10 +163,10 @@ function procesarDatosRecaudacion(datos, silent) {
                 <div style="background:#f8fafc;border-top:1px solid #eee;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="font-size:0.78em;font-weight:700;color:#7f8c8d;">Divisor:</span>
-                        <input type="number" step="0.01" min="0.01" value="${dia.divisor}"
+                        <input type="number" step="0.01" min="0.01" value="${dia.divisor ?? ''}" placeholder="—"
                             style="width:72px;padding:5px 6px;border:2px solid var(--secondary);border-radius:7px;font-weight:800;text-align:center;font-size:0.9em;"
                             onchange="rec_actualizarDivisor('${fecha}', this.value)">
-                        <span style="font-size:0.78em;color:var(--success);font-weight:700;">${formatearMoneda(puntoNoche)} / pto</span>
+                        <span style="font-size:0.78em;color:var(--success);font-weight:700;">${puntoNoche !== null ? formatearMoneda(puntoNoche) + ' / pto' : '—'}</span>
                     </div>
                     <div style="display:flex;gap:6px;">
                         <button onclick="rec_abrirAgregar('${fecha}')" style="background:var(--success);color:white;border:none;border-radius:7px;padding:6px 11px;font-size:0.8em;font-weight:700;cursor:pointer;">➕ Agregar</button>
@@ -374,8 +374,8 @@ function rec_copiarReporte(fecha) {
     if (!registros.length) return showToast('Sin datos para copiar', 'error');
     const total = registros.reduce((s, r) => s + (parseFloat(r.monto) || 0), 0);
     const divReg = registros.find(r => parseFloat(r.divisor) > 0);
-    const divisorDia = divReg ? parseFloat(divReg.divisor) : 1;
-    const puntoNoche = total / divisorDia;
+    const divisorDia = divReg ? parseFloat(divReg.divisor) : null;
+    const puntoNoche = divisorDia ? total / divisorDia : null;
     const partes = fecha.split('-');
     const fechaVis = partes[2] + '/' + partes[1] + '/' + partes[0];
     let txt = 'REPORTE: ' + fechaVis + '\n' + '-'.repeat(28) + '\n';
@@ -386,8 +386,8 @@ function rec_copiarReporte(fecha) {
     });
     txt += '-'.repeat(28) + '\n';
     txt += 'TOTAL: ' + formatearMoneda(total) + '\n';
-    txt += 'DIVISOR: ' + divisorDia + '\n';
-    txt += 'PUNTO NOCHE: ' + formatearMoneda(puntoNoche);
+    txt += 'DIVISOR: ' + (divisorDia ?? 'Sin divisor') + '\n';
+    txt += 'PUNTO NOCHE: ' + (puntoNoche !== null ? formatearMoneda(puntoNoche) : '—');
     navigator.clipboard.writeText(txt)
         .then(() => showToast('Reporte copiado al portapapeles', 'success'))
         .catch(() => showToast('No se pudo copiar (sin permisos)', 'error'));
