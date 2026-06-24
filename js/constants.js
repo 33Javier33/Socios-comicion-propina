@@ -80,6 +80,7 @@ let aq_conteo = {}, aq_movi = {}, aq_totalRetirado = 0, aq_totalAnticipos = 0, a
 let aq_histStates = [], aq_histIdx = -1;
 let aq_syncInterval = null; // intervalo de sincronizacion automatica
 let aq_snapAlAbrir = null;  // snapshot del conteo al abrir el modal
+let _aqAutoSaveTimer = null; // timer para auto-guardado en nube
 
 // Calendario Part-Time
 let ptCalFecha = new Date();

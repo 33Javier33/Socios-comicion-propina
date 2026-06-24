@@ -93,6 +93,7 @@ function aq_initSiNoIniciado() {
     }
     aq_fetchEsperadoData();
     aq_fetchAnticipos();
+    aq_recuperarDeNube(true);
 }
 
 function aq_fmt(n) { return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(Math.round(n || 0)); }
@@ -123,6 +124,8 @@ function aq_saveState() {
     localStorage.setItem(AQ_SK_CONTEO, JSON.stringify(aq_conteo));
     localStorage.setItem(AQ_SK_MOVI, JSON.stringify(aq_movi));
     localStorage.setItem(AQ_SK_RETIROS, aq_totalRetirado.toString());
+    clearTimeout(_aqAutoSaveTimer);
+    _aqAutoSaveTimer = setTimeout(() => aq_guardarEnNube(true), 3500);
 }
 
 function aq_undoAction() {
@@ -577,8 +580,8 @@ function aq_borrarBackup(index) {
     aq_abrirModalBackup();
 }
 
-async function aq_recuperarDeNube() {
-    toggleLoader(true, 'Cargando arqueo...');
+async function aq_recuperarDeNube(silencioso = false) {
+    if(!silencioso) toggleLoader(true, 'Cargando arqueo...');
     try {
         const res = await fetch(AQ_URL_POST + '?action=getLast');
         const json = await res.json();
@@ -586,30 +589,42 @@ async function aq_recuperarDeNube() {
             aq_conteo = json.data.conteoActual || {};
             aq_movi = json.data.movimientoDisplay || {};
             aq_totalRetirado = json.data.totalRetirado || 0;
+            if(silencioso) {
+                aq_histStates = [{ c: JSON.parse(JSON.stringify(aq_conteo)), r: aq_totalRetirado, m: JSON.parse(JSON.stringify(aq_movi)) }];
+                aq_histIdx = 0;
+            }
             aq_generarCampos();
-            if (json.data.esArchivado) {
-                showToast('⚠️ Cargado desde el último cierre archivado (no hay estado activo)', 'warning');
-            } else {
-                showToast('✅ Datos cargados desde nube', 'success');
+            if(!silencioso) {
+                if (json.data.esArchivado) {
+                    showToast('⚠️ Cargado desde el último cierre archivado (no hay estado activo)', 'warning');
+                } else {
+                    showToast('✅ Datos cargados desde nube', 'success');
+                }
             }
         } else {
-            showToast('Sin datos guardados en la nube', 'warning');
+            if(!silencioso) showToast('Sin datos guardados en la nube', 'warning');
         }
-    } catch(e) { showToast('Error al cargar: ' + e.message, 'error'); } finally { toggleLoader(false); }
+    } catch(e) { if(!silencioso) showToast('Error al cargar: ' + e.message, 'error'); }
+    finally { if(!silencioso) toggleLoader(false); }
 }
 
-async function aq_guardarEnNube() {
-    if(!confirm('☁️ ¿Guardar arqueo en la nube?\n\nEl estado actual queda disponible para cargar desde otro dispositivo.')) return;
-    toggleLoader(true, 'Guardando arqueo...');
+async function aq_guardarEnNube(silencioso = false) {
+    if(!silencioso && !confirm('☁️ ¿Guardar arqueo en la nube?\n\nEl estado actual queda disponible para cargar desde otro dispositivo.')) return;
+    if(!silencioso) toggleLoader(true, 'Guardando arqueo...');
     const espVal = Math.round(parseInt((document.getElementById('aq-esperadoDisplay').textContent||'0').replace(/[^0-9-]/g,''))) || 0;
     const totalCaja = Math.round(aq_calcTotal());
     const payload = { conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
     try {
         const resp = await fetch(AQ_URL_POST, { method: 'POST', body: JSON.stringify(payload) });
         const json = await resp.json();
-        if(json.status === 'success') { aq_crearBackupLocal(); showToast('✅ Guardado en la nube', 'success'); }
-        else { showToast('Error al guardar: ' + (json.message || 'desconocido'), 'error'); }
-    } catch(e) { showToast('Error al guardar: ' + e.message, 'error'); } finally { toggleLoader(false); }
+        if(json.status === 'success') {
+            aq_crearBackupLocal();
+            if(!silencioso) showToast('✅ Guardado en la nube', 'success');
+        } else {
+            if(!silencioso) showToast('Error al guardar: ' + (json.message || 'desconocido'), 'error');
+        }
+    } catch(e) { if(!silencioso) showToast('Error al guardar: ' + e.message, 'error'); }
+    finally { if(!silencioso) toggleLoader(false); }
 }
 
 async function aq_archivarEnNube() {
