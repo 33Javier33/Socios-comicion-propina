@@ -458,6 +458,7 @@ function aq_crearBackupLocal() {
     historial.unshift(backup);
     if(historial.length > 20) historial.pop();
     localStorage.setItem(AQ_SK_BACKUP, JSON.stringify(historial));
+    if(typeof window.sbGuardarBackup === 'function') window.sbGuardarBackup(backup).catch(() => {});
 }
 
 
@@ -537,41 +538,64 @@ function aq_listoConteo() {
     aq_snapAlAbrir = null;
 }
 
-function aq_abrirModalBackup() {
-    const historial = JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || [];
+function _aq_renderBackupList(historial) {
     const container = document.getElementById('aq-backup-list');
-    if(historial.length === 0) { container.innerHTML = '<p style="color:#7f8c8d;">Sin registros archivados.</p>'; }
-    else {
-        let html = '';
-        historial.forEach((b, index) => {
-            const colorDif = b.diferencia >= 0 ? '#10b981' : '#ef4444';
-            const signo = b.diferencia > 0 ? '+' : '';
-            const rendido = Math.round((b.totalContado || 0) + (b.anticipos || 0));
-            html += `<div class="arqueo-card" style="border-left:4px solid #8b5cf6; margin-bottom:15px; padding:15px;">
-                <div style="border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:bold; color:#64748b;">${b.fecha}</span>
-                    <button onclick="aq_borrarBackup(${index})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1em;" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.9em; margin-bottom:10px;">
-                    <div>💰 En Caja:<br><b>${aq_fmt(b.totalContado)}</b></div>
-                    <div>📉 Retiros:<br><b style="color:#ef4444">${aq_fmt(b.retiros||0)}</b></div>
-                    <div>🧾 Anticipos:<br><b style="color:#8b5cf6">${aq_fmt(b.anticipos||0)}</b></div>
-                    <div>📝 Rendido:<br><b style="color:#2563eb">${aq_fmt(rendido)}</b></div>
-                </div>
-                <div style="background:${b.diferencia>=0?'#dcfce7':'#fee2e2'}; padding:10px; border-radius:6px; text-align:center; font-weight:bold; color:${colorDif}; border:1px solid ${colorDif}">
-                    Diferencia: ${signo}${aq_fmt(b.diferencia)} (Esperado: ${aq_fmt(b.esperado)})
-                </div>
-                <details style="font-size:0.85em; margin-top:10px; border-top:1px dashed #e2e8f0; padding-top:5px;">
-                    <summary style="cursor:pointer; color:#2563eb; font-weight:600;">Ver Desglose Billetes</summary>
-                    <table style="width:100%; margin-top:5px;">
-                        ${AQ_DENOMINACIONES.map(v => (b.conteo[v]>0||(b.rastros&&b.rastros[v]))?`<tr><td>${aq_fmt(v)}</td><td>${b.conteo[v]}</td><td style="font-family:monospace; color:#2563eb">${(b.rastros?b.rastros[v]:'')||'-'}</td></tr>`:'').join('')}
-                    </table>
-                </details>
-            </div>`;
-        });
-        container.innerHTML = html;
-    }
+    if(!historial.length) { container.innerHTML = '<p style="color:#7f8c8d;">Sin registros archivados.</p>'; return; }
+    let html = '';
+    historial.forEach((b, index) => {
+        const colorDif = b.diferencia >= 0 ? '#10b981' : '#ef4444';
+        const signo = b.diferencia > 0 ? '+' : '';
+        const rendido = Math.round((b.totalContado || 0) + (b.anticipos || 0));
+        const esLocal = b._local === true;
+        html += `<div class="arqueo-card" style="border-left:4px solid #8b5cf6; margin-bottom:15px; padding:15px;">
+            <div style="border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:bold; color:#64748b;">${b.fecha}</span>
+                ${esLocal ? `<button onclick="aq_borrarBackup(${index})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1em;" title="Eliminar"><i class="fas fa-trash-alt"></i></button>` : '<span style="font-size:0.7em;color:#94a3b8;">☁️</span>'}
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.9em; margin-bottom:10px;">
+                <div>💰 En Caja:<br><b>${aq_fmt(b.totalContado)}</b></div>
+                <div>📉 Retiros:<br><b style="color:#ef4444">${aq_fmt(b.retiros||0)}</b></div>
+                <div>🧾 Anticipos:<br><b style="color:#8b5cf6">${aq_fmt(b.anticipos||0)}</b></div>
+                <div>📝 Rendido:<br><b style="color:#2563eb">${aq_fmt(rendido)}</b></div>
+            </div>
+            <div style="background:${b.diferencia>=0?'#dcfce7':'#fee2e2'}; padding:10px; border-radius:6px; text-align:center; font-weight:bold; color:${colorDif}; border:1px solid ${colorDif}">
+                Diferencia: ${signo}${aq_fmt(b.diferencia)} (Esperado: ${aq_fmt(b.esperado)})
+            </div>
+            <details style="font-size:0.85em; margin-top:10px; border-top:1px dashed #e2e8f0; padding-top:5px;">
+                <summary style="cursor:pointer; color:#2563eb; font-weight:600;">Ver Desglose Billetes</summary>
+                <table style="width:100%; margin-top:5px;">
+                    ${AQ_DENOMINACIONES.map(v => (b.conteo[v]>0||(b.rastros&&b.rastros[v]))?`<tr><td>${aq_fmt(v)}</td><td>${b.conteo[v]}</td><td style="font-family:monospace; color:#2563eb">${(b.rastros?b.rastros[v]:'')||'-'}</td></tr>`:'').join('')}
+                </table>
+            </details>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+async function aq_abrirModalBackup() {
+    const container = document.getElementById('aq-backup-list');
+    container.innerHTML = '<p style="color:#94a3b8; text-align:center;">Cargando...</p>';
     document.getElementById('aq-modalBackup').style.display = 'block';
+
+    const locales = (JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || []).map(b => ({ ...b, _local: true }));
+
+    // Subir backups locales a Supabase (sync inicial, una sola vez por entrada)
+    if(typeof window.sbSyncBackupsLocales === 'function') window.sbSyncBackupsLocales().catch(() => {});
+
+    let nube = [];
+    if(typeof window.sbCargarBackups === 'function') {
+        try { nube = await window.sbCargarBackups(); } catch(e) {}
+    }
+
+    // Mezclar: nube primero, luego locales que no están en nube (por fecha)
+    const fechasNube = new Set(nube.map(b => b.fecha));
+    const soloLocales = locales.filter(b => !fechasNube.has(b.fecha));
+    const todos = [...nube, ...soloLocales].sort((a, b) => {
+        const da = new Date(a.fecha), db = new Date(b.fecha);
+        return (isNaN(db) ? 0 : db) - (isNaN(da) ? 0 : da);
+    });
+
+    _aq_renderBackupList(todos);
 }
 
 function aq_borrarBackup(index) {

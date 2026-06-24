@@ -1715,6 +1715,45 @@ window.sbArchivarArqueo = async function(payload) {
     await dbSoc.from('arqueo_estado').delete().eq('periodo', periodo);
 };
 
+// ── Arqueo backups (Vista Último) → Supabase ─────────────────────────────────────
+window.sbGuardarBackup = async function(backup) {
+    const row = {
+        fecha_texto: backup.fecha,
+        total_contado: backup.totalContado || 0,
+        total_esperado: backup.esperado || 0,
+        total_anticipos: backup.anticipos || 0,
+        total_retiros: backup.retiros || 0,
+        diferencia: backup.diferencia || 0,
+        conteo: backup.conteo || {},
+        rastros: backup.rastros || {}
+    };
+    await dbSoc.from('arqueo_backups').upsert(row, { onConflict: 'fecha_texto', ignoreDuplicates: true });
+};
+
+window.sbCargarBackups = async function() {
+    const { data, error } = await dbSoc.from('arqueo_backups')
+        .select('*').order('fecha', { ascending: false }).limit(30);
+    if (error || !data) return [];
+    return data.map(r => ({
+        fecha: r.fecha_texto || r.fecha,
+        totalContado: r.total_contado || 0,
+        esperado: r.total_esperado || 0,
+        anticipos: r.total_anticipos || 0,
+        retiros: r.total_retiros || 0,
+        diferencia: r.diferencia || 0,
+        conteo: r.conteo || {},
+        rastros: r.rastros || {}
+    }));
+};
+
+window.sbSyncBackupsLocales = async function() {
+    const historial = JSON.parse(localStorage.getItem('arqueoBackupHistorial_List') || '[]');
+    if (!historial.length) return;
+    for (const b of historial) {
+        try { await window.sbGuardarBackup(b); } catch(e) {}
+    }
+};
+
 // ── Realtime broadcast: recargar UI cuando otra app cambia datos ───────────────
 window.addEventListener('load', () => {
     let _rt = null;
