@@ -78,6 +78,10 @@ function auditoria_filtrarDatos() {
 }
 
 const AUD_COLORES = {
+    'Acceso':          { bg:'#e8f0fe', txt:'#1a73e8' },
+    'Retiro':          { bg:'#fef7e0', txt:'#e37400' },
+    'Verificar':       { bg:'#e6f4ea', txt:'#137333' },
+    'Cambiar':         { bg:'#f3e8fd', txt:'#7b1fa2' },
     'Eliminar':        { bg:'#fdecea', txt:'#c0392b' },
     'Registrar':       { bg:'#eafaf1', txt:'#1e8449' },
     'Agregar':         { bg:'#eaf4fb', txt:'#1a6fa0' },
@@ -244,6 +248,7 @@ function auditoria_abrirFiltroImpresion() {
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;';
 
     const CPRINT_COL = {
+        'Acceso':'#1a73e8','Retiro':'#e37400','Verificar':'#137333','Cambiar':'#7b1fa2',
         'Eliminar':'#c0392b','Registrar':'#1a8a44','Agregar':'#1a6fa0',
         'Editar':'#b7770d','Actualizar':'#148f77','Cierre':'#7d3c98','Reiniciar':'#a04000',
         'Imprimir':'#1a3a8a','Canje':'#1b5e20','Ingreso Material':'#059669','Gasto Material':'#dc2626',
@@ -334,6 +339,7 @@ function auditoria_informe(datosOverride, filtrosUsados) {
     const mesNom = MESES[new Date().getMonth()];
 
     const CPRINT = {
+        'Acceso':'#1a73e8','Retiro':'#e37400','Verificar':'#137333','Cambiar':'#7b1fa2',
         'Eliminar':'#c0392b','Registrar':'#1a8a44','Agregar':'#1a6fa0',
         'Editar':'#b7770d','Actualizar':'#148f77','Cierre':'#7d3c98','Reiniciar':'#a04000',
         'Imprimir':'#1a3a8a','Canje':'#1b5e20','Ingreso Material':'#059669','Gasto Material':'#dc2626',
