@@ -1528,7 +1528,7 @@ function abrirDesgloseAnticipo({ id, nombre, fecha, monto, respIni, respArea, mo
     AQ_DENOMINACIONES.forEach(d => {
         html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dotted #e5e7eb;">
             <span style="flex:1;font-weight:700;font-size:0.9em;color:#374151;">${fmt(d)}</span>
-            <input type="number" id="dsg-bil-${d}" min="0" value="0"
+            <input type="number" id="dsg-bil-${d}" min="0" placeholder="0"
                    oninput="actualizarTotalDesglose()"
                    onkeydown="dsgNavegar(event,${d})"
                    style="width:64px;text-align:center;padding:6px 4px;border:1px solid #d1d5db;border-radius:6px;font-size:1em;font-weight:700;">
