@@ -1736,6 +1736,7 @@ window.sbCargarBackups = async function() {
     if (error || !data) return [];
     return data.map(r => ({
         fecha: r.fecha_texto || r.fecha,
+        fecha_iso: r.fecha,
         totalContado: r.total_contado || 0,
         esperado: r.total_esperado || 0,
         anticipos: r.total_anticipos || 0,

@@ -590,10 +590,20 @@ async function aq_abrirModalBackup() {
     // Mezclar: nube primero, luego locales que no están en nube (por fecha)
     const fechasNube = new Set(nube.map(b => b.fecha));
     const soloLocales = locales.filter(b => !fechasNube.has(b.fecha));
-    const todos = [...nube, ...soloLocales].sort((a, b) => {
-        const da = new Date(a.fecha), db = new Date(b.fecha);
-        return (isNaN(db) ? 0 : db) - (isNaN(da) ? 0 : da);
-    });
+
+    function _parseFechaBackup(str) {
+        if (!str) return 0;
+        const iso = Date.parse(str);
+        if (!isNaN(iso)) return iso;
+        // Formato español: "24/6/2025, 22:34:11" o "24/6/2025 22:34:11"
+        const m = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})[,\s]+(\d{1,2}):(\d{2}):(\d{2})/);
+        if (m) return new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5], +m[6]).getTime();
+        return 0;
+    }
+
+    const todos = [...nube, ...soloLocales].sort((a, b) =>
+        _parseFechaBackup(b.fecha_iso || b.fecha) - _parseFechaBackup(a.fecha_iso || a.fecha)
+    );
 
     _aq_renderBackupList(todos);
 }
