@@ -583,24 +583,24 @@ function aq_borrarBackup(index) {
 async function aq_recuperarDeNube(silencioso = false) {
     if(!silencioso) toggleLoader(true, 'Cargando arqueo...');
     try {
-        const res = await fetch(AQ_URL_POST + '?action=getLast');
-        const json = await res.json();
-        if(json.status === 'success') {
-            aq_conteo = json.data.conteoActual || {};
-            aq_movi = json.data.movimientoDisplay || {};
-            aq_totalRetirado = json.data.totalRetirado || 0;
+        let datos = null;
+        if(typeof window.sbCargarArqueo === 'function') {
+            datos = await window.sbCargarArqueo();
+        } else {
+            const res = await fetch(AQ_URL_POST + '?action=getLast');
+            const json = await res.json();
+            if(json.status === 'success') datos = json.data;
+        }
+        if(datos && datos.conteoActual !== undefined) {
+            aq_conteo = datos.conteoActual || {};
+            aq_movi = datos.movimientoDisplay || {};
+            aq_totalRetirado = datos.totalRetirado || 0;
             if(silencioso) {
                 aq_histStates = [{ c: JSON.parse(JSON.stringify(aq_conteo)), r: aq_totalRetirado, m: JSON.parse(JSON.stringify(aq_movi)) }];
                 aq_histIdx = 0;
             }
             aq_generarCampos();
-            if(!silencioso) {
-                if (json.data.esArchivado) {
-                    showToast('⚠️ Cargado desde el último cierre archivado (no hay estado activo)', 'warning');
-                } else {
-                    showToast('✅ Datos cargados desde nube', 'success');
-                }
-            }
+            if(!silencioso) showToast(datos.esArchivado ? '⚠️ Cargado desde el último cierre archivado' : '✅ Datos cargados desde nube', datos.esArchivado ? 'warning' : 'success');
         } else {
             if(!silencioso) showToast('Sin datos guardados en la nube', 'warning');
         }
@@ -615,14 +615,15 @@ async function aq_guardarEnNube(silencioso = false) {
     const totalCaja = Math.round(aq_calcTotal());
     const payload = { conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
     try {
-        const resp = await fetch(AQ_URL_POST, { method: 'POST', body: JSON.stringify(payload) });
-        const json = await resp.json();
-        if(json.status === 'success') {
-            aq_crearBackupLocal();
-            if(!silencioso) showToast('✅ Guardado en la nube', 'success');
+        if(typeof window.sbGuardarArqueo === 'function') {
+            await window.sbGuardarArqueo(payload);
         } else {
-            if(!silencioso) showToast('Error al guardar: ' + (json.message || 'desconocido'), 'error');
+            const resp = await fetch(AQ_URL_POST, { method: 'POST', body: JSON.stringify(payload) });
+            const json = await resp.json();
+            if(json.status !== 'success') throw new Error(json.message || 'Error GAS');
         }
+        aq_crearBackupLocal();
+        if(!silencioso) showToast('✅ Guardado en la nube', 'success');
     } catch(e) { if(!silencioso) showToast('Error al guardar: ' + e.message, 'error'); }
     finally { if(!silencioso) toggleLoader(false); }
 }
@@ -632,12 +633,16 @@ async function aq_archivarEnNube() {
     toggleLoader(true, 'Archivando...');
     const espVal = Math.round(parseInt((document.getElementById('aq-esperadoDisplay').textContent||'0').replace(/[^0-9-]/g,''))) || 0;
     const totalCaja = Math.round(aq_calcTotal());
-    const payload = { action: 'archive', conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
+    const payload = { conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
     try {
-        const resp = await fetch(AQ_URL_POST + '?action=archive', { method: 'POST', body: JSON.stringify(payload) });
-        const json = await resp.json();
-        if(json.status === 'success') { aq_crearBackupLocal(); aq_resetear(); showToast('✅ Informe archivado correctamente', 'success'); }
-        else { showToast('Error al archivar: ' + (json.message || 'desconocido'), 'error'); }
+        if(typeof window.sbArchivarArqueo === 'function') {
+            await window.sbArchivarArqueo(payload);
+        } else {
+            const resp = await fetch(AQ_URL_POST + '?action=archive', { method: 'POST', body: JSON.stringify(payload) });
+            const json = await resp.json();
+            if(json.status !== 'success') throw new Error(json.message || 'Error GAS');
+        }
+        aq_crearBackupLocal(); aq_resetear(); showToast('✅ Informe archivado correctamente', 'success');
     } catch(e) { showToast('Error al archivar: ' + e.message, 'error'); } finally { toggleLoader(false); }
 }
 

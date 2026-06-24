@@ -1647,6 +1647,74 @@ window.sbSyncResponsables = async function() {
     } catch(e) {}
 };
 
+// ── Arqueo de caja → Supabase ────────────────────────────────────────────────────
+function _aqPeriodoActual() {
+    const hoy = new Date();
+    const anio = hoy.getFullYear(), mes = hoy.getMonth();
+    let inicio;
+    if (hoy.getDate() >= 15) {
+        inicio = new Date(anio, mes, 15);
+    } else {
+        inicio = new Date(anio, mes - 1, 15);
+    }
+    return inicio.toISOString().split('T')[0];
+}
+
+window.sbGuardarArqueo = async function(payload) {
+    const periodo = _aqPeriodoActual();
+    const row = {
+        periodo,
+        conteo: payload.conteoActual || {},
+        movimiento_display: payload.movimientoDisplay || {},
+        total_retirado: payload.totalRetirado || 0,
+        total_contado: payload.totalContado || 0,
+        total_esperado: payload.totalEsperado || 0,
+        total_anticipos_nomina: payload.totalAnticiposNomina || 0,
+        diferencia: payload.diferencia || 0,
+        divisor_planta: String(payload.divisorPlanta || '1'),
+        divisor_part_time: String(payload.divisorPartTime || '1'),
+        updated_at: new Date().toISOString()
+    };
+    const { error } = await dbSoc.from('arqueo_estado').upsert(row, { onConflict: 'periodo' });
+    if (error) throw new Error(error.message);
+};
+
+window.sbCargarArqueo = async function() {
+    const periodo = _aqPeriodoActual();
+    // Intenta el período actual primero
+    let { data, error } = await dbSoc.from('arqueo_estado')
+        .select('*').eq('periodo', periodo).maybeSingle();
+    if (!error && data) {
+        return { conteoActual: data.conteo || {}, movimientoDisplay: data.movimiento_display || {}, totalRetirado: data.total_retirado || 0, esArchivado: false };
+    }
+    // Fallback: el más reciente de cualquier período
+    const { data: fb } = await dbSoc.from('arqueo_estado')
+        .select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle();
+    if (fb) {
+        return { conteoActual: fb.conteo || {}, movimientoDisplay: fb.movimiento_display || {}, totalRetirado: fb.total_retirado || 0, esArchivado: false };
+    }
+    return null;
+};
+
+window.sbArchivarArqueo = async function(payload) {
+    const cierre = {
+        total_contado: payload.totalContado || 0,
+        diferencia: payload.diferencia || 0,
+        total_retirado: payload.totalRetirado || 0,
+        conteo_actual: payload.conteoActual || {},
+        movimiento_display: payload.movimientoDisplay || {},
+        total_esperado: payload.totalEsperado || 0,
+        total_anticipos_nomina: payload.totalAnticiposNomina || 0,
+        divisor_planta: parseFloat(payload.divisorPlanta) || 1,
+        divisor_pt: parseFloat(payload.divisorPartTime) || 1,
+        divisor_part_time: String(payload.divisorPartTime || '1')
+    };
+    const { error } = await dbSoc.from('arqueo_cierres').insert(cierre);
+    if (error) throw new Error(error.message);
+    const periodo = _aqPeriodoActual();
+    await dbSoc.from('arqueo_estado').delete().eq('periodo', periodo);
+};
+
 // ── Realtime broadcast: recargar UI cuando otra app cambia datos ───────────────
 window.addEventListener('load', () => {
     let _rt = null;
