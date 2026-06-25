@@ -1138,6 +1138,26 @@
             </div>
         </div>
 
+        <!-- MODAL CONFIRMACIÓN FIRMA CERTIFICADO -->
+        <div id="cert-modal-firma" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+            <div style="background:white;border-radius:20px;padding:24px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <div style="font-size:1em;font-weight:800;color:#1e3a5f;margin-bottom:4px;">🖊 Confirmar Firma</div>
+                <div style="font-size:0.8em;color:#64748b;margin-bottom:16px;">Ingresa tu nombre completo y PIN para firmar e imprimir el certificado.</div>
+                <div style="font-size:0.72em;font-weight:700;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em;">Nombre Completo</div>
+                <input id="cert-firma-nombre" type="text" placeholder="Ej: Patricia Miralles" autocomplete="off"
+                    style="width:100%;box-sizing:border-box;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9em;outline:none;margin-bottom:12px;">
+                <div style="font-size:0.72em;font-weight:700;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em;">PIN de acceso</div>
+                <input id="cert-firma-pin" type="password" placeholder="••••" maxlength="6" inputmode="numeric"
+                    style="width:100%;box-sizing:border-box;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:1em;outline:none;margin-bottom:12px;letter-spacing:6px;text-align:center;"
+                    onkeydown="if(event.key==='Enter')cert_confirmarFirma()">
+                <div id="cert-firma-error" style="display:none;color:#dc2626;font-size:0.8em;margin-bottom:10px;padding:8px 10px;background:#fee2e2;border-radius:8px;"></div>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="cert_cerrarModalFirma()" style="flex:1;padding:11px;background:#f1f5f9;border:none;border-radius:10px;font-weight:700;cursor:pointer;color:#374151;font-size:0.9em;">Cancelar</button>
+                    <button onclick="cert_confirmarFirma()" style="flex:2;padding:11px;background:linear-gradient(135deg,#1e3a5f,#2980b9);color:white;border:none;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.9em;">✓ Firmar e Imprimir</button>
+                </div>
+            </div>
+        </div>
+
         <!-- PESTAÑA: MATERIALES Y GASTOS -->
         <div id="tab-materiales" class="tab-content">
             <div id="mat-columnas" style="padding:15px;margin:0 auto;display:flex;flex-direction:column;gap:14px;">

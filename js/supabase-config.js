@@ -1025,6 +1025,20 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             }
         }
 
+        // ── actualizarCertificadoResponsable → guardar nombre del firmante ──
+        if (action === 'actualizarCertificadoResponsable') {
+            try {
+                const { error } = await dbSoc.from('certificados')
+                    .update({ responsable: body.responsable || '' })
+                    .eq('id', body.id);
+                if (error) throw error;
+                return _mockOk({ status: 'success' });
+            } catch(e) {
+                console.warn('[SB-CERT] actualizarCertificadoResponsable error:', e.message);
+                return _mockOk({ status: 'error', message: e.message });
+            }
+        }
+
         // ── eliminarCertificado → borrar por id ────────────────────
         if (action === 'eliminarCertificado') {
             try {

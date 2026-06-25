@@ -280,6 +280,8 @@ function cert_actualizarTotal() {
 // GENERAR Y GUARDAR
 // ──────────────────────────────────────────────────────────
 
+let _certPendingPrint = null; // datos pendientes hasta confirmar firma
+
 async function cert_generar() {
     if (!_certSocioSel) return;
     const sel = _certPeriodosGen.filter(p => p.checked);
@@ -299,9 +301,6 @@ async function cert_generar() {
         '💵 Total: ' + fmt(totalGeneral) + '\n\n¿Confirmar y guardar?'
     )) return;
 
-    const rObj = typeof getSesionResponsableObj === 'function' ? getSesionResponsableObj() : {};
-    const responsable = rObj.ini ? `${rObj.ini}${rObj.area ? ' (' + rObj.area + ')' : ''}` : '';
-
     const periodosData = sel.map(p => ({
         nombre: `${fmtD(p.inicio)} A ${fmtD(p.fin)}`,
         fechaInicio: p.inicioISO,
@@ -319,18 +318,90 @@ async function cert_generar() {
             socio_puntos: puntos,
             periodos: periodosData,
             total_recibir: totalGeneral,
-            responsable
+            responsable: ''   // se completará tras confirmar firma
         });
         if (res.status !== 'success') throw new Error(res.message || 'Error al guardar');
-        showToast('✅ Certificado guardado', 'success');
         if (res.data) _certRegistros.unshift(res.data);
         cert_renderHistorial();
-        cert_imprimir({ socio: _certSocioSel, periodos: periodosData, total: totalGeneral, responsable });
+        // Guardar datos para imprimir tras confirmar nombre+PIN
+        _certPendingPrint = {
+            recordId: res.data?.id || null,
+            socio: _certSocioSel,
+            periodos: periodosData,
+            total: totalGeneral
+        };
+        cert_abrirModalFirma();
     } catch(e) {
         showToast('Error al guardar: ' + e.message, 'error');
     } finally {
         toggleLoader(false);
     }
+}
+
+// ──────────────────────────────────────────────────────────
+// MODAL FIRMA
+// ──────────────────────────────────────────────────────────
+
+function cert_abrirModalFirma() {
+    const modal = document.getElementById('cert-modal-firma');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    const nombre = document.getElementById('cert-firma-nombre');
+    if (nombre) { nombre.value = ''; nombre.focus(); }
+    const pin = document.getElementById('cert-firma-pin');
+    if (pin) pin.value = '';
+    const err = document.getElementById('cert-firma-error');
+    if (err) err.style.display = 'none';
+}
+
+function cert_cerrarModalFirma() {
+    const modal = document.getElementById('cert-modal-firma');
+    if (modal) modal.style.display = 'none';
+    _certPendingPrint = null;
+}
+
+function cert_confirmarFirma() {
+    const nombreEl = document.getElementById('cert-firma-nombre');
+    const pinEl = document.getElementById('cert-firma-pin');
+    const errEl = document.getElementById('cert-firma-error');
+    const nombre = (nombreEl?.value || '').trim();
+    const pin = (pinEl?.value || '').trim();
+
+    const mostrarError = msg => {
+        if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    };
+
+    if (!nombre) { mostrarError('Ingresa tu nombre completo.'); nombreEl?.focus(); return; }
+    if (!pin) { mostrarError('Ingresa tu PIN.'); pinEl?.focus(); return; }
+
+    // Validar PIN — buscar en credencialesCache del responsable en sesión
+    const sesion = typeof getSesionResponsableObj === 'function' ? getSesionResponsableObj() : {};
+    const key = sesion.ini && sesion.area ? `${sesion.ini}|${sesion.area}` : '';
+    const pinSesion = key ? (credencialesCache[key] || '') : '';
+    const pinGlobal = localStorage.getItem(PIN_KEY) || PIN_DEFAULT;
+    const pinValido = (pinSesion && pin === pinSesion) || (!pinSesion && pin === pinGlobal);
+
+    if (!pinValido) {
+        mostrarError('PIN incorrecto. Intenta nuevamente.');
+        if (pinEl) { pinEl.value = ''; pinEl.focus(); }
+        return;
+    }
+
+    // Actualizar el registro en Supabase con el nombre del responsable
+    if (_certPendingPrint?.recordId) {
+        callApiSocios('actualizarCertificadoResponsable', {
+            id: _certPendingPrint.recordId,
+            responsable: nombre
+        }).catch(() => {});
+        // Actualizar también en cache local
+        const rec = _certRegistros.find(r => r.id === _certPendingPrint.recordId);
+        if (rec) rec.responsable = nombre;
+        cert_renderHistorial();
+    }
+
+    const datos = _certPendingPrint;
+    cert_cerrarModalFirma();
+    if (datos) cert_imprimir({ ...datos, responsable: nombre });
 }
 
 // ──────────────────────────────────────────────────────────
@@ -432,25 +503,29 @@ function cert_imprimir({ socio, periodos, total, responsable }) {
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Certificado — ${nombreCompleto}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#000;padding:22mm 22mm 18mm 22mm;}
+html,body{height:100%;}
+body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#000;padding:20mm 22mm 15mm 22mm;
+     display:flex;flex-direction:column;min-height:100%;}
 h1{text-align:center;font-size:22pt;font-weight:900;letter-spacing:3px;margin-bottom:4mm;}
-.sub{text-align:center;font-size:10pt;color:#333;margin-bottom:10mm;font-weight:600;}
-.lugar{text-align:right;font-size:9.5pt;color:#555;margin-bottom:9mm;}
-.cuerpo{font-size:10.5pt;line-height:1.75;margin-bottom:7mm;text-align:justify;}
-table{width:100%;border-collapse:collapse;margin-top:4mm;}
+.sub{text-align:center;font-size:10pt;color:#333;margin-bottom:9mm;font-weight:600;}
+.lugar{text-align:right;font-size:9.5pt;color:#555;margin-bottom:8mm;}
+.cuerpo{font-size:10.5pt;line-height:1.7;margin-bottom:6mm;text-align:justify;}
+table{width:100%;border-collapse:collapse;margin-top:3mm;}
 thead tr{border-bottom:2px solid #000;}
-thead th{padding:5px 8px;text-align:left;font-size:9.5pt;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;}
+thead th{padding:4px 8px;text-align:left;font-size:9.5pt;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;}
 thead th:last-child{text-align:right;}
 tbody tr:nth-child(even){background:#f7f7f7;}
 tbody td{font-size:10pt;color:#000;}
-.total-row{border-top:2px solid #000;padding:7px 8px;display:flex;justify-content:space-between;margin-top:3mm;font-size:12pt;font-weight:900;}
-.nota{font-size:8.5pt;color:#92400e;margin-top:5mm;font-style:italic;}
-.footer{margin-top:9mm;font-size:10.5pt;line-height:1.7;text-align:justify;}
-.firmas{margin-top:20mm;display:flex;justify-content:space-around;}
-.firma-box{text-align:center;width:45%;}
-.firma-linea{border-top:1.5px solid #000;padding-top:5px;margin-top:18mm;font-size:9.5pt;font-weight:700;text-transform:uppercase;}
+.total-row{border-top:2px solid #000;padding:6px 8px;display:flex;justify-content:space-between;margin-top:2mm;font-size:12pt;font-weight:900;}
+.nota{font-size:8.5pt;color:#92400e;margin-top:4mm;font-style:italic;}
+.footer{margin-top:7mm;font-size:10.5pt;line-height:1.65;text-align:justify;}
+.firmas{margin-top:auto;padding-top:10mm;display:flex;justify-content:space-around;
+        page-break-inside:avoid;break-inside:avoid;}
+.firma-box{text-align:center;width:44%;}
+.firma-espacio{height:16mm;}
+.firma-linea{border-top:1.5px solid #000;padding-top:5px;font-size:9.5pt;font-weight:700;text-transform:uppercase;}
 .firma-sub{font-size:9pt;color:#555;margin-top:3px;}
-@media print{@page{size:A4;margin:0;}body{padding:20mm 20mm 16mm 20mm;}}
+@media print{@page{size:A4;margin:0;}body{padding:18mm 20mm 12mm 20mm;}}
 </style></head><body>
 
 <h1>CERTIFICADO</h1>
@@ -483,10 +558,12 @@ ${hayEstimados ? '<p class="nota">(*) Los valores marcados con asterisco son est
 
 <div class="firmas">
     <div class="firma-box">
+        <div class="firma-espacio"></div>
         <div class="firma-linea">${responsable ? _cert_esc(responsable) : 'Comisión Propinas'}</div>
         <div class="firma-sub">Comisión Propinas · Casino Pto. Varas</div>
     </div>
     <div class="firma-box">
+        <div class="firma-espacio"></div>
         <div class="firma-linea">${nombreCompleto}</div>
         <div class="firma-sub">${_cert_esc(socio.contrato || socio.area || '')}</div>
     </div>
