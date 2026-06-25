@@ -75,7 +75,8 @@ function procesarDatosRecaudacion(datos, silent) {
     globalValorPuntoTotal = sumaPuntosGlobal;
 
     // Actualizar valor/pto en tarjetas de Anticipos y Ausencias (en modo silent y normal)
-    if (typeof renderizarListaBusqueda === 'function' && document.getElementById('listaResultados')?.children.length > 0) {
+    // Usar cacheSocios como condición (más confiable que chequear DOM) para evitar race conditions
+    if (typeof renderizarListaBusqueda === 'function' && Array.isArray(cacheSocios) && cacheSocios.length > 0) {
         renderizarListaBusqueda();
     }
 
