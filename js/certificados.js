@@ -213,14 +213,21 @@ function cert_renderPeriodoLista() {
         </div>`;
     }).join('');
 
+    // Años disponibles (de más reciente a más antiguo)
+    const años = [...new Set(_certPeriodosGen.map(p => p.inicio.getFullYear()))].sort((a, b) => b - a);
+    const añoBtns = años.map(a =>
+        `<button onclick="cert_seleccionarAño(${a})"
+            style="font-size:0.72em;padding:3px 9px;background:#f1f5f9;border:1px solid #cbd5e1;color:#334155;border-radius:6px;cursor:pointer;font-weight:700;">${a}</button>`
+    ).join('');
+
     wrap.style.display = 'block';
     wrap.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-            <span style="font-size:0.72em;font-weight:800;color:#1e3a5f;text-transform:uppercase;letter-spacing:0.06em;">${_certPeriodosGen.length} período${_certPeriodosGen.length!==1?'s':''}</span>
-            <div style="display:flex;gap:6px;">
-                <button onclick="cert_toggleTodos(true)" style="font-size:0.72em;padding:3px 9px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:6px;cursor:pointer;font-weight:700;">Todos</button>
-                <button onclick="cert_toggleTodos(false)" style="font-size:0.72em;padding:3px 9px;background:#f8fafc;border:1px solid #e2e8f0;color:#64748b;border-radius:6px;cursor:pointer;font-weight:700;">Ninguno</button>
-            </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px;">
+            <button onclick="cert_seleccionarUltimos(6)"  style="font-size:0.72em;padding:3px 9px;background:#fef3c7;border:1px solid #fde68a;color:#92400e;border-radius:6px;cursor:pointer;font-weight:700;">Últimos 6 meses</button>
+            <button onclick="cert_seleccionarUltimos(12)" style="font-size:0.72em;padding:3px 9px;background:#fef3c7;border:1px solid #fde68a;color:#92400e;border-radius:6px;cursor:pointer;font-weight:700;">Últimos 12 meses</button>
+            <button onclick="cert_toggleTodos(true)"  style="font-size:0.72em;padding:3px 9px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:6px;cursor:pointer;font-weight:700;">Todos</button>
+            <button onclick="cert_toggleTodos(false)" style="font-size:0.72em;padding:3px 9px;background:#f8fafc;border:1px solid #e2e8f0;color:#64748b;border-radius:6px;cursor:pointer;font-weight:700;">Ninguno</button>
+            ${añoBtns}
         </div>
         <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;max-height:280px;overflow-y:auto;">${filas}</div>
         <div style="margin-top:10px;background:#f0fdf4;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">
@@ -236,6 +243,25 @@ function cert_toggleTodos(checked) {
         p.checked = checked;
         const cb = document.getElementById('cert-p-' + i);
         if (cb) cb.checked = checked;
+    });
+    cert_actualizarTotal();
+}
+
+function cert_seleccionarUltimos(n) {
+    const total = _certPeriodosGen.length;
+    _certPeriodosGen.forEach((p, i) => {
+        p.checked = i >= total - n;
+        const cb = document.getElementById('cert-p-' + i);
+        if (cb) cb.checked = p.checked;
+    });
+    cert_actualizarTotal();
+}
+
+function cert_seleccionarAño(año) {
+    _certPeriodosGen.forEach((p, i) => {
+        p.checked = p.inicio.getFullYear() === año;
+        const cb = document.getElementById('cert-p-' + i);
+        if (cb) cb.checked = p.checked;
     });
     cert_actualizarTotal();
 }
