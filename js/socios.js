@@ -568,6 +568,10 @@ function renderizarListaBusqueda() {
 
             // Valor del punto según tipo de contrato (requiere datos de recaudación cargados)
             let valorPunto = 0;
+            const _mapKeys = globalMapaPuntosDia ? Object.keys(globalMapaPuntosDia).length : 0;
+            if (_mapKeys === 0 || globalValorPuntoTotal === 0) {
+                if (socios.indexOf(s) === 0) console.log('[DBG-VALPTO] globalMapaPuntosDia keys:', _mapKeys, '| globalValorPuntoTotal:', globalValorPuntoTotal, '| cacheSocios:', cacheSocios.length);
+            }
             const hayDatos = globalMapaPuntosDia && Object.keys(globalMapaPuntosDia).length > 0;
             if (hayDatos) {
                 if (s.contrato === 'Part-Time') {
