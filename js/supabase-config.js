@@ -1002,22 +1002,21 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         // ── guardarCertificado → insertar nuevo certificado ────────
         if (action === 'guardarCertificado') {
             try {
+                const nPeriodos = Array.isArray(body.periodos) ? body.periodos.length : 0;
                 const { data: inserted, error } = await dbSoc.from('certificados').insert({
                     socio_id: body.socio_id || '',
                     socio_nombre: body.socio_nombre || '',
                     socio_apellido: body.socio_apellido || '',
                     socio_puntos: Number(body.socio_puntos || 0),
-                    periodo_id: body.periodo_id || '',
-                    periodo_nombre: body.periodo_nombre || '',
-                    valor_punto: Number(body.valor_punto || 0),
+                    periodos: body.periodos || null,
                     total_recibir: Number(body.total_recibir || 0),
                     responsable: body.responsable || ''
                 }).select().single();
                 if (error) throw error;
                 _sbAudit('Generar Certificado', {
                     idAfectado: body.socio_id || '',
-                    detalle: `Socio: ${body.socio_nombre} ${body.socio_apellido} | Período: ${body.periodo_nombre} | Total: $${Number(body.total_recibir || 0).toLocaleString('es-CL')}`,
-                    datos: { socio_puntos: body.socio_puntos, valor_punto: body.valor_punto }
+                    detalle: `Socio: ${body.socio_nombre} ${body.socio_apellido} | Períodos: ${nPeriodos} | Total: $${Number(body.total_recibir || 0).toLocaleString('es-CL')}`,
+                    datos: { socio_puntos: body.socio_puntos, periodos: nPeriodos }
                 });
                 return _mockOk({ status: 'success', data: inserted });
             } catch(e) {

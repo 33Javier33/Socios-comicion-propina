@@ -1,11 +1,11 @@
 // ============================================================
-// CERTIFICADOS — generación y archivo de certificados de pago
+// CERTIFICADOS — generación multi-período y archivo
 // ============================================================
 
 let _certRegistros = [];
-let _certPeriodos = [];
+let _certPeriodos = [];           // períodos archivados en Supabase
 let _certSocioSel = null;
-let _certPeriodoSel = null;
+let _certPeriodosGen = [];        // períodos generados para el socio seleccionado
 let _certInicializado = false;
 
 // ──────────────────────────────────────────────────────────
@@ -18,19 +18,21 @@ async function cert_init() {
     const lista = document.getElementById('cert-historial');
     if (lista) lista.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:0.88em;">⏳ Cargando...</div>';
     await Promise.all([cert_cargarPeriodos(), cert_cargarHistorial()]);
-    cert_renderPeriodos();
     cert_renderHistorial();
 }
 
 async function cert_recargar() {
     _certInicializado = false;
     _certSocioSel = null;
-    _certPeriodoSel = null;
+    _certPeriodosGen = [];
     const input = document.getElementById('cert-buscar-socio');
     if (input) input.value = '';
-    const sel = document.getElementById('cert-periodo-select');
-    if (sel) sel.value = '';
-    cert_actualizarCalculo();
+    const info = document.getElementById('cert-socio-info');
+    if (info) { info.style.display = 'none'; info.innerHTML = ''; }
+    const wrap = document.getElementById('cert-periodos-wrap');
+    if (wrap) { wrap.style.display = 'none'; wrap.innerHTML = ''; }
+    const btn = document.getElementById('cert-btn-generar');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
     await cert_init();
 }
 
@@ -41,15 +43,14 @@ async function cert_recargar() {
 async function cert_cargarPeriodos() {
     try {
         const { data, error } = await dbSoc.from('periodos_archivados')
-            .select('id, nombre, datos, created_at')
-            .order('created_at', { ascending: false });
+            .select('id, nombre, fecha_inicio, datos, created_at')
+            .order('fecha_inicio', { ascending: true });
         if (error) throw error;
         _certPeriodos = (data || []).map(row => ({
             id: row.id,
             nombre: row.nombre || row.datos?.rango || '',
-            totalPtos: row.datos?.totalPtos || '—',
             valorPunto: _cert_parseMonto(row.datos?.totalPtos || '0'),
-            fechaArchivo: row.datos?.fechaArchivo || row.created_at
+            fechaInicio: row.fecha_inicio || ''
         }));
     } catch(e) {
         console.warn('[CERT] Error cargando períodos:', e.message);
@@ -85,12 +86,11 @@ function cert_buscarSocio() {
         .filter(s => `${s.nombre} ${s.apellido}`.toLowerCase().includes(q))
         .slice(0, 8);
 
-    if (matches.length === 0) {
+    if (!matches.length) {
         results.innerHTML = '<div style="padding:10px;color:#94a3b8;font-size:0.85em;text-align:center;">Sin resultados</div>';
         results.style.display = 'block';
         return;
     }
-
     results.style.display = 'block';
     results.innerHTML = matches.map(s =>
         `<div onclick="cert_seleccionarSocio('${_cert_esc(s.id)}')"
@@ -108,77 +108,146 @@ function cert_seleccionarSocio(id) {
     if (input && _certSocioSel) input.value = `${_certSocioSel.nombre} ${_certSocioSel.apellido}`;
     const results = document.getElementById('cert-socio-results');
     if (results) { results.innerHTML = ''; results.style.display = 'none'; }
-    cert_actualizarCalculo();
+
+    const info = document.getElementById('cert-socio-info');
+    if (info && _certSocioSel) {
+        info.style.display = 'block';
+        info.innerHTML = `<strong>${_cert_esc(_certSocioSel.nombre)} ${_cert_esc(_certSocioSel.apellido)}</strong>&nbsp;·&nbsp;${_certSocioSel.puntos} puntos&nbsp;·&nbsp;${_certSocioSel.contrato || _certSocioSel.area || ''}`;
+    }
+
+    cert_generarListaPeriodos();
 }
 
 // ──────────────────────────────────────────────────────────
-// PERÍODOS
+// GENERACIÓN Y RENDER DE PERÍODOS
 // ──────────────────────────────────────────────────────────
 
-function cert_renderPeriodos() {
-    const sel = document.getElementById('cert-periodo-select');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— Selecciona un período —</option>';
-    _certPeriodos.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        const fmt = v => new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(v);
-        opt.textContent = p.nombre + '  ·  ' + fmt(p.valorPunto) + '/pto';
-        sel.appendChild(opt);
-    });
-}
+function cert_generarListaPeriodos() {
+    if (!_certSocioSel) return;
 
-function cert_seleccionarPeriodo() {
-    const sel = document.getElementById('cert-periodo-select');
-    const id = sel?.value || '';
-    _certPeriodoSel = _certPeriodos.find(p => p.id === id) || null;
-    cert_actualizarCalculo();
-}
+    const wrap = document.getElementById('cert-periodos-wrap');
+    const fechaIngreso = _certSocioSel.fechaIngreso;
 
-// ──────────────────────────────────────────────────────────
-// CÁLCULO Y PREVIEW
-// ──────────────────────────────────────────────────────────
-
-function cert_actualizarCalculo() {
-    const previewEl = document.getElementById('cert-preview');
-    const btnGen = document.getElementById('cert-btn-generar');
-    if (!previewEl) return;
-
-    if (!_certSocioSel || !_certPeriodoSel) {
-        previewEl.style.display = 'none';
-        if (btnGen) { btnGen.disabled = true; btnGen.style.opacity = '0.4'; }
+    if (!fechaIngreso) {
+        if (wrap) { wrap.style.display = 'block'; wrap.innerHTML = '<div style="color:#dc2626;font-size:0.85em;padding:8px;">Sin fecha de ingreso registrada para este socio.</div>'; }
         return;
     }
 
+    // Promedio de valor_punto de períodos archivados (para estimados)
+    const vals = _certPeriodos.map(p => p.valorPunto).filter(v => v > 0);
+    const promedio = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
     const puntos = Number(_certSocioSel.puntos || 0);
-    const valorPunto = _certPeriodoSel.valorPunto;
-    const total = Math.round(puntos * valorPunto);
-    const fmt = v => new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(v);
 
-    previewEl.style.display = 'block';
-    previewEl.innerHTML = `
-        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:80px;background:white;border-radius:10px;padding:10px;text-align:center;border:1px solid #bfdbfe;">
-                <div style="font-size:0.65em;font-weight:800;color:#1e40af;text-transform:uppercase;margin-bottom:3px;">Puntos</div>
-                <div style="font-size:1.4em;font-weight:900;color:#1e3a5f;">${puntos}</div>
-            </div>
-            <div style="display:flex;align-items:center;font-size:1.2em;color:#94a3b8;font-weight:700;">×</div>
-            <div style="flex:1;min-width:80px;background:white;border-radius:10px;padding:10px;text-align:center;border:1px solid #fde68a;">
-                <div style="font-size:0.65em;font-weight:800;color:#92400e;text-transform:uppercase;margin-bottom:3px;">Valor punto</div>
-                <div style="font-size:1.05em;font-weight:900;color:#1e293b;">${fmt(valorPunto)}</div>
-            </div>
-            <div style="display:flex;align-items:center;font-size:1.2em;color:#94a3b8;font-weight:700;">=</div>
-            <div style="flex:1;min-width:90px;background:#f0fdf4;border-radius:10px;padding:10px;text-align:center;border:2px solid #86efac;">
-                <div style="font-size:0.65em;font-weight:800;color:#15803d;text-transform:uppercase;margin-bottom:3px;">Total</div>
-                <div style="font-size:1.1em;font-weight:900;color:#14532d;">${fmt(total)}</div>
+    // Primera fecha de inicio: el 15 del mes en o después de fechaIngreso
+    let d = new Date(fechaIngreso + 'T12:00:00');
+    if (isNaN(d.getTime())) {
+        if (wrap) { wrap.style.display = 'block'; wrap.innerHTML = '<div style="color:#dc2626;font-size:0.85em;padding:8px;">Fecha de ingreso inválida.</div>'; }
+        return;
+    }
+    if (d.getDate() < 15) {
+        d = new Date(d.getFullYear(), d.getMonth(), 15);
+    } else if (d.getDate() > 15) {
+        d = new Date(d.getFullYear(), d.getMonth() + 1, 15);
+    } else {
+        d = new Date(d.getFullYear(), d.getMonth(), 15);
+    }
+
+    // Límite: 15 del período actualmente completado
+    const hoy = new Date();
+    const limiteInicio = hoy.getDate() >= 15
+        ? new Date(hoy.getFullYear(), hoy.getMonth(), 15)
+        : new Date(hoy.getFullYear(), hoy.getMonth() - 1, 15);
+
+    _certPeriodosGen = [];
+    while (d <= limiteInicio) {
+        const inicio = new Date(d);
+        const fin = new Date(d.getFullYear(), d.getMonth() + 1, 14);
+        const inicioISO = inicio.toISOString().slice(0, 10);
+
+        const archivado = _certPeriodos.find(p => p.fechaInicio === inicioISO) || null;
+        const valorPunto = archivado ? archivado.valorPunto : promedio;
+        const tipo = archivado ? 'exacto' : 'estimado';
+
+        _certPeriodosGen.push({
+            inicio, fin, inicioISO,
+            archivado, valorPunto, tipo,
+            total: Math.round(puntos * valorPunto),
+            checked: true
+        });
+
+        d = new Date(d.getFullYear(), d.getMonth() + 1, 15);
+    }
+
+    cert_renderPeriodoLista();
+}
+
+function cert_renderPeriodoLista() {
+    const wrap = document.getElementById('cert-periodos-wrap');
+    if (!wrap) return;
+
+    if (!_certPeriodosGen.length) {
+        wrap.style.display = 'block';
+        wrap.innerHTML = '<div style="color:#dc2626;font-size:0.85em;padding:8px;">No hay períodos activos para este socio.</div>';
+        return;
+    }
+
+    const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
+    const fmtD = d => `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+
+    const filas = _certPeriodosGen.map((p, i) => {
+        const badge = p.tipo === 'exacto'
+            ? `<span style="font-size:0.6em;background:#dcfce7;color:#15803d;border-radius:4px;padding:1px 5px;font-weight:800;white-space:nowrap;">EXACTO</span>`
+            : `<span style="font-size:0.6em;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;font-weight:800;white-space:nowrap;">ESTIMADO</span>`;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid #f1f5f9;">
+            <input type="checkbox" id="cert-p-${i}" ${p.checked ? 'checked' : ''}
+                onchange="_certPeriodosGen[${i}].checked=this.checked;cert_actualizarTotal()"
+                style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#1e3a5f;">
+            <label for="cert-p-${i}" style="flex:1;cursor:pointer;min-width:0;">
+                <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+                    <span style="font-size:0.8em;font-weight:700;color:#0f172a;">${fmtD(p.inicio)} – ${fmtD(p.fin)}</span>
+                    ${badge}
+                </div>
+                ${p.valorPunto > 0 ? `<div style="font-size:0.7em;color:#64748b;margin-top:1px;">${fmt(p.valorPunto)}/pto</div>` : ''}
+            </label>
+            <span style="font-size:0.88em;font-weight:800;color:${p.tipo==='exacto'?'#059669':'#92400e'};flex-shrink:0;">${fmt(p.total)}</span>
+        </div>`;
+    }).join('');
+
+    wrap.style.display = 'block';
+    wrap.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:0.72em;font-weight:800;color:#1e3a5f;text-transform:uppercase;letter-spacing:0.06em;">${_certPeriodosGen.length} período${_certPeriodosGen.length!==1?'s':''}</span>
+            <div style="display:flex;gap:6px;">
+                <button onclick="cert_toggleTodos(true)" style="font-size:0.72em;padding:3px 9px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:6px;cursor:pointer;font-weight:700;">Todos</button>
+                <button onclick="cert_toggleTodos(false)" style="font-size:0.72em;padding:3px 9px;background:#f8fafc;border:1px solid #e2e8f0;color:#64748b;border-radius:6px;cursor:pointer;font-weight:700;">Ninguno</button>
             </div>
         </div>
-        <div style="font-size:0.78em;color:#64748b;text-align:center;padding:6px 0;">
-            <strong style="color:#0f172a;">${_cert_esc(_certSocioSel.nombre)} ${_cert_esc(_certSocioSel.apellido)}</strong>
-            &nbsp;·&nbsp; ${puntos} pts × ${fmt(valorPunto)} = <strong style="color:#059669;">${fmt(total)}</strong>
+        <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;max-height:280px;overflow-y:auto;">${filas}</div>
+        <div style="margin-top:10px;background:#f0fdf4;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.8em;font-weight:700;color:#374151;">Total seleccionado</span>
+            <span id="cert-total-valor" style="font-size:1.1em;font-weight:900;color:#14532d;">$0</span>
         </div>`;
 
-    if (btnGen) { btnGen.disabled = false; btnGen.style.opacity = '1'; }
+    cert_actualizarTotal();
+}
+
+function cert_toggleTodos(checked) {
+    _certPeriodosGen.forEach((p, i) => {
+        p.checked = checked;
+        const cb = document.getElementById('cert-p-' + i);
+        if (cb) cb.checked = checked;
+    });
+    cert_actualizarTotal();
+}
+
+function cert_actualizarTotal() {
+    const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
+    const sel = _certPeriodosGen.filter(p => p.checked);
+    const total = sel.reduce((s, p) => s + p.total, 0);
+    const totalEl = document.getElementById('cert-total-valor');
+    if (totalEl) totalEl.textContent = fmt(total);
+    const btn = document.getElementById('cert-btn-generar');
+    if (btn) { btn.disabled = sel.length === 0; btn.style.opacity = sel.length ? '1' : '0.4'; }
 }
 
 // ──────────────────────────────────────────────────────────
@@ -186,25 +255,34 @@ function cert_actualizarCalculo() {
 // ──────────────────────────────────────────────────────────
 
 async function cert_generar() {
-    if (!_certSocioSel || !_certPeriodoSel) return;
+    if (!_certSocioSel) return;
+    const sel = _certPeriodosGen.filter(p => p.checked);
+    if (!sel.length) { showToast('Selecciona al menos un período', 'warning'); return; }
 
     const puntos = Number(_certSocioSel.puntos || 0);
-    const valorPunto = _certPeriodoSel.valorPunto;
-    const total = Math.round(puntos * valorPunto);
-    const fmt = v => new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(v);
+    const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
+    const fmtD = d => `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+    const totalGeneral = sel.reduce((s, p) => s + p.total, 0);
+    const estimados = sel.filter(p => p.tipo === 'estimado').length;
+
+    if (!confirm(
+        'GENERAR CERTIFICADO DE PAGO\n\n' +
+        '👤 ' + _certSocioSel.nombre + ' ' + _certSocioSel.apellido + '\n' +
+        '📌 Puntos: ' + puntos + '\n' +
+        '📅 Períodos: ' + sel.length + (estimados ? ' (' + estimados + ' estimado' + (estimados > 1 ? 's' : '') + ')' : '') + '\n' +
+        '💵 Total: ' + fmt(totalGeneral) + '\n\n¿Confirmar y guardar?'
+    )) return;
 
     const rObj = typeof getSesionResponsableObj === 'function' ? getSesionResponsableObj() : {};
     const responsable = rObj.ini ? `${rObj.ini}${rObj.area ? ' (' + rObj.area + ')' : ''}` : '';
 
-    if (!confirm(
-        'GENERAR CERTIFICADO DE PAGO\n\n' +
-        '👤 Socio: ' + _certSocioSel.nombre + ' ' + _certSocioSel.apellido + '\n' +
-        '📌 Puntos: ' + puntos + '\n' +
-        '📁 Período: ' + _certPeriodoSel.nombre + '\n' +
-        '💰 Valor punto: ' + fmt(valorPunto) + '\n' +
-        '💵 Total a recibir: ' + fmt(total) + '\n\n' +
-        '¿Confirmar y guardar?'
-    )) return;
+    const periodosData = sel.map(p => ({
+        nombre: `${fmtD(p.inicio)} A ${fmtD(p.fin)}`,
+        fechaInicio: p.inicioISO,
+        valorPunto: p.valorPunto,
+        total: p.total,
+        tipo: p.tipo
+    }));
 
     toggleLoader(true, 'Guardando certificado...');
     try {
@@ -213,18 +291,15 @@ async function cert_generar() {
             socio_nombre: _certSocioSel.nombre,
             socio_apellido: _certSocioSel.apellido,
             socio_puntos: puntos,
-            periodo_id: _certPeriodoSel.id,
-            periodo_nombre: _certPeriodoSel.nombre,
-            valor_punto: valorPunto,
-            total_recibir: total,
+            periodos: periodosData,
+            total_recibir: totalGeneral,
             responsable
         });
         if (res.status !== 'success') throw new Error(res.message || 'Error al guardar');
         showToast('✅ Certificado guardado', 'success');
-        // Agregar al inicio de la lista local
         if (res.data) _certRegistros.unshift(res.data);
         cert_renderHistorial();
-        cert_imprimir({ socio: _certSocioSel, periodo: _certPeriodoSel, total, valorPunto, responsable });
+        cert_imprimir({ socio: _certSocioSel, periodos: periodosData, total: totalGeneral, responsable });
     } catch(e) {
         showToast('Error al guardar: ' + e.message, 'error');
     } finally {
@@ -241,25 +316,31 @@ function cert_renderHistorial() {
     const empty = document.getElementById('cert-historial-vacio');
     if (!el) return;
 
-    if (_certRegistros.length === 0) {
+    if (!_certRegistros.length) {
         el.innerHTML = '';
         if (empty) empty.style.display = 'block';
         return;
     }
     if (empty) empty.style.display = 'none';
 
-    const fmt = v => new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(v);
+    const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
     const fmtDate = iso => {
-        try { const d = new Date(iso); return d.toLocaleDateString('es-CL') + ' ' + d.toLocaleTimeString('es-CL', { hour:'2-digit', minute:'2-digit' }); }
-        catch(e) { return iso || ''; }
+        try {
+            const d = new Date(iso);
+            return d.toLocaleDateString('es-CL') + ' ' + d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+        } catch(e) { return iso || ''; }
     };
 
-    el.innerHTML = _certRegistros.map(r => `
-        <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+    el.innerHTML = _certRegistros.map(r => {
+        const periodos = Array.isArray(r.periodos) ? r.periodos : (r.periodo_nombre ? [{ nombre: r.periodo_nombre, tipo: 'exacto' }] : []);
+        const nP = periodos.length;
+        const conEst = periodos.some(p => p.tipo === 'estimado');
+        return `
+        <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);margin-bottom:8px;">
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:800;font-size:0.92em;color:#0f172a;">${_cert_esc(r.socio_nombre)} ${_cert_esc(r.socio_apellido)}</div>
-                <div style="font-size:0.72em;color:#374151;margin-top:2px;font-weight:600;">${_cert_esc(r.periodo_nombre)} &nbsp;·&nbsp; ${r.socio_puntos} pts × ${fmt(r.valor_punto)}</div>
-                <div style="font-size:0.7em;color:#64748b;margin-top:2px;">${fmtDate(r.created_at)}${r.responsable ? ' · ' + _cert_esc(r.responsable) : ''}</div>
+                <div style="font-size:0.72em;color:#374151;margin-top:2px;font-weight:600;">${nP} período${nP!==1?'s':''}${conEst?' · con estimados':''} · ${r.socio_puntos} pts</div>
+                <div style="font-size:0.7em;color:#64748b;margin-top:2px;">${fmtDate(r.created_at)}${r.responsable?' · '+_cert_esc(r.responsable):''}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
                 <div style="font-size:1.1em;font-weight:900;color:#059669;">${fmt(r.total_recibir)}</div>
@@ -268,7 +349,8 @@ function cert_renderHistorial() {
                     <button onclick="cert_eliminar('${r.id}')" style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;border-radius:7px;padding:4px 10px;font-size:0.72em;font-weight:700;cursor:pointer;">🗑</button>
                 </div>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 async function cert_eliminar(id) {
@@ -289,66 +371,107 @@ async function cert_eliminar(id) {
 function cert_reimprimir(id) {
     const r = _certRegistros.find(c => c.id === id);
     if (!r) return;
+    const periodos = Array.isArray(r.periodos) && r.periodos.length
+        ? r.periodos
+        : (r.periodo_nombre ? [{ nombre: r.periodo_nombre, valorPunto: r.valor_punto || 0, total: r.total_recibir, tipo: 'exacto' }] : []);
     cert_imprimir({
-        socio: { nombre: r.socio_nombre, apellido: r.socio_apellido, puntos: r.socio_puntos },
-        periodo: { nombre: r.periodo_nombre, valorPunto: r.valor_punto },
+        socio: { nombre: r.socio_nombre, apellido: r.socio_apellido, puntos: r.socio_puntos, contrato: r.socio_contrato || '' },
+        periodos,
         total: r.total_recibir,
-        valorPunto: r.valor_punto,
         responsable: r.responsable || ''
     });
 }
 
 // ──────────────────────────────────────────────────────────
-// IMPRESIÓN
+// IMPRESIÓN — formato A4 como certificado oficial
 // ──────────────────────────────────────────────────────────
 
-function cert_imprimir({ socio, periodo, total, valorPunto, responsable }) {
-    const fmt = v => new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(v);
+function cert_imprimir({ socio, periodos, total, responsable }) {
+    const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
     const ahora = new Date();
-    const _pad = n => String(n).padStart(2, '0');
-    const fechaHoy = `${_pad(ahora.getDate())}/${_pad(ahora.getMonth()+1)}/${ahora.getFullYear()}`;
-    const horaHoy = `${_pad(ahora.getHours())}:${_pad(ahora.getMinutes())}`;
-    const puntos = Number(socio.puntos || 0);
+    const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const fechaLarga = `Puerto Varas, ${ahora.getDate()} de ${meses[ahora.getMonth()]} de ${ahora.getFullYear()}`;
+    const nombreCompleto = ((socio.nombre || '') + ' ' + (socio.apellido || '')).trim().toUpperCase();
+    const hayEstimados = periodos.some(p => p.tipo === 'estimado');
 
-    const dosCopias = !window.confirm('¿Cómo imprimir?\n\nOK → Una copia\nCancelar → Dos copias (original + duplicado)');
+    const filas = periodos.map((p, i) => {
+        const est = p.tipo === 'estimado' ? '<sup style="color:#b45309;font-size:0.7em;"> *</sup>' : '';
+        return `<tr>
+            <td style="padding:5px 8px;font-weight:700;white-space:nowrap;">${i + 1}.)</td>
+            <td style="padding:5px 8px;white-space:nowrap;">${_cert_esc(p.nombre)}${est}</td>
+            <td style="padding:5px 8px;text-align:right;font-weight:700;">${fmt(p.total)}</td>
+        </tr>`;
+    }).join('');
 
-    function bloque(etiqueta) {
-        return `<div style="font-size:10px;padding:8mm 6mm;font-family:'Courier New',monospace;max-width:80mm;box-sizing:border-box;${dosCopias?'margin-bottom:8px;border-bottom:2px dashed #999;':''}">
-            <div style="text-align:center;margin-bottom:8px;">
-                <div style="font-size:14px;font-weight:900;letter-spacing:0.5px;">FONDO DE SOLIDARIDAD</div>
-                <div style="font-size:10px;color:#555;">CASINO DE PTO. VARAS · LEY 17312</div>
-                <div style="font-size:9px;color:#888;margin-top:2px;font-weight:700;text-transform:uppercase;">Certificado de Pago · ${etiqueta}</div>
-            </div>
-            <hr style="border:none;border-top:1px dashed #999;margin:8px 0;">
-            <div style="text-align:center;margin-bottom:8px;">
-                <div style="font-size:13px;font-weight:900;text-transform:uppercase;">${((socio.nombre||'') + ' ' + (socio.apellido||'')).trim()}</div>
-            </div>
-            <table style="width:100%;font-size:9px;border-collapse:collapse;">
-                <tr><td style="padding:3px 0;color:#555;width:50%;">Período</td><td style="text-align:right;font-weight:700;font-size:8px;">${(periodo.nombre||'').substring(0,40)}</td></tr>
-                <tr><td style="padding:3px 0;color:#555;">Puntos del socio</td><td style="text-align:right;font-weight:900;font-size:12px;">${puntos}</td></tr>
-                <tr><td style="padding:3px 0;color:#555;">Valor por punto</td><td style="text-align:right;font-weight:700;">${fmt(valorPunto)}</td></tr>
-            </table>
-            <hr style="border:none;border-top:1px dashed #999;margin:8px 0;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0;">
-                <span style="font-size:11px;font-weight:900;text-transform:uppercase;">Total a recibir</span>
-                <span style="font-size:16px;font-weight:900;color:#15803d;">${fmt(total)}</span>
-            </div>
-            <hr style="border:none;border-top:1px dashed #999;margin:8px 0;">
-            <div style="font-size:8px;color:#777;text-align:center;margin-bottom:6px;">${fechaHoy} ${horaHoy}${responsable ? ' · ' + responsable : ''}</div>
-            <div style="margin-top:24px;border-top:1px solid #000;padding-top:4px;text-align:center;font-size:8px;color:#555;">Firma del socio</div>
-        </div>`;
-    }
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Certificado — ${nombreCompleto}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#000;padding:22mm 22mm 18mm 22mm;}
+h1{text-align:center;font-size:22pt;font-weight:900;letter-spacing:3px;margin-bottom:4mm;}
+.sub{text-align:center;font-size:10pt;color:#333;margin-bottom:10mm;font-weight:600;}
+.lugar{text-align:right;font-size:9.5pt;color:#555;margin-bottom:9mm;}
+.cuerpo{font-size:10.5pt;line-height:1.75;margin-bottom:7mm;text-align:justify;}
+table{width:100%;border-collapse:collapse;margin-top:4mm;}
+thead tr{border-bottom:2px solid #000;}
+thead th{padding:5px 8px;text-align:left;font-size:9.5pt;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;}
+thead th:last-child{text-align:right;}
+tbody tr:nth-child(even){background:#f7f7f7;}
+tbody td{font-size:10pt;color:#000;}
+.total-row{border-top:2px solid #000;padding:7px 8px;display:flex;justify-content:space-between;margin-top:3mm;font-size:12pt;font-weight:900;}
+.nota{font-size:8.5pt;color:#92400e;margin-top:5mm;font-style:italic;}
+.footer{margin-top:9mm;font-size:10.5pt;line-height:1.7;text-align:justify;}
+.firmas{margin-top:20mm;display:flex;justify-content:space-around;}
+.firma-box{text-align:center;width:45%;}
+.firma-linea{border-top:1.5px solid #000;padding-top:5px;margin-top:18mm;font-size:9.5pt;font-weight:700;text-transform:uppercase;}
+.firma-sub{font-size:9pt;color:#555;margin-top:3px;}
+@media print{@page{size:A4;margin:0;}body{padding:20mm 20mm 16mm 20mm;}}
+</style></head><body>
 
-    const contenido = dosCopias
-        ? bloque('ORIGINAL') + bloque('DUPLICADO')
-        : bloque('ORIGINAL');
+<h1>CERTIFICADO</h1>
+<div class="sub">Comisión Propina Casino de Puerto Varas</div>
+<div class="lugar">${fechaLarga}</div>
 
-    const win = window.open('', '_blank', 'width=360,height=700');
+<p class="cuerpo">La Comisión del Fondo de Solidaridad de los Empleados del Casino de Juegos de
+Puerto Varas, certifica que el(la) Sr./Sra. <strong>${nombreCompleto}</strong> ha percibido
+por concepto de propina, en los períodos que se señalan los siguientes valores:</p>
+
+<table>
+    <thead><tr>
+        <th style="width:7%;">#</th>
+        <th>PERÍODO</th>
+        <th style="text-align:right;width:24%;">VALOR</th>
+    </tr></thead>
+    <tbody>${filas}</tbody>
+</table>
+
+${hayEstimados ? '<p class="nota">(*) Los valores marcados con asterisco son estimados basados en el promedio histórico de períodos disponibles.</p>' : ''}
+
+<div class="total-row"><span>TOTAL A RECIBIR</span><span>${fmt(total)}</span></div>
+
+<div class="footer">
+    <p>Se deja constancia que los valores indicados no se encuentran afectos a ningún tipo de descuentos
+    legales ni previsionales, de acuerdo a lo indicado en la Ley 17.312.</p>
+    <br>
+    <p>Se extiende el presente Certificado a solicitud del interesado, PARA LOS FINES QUE ESTIME CONVENIENTE.</p>
+</div>
+
+<div class="firmas">
+    <div class="firma-box">
+        <div class="firma-linea">${responsable ? _cert_esc(responsable) : 'Comisión Propinas'}</div>
+        <div class="firma-sub">Comisión Propinas · Casino Pto. Varas</div>
+    </div>
+    <div class="firma-box">
+        <div class="firma-linea">${nombreCompleto}</div>
+        <div class="firma-sub">${_cert_esc(socio.contrato || socio.area || '')}</div>
+    </div>
+</div>
+
+<script>window.onload=function(){window.print();}<\/script>
+</body></html>`;
+
+    const win = window.open('', '_blank', 'width=850,height=1000');
     if (!win) { showToast('Activa ventanas emergentes para imprimir', 'warning'); return; }
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Certificado</title>
-        <style>*{margin:0;padding:0;box-sizing:border-box;}body{background:white;}@media print{@page{size:80mm auto;margin:0;}}</style>
-        </head><body>${contenido}
-        <script>window.onload=function(){window.print();}<\/script></body></html>`);
+    win.document.write(html);
     win.document.close();
 }
 

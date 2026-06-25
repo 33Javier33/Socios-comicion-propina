@@ -1117,22 +1117,13 @@
                 </div>
 
                 <!-- Socio seleccionado -->
-                <div id="cert-socio-info" style="display:none;background:#f0f7ff;border-radius:10px;padding:10px 13px;margin-bottom:10px;font-size:0.85em;color:#1e3a5f;font-weight:700;"></div>
+                <div id="cert-socio-info" style="display:none;background:#f0f7ff;border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:0.85em;color:#1e3a5f;font-weight:700;"></div>
 
-                <!-- Selector de período -->
-                <select id="cert-periodo-select" onchange="cert_seleccionarPeriodo()"
-                    style="width:100%;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.87em;color:#2c3e50;background:white;margin-bottom:10px;box-sizing:border-box;">
-                    <option value="">— Seleccionar período archivado —</option>
-                </select>
-
-                <!-- Preview cálculo -->
-                <div id="cert-preview" style="display:none;background:#f8fafb;border-radius:12px;padding:14px;margin-bottom:12px;">
-                    <div style="font-size:0.68em;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">Detalle del Certificado</div>
-                    <div id="cert-preview-body"></div>
-                </div>
+                <!-- Lista de períodos (generada automáticamente al seleccionar socio) -->
+                <div id="cert-periodos-wrap" style="display:none;margin-bottom:12px;"></div>
 
                 <button id="cert-btn-generar" onclick="cert_generar()" disabled
-                    style="width:100%;padding:12px;background:linear-gradient(135deg,#1e3a5f,#2980b9);color:white;border:none;border-radius:12px;font-weight:800;font-size:0.92em;cursor:pointer;opacity:0.45;transition:opacity 0.2s;">
+                    style="width:100%;padding:12px;background:linear-gradient(135deg,#1e3a5f,#2980b9);color:white;border:none;border-radius:12px;font-weight:800;font-size:0.92em;cursor:pointer;opacity:0.4;transition:opacity 0.2s;">
                     📜 Generar e Imprimir Certificado
                 </button>
             </div>
