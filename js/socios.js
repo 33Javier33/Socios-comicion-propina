@@ -565,7 +565,23 @@ function renderizarListaBusqueda() {
             const mov = gestionSociosConMovimientos[s.id];
             const badgeAnt = mov && mov.anticipos ? '<span style="background:#fff3cd;color:#856404;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:4px;">💰 ANT</span>' : '';
             const badgeAus = mov && mov.ausencias ? '<span style="background:#fde8e8;color:#9b1c1c;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">📅 AUS</span>' : '';
-            div.innerHTML = `<strong>${s.nombre} ${s.apellido}</strong> <span style="font-size:0.8em; color:#7f8c8d;">${s.puntos} pts</span>${badgeAnt}${badgeAus}`;
+
+            // Valor del punto según tipo de contrato (requiere datos de recaudación cargados)
+            let valorPunto = 0;
+            const hayDatos = globalMapaPuntosDia && Object.keys(globalMapaPuntosDia).length > 0;
+            if (hayDatos) {
+                if (s.contrato === 'Part-Time') {
+                    (globalDiasPT[s.id] || []).forEach(d => { if (globalMapaPuntosDia[d]) valorPunto += globalMapaPuntosDia[d]; });
+                } else {
+                    valorPunto = globalValorPuntoTotal;
+                }
+            }
+            const _fmtPto = v => new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(Math.round(v));
+            const puntoStr = (hayDatos && valorPunto > 0)
+                ? `<span style="font-size:0.68em;color:#059669;font-weight:700;margin-left:5px;white-space:nowrap;">· ${_fmtPto(valorPunto)}/pto</span>`
+                : '';
+
+            div.innerHTML = `<strong>${s.nombre} ${s.apellido}</strong> <span style="font-size:0.8em;color:#7f8c8d;">${s.puntos} pts</span>${puntoStr}${badgeAnt}${badgeAus}`;
             div.onclick = () => seleccionarSocio(s.id);
             lista.appendChild(div);
         });

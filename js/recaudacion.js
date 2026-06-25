@@ -183,6 +183,10 @@ function procesarDatosRecaudacion(datos, silent) {
     // Re-aplicar filtros activos después de cada render (incluye recarga silenciosa)
     const hayFiltros = recFiltroFechas.length > 0 || recFiltroTipo || recFiltroSinDiv || recFiltroConDiv;
     if (hayFiltros) { filtrarRecaudacion(); if (document.getElementById('rec-filtro-panel')?.style.display === 'block') recFiltroCalRenderMes(); }
+    // Actualizar valor/pto en tarjetas de Anticipos y Ausencias si ya están visibles
+    if (typeof renderizarListaBusqueda === 'function' && document.getElementById('listaResultados')?.children.length > 0) {
+        renderizarListaBusqueda();
+    }
 }
 
 // Total Puntos PT: suma de (recaudación / divisor) para cada día único marcado como PT batch.
