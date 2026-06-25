@@ -74,6 +74,11 @@ function procesarDatosRecaudacion(datos, silent) {
     });
     globalValorPuntoTotal = sumaPuntosGlobal;
 
+    // Actualizar valor/pto en tarjetas de Anticipos y Ausencias (en modo silent y normal)
+    if (typeof renderizarListaBusqueda === 'function' && document.getElementById('listaResultados')?.children.length > 0) {
+        renderizarListaBusqueda();
+    }
+
     if(silent) return;
 
     (document.getElementById('recGranTotal')||{}).innerText = formatearMoneda(granTotal);
