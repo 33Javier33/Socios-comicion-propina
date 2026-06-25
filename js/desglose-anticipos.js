@@ -2,17 +2,87 @@
 // DESGLOSE DE ANTICIPOS — historial con detalle de billetes
 // ============================================================
 
-let _dsgRegistros = [];      // todos los registros cargados desde Supabase
-let _dsgFiltrados = [];      // registros tras aplicar filtros
+let _dsgRegistros = [];             // registros cargados desde Supabase
+let _dsgFiltrados = [];             // registros tras aplicar filtros
 let _dsgCargando = false;
+let _dsgPeriodoSeleccionado = null; // null = activo, 'YYYY-MM-DD' = archivado
+let _dsgPeriodos = [];              // períodos archivados disponibles
+
+// Retorna la fecha ISO del inicio del período actual (el 15 correspondiente)
+function _dsgCalcPeriodoInicio() {
+    const hoy = new Date();
+    const y = hoy.getFullYear(), m = hoy.getMonth(), d = hoy.getDate();
+    return (d >= 15 ? new Date(y, m, 15) : new Date(y, m - 1, 15)).toISOString().split('T')[0];
+}
+
+// "2026-06-15" → "15 Jun – 14 Jul 2026"
+function _dsgFormatPeriodo(key) {
+    if (!key) return 'Período Actual';
+    const [y, m, d] = key.split('-').map(Number);
+    const inicio = new Date(y, m - 1, d);
+    const fin = new Date(y, m - 1, d);
+    fin.setMonth(fin.getMonth() + 1);
+    fin.setDate(fin.getDate() - 1);
+    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const fmt = dt => `${dt.getDate()} ${meses[dt.getMonth()]} ${dt.getFullYear()}`;
+    return `${fmt(inicio)} – ${fmt(fin)}`;
+}
+
+// Cambia el período y recarga
+function dsg_seleccionarPeriodo(periodo) {
+    _dsgPeriodoSeleccionado = periodo || null;
+    dsg_cargarHistorial(true);
+}
+
+// Archiva registros de períodos anteriores
+async function dsg_archivarPeriodoAnterior() {
+    if (!confirm('¿Archivar los desgloses de períodos anteriores? Esta acción los moverá al historial.')) return;
+    toggleLoader(true, 'Archivando desgloses...');
+    try {
+        const res = await fetch(AQ_URL_POST, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'archivarDesglosesPeriodo' })
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+            const count = json.count || 0;
+            showToast(count > 0 ? `✅ ${count} registros archivados` : 'Sin registros para archivar', count > 0 ? 'success' : 'info');
+            await dsg_cargarHistorial(true);
+        } else {
+            showToast('Error al archivar', 'error');
+        }
+    } catch(e) {
+        showToast('Error: ' + e.message, 'error');
+    } finally {
+        toggleLoader(false);
+    }
+}
+
+// Renderiza los chips de selección de período
+function _dsgRenderPeriodSelector() {
+    const el = document.getElementById('dsg-periodo-selector');
+    if (!el) return;
+
+    const chips = [
+        { periodo: null, label: '📋 Período Actual' },
+        ..._dsgPeriodos.map(p => ({ periodo: p, label: _dsgFormatPeriodo(p) }))
+    ];
+
+    el.innerHTML = chips.map(c => {
+        const active = c.periodo === _dsgPeriodoSeleccionado;
+        return `<button onclick="dsg_seleccionarPeriodo(${c.periodo ? "'" + c.periodo + "'" : 'null'})" style="padding:6px 14px;border-radius:20px;border:2px solid ${active ? '#2563eb' : '#d1d5db'};background:${active ? '#eff6ff' : 'white'};color:${active ? '#1e40af' : '#6b7280'};font-size:0.8em;font-weight:${active ? '800' : '600'};cursor:pointer;white-space:nowrap;transition:all 0.15s;">${_htmlEsc(c.label)}</button>`;
+    }).join('');
+}
 
 // Llamado cuando se registra un anticipo nuevo (inyección desde anticipos.js)
 function dsg_onNuevoAnticipo(registro) {
-    _dsgRegistros.unshift(registro);
-    dsg_filtrar();
+    if (_dsgPeriodoSeleccionado === null) {
+        _dsgRegistros.unshift(registro);
+        dsg_filtrar();
+    }
 }
 
-// Carga el historial desde Supabase (via AQ_URL_POST interceptado)
+// Carga el historial desde Supabase
 async function dsg_cargarHistorial(forzar = false) {
     if (_dsgCargando) return;
     _dsgCargando = true;
@@ -21,15 +91,36 @@ async function dsg_cargarHistorial(forzar = false) {
     if (lista) lista.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;font-size:0.9em;">⏳ Cargando...</div>';
 
     try {
+        // Cargar períodos archivados disponibles
+        const resPer = await fetch(AQ_URL_POST, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'getDesglosesPeriodos' })
+        });
+        const jsonPer = await resPer.json();
+        _dsgPeriodos = (jsonPer.status === 'success' && Array.isArray(jsonPer.data)) ? jsonPer.data : [];
+        _dsgRenderPeriodSelector();
+
+        // Cargar registros del período seleccionado
+        const body = { action: 'getRetirosAnticipos', limit: 300 };
+        if (_dsgPeriodoSeleccionado) body.periodo = _dsgPeriodoSeleccionado;
+
         const res = await fetch(AQ_URL_POST, {
             method: 'POST',
-            body: JSON.stringify({ action: 'getRetirosAnticipos', limit: 300 })
+            body: JSON.stringify(body)
         });
         const json = await res.json();
-        if (json.status === 'success' && Array.isArray(json.data)) {
-            _dsgRegistros = json.data;
-        } else {
-            _dsgRegistros = [];
+        _dsgRegistros = (json.status === 'success' && Array.isArray(json.data)) ? json.data : [];
+
+        // Mostrar aviso si hay registros de períodos anteriores sin archivar
+        const notice = document.getElementById('dsg-archivo-notice');
+        if (notice) {
+            if (_dsgPeriodoSeleccionado === null) {
+                const periodoInicio = _dsgCalcPeriodoInicio();
+                const hayViejos = _dsgRegistros.some(r => r.fecha && r.fecha < periodoInicio);
+                notice.style.display = hayViejos ? 'flex' : 'none';
+            } else {
+                notice.style.display = 'none';
+            }
         }
     } catch(e) {
         console.warn('[DSG] Error cargando historial:', e.message);
@@ -83,14 +174,15 @@ function dsg_renderHistorial() {
         return;
     }
 
-    if (vacio)   { vacio.style.display = 'none'; }
+    if (vacio) { vacio.style.display = 'none'; }
 
     const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
     const totalMonto = _dsgFiltrados.reduce((s, r) => s + Number(r.monto || 0), 0);
 
     if (resumen) {
+        const labelPeriodo = _dsgPeriodoSeleccionado ? ` · ${_dsgFormatPeriodo(_dsgPeriodoSeleccionado)}` : '';
         resumen.style.display = 'block';
-        resumen.textContent = `${_dsgFiltrados.length} registro${_dsgFiltrados.length !== 1 ? 's' : ''} · Total: ${fmt(totalMonto)}`;
+        resumen.textContent = `${_dsgFiltrados.length} registro${_dsgFiltrados.length !== 1 ? 's' : ''} · Total: ${fmt(totalMonto)}${labelPeriodo}`;
     }
 
     lista.innerHTML = _dsgFiltrados.map(r => _dsgRenderCard(r)).join('');
@@ -158,4 +250,3 @@ function _dsgRenderCard(r) {
 function _htmlEsc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-

@@ -573,10 +573,34 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 detalle: `Período archivado: ${periodo} | ${activos?.length || 0} anticipos`,
                 datos: { periodo, cantidad_archivada: activos?.length || 0 }
             });
-            // 4. Llamar al GAS (archiva a Sheets y limpia la hoja)
+            // 4. Archivar desglose de anticipos antes de limpiar
+            const hoyR = new Date();
+            const yR = hoyR.getFullYear(), mR = hoyR.getMonth(), dR = hoyR.getDate();
+            const periodoActualInicioR = (dR >= 15
+                ? new Date(yR, mR, 15)
+                : new Date(yR, mR - 1, 15)).toISOString().split('T')[0];
+            const { data: dsgToArc } = await dbSoc.from('retiros_anticipos')
+                .select('id,fecha').is('periodo', null).lt('fecha', periodoActualInicioR);
+            if (dsgToArc && dsgToArc.length > 0) {
+                const byP = {};
+                dsgToArc.forEach(r => {
+                    const fd = new Date((r.fecha || '') + 'T12:00:00');
+                    const fy = fd.getFullYear(), fm = fd.getMonth(), fdia = fd.getDate();
+                    const key = (fdia >= 15
+                        ? new Date(fy, fm, 15)
+                        : new Date(fy, fm - 1, 15)).toISOString().split('T')[0];
+                    if (!byP[key]) byP[key] = [];
+                    byP[key].push(r.id);
+                });
+                for (const [key, ids] of Object.entries(byP)) {
+                    await dbSoc.from('retiros_anticipos').update({ periodo: key }).in('id', ids)
+                        .catch(e => console.warn('[sb] desglose archive error:', e.message));
+                }
+            }
+            // 5. Llamar al GAS (archiva a Sheets y limpia la hoja)
             _invalidarTodosLosDatos(); // reinicio de anticipos afecta a todos los socios
             const gasRes = await _origFetch(url, options);
-            // 5. Limpiar Supabase anticipos después de confirmar con GAS y resetear flag
+            // 6. Limpiar Supabase anticipos después de confirmar con GAS
             dbSoc.from('anticipos').delete().neq('id', '__never__')
                 .then(() => { _sbHasAnticipos = false; localStorage.removeItem('_sb_ants_ok'); })
                 .catch(e => console.error('[sb] error limpiando anticipos:', e));
@@ -1214,13 +1238,63 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 const limit = parseInt(aqBody?.limit || 0) || 200;
                 const offset = parseInt(aqBody?.offset || 0) || 0;
                 let q = dbSoc.from('retiros_anticipos')
-                    .select('firma,socio_nombre,socio_id,monto,billetes,responsable,fecha,created_at')
+                    .select('id,firma,socio_nombre,socio_id,monto,billetes,responsable,fecha,created_at,periodo')
                     .order('created_at', { ascending: false })
                     .range(offset, offset + limit - 1);
                 if (aqBody?.socio_id) q = q.eq('socio_id', aqBody.socio_id);
+                if (aqBody?.periodo) {
+                    q = q.eq('periodo', aqBody.periodo);
+                } else {
+                    q = q.is('periodo', null);
+                }
                 const { data, error } = await q;
                 if (error) { console.error('[AQ-SB] getRetirosAnticipos error:', error.message); return _mockOk({ status: 'success', data: [] }); }
                 return _mockOk({ status: 'success', data: data || [] });
+            }
+
+            // GET getDesglosesPeriodos — períodos archivados disponibles
+            if (aqAction === 'getDesglosesPeriodos') {
+                const { data, error } = await dbSoc.from('retiros_anticipos')
+                    .select('periodo').not('periodo', 'is', null)
+                    .order('periodo', { ascending: false });
+                if (error) return _mockOk({ status: 'success', data: [] });
+                const periodos = [...new Set((data || []).map(r => r.periodo))];
+                return _mockOk({ status: 'success', data: periodos });
+            }
+
+            // POST archivarDesglosesPeriodo — etiquetar registros viejos con su período
+            if (aqAction === 'archivarDesglosesPeriodo') {
+                const hoyA = new Date();
+                const yA = hoyA.getFullYear(), mA = hoyA.getMonth(), dA = hoyA.getDate();
+                const periodoActualInicioA = (dA >= 15
+                    ? new Date(yA, mA, 15)
+                    : new Date(yA, mA - 1, 15)).toISOString().split('T')[0];
+                // Leer todos los registros sin periodo que sean anteriores al período actual
+                const { data: toArc, error: findErr } = await dbSoc.from('retiros_anticipos')
+                    .select('id,fecha').is('periodo', null).lt('fecha', periodoActualInicioA);
+                if (findErr || !toArc || !toArc.length) {
+                    return _mockOk({ status: 'success', count: 0, message: 'Sin registros para archivar' });
+                }
+                // Agrupar por período real de cada registro
+                const byPeriodo = {};
+                toArc.forEach(r => {
+                    const fd = new Date((r.fecha || '') + 'T12:00:00');
+                    const fy = fd.getFullYear(), fm = fd.getMonth(), fdia = fd.getDate();
+                    const key = (fdia >= 15
+                        ? new Date(fy, fm, 15)
+                        : new Date(fy, fm - 1, 15)).toISOString().split('T')[0];
+                    if (!byPeriodo[key]) byPeriodo[key] = [];
+                    byPeriodo[key].push(r.id);
+                });
+                for (const [key, ids] of Object.entries(byPeriodo)) {
+                    await dbSoc.from('retiros_anticipos').update({ periodo: key }).in('id', ids)
+                        .catch(e => console.warn('[AQ-SB] archive desglose error:', e.message));
+                }
+                _sbAudit('Archivar Desglose Anticipos', {
+                    detalle: `Períodos archivados: ${Object.keys(byPeriodo).join(', ')} | ${toArc.length} registros`,
+                    datos: { periodos: Object.keys(byPeriodo), cantidad: toArc.length }
+                });
+                return _mockOk({ status: 'success', count: toArc.length, periodos: Object.keys(byPeriodo) });
             }
 
             // POST registrarRetiroAnticipo
