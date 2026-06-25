@@ -74,12 +74,6 @@ function procesarDatosRecaudacion(datos, silent) {
     });
     globalValorPuntoTotal = sumaPuntosGlobal;
 
-    // Actualizar valor/pto en tarjetas de Anticipos y Ausencias (en modo silent y normal)
-    // Usar cacheSocios como condición (más confiable que chequear DOM) para evitar race conditions
-    if (typeof renderizarListaBusqueda === 'function' && Array.isArray(cacheSocios) && cacheSocios.length > 0) {
-        renderizarListaBusqueda();
-    }
-
     if(silent) return;
 
     (document.getElementById('recGranTotal')||{}).innerText = formatearMoneda(granTotal);

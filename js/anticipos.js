@@ -600,6 +600,7 @@ async function cargarHistorialSocio(id) {
             document.getElementById('gestionSocioRemanente').value = remanente;
             document.getElementById('socioTotalPedido').innerText = formatearMoneda(sumaTotalPedido);
             document.getElementById('socioAlcance').innerText = formatearMoneda(alcance);
+            _actualizarValorPunto(socio);
 
             const elSaldoReal = document.getElementById('socioSaldoReal');
             elSaldoReal.innerText = formatearMoneda(saldoReal);
@@ -1490,6 +1491,7 @@ function seleccionarSocio(id) {
     document.getElementById('socioSaldoReal').innerHTML = skEl;
     document.getElementById('socioAPagar').innerHTML = skEl;
     document.getElementById('socioRemanente').innerHTML = skEl;
+    _actualizarValorPunto(socio);
 
     document.querySelectorAll('.result-item').forEach(el => el.classList.remove('seleccionado'));
     const itemSeleccionado = document.querySelector(`.result-item[data-socio-id="${id}"]`);
@@ -1506,6 +1508,22 @@ function seleccionarSocio(id) {
 
     responsables_poblarSelector();
     cargarHistorialSocio(id);
+}
+
+function _actualizarValorPunto(socio) {
+    const el = document.getElementById('socioValorPunto');
+    if (!el || !socio) return;
+    const hayDatos = globalMapaPuntosDia && Object.values(globalMapaPuntosDia).some(v => v !== null && v > 0);
+    if (!hayDatos) { el.textContent = '—'; return; }
+    let valorPunto = 0;
+    if (socio.contrato === 'Part-Time') {
+        (globalDiasPT[socio.id] || []).forEach(d => { if (globalMapaPuntosDia[d]) valorPunto += globalMapaPuntosDia[d]; });
+    } else {
+        valorPunto = globalValorPuntoTotal;
+    }
+    el.textContent = valorPunto > 0
+        ? new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(Math.round(valorPunto))
+        : '—';
 }
 
 // ══════════════════════════════════════════════════════════════════
