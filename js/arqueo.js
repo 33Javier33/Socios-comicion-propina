@@ -126,6 +126,7 @@ function aq_saveState() {
     localStorage.setItem(AQ_SK_CONTEO, JSON.stringify(aq_conteo));
     localStorage.setItem(AQ_SK_MOVI, JSON.stringify(aq_movi));
     localStorage.setItem(AQ_SK_RETIROS, aq_totalRetirado.toString());
+    _aqDirtyFlag = true;
     clearTimeout(_aqAutoSaveTimer);
     _aqAutoSaveTimer = setTimeout(() => aq_guardarEnNube(true), 3500);
 }
@@ -430,7 +431,6 @@ async function aq_fetchAnticipos(silent = false) {
 
 function aq_aplicarBilletesAnticipo(billetes) {
     if (!billetes || Object.keys(billetes).length === 0) return;
-    // Cargar estado actual desde localStorage si aq_conteo aún no fue inicializado
     if (Object.keys(aq_conteo).length === 0) {
         try { const c = localStorage.getItem(AQ_SK_CONTEO); if (c) aq_conteo = JSON.parse(c); } catch(e) {}
     }
@@ -441,11 +441,11 @@ function aq_aplicarBilletesAnticipo(billetes) {
         const den = Number(d); const n = Number(cant);
         if (!den || !n) return;
         aq_conteo[den] = (aq_conteo[den] || 0) - n;
+        aq_totalRetirado += n * den;
         aq_movi[den] = (aq_movi[den] || '') + `-${n}`;
     });
-    try { localStorage.setItem(AQ_SK_CONTEO, JSON.stringify(aq_conteo)); } catch(e) {}
-    try { localStorage.setItem(AQ_SK_MOVI, JSON.stringify(aq_movi)); } catch(e) {}
-    try { if (typeof aq_render === 'function') aq_render(); } catch(e) {}
+    aq_saveState();
+    if (aq_iniciado) aq_generarCampos();
 }
 
 
@@ -617,6 +617,8 @@ function aq_borrarBackup(index) {
 }
 
 async function aq_recuperarDeNube(silencioso = false) {
+    // No sobrescribir si hay cambios locales pendientes de guardar
+    if (silencioso && _aqDirtyFlag) return;
     if(!silencioso) toggleLoader(true, 'Cargando arqueo...');
     try {
         let datos = null;
@@ -676,6 +678,7 @@ async function aq_guardarEnNube(silencioso = false) {
             const json = await resp.json();
             if(json.status !== 'success') throw new Error(json.message || 'Error GAS');
         }
+        _aqDirtyFlag = false;
         aq_crearBackupLocal();
         if(!silencioso) showToast('✅ Guardado en la nube', 'success');
     } catch(e) { if(!silencioso) showToast('Error al guardar: ' + e.message, 'error'); }

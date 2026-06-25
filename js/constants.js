@@ -81,6 +81,7 @@ let aq_histStates = [], aq_histIdx = -1;
 let aq_syncInterval = null; // intervalo de sincronizacion automatica
 let aq_snapAlAbrir = null;  // snapshot del conteo al abrir el modal
 let _aqAutoSaveTimer = null; // timer para auto-guardado en nube
+let _aqDirtyFlag = false;    // true = cambios locales pendientes de guardar en nube
 
 // Calendario Part-Time
 let ptCalFecha = new Date();
