@@ -985,6 +985,59 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             }
         }
 
+        // ── getCertificados → listar certificados generados ───────
+        if (action === 'getCertificados') {
+            try {
+                let q = dbSoc.from('certificados').select('*').order('created_at', { ascending: false });
+                if (body.socio_id) q = q.eq('socio_id', body.socio_id);
+                const { data, error } = await q.limit(200);
+                if (error) throw error;
+                return _mockOk({ status: 'success', data: data || [] });
+            } catch(e) {
+                console.warn('[SB-CERT] getCertificados error:', e.message);
+                return _mockOk({ status: 'success', data: [] });
+            }
+        }
+
+        // ── guardarCertificado → insertar nuevo certificado ────────
+        if (action === 'guardarCertificado') {
+            try {
+                const { data: inserted, error } = await dbSoc.from('certificados').insert({
+                    socio_id: body.socio_id || '',
+                    socio_nombre: body.socio_nombre || '',
+                    socio_apellido: body.socio_apellido || '',
+                    socio_puntos: Number(body.socio_puntos || 0),
+                    periodo_id: body.periodo_id || '',
+                    periodo_nombre: body.periodo_nombre || '',
+                    valor_punto: Number(body.valor_punto || 0),
+                    total_recibir: Number(body.total_recibir || 0),
+                    responsable: body.responsable || ''
+                }).select().single();
+                if (error) throw error;
+                _sbAudit('Generar Certificado', {
+                    idAfectado: body.socio_id || '',
+                    detalle: `Socio: ${body.socio_nombre} ${body.socio_apellido} | Período: ${body.periodo_nombre} | Total: $${Number(body.total_recibir || 0).toLocaleString('es-CL')}`,
+                    datos: { socio_puntos: body.socio_puntos, valor_punto: body.valor_punto }
+                });
+                return _mockOk({ status: 'success', data: inserted });
+            } catch(e) {
+                console.warn('[SB-CERT] guardarCertificado error:', e.message);
+                return _mockOk({ status: 'error', message: e.message });
+            }
+        }
+
+        // ── eliminarCertificado → borrar por id ────────────────────
+        if (action === 'eliminarCertificado') {
+            try {
+                const { error } = await dbSoc.from('certificados').delete().eq('id', body.id);
+                if (error) throw error;
+                return _mockOk({ status: 'success' });
+            } catch(e) {
+                console.warn('[SB-CERT] eliminarCertificado error:', e.message);
+                return _mockOk({ status: 'error', message: e.message });
+            }
+        }
+
         // Cualquier otra acción POST de socios: pasar a GAS sin interceptar
         return _origFetch(url, options);
     }

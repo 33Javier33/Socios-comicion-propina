@@ -82,6 +82,7 @@
             <button class="nav-btn" data-tab="auditoria" onclick="switchTab('auditoria')">🔍 Auditoría</button>
             <button class="nav-btn" data-tab="carpetas" onclick="switchTab('carpetas')">📁 Carpetas</button>
             <button class="nav-btn" data-tab="materiales" onclick="switchTab('materiales')">📦 Materiales</button>
+            <button class="nav-btn" data-tab="certificados" onclick="switchTab('certificados')">📜 Certificados</button>
             <button onclick="ayudaCompleta_abrir()" style="background:#2c3e50;color:white;border:none;border-radius:20px;padding:6px 12px;font-size:0.78em;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto;">📖 Ayuda</button>
         </div>
         
@@ -1093,6 +1094,59 @@
             </div>
         </div>
 
+        <!-- PESTAÑA: CERTIFICADOS -->
+        <div id="tab-certificados" class="tab-content">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#1e3a5f,#2980b9);border-radius:16px;padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <div style="color:rgba(255,255,255,0.7);font-size:0.62em;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Fondo Solidario de Propina</div>
+                    <div style="color:white;font-size:1.05em;font-weight:800;margin-top:2px;">📜 Certificados</div>
+                </div>
+                <button onclick="cert_recargar()" style="background:rgba(255,255,255,0.15);border:none;border-radius:10px;padding:8px 13px;color:white;font-size:0.78em;font-weight:700;cursor:pointer;">🔄 Actualizar</button>
+            </div>
+
+            <!-- Formulario -->
+            <div style="background:white;border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,0.07);margin-bottom:14px;">
+                <div style="font-size:0.72em;font-weight:800;color:#1e3a5f;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Generar Certificado</div>
+
+                <!-- Búsqueda socio -->
+                <div style="position:relative;margin-bottom:10px;">
+                    <input id="cert-buscar-socio" type="text" placeholder="🔍 Buscar socio por nombre..." oninput="cert_buscarSocio()"
+                        style="width:100%;box-sizing:border-box;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.88em;outline:none;">
+                    <div id="cert-socio-results" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:white;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:50;max-height:200px;overflow-y:auto;"></div>
+                </div>
+
+                <!-- Socio seleccionado -->
+                <div id="cert-socio-info" style="display:none;background:#f0f7ff;border-radius:10px;padding:10px 13px;margin-bottom:10px;font-size:0.85em;color:#1e3a5f;font-weight:700;"></div>
+
+                <!-- Selector de período -->
+                <select id="cert-periodo-select" onchange="cert_seleccionarPeriodo()"
+                    style="width:100%;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.87em;color:#2c3e50;background:white;margin-bottom:10px;box-sizing:border-box;">
+                    <option value="">— Seleccionar período archivado —</option>
+                </select>
+
+                <!-- Preview cálculo -->
+                <div id="cert-preview" style="display:none;background:#f8fafb;border-radius:12px;padding:14px;margin-bottom:12px;">
+                    <div style="font-size:0.68em;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">Detalle del Certificado</div>
+                    <div id="cert-preview-body"></div>
+                </div>
+
+                <button id="cert-btn-generar" onclick="cert_generar()" disabled
+                    style="width:100%;padding:12px;background:linear-gradient(135deg,#1e3a5f,#2980b9);color:white;border:none;border-radius:12px;font-weight:800;font-size:0.92em;cursor:pointer;opacity:0.45;transition:opacity 0.2s;">
+                    📜 Generar e Imprimir Certificado
+                </button>
+            </div>
+
+            <!-- Historial -->
+            <div style="background:white;border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,0.07);">
+                <div style="font-size:0.72em;font-weight:800;color:#1e3a5f;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Historial de Certificados</div>
+                <div id="cert-historial-vacio" style="text-align:center;color:#7f8c8d;padding:30px 10px;font-size:0.88em;">
+                    📭 No hay certificados generados aún.
+                </div>
+                <div id="cert-historial"></div>
+            </div>
+        </div>
+
         <!-- PESTAÑA: MATERIALES Y GASTOS -->
         <div id="tab-materiales" class="tab-content">
             <div id="mat-columnas" style="padding:15px;margin:0 auto;display:flex;flex-direction:column;gap:14px;">
@@ -1636,6 +1690,7 @@
     <script src="js/auditoria.js"></script>
     <script src="js/carpetas.js"></script>
     <script src="js/materiales.js"></script>
+    <script src="js/certificados.js"></script>
     <script src="js/app-init.js"></script>
 
 <!-- ══════════════════════════════════════════
