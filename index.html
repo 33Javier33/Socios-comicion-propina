@@ -1277,8 +1277,9 @@
                             <div style="border-top:1px dashed #bfdbfe; margin:5px 0;"></div>
                             <p style="margin:5px 0; display:flex; justify-content:space-between;"><span>Divisor:</span><strong id="aq-divisor-value">1</strong></p>
                             <p style="margin:5px 0; display:flex; justify-content:space-between;"><span>💰 Punto Día:</span><strong id="aq-punto-del-dia" style="color:#10b981;">$0</strong></p>
-                            <div style="background:#dcfce7; padding:8px; border-radius:6px; margin-top:10px;">
-                                <p style="margin:0; font-size:0.9em; display:flex; justify-content:space-between;"><span>📊 TOTAL Puntos:</span><strong id="aq-suma-total-puntos">0</strong></p>
+                            <div style="background:#dcfce7; padding:8px 10px; border-radius:6px; margin-top:10px;">
+                                <p style="margin:0 0 2px 0; font-size:0.7em; font-weight:700; color:#166534; text-transform:uppercase; letter-spacing:0.06em;">📊 TOTAL Puntos</p>
+                                <p style="margin:0; font-size:1.25em; font-weight:800; color:#15803d; text-align:right;" id="aq-suma-total-puntos">0</p>
                             </div>
                             <input type="hidden" id="aq-divisor-planta" value="1.0">
                             <input type="hidden" id="aq-divisor-part-time" value="1.0">
@@ -1307,11 +1308,12 @@
                     </div>
                     <div class="arqueo-card">
                         <h2><i class="fas fa-chart-pie"></i> Análisis</h2>
+                        <!-- Puntos Totales — destacado -->
+                        <div style="font-size:0.7em;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px;">📊 Total Puntos del Período</div>
+                        <div id="aq-division-result" style="font-size:1.5rem;font-weight:700;color:#2563eb;text-align:right;padding:10px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;margin-bottom:14px;">0</div>
+                        <!-- Diferencia Real -->
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:1.1em;">
                             <strong>Diferencia Real:</strong> <span id="aq-diferencia" style="font-weight:800;">$0</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-                            <strong>📊 Puntos Totales:</strong> <span id="aq-division-result" style="color:#64748b;">0</span>
                         </div>
                         <p id="aq-mensaje-arqueo" class="aq-mensaje"></p>
                         <button onclick="aq_archivarEnNube()" class="aq-btn aq-btn-danger" style="width:100%; margin-top:10px;"><i class="fas fa-archive"></i> Archivar Informe Final</button>

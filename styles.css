@@ -548,6 +548,7 @@
         body.dark-mode .arqueo-info-box small { color:#94a3b8 !important; }
         body.dark-mode .arqueo-info-box strong { color:#e2e8f0 !important; }
         body.dark-mode #aq-esperadoDisplay { background:#0f172a !important; border-color:#334155 !important; color:#93c5fd !important; }
+        body.dark-mode #aq-division-result { background:#0f172a !important; border-color:#334155 !important; color:#93c5fd !important; }
         body.dark-mode .aq-table { color:#e2e8f0; }
         body.dark-mode .aq-table th { background:#243040 !important; color:#94a3b8 !important; border-color:#334155 !important; }
         body.dark-mode .aq-table td { color:#e2e8f0 !important; border-color:#334155 !important; }
