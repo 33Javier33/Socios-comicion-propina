@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-06-27 — Anticipos: descuento de billetes en Arqueo persiste ante recargas
+- Al confirmar el desglose de billetes de un anticipo, los billetes ya se descuentan del conteo de Arqueo de Caja (cada denominación con su rastro negativo, ej: `10.000` → `-10`). Esto ya funcionaba en el flujo normal.
+- Fix de carrera: el guardado a la nube del arqueo es diferido (3.5s) y el flag `_aqDirtyFlag` era solo de sesión. Si el encargado recargaba la página o abría Arqueo antes de que ese guardado se completara, `aq_recuperarDeNube` traía datos viejos de la nube y se perdía el descuento.
+- Solución: el flag de cambios pendientes ahora se persiste en localStorage (`AQ_SK_DIRTY`). `aq_recuperarDeNube` lo respeta y, en lugar de descartar los cambios locales, los empuja a la nube. Se limpia al guardar y al archivar/resetear.
+- Archivos modificados: `js/arqueo.js`, `js/constants.js`.
+
+#### 2026-06-27 — "Total Punto Actual" en la tarjeta de detalle del socio
+- Se agregó un mini-stat verde "Total Punto Actual" en el detalle del socio (Anticipos y Ausencias), junto a Saldo Mes Ant., Alcance Teórico y Total Pedido.
+- Planta: muestra el valor total del punto del período. Part-Time: suma solo los días trabajados por ese socio.
+- Archivos modificados: `index.html`, `js/anticipos.js`, `js/socios.js`.
+
 #### 2026-06-19 — "Acerca de": énfasis en el propósito del sistema para operadores del fondo
 - Nuevo bloque destacado "Para qué sirve este sistema" que explica claramente la misión: control de socios, anticipos, ausencias, recaudaciones diarias y arqueo de billetes, todo guardado en Supabase para que el siguiente encargado encuentre el historial intacto sin empezar desde cero con planillas Excel.
 - Archivos modificados: `index.html`.

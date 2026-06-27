@@ -69,6 +69,9 @@ function aq_initSiNoIniciado() {
     if(sc) aq_conteo = JSON.parse(sc);
     if(sm) aq_movi = JSON.parse(sm);
     if(sr) aq_totalRetirado = parseInt(sr);
+    // Si hay cambios locales pendientes (ej: anticipo aplicado antes de recargar),
+    // marcar dirty para que aq_recuperarDeNube empuje a la nube en vez de sobrescribir.
+    try { if (localStorage.getItem(AQ_SK_DIRTY) === '1') _aqDirtyFlag = true; } catch(e) {}
     aq_histStates = [{ c: JSON.parse(JSON.stringify(aq_conteo)), r: aq_totalRetirado, m: JSON.parse(JSON.stringify(aq_movi)) }];
     aq_histIdx = 0;
     const aqCached = localStorage.getItem('fondo_cache_aq_esperado');
@@ -127,6 +130,7 @@ function aq_saveState() {
     localStorage.setItem(AQ_SK_MOVI, JSON.stringify(aq_movi));
     localStorage.setItem(AQ_SK_RETIROS, aq_totalRetirado.toString());
     _aqDirtyFlag = true;
+    try { localStorage.setItem(AQ_SK_DIRTY, '1'); } catch(e) {}
     clearTimeout(_aqAutoSaveTimer);
     _aqAutoSaveTimer = setTimeout(() => aq_guardarEnNube(true), 3500);
 }
@@ -467,6 +471,7 @@ function aq_resetear() {
     aq_histStates = []; aq_histIdx = -1;
     localStorage.removeItem(AQ_SK_CONTEO); localStorage.removeItem(AQ_SK_MOVI); localStorage.removeItem(AQ_SK_RETIROS);
     localStorage.removeItem(AQ_SK_RETIROS_ANTICIPOS);
+    localStorage.removeItem(AQ_SK_DIRTY); _aqDirtyFlag = false;
     aqAnticiposListaPeriodo = [];
     aq_generarCampos(); aq_realizarArqueo();
 }
@@ -617,8 +622,18 @@ function aq_borrarBackup(index) {
 }
 
 async function aq_recuperarDeNube(silencioso = false) {
-    // No sobrescribir si hay cambios locales pendientes de guardar
-    if (silencioso && _aqDirtyFlag) return;
+    // No sobrescribir si hay cambios locales pendientes de guardar.
+    // El flag persiste en localStorage para sobrevivir recargas (ej: anticipo aplicado
+    // justo antes de recargar, antes de que el auto-guardado a la nube se complete).
+    let dirtyPersistido = false;
+    try { dirtyPersistido = localStorage.getItem(AQ_SK_DIRTY) === '1'; } catch(e) {}
+    if (silencioso && (_aqDirtyFlag || dirtyPersistido)) {
+        _aqDirtyFlag = true;
+        // Empujar los cambios locales pendientes a la nube en vez de descartarlos
+        clearTimeout(_aqAutoSaveTimer);
+        _aqAutoSaveTimer = setTimeout(() => aq_guardarEnNube(true), 1200);
+        return;
+    }
     if(!silencioso) toggleLoader(true, 'Cargando arqueo...');
     try {
         let datos = null;
@@ -679,6 +694,7 @@ async function aq_guardarEnNube(silencioso = false) {
             if(json.status !== 'success') throw new Error(json.message || 'Error GAS');
         }
         _aqDirtyFlag = false;
+        try { localStorage.removeItem(AQ_SK_DIRTY); } catch(e) {}
         aq_crearBackupLocal();
         if(!silencioso) showToast('✅ Guardado en la nube', 'success');
     } catch(e) { if(!silencioso) showToast('Error al guardar: ' + e.message, 'error'); }

@@ -12,6 +12,7 @@ const AQ_URL_POST = 'https://script.google.com/macros/s/AKfycbzr0_GPBfp1MuP0YzBU
 const AQ_DENOMINACIONES = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
 const AQ_SK_CONTEO = 'arqueoConteoCLP', AQ_SK_MOVI = 'arqueoMoviDisplayCLP', AQ_SK_RETIROS = 'arqueoRetirosCLP', AQ_SK_BACKUP = 'arqueoBackupHistorial_List';
 const AQ_SK_RETIROS_ANTICIPOS = 'arqueoRetirosAnticipos';
+const AQ_SK_DIRTY = 'arqueoCambiosPendientes'; // '1' = hay cambios locales sin guardar en nube
 
 // ===== RESPONSABLES DE ANTICIPOS =====
 const RESP_KEY = 'fondo_responsables';
