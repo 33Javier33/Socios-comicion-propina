@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-06-28 — Certificados: períodos ordenados de la fecha más reciente primero
+- La lista de períodos generados y el certificado impreso ahora muestran las fechas de la más reciente a la más antigua.
+- Se invierte `_certPeriodosGen` tras generarlo (afecta lista, selección por año/últimos N e impresión) y se ordena defensivamente en `cert_imprimir` para que también aplique a certificados antiguos ya guardados al reimprimirlos.
+- Archivos modificados: `js/certificados.js`.
+
 #### 2026-06-27 — Anticipos: descuento de billetes en Arqueo persiste ante recargas
 - Al confirmar el desglose de billetes de un anticipo, los billetes ya se descuentan del conteo de Arqueo de Caja (cada denominación con su rastro negativo, ej: `10.000` → `-10`). Esto ya funcionaba en el flujo normal.
 - Fix de carrera: el guardado a la nube del arqueo es diferido (3.5s) y el flag `_aqDirtyFlag` era solo de sesión. Si el encargado recargaba la página o abría Arqueo antes de que ese guardado se completara, `aq_recuperarDeNube` traía datos viejos de la nube y se perdía el descuento.

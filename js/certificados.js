@@ -178,6 +178,9 @@ function cert_generarListaPeriodos() {
         d = new Date(d.getFullYear(), d.getMonth() + 1, 15);
     }
 
+    // Ordenar de la fecha más reciente a la más antigua (afecta lista, selección e impresión)
+    _certPeriodosGen.reverse();
+
     cert_renderPeriodoLista();
 }
 
@@ -490,6 +493,11 @@ function cert_imprimir({ socio, periodos, total, responsable }) {
     const fechaLarga = `Puerto Varas, ${ahora.getDate()} de ${meses[ahora.getMonth()]} de ${ahora.getFullYear()}`;
     const nombreCompleto = ((socio.nombre || '') + ' ' + (socio.apellido || '')).trim().toUpperCase();
     const hayEstimados = periodos.some(p => p.tipo === 'estimado');
+
+    // Asegurar orden: fecha más reciente primero (también para certificados antiguos guardados)
+    if (periodos.every(p => p.fechaInicio)) {
+        periodos = periodos.slice().sort((a, b) => b.fechaInicio.localeCompare(a.fechaInicio));
+    }
 
     const filas = periodos.map((p, i) => {
         const est = p.tipo === 'estimado' ? '<sup style="color:#b45309;font-size:0.7em;"> *</sup>' : '';
