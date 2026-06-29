@@ -452,6 +452,28 @@ function aq_aplicarBilletesAnticipo(billetes) {
     if (aq_iniciado) aq_generarCampos();
 }
 
+// Suma billetes de una recaudación verificada al conteo de arqueo.
+// Espejo de aq_aplicarBilletesAnticipo pero sumando: rastro "+N" por denominación.
+// Usa aq_saveState() para persistir en localStorage, marcar dirty y sincronizar a la nube.
+function aq_aplicarBilletesRecaudacion(billetes) {
+    if (!billetes || Object.keys(billetes).length === 0) return;
+    if (Object.keys(aq_conteo).length === 0) {
+        try { const c = localStorage.getItem(AQ_SK_CONTEO); if (c) aq_conteo = JSON.parse(c); } catch(e) {}
+    }
+    if (Object.keys(aq_movi).length === 0) {
+        try { const m = localStorage.getItem(AQ_SK_MOVI); if (m) aq_movi = JSON.parse(m); } catch(e) {}
+    }
+    Object.entries(billetes).forEach(([d, cant]) => {
+        const den = Number(d); const n = Number(cant);
+        if (!den || !n) return;
+        aq_conteo[den] = (aq_conteo[den] || 0) + n;
+        const prev = aq_movi[den] || '';
+        aq_movi[den] = prev ? `${prev}+${n}` : `+${n}`;
+    });
+    aq_saveState();
+    if (aq_iniciado) aq_generarCampos();
+}
+
 
 function aq_crearBackupLocal() {
     const totalCaja = Math.round(aq_calcTotal());

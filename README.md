@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-06-28 — Recaudaciones: suma de billetes verificados al Arqueo persiste correctamente
+- Al verificar una recaudación en Montos Recaudados, los billetes se suman al conteo de Arqueo con rastro positivo "+N" por denominación (ej: 10 billetes de 10.000 → `+10`). El comportamiento de la suma ya existía.
+- Fix de persistencia: la función guardaba directamente a GAS y a localStorage **sin** activar el flag de cambios pendientes. Como el Arqueo ahora lee desde Supabase, al reabrir/recargar `aq_recuperarDeNube` podía sobrescribir y perder las sumas (mismo problema que se corrigió para anticipos).
+- Solución: se centralizó la lógica en `aq_aplicarBilletesRecaudacion` (espejo de `aq_aplicarBilletesAnticipo`, sumando con "+") que usa `aq_saveState()` → persiste en localStorage, marca dirty y sincroniza con Supabase de forma robusta. `_rec_volcarBilletesAArqueo` ahora solo delega en ella.
+- Archivos modificados: `js/arqueo.js`, `js/recaudacion.js`.
+
 #### 2026-06-28 — Certificados: períodos ordenados de la fecha más reciente primero
 - La lista de períodos generados y el certificado impreso ahora muestran las fechas de la más reciente a la más antigua.
 - Se invierte `_certPeriodosGen` tras generarlo (afecta lista, selección por año/últimos N e impresión) y se ordena defensivamente en `cert_imprimir` para que también aplique a certificados antiguos ya guardados al reimprimirlos.
