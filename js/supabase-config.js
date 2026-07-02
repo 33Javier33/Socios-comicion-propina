@@ -985,6 +985,44 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             }
         }
 
+        // ── registrarDinero → Dineros Sobrantes (solo Supabase) ──
+        if (action === 'registrarDinero') {
+            const uuid = 'din-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+            const row = {
+                uuid,
+                fecha:       body.fecha       || null,
+                tipo:        body.tipo         || '',
+                monto:       Number(body.monto || 0),
+                nota:        body.nota         || null,
+                responsable: body.responsable  || null,
+                periodo:     body.periodo      || null,
+                estado:      'activo'
+            };
+            try {
+                const { error } = await dbSoc.from('dineros_sobrantes').insert(row);
+                if (error) throw error;
+                return _mockOk({ status: 'success', uuid });
+            } catch(e) {
+                console.warn('[SB-DIN] registrarDinero error:', e.message);
+                return _mockOk({ status: 'error', message: e.message });
+            }
+        }
+
+        // ── borrarDinero → soft delete en Supabase ──
+        if (action === 'borrarDinero') {
+            const dinUuid = body.uuid || '';
+            if (!dinUuid) return _mockOk({ status: 'error', message: 'uuid requerido' });
+            try {
+                const { error } = await dbSoc.from('dineros_sobrantes')
+                    .update({ estado: 'borrado' }).eq('uuid', dinUuid);
+                if (error) throw error;
+                return _mockOk({ status: 'success' });
+            } catch(e) {
+                console.warn('[SB-DIN] borrarDinero error:', e.message);
+                return _mockOk({ status: 'error', message: e.message });
+            }
+        }
+
         // ── getCertificados → listar certificados generados ───────
         if (action === 'getCertificados') {
             try {
@@ -1250,6 +1288,26 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         return _mockOk({ status: 'success', data: gasItems.map(_matMapGas) });
                     } catch(e) {
                         _materialesGasCache = null;
+                        return _mockOk({ status: 'success', data: [] });
+                    }
+                }
+
+                // ── getAllDineros → Dineros Sobrantes (solo Supabase) ──
+                if (action === 'getAllDineros') {
+                    try {
+                        const { data: dinRows, error: dinErr } = await dbSoc.from('dineros_sobrantes')
+                            .select('id, uuid, fecha, tipo, monto, nota, responsable, periodo, estado')
+                            .neq('estado', 'borrado')
+                            .order('fecha', { ascending: false });
+                        if (dinErr) throw dinErr;
+                        const data = (dinRows || []).map(r => ({
+                            uuid: r.uuid || r.id, fecha: r.fecha || '', tipo: r.tipo || '',
+                            monto: Number(r.monto || 0), nota: r.nota || '',
+                            responsable: r.responsable || '', periodo: r.periodo || '', estado: r.estado || 'activo'
+                        }));
+                        return _mockOk({ status: 'success', data });
+                    } catch(e) {
+                        console.warn('[SB-DIN] getAllDineros error:', e.message);
                         return _mockOk({ status: 'success', data: [] });
                     }
                 }

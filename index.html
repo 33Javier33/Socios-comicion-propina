@@ -82,6 +82,7 @@
             <button class="nav-btn" data-tab="auditoria" onclick="switchTab('auditoria')">🔍 Auditoría</button>
             <button class="nav-btn" data-tab="carpetas" onclick="switchTab('carpetas')">📁 Carpetas</button>
             <button class="nav-btn" data-tab="materiales" onclick="switchTab('materiales')">📦 Materiales</button>
+            <button class="nav-btn" data-tab="dineros" onclick="switchTab('dineros')">💵 Dineros Sobrantes</button>
             <button class="nav-btn" data-tab="certificados" onclick="switchTab('certificados')">📜 Certificados</button>
             <button onclick="ayudaCompleta_abrir()" style="background:#2c3e50;color:white;border:none;border-radius:20px;padding:6px 12px;font-size:0.78em;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto;">📖 Ayuda</button>
         </div>
@@ -1245,6 +1246,82 @@
             </div>
         </div>
 
+        <!-- PESTAÑA: DINEROS SOBRANTES (INGRESOS Y RETIROS) -->
+        <div id="tab-dineros" class="tab-content">
+            <div id="ds-columnas" style="padding:15px;margin:0 auto;display:flex;flex-direction:column;gap:14px;">
+
+                <!-- ── BOTONES AGREGAR ────────────────────────────── -->
+                <div id="ds-btns-agregar" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <button onclick="ds_abrirModal('Ingreso')" style="padding:11px;background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:10px;font-weight:700;font-size:0.85em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 3px 10px rgba(5,150,105,0.3);">
+                        <span>↑</span> Agregar Ingreso
+                    </button>
+                    <button onclick="ds_abrirModal('Retiro')" style="padding:11px;background:linear-gradient(135deg,#dc2626,#ef4444);color:white;border:none;border-radius:10px;font-weight:700;font-size:0.85em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 3px 10px rgba(220,38,38,0.3);">
+                        <span>↓</span> Agregar Retiro
+                    </button>
+                </div>
+
+                <!-- ── RESUMEN ANUAL ───────────────────────────────── -->
+                <div style="background:white;border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,0.07);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                        <button onclick="ds_cambiarAño(-1)" style="background:none;border:1px solid #e2e8f0;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1em;color:#2c3e50;">◀</button>
+                        <div style="text-align:center;">
+                            <div style="font-size:0.62em;color:#7f8c8d;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Resumen anual</div>
+                            <div id="ds-año-label" style="font-weight:900;color:#1e3a5f;font-size:1.15em;">2026</div>
+                        </div>
+                        <button onclick="ds_cambiarAño(1)" style="background:none;border:1px solid #e2e8f0;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1em;color:#2c3e50;">▶</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+                        <div style="background:#f0fdf4;border-radius:10px;padding:10px;text-align:center;border-top:3px solid #10b981;">
+                            <div style="font-size:0.6em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Ingresos año</div>
+                            <div id="ds-anual-ingresos" style="font-size:0.88em;font-weight:800;color:#059669;margin-top:4px;">$0</div>
+                        </div>
+                        <div style="background:#fef2f2;border-radius:10px;padding:10px;text-align:center;border-top:3px solid #ef4444;">
+                            <div style="font-size:0.6em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Retiros año</div>
+                            <div id="ds-anual-retiros" style="font-size:0.88em;font-weight:800;color:#ef4444;margin-top:4px;">$0</div>
+                        </div>
+                        <div id="ds-anual-bal-card" style="background:#dcfce7;border-radius:10px;padding:10px;text-align:center;border-top:3px solid #059669;">
+                            <div style="font-size:0.6em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Balance año</div>
+                            <div id="ds-anual-balance" style="font-size:0.88em;font-weight:800;color:#059669;margin-top:4px;">$0</div>
+                        </div>
+                    </div>
+                    <button id="ds-desglose-toggle" onclick="ds_toggleDesglose()" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:7px 12px;font-size:0.72em;font-weight:700;color:#64748b;cursor:pointer;text-align:left;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+                        <span>Desglose mes a mes</span>
+                        <span id="ds-desglose-arrow">▼</span>
+                    </button>
+                    <div id="ds-desglose-mensual" style="display:flex;flex-direction:column;gap:5px;"></div>
+                </div>
+
+                <!-- ── PERÍODO ACTUAL ──────────────────────────────── -->
+                <div style="background:white;border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,0.07);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                        <button onclick="ds_cambiarPeriodo(-1)" style="background:none;border:1px solid #e2e8f0;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1em;color:#2c3e50;">◀</button>
+                        <div style="text-align:center;">
+                            <div style="font-size:0.62em;color:#7f8c8d;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Período</div>
+                            <div id="ds-periodo-label" style="font-weight:800;color:#1e3a5f;font-size:0.9em;">Cargando...</div>
+                        </div>
+                        <button onclick="ds_cambiarPeriodo(1)" style="background:none;border:1px solid #e2e8f0;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1em;color:#2c3e50;">▶</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+                        <div style="background:white;border-radius:10px;padding:9px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.07);border-top:2px solid #10b981;">
+                            <div style="font-size:0.6em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Fondo total</div>
+                            <div id="ds-total-ingresos" style="font-size:0.85em;font-weight:800;color:#10b981;margin-top:3px;">$0</div>
+                        </div>
+                        <div style="background:white;border-radius:10px;padding:9px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.07);border-top:2px solid #ef4444;">
+                            <div style="font-size:0.6em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Retiros período</div>
+                            <div id="ds-total-retiros" style="font-size:0.85em;font-weight:800;color:#ef4444;margin-top:3px;">$0</div>
+                        </div>
+                        <div id="ds-balance-card" style="background:#dcfce7;border-radius:10px;padding:9px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.07);border-top:2px solid #059669;">
+                            <div style="font-size:0.6em;color:#7f8c8d;font-weight:700;text-transform:uppercase;">Balance global</div>
+                            <div id="ds-balance" style="font-size:0.85em;font-weight:800;color:#059669;margin-top:3px;">$0</div>
+                        </div>
+                    </div>
+                    <div style="font-size:0.7em;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Movimientos del período</div>
+                    <div id="ds-lista" style="display:flex;flex-direction:column;gap:7px;"></div>
+                </div>
+
+            </div>
+        </div>
+
         <!-- PESTAÑA 4: ARQUEO DE CAJA -->
         <div id="tab-arqueo" class="tab-content">
             <!-- Toolbar principal -->
@@ -1708,6 +1785,7 @@
     <script src="js/auditoria.js"></script>
     <script src="js/carpetas.js"></script>
     <script src="js/materiales.js"></script>
+    <script src="js/dineros.js"></script>
     <script src="js/certificados.js"></script>
     <script src="js/app-init.js"></script>
 
@@ -1918,6 +1996,36 @@
                 <input type="text" id="mat-modal-nota" placeholder="Describe el ingreso o gasto..." style="width:100%;padding:9px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.9em;margin-top:4px;box-sizing:border-box;">
             </div>
             <button onclick="mat_guardar()" style="width:100%;padding:12px;background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:8px;font-weight:700;font-size:0.95em;cursor:pointer;">Guardar Registro</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: NUEVO REGISTRO DE DINEROS SOBRANTES -->
+<div id="ds-modal" class="modal">
+    <div class="modal-content" style="max-width:420px;">
+        <div class="modal-header" style="background:linear-gradient(135deg,#1e3a5f,#059669);">
+            <h2 id="ds-modal-titulo" style="color:white;margin:0;">Nuevo Registro</h2>
+            <span class="close-modal" onclick="document.getElementById('ds-modal').style.display='none'" style="color:white;">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;gap:8px;margin-bottom:16px;">
+                <button id="ds-btn-ingreso" onclick="ds_toggleTipo('Ingreso')" style="flex:1;padding:10px;border:2px solid #10b981;border-radius:8px;font-weight:700;font-size:0.88em;cursor:pointer;transition:0.2s;">↑ Ingreso</button>
+                <button id="ds-btn-retiro" onclick="ds_toggleTipo('Retiro')" style="flex:1;padding:10px;border:2px solid #ef4444;border-radius:8px;font-weight:700;font-size:0.88em;cursor:pointer;transition:0.2s;background:white;color:#ef4444;">↓ Retiro</button>
+            </div>
+            <input type="hidden" id="ds-modal-tipo" value="Ingreso">
+            <div style="margin-bottom:12px;">
+                <label style="font-size:0.82em;font-weight:700;color:#374151;">Fecha</label>
+                <input type="date" id="ds-modal-fecha" style="width:100%;padding:9px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.9em;margin-top:4px;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:0.82em;font-weight:700;color:#374151;">Monto</label>
+                <input type="number" id="ds-modal-monto" placeholder="0" min="1" style="width:100%;padding:9px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.9em;margin-top:4px;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:18px;">
+                <label id="ds-nota-label" style="font-size:0.82em;font-weight:700;color:#374151;">Descripción (ej: Sobrante de caja)</label>
+                <input type="text" id="ds-modal-nota" placeholder="Describe el ingreso o retiro..." style="width:100%;padding:9px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.9em;margin-top:4px;box-sizing:border-box;">
+            </div>
+            <button onclick="ds_guardar()" style="width:100%;padding:12px;background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:8px;font-weight:700;font-size:0.95em;cursor:pointer;">Guardar Registro</button>
         </div>
     </div>
 </div>

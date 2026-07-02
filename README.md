@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-02 — Nueva sección: Dineros Sobrantes (ingresos y retiros)
+- Se agregó la sección **💵 Dineros Sobrantes**, con la misma estructura que Materiales pero con tipos **Ingreso** y **Retiro**.
+- Incluye: resumen anual (ingresos/retiros/balance), desglose mes a mes (períodos 15→14), navegación por año y por período, lista de movimientos y modal para agregar registros.
+- Persistencia 100% en Supabase (tabla nueva `dineros_sobrantes` en la base de socios, con RLS activado y política permisiva para la clave anónima). Acciones: `registrarDinero`, `borrarDinero`, `getAllDineros`.
+- Archivos: nuevo `js/dineros.js`; modificados `index.html` (nav, tab, modal, script), `js/app-init.js` (switchTab), `js/supabase-config.js` (handlers).
+
 #### 2026-07-02 — Certificados: previsualización antes de imprimir
 - El certificado ya no se envía directo a la impresora. Ahora se abre una ventana de **vista previa** que muestra el documento tal como quedará (formato A4).
 - La ventana tiene una barra superior (que no se imprime) con botones **🖨 Imprimir** y **✖ Cerrar**, para revisar el documento antes de imprimirlo.
