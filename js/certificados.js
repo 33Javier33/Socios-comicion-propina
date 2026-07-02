@@ -533,8 +533,23 @@ tbody td{font-size:10pt;color:#000;}
 .firma-espacio{height:16mm;}
 .firma-linea{border-top:1.5px solid #000;padding-top:5px;font-size:9.5pt;font-weight:700;text-transform:uppercase;}
 .firma-sub{font-size:9pt;color:#555;margin-top:3px;}
-@media print{@page{size:A4;margin:0;}body{padding:18mm 20mm 12mm 20mm;}}
+.cert-toolbar{position:fixed;top:0;left:0;right:0;height:52px;background:#0f172a;display:flex;
+    align-items:center;justify-content:space-between;padding:0 16px;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,0.25);}
+.cert-toolbar .tb-title{color:#e2e8f0;font-size:12pt;font-weight:700;}
+.cert-toolbar button{border:none;border-radius:8px;padding:8px 16px;font-size:11pt;font-weight:800;cursor:pointer;margin-left:8px;}
+.tb-print{background:#2563eb;color:white;}
+.tb-close{background:#334155;color:#e2e8f0;}
+@media screen{body{padding-top:72px;}}
+@media print{@page{size:A4;margin:0;}body{padding:18mm 20mm 12mm 20mm;}.no-print{display:none !important;}}
 </style></head><body>
+
+<div class="cert-toolbar no-print">
+    <span class="tb-title">📄 Vista previa del certificado</span>
+    <div>
+        <button class="tb-print" onclick="window.print()">🖨 Imprimir</button>
+        <button class="tb-close" onclick="window.close()">✖ Cerrar</button>
+    </div>
+</div>
 
 <h1>CERTIFICADO</h1>
 <div class="sub">Comisión Propina Casino de Puerto Varas</div>
@@ -577,11 +592,10 @@ ${hayEstimados ? '<p class="nota">(*) Los valores marcados con asterisco son est
     </div>
 </div>
 
-<script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 
     const win = window.open('', '_blank', 'width=850,height=1000');
-    if (!win) { showToast('Activa ventanas emergentes para imprimir', 'warning'); return; }
+    if (!win) { showToast('Activa ventanas emergentes para ver el certificado', 'warning'); return; }
     win.document.write(html);
     win.document.close();
 }

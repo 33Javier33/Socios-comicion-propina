@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-02 — Certificados: previsualización antes de imprimir
+- El certificado ya no se envía directo a la impresora. Ahora se abre una ventana de **vista previa** que muestra el documento tal como quedará (formato A4).
+- La ventana tiene una barra superior (que no se imprime) con botones **🖨 Imprimir** y **✖ Cerrar**, para revisar el documento antes de imprimirlo.
+- Aplica tanto al generar un certificado nuevo (tras confirmar nombre+PIN) como al ver uno del historial ("🖨 Ver").
+- Archivos modificados: `js/certificados.js`.
+
 #### 2026-06-28 — Recaudaciones: suma de billetes verificados al Arqueo persiste correctamente
 - Al verificar una recaudación en Montos Recaudados, los billetes se suman al conteo de Arqueo con rastro positivo "+N" por denominación (ej: 10 billetes de 10.000 → `+10`). El comportamiento de la suma ya existía.
 - Fix de persistencia: la función guardaba directamente a GAS y a localStorage **sin** activar el flag de cambios pendientes. Como el Arqueo ahora lee desde Supabase, al reabrir/recargar `aq_recuperarDeNube` podía sobrescribir y perder las sumas (mismo problema que se corrigió para anticipos).
