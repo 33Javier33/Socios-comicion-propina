@@ -1441,6 +1441,24 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 return _mockOk({ status: 'success' });
             }
 
+            // POST actualizarRetiroAnticipo → editar un desglose existente (por firma)
+            if (aqAction === 'actualizarRetiroAnticipo') {
+                if (!aqBody.firma) return _mockOk({ status: 'error', message: 'firma requerida' });
+                const upd = {};
+                if (aqBody.monto !== undefined)        upd.monto = Number(aqBody.monto || 0);
+                if (aqBody.billetes !== undefined)     upd.billetes = aqBody.billetes || {};
+                if (aqBody.fecha !== undefined)        upd.fecha = aqBody.fecha || null;
+                if (aqBody.socio_nombre !== undefined) upd.socio_nombre = aqBody.socio_nombre || '';
+                const { error } = await dbSoc.from('retiros_anticipos').update(upd).eq('firma', aqBody.firma);
+                if (error) { console.error('[AQ-SB] actualizarRetiro error:', error.message); return _mockOk({ status: 'error', message: error.message }); }
+                _sbAudit('Editar Desglose Anticipo', {
+                    idAfectado: aqBody.firma,
+                    detalle: `Editado por: ${aqBody.editadoPor || '—'} | Monto: $${Number(aqBody.monto || 0).toLocaleString('es-CL')}`,
+                    datos: { firma: aqBody.firma, cambios: upd, editadoPor: aqBody.editadoPor || '' }
+                });
+                return _mockOk({ status: 'success' });
+            }
+
             // POST archive → guardar en arqueo_cierres y borrar estado actual
             if (aqAction === 'archive') {
                 const { error: insErr } = await dbSoc.from('arqueo_cierres').insert({

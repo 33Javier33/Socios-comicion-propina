@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-02 — Desglose de Anticipos: editar (con PIN personal), reimprimir e informe
+- **Editar**: cada tarjeta de desglose tiene un botón ✏️ que abre un modal para corregir la fecha y el detalle de billetes (recalcula el total automáticamente). Para guardar se exige el **PIN personal** del responsable en sesión (validado contra `credencialesCache[ini|area]`). La clave de recuperación, la clave/PIN global y el PIN de ingreso **no** permiten editar. Si el responsable no tiene PIN personal configurado, no puede editar. Cada edición queda en auditoría (`Editar Desglose Anticipo`, con quién editó).
+- **Reimprimir**: botón 🖨 en cada tarjeta que reimprime el boucher del anticipo (reutiliza `generarBoucherAnticipo`).
+- **Informe**: botón 📄 en el encabezado que genera un informe imprimible de los anticipos filtrados (N°, socio, fecha, responsable, monto) con total general, al estilo del Detalle de Anticipos.
+- Nuevo handler Supabase `actualizarRetiroAnticipo` (actualiza `retiros_anticipos` por `firma`).
+- Archivos modificados: `js/desglose-anticipos.js`, `js/supabase-config.js`, `index.html`.
+
 #### 2026-07-02 — Nueva sección: Dineros Sobrantes (ingresos y retiros)
 - Se agregó la sección **💵 Dineros Sobrantes**, con la misma estructura que Materiales pero con tipos **Ingreso** y **Retiro**.
 - Incluye: resumen anual (ingresos/retiros/balance), desglose mes a mes (períodos 15→14), navegación por año y por período, lista de movimientos y modal para agregar registros.

@@ -243,8 +243,215 @@ function _dsgRenderCard(r) {
             ${densSorted.length > 0 ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;margin-top:2px;background:#eff6ff;border-radius:6px;font-size:0.84em;font-weight:800;color:#1e40af;border:1px solid #bfdbfe;">
                 <span>Total billetes</span><span>${fmt(totalBilletes)}</span>
             </div>` : ''}
+            <div style="display:flex;gap:6px;margin-top:6px;">
+                <button onclick="dsg_reimprimir('${_htmlEsc(r.firma || '')}')" style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:7px;padding:6px 10px;font-size:0.76em;font-weight:700;cursor:pointer;">🖨 Reimprimir</button>
+                <button onclick="dsg_abrirEditar('${_htmlEsc(r.firma || '')}')" style="flex:1;background:#fef9c3;border:1px solid #fde047;color:#854d0e;border-radius:7px;padding:6px 10px;font-size:0.76em;font-weight:700;cursor:pointer;">✏️ Editar</button>
+            </div>
         </div>
     </div>`;
+}
+
+// ── Reimprimir el boucher de un desglose ────────────────────
+function dsg_reimprimir(firma) {
+    const r = _dsgRegistros.find(x => x.firma === firma);
+    if (!r) { showToast('Registro no encontrado', 'error'); return; }
+    if (typeof generarBoucherAnticipo !== 'function') { showToast('Impresión no disponible', 'error'); return; }
+    const fecha = r.fecha || (r.created_at || '').slice(0, 10);
+    generarBoucherAnticipo({
+        id: r.socio_id || '',
+        nombre: r.socio_nombre || '',
+        fecha,
+        monto: Number(r.monto || 0),
+        respIni: r.responsable || '',
+        respArea: '',
+        billetes: r.billetes || {},
+        folio: r.firma || ''
+    });
+}
+
+// ── Editar un desglose (requiere PIN personal del responsable) ──
+let _dsgEditFirma = null;
+
+function dsg_abrirEditar(firma) {
+    const r = _dsgRegistros.find(x => x.firma === firma);
+    if (!r) { showToast('Registro no encontrado', 'error'); return; }
+    _dsgEditFirma = firma;
+
+    const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
+    const fecha = r.fecha || (r.created_at || '').slice(0, 10);
+    document.getElementById('dsg-edit-socio').textContent = r.socio_nombre || '—';
+    document.getElementById('dsg-edit-firma').textContent = r.firma || '';
+    document.getElementById('dsg-edit-fecha').value = fecha;
+
+    // Grid de billetes por denominación
+    const billetes = r.billetes || {};
+    const grid = document.getElementById('dsg-edit-billetes');
+    grid.innerHTML = AQ_DENOMINACIONES.map(d => {
+        const cant = Number(billetes[d] || 0);
+        return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dotted #e5e7eb;">
+            <span style="flex:1;font-weight:700;font-size:0.88em;color:#374151;">${fmt(d)}</span>
+            <input type="number" id="dsg-edit-bil-${d}" min="0" value="${cant || ''}" placeholder="0"
+                   oninput="dsg_recalcularEdit()"
+                   style="width:64px;text-align:center;padding:6px 4px;border:1px solid #d1d5db;border-radius:6px;font-size:1em;font-weight:700;">
+            <span id="dsg-edit-sub-${d}" style="width:96px;text-align:right;font-size:0.82em;color:#6b7280;">${cant > 0 ? fmt(d * cant) : '$0'}</span>
+        </div>`;
+    }).join('');
+
+    // Responsable en sesión (para mostrar quién debe autenticar)
+    const sesion = typeof getSesionResponsableObj === 'function' ? getSesionResponsableObj() : {};
+    const quien = sesion.ini ? `${sesion.ini}${sesion.area ? ' (' + sesion.area + ')' : ''}` : '—';
+    document.getElementById('dsg-edit-responsable').textContent = quien;
+
+    document.getElementById('dsg-edit-pin').value = '';
+    const err = document.getElementById('dsg-edit-error');
+    if (err) err.style.display = 'none';
+
+    dsg_recalcularEdit();
+    document.getElementById('dsg-modal-editar').style.display = 'flex';
+}
+
+function dsg_cerrarEditar() {
+    document.getElementById('dsg-modal-editar').style.display = 'none';
+    _dsgEditFirma = null;
+}
+
+function dsg_recalcularEdit() {
+    const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
+    let total = 0;
+    AQ_DENOMINACIONES.forEach(d => {
+        const cant = Math.max(0, parseInt(document.getElementById('dsg-edit-bil-' + d)?.value || 0) || 0);
+        const sub = cant * d;
+        total += sub;
+        const subEl = document.getElementById('dsg-edit-sub-' + d);
+        if (subEl) subEl.textContent = cant > 0 ? fmt(sub) : '$0';
+    });
+    const totEl = document.getElementById('dsg-edit-total');
+    if (totEl) totEl.textContent = fmt(total);
+    return total;
+}
+
+async function dsg_guardarEdicion() {
+    if (!_dsgEditFirma) return;
+    const errEl = document.getElementById('dsg-edit-error');
+    const mostrarError = msg => { if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; } };
+
+    const pin = (document.getElementById('dsg-edit-pin')?.value || '').trim();
+    if (!pin) { mostrarError('Ingresa tu PIN personal para confirmar.'); return; }
+
+    // Validación de credencial: SOLO el PIN personal del responsable en sesión.
+    // NO se aceptan la clave de recuperación, la clave/PIN global ni el PIN de ingreso.
+    const sesion = typeof getSesionResponsableObj === 'function' ? getSesionResponsableObj() : {};
+    const key = sesion.ini && sesion.area ? `${sesion.ini}|${sesion.area}` : '';
+    const pinPersonal = key ? (credencialesCache[key] || '') : '';
+
+    if (!pinPersonal) {
+        mostrarError('No tienes un PIN personal configurado. Solo quien tenga su clave personal puede editar estos registros.');
+        return;
+    }
+    if (pin !== pinPersonal) {
+        mostrarError('PIN incorrecto. Debes usar tu clave personal.');
+        const pinEl = document.getElementById('dsg-edit-pin');
+        if (pinEl) { pinEl.value = ''; pinEl.focus(); }
+        return;
+    }
+
+    // Recolectar billetes y total
+    const billetes = {};
+    let total = 0;
+    AQ_DENOMINACIONES.forEach(d => {
+        const cant = Math.max(0, parseInt(document.getElementById('dsg-edit-bil-' + d)?.value || 0) || 0);
+        if (cant > 0) { billetes[d] = cant; total += cant * d; }
+    });
+    const fecha = document.getElementById('dsg-edit-fecha')?.value || null;
+
+    if (total <= 0) { mostrarError('El desglose no puede quedar en cero. Ingresa al menos un billete.'); return; }
+
+    const editadoPor = sesion.ini ? `${sesion.ini}${sesion.area ? ' ' + sesion.area : ''}` : '';
+
+    toggleLoader(true, 'Guardando cambios...');
+    try {
+        const res = await fetch(AQ_URL_POST, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'actualizarRetiroAnticipo',
+                firma: _dsgEditFirma,
+                monto: total,
+                billetes,
+                fecha,
+                editadoPor
+            })
+        });
+        const json = await res.json();
+        if (json.status !== 'success') throw new Error(json.message || 'Error al guardar');
+
+        // Actualizar el registro en memoria y re-renderizar
+        const reg = _dsgRegistros.find(x => x.firma === _dsgEditFirma);
+        if (reg) { reg.monto = total; reg.billetes = billetes; reg.fecha = fecha; }
+        showToast('Desglose actualizado ✅', 'success');
+        dsg_cerrarEditar();
+        dsg_filtrar();
+    } catch(e) {
+        mostrarError('Error al guardar: ' + e.message);
+    } finally {
+        toggleLoader(false);
+    }
+}
+
+// ── Informe de anticipos (fechas y totales) ─────────────────
+function dsg_informe() {
+    if (!_dsgFiltrados.length) { showToast('No hay registros para el informe', 'error'); return; }
+    const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
+
+    // Ordenar por fecha ascendente para el informe
+    const registros = [..._dsgFiltrados].sort((a, b) => {
+        const fa = a.fecha || (a.created_at || '').slice(0, 10);
+        const fb = b.fecha || (b.created_at || '').slice(0, 10);
+        return fa.localeCompare(fb);
+    });
+
+    const totalGeneral = registros.reduce((s, r) => s + Number(r.monto || 0), 0);
+    const periodoLabel = _dsgPeriodoSeleccionado ? _dsgFormatPeriodo(_dsgPeriodoSeleccionado) : 'Período Actual';
+    const hoy = new Date();
+    const fechaHoyVis = hoy.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    const filas = registros.map((r, i) => {
+        const fechaRaw = r.fecha || (r.created_at || '').slice(0, 10);
+        let fechaVis = fechaRaw;
+        if (fechaRaw && fechaRaw.includes('-')) { const p = fechaRaw.split('-'); if (p.length === 3) fechaVis = p[2] + '/' + p[1] + '/' + p[0]; }
+        const bg = i % 2 === 0 ? '#f7f7f7' : 'white';
+        return `<tr style="background:${bg};">
+            <td style="padding:4px 8px;border:1px solid #ccc;text-align:center;">${i + 1}</td>
+            <td style="padding:4px 8px;border:1px solid #ccc;font-weight:700;">${_htmlEsc(r.socio_nombre || '—')}</td>
+            <td style="padding:4px 8px;border:1px solid #ccc;text-align:center;">${fechaVis}</td>
+            <td style="padding:4px 8px;border:1px solid #ccc;">${_htmlEsc(r.responsable || '')}</td>
+            <td style="padding:4px 8px;border:1px solid #ccc;text-align:right;font-weight:800;">${fmt(Number(r.monto || 0))}</td>
+        </tr>`;
+    }).join('');
+
+    const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Informe Anticipos</title><style>'
+        + '*{margin:0;padding:0;box-sizing:border-box;}'
+        + 'body{font-family:Arial,sans-serif;font-size:11px;color:#000;padding:14mm;}'
+        + 'h1{font-size:16px;text-align:center;font-weight:900;letter-spacing:1px;margin-bottom:2px;}'
+        + '.sub{text-align:center;font-size:9px;margin-bottom:10px;font-weight:600;color:#333;}'
+        + '.tothead{background:#1e3a5f;color:white;padding:6px 12px;font-size:12px;font-weight:900;display:flex;justify-content:space-between;margin-bottom:10px;border-radius:4px;}'
+        + 'table{width:100%;border-collapse:collapse;margin-bottom:10px;}'
+        + 'th{background:#2c3e50;color:white;padding:5px 8px;font-size:10px;border:1px solid #1a252f;}'
+        + '.totfinal{background:#c0392b;color:white;padding:6px 12px;font-weight:900;font-size:13px;text-align:right;border-radius:3px;}'
+        + '.footer{text-align:center;font-size:8px;color:#888;margin-top:10px;border-top:1px dashed #ccc;padding-top:6px;}'
+        + '@media print{@page{size:A4 portrait;margin:10mm;}body{padding:0;}}'
+        + '</style></head><body>'
+        + '<h1>INFORME DE ANTICIPOS</h1>'
+        + '<div class="sub">FONDO DE SOLIDARIDAD — CASINO DE PUERTO VARAS | LEY 17312 DEL 29/07/70</div>'
+        + '<div class="tothead"><span>' + _htmlEsc(periodoLabel) + '</span><span>' + registros.length + ' anticipo' + (registros.length !== 1 ? 's' : '') + '</span></div>'
+        + '<table><thead><tr>'
+        + '<th style="width:26px;">N°</th><th style="text-align:left;">SOCIO</th><th style="width:78px;">FECHA</th><th style="text-align:left;width:110px;">RESPONSABLE</th><th style="width:96px;text-align:right;">MONTO</th>'
+        + '</tr></thead><tbody>' + filas + '</tbody></table>'
+        + '<div class="totfinal">TOTAL GENERAL: ' + fmt(totalGeneral) + '</div>'
+        + '<div class="footer">Emitido: ' + fechaHoyVis + ' | Sistema Fondo Solidario — Casino de Puerto Varas</div>'
+        + '</body></html>';
+
+    if (typeof printHTML === 'function') printHTML(html, 'Informe Anticipos ' + fechaHoyVis.replace(/\//g, '-'));
+    else { const w = window.open('', '_blank'); if (w) { w.document.write(html); w.document.close(); } }
 }
 
 function _htmlEsc(s) {
