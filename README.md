@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-05 — Nueva sección "PIN Diario": gestionar los PIN de diario.propi
+- Nueva pestaña **🔑 PIN Diario** para crear, cambiar, ver (recuperar) y quitar el **PIN de 4 dígitos** con que cada socio entra a la app **diario.propi**.
+- Los PIN se guardan en Supabase (tabla nueva `diario_pins`, base de socios) y se comparten con diario.propi. Filtro por área (Mesas, Máquinas, Técnicos, Cambistas).
+- La sección está **protegida por la clave de recuperación** (misma clave maestra del sistema). Cada cambio queda en Auditoría ("PIN Diario Actualizado/Eliminado").
+- Contexto: diario.propi cambió su login a **área → socio → PIN** (se eliminó la clave fija `1234`); estos PIN se administran desde aquí.
+- Archivos: nuevo `js/diario-pins.js`; modificados `index.html` (nav, tab, script) y `js/app-init.js`.
+
 #### 2026-07-05 — Auditoría: columna "Referencia" con datos útiles + más contexto
 - Antes la columna **Referencia** mostraba "—" en muchos eventos porque solo se armaba con folio o con una fecha dentro del detalle. Ahora `_audRef` deriva una referencia legible según el tipo de evento:
   - Acceso / Cierre de Sesión → método de ingreso + área (ej: "PIN personal · S.J").
