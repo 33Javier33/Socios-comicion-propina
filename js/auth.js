@@ -106,6 +106,7 @@ function toggleRecuperar() {
 let inactividadTimeout = null;
 let inactividadInterval = null;
 let tiempoRestante = INACTIVIDAD_MS;
+let _ultimaActividad = Date.now(); // hora real de la última actividad
 
 function cerrarSesion(silencioso = false) {
     // Auditar cierre de sesión antes de limpiar sessionStorage
@@ -139,31 +140,54 @@ function cerrarSesion(silencioso = false) {
     setTimeout(() => document.getElementById('pinInput').focus(), 450);
 }
 
-function resetearInactividad() {
-    if (!sessionStorage.getItem(SESSION_KEY)) return;
+// Arranca el contador usando el tiempo REAL transcurrido desde la última actividad.
+// Calcular tiempoRestante con Date.now() (no restando 1s) hace que el cierre sea
+// correcto aunque el timer se haya congelado en segundo plano: al reanudar, el
+// primer tick refleja el tiempo real y cierra si ya pasaron los 15 min.
+function _arrancarContadorInactividad() {
     clearTimeout(inactividadTimeout);
     clearInterval(inactividadInterval);
-    tiempoRestante = INACTIVIDAD_MS;
     const badge = document.getElementById('inactividadBadge');
-    if (badge) badge.style.display = "none";
-    inactividadInterval = setInterval(() => {
-        tiempoRestante -= 1000;
-        const mins = Math.floor(tiempoRestante / 60000);
-        const secs = Math.floor((tiempoRestante % 60000) / 1000);
+    const _tick = () => {
+        tiempoRestante = INACTIVIDAD_MS - (Date.now() - _ultimaActividad);
+        const mins = Math.max(0, Math.floor(tiempoRestante / 60000));
+        const secs = Math.max(0, Math.floor((tiempoRestante % 60000) / 1000));
         const timerEl = document.getElementById('inactividadTimer');
         if (timerEl) timerEl.textContent = mins + ":" + String(secs).padStart(2, "0");
-        if (tiempoRestante <= 2 * 60 * 1000 && badge) badge.style.display = "flex";
+        if (badge) badge.style.display = (tiempoRestante <= 2 * 60 * 1000) ? "flex" : "none";
         if (tiempoRestante <= 0) {
             clearInterval(inactividadInterval);
             cerrarSesion(true);
         }
-    }, 1000);
-    inactividadTimeout = setTimeout(() => cerrarSesion(true), INACTIVIDAD_MS);
+    };
+    inactividadInterval = setInterval(_tick, 1000);
+    inactividadTimeout = setTimeout(() => cerrarSesion(true), Math.max(0, INACTIVIDAD_MS - (Date.now() - _ultimaActividad)));
+}
+
+function resetearInactividad() {
+    if (!sessionStorage.getItem(SESSION_KEY)) return;
+    _ultimaActividad = Date.now();
+    tiempoRestante = INACTIVIDAD_MS;
+    const badge = document.getElementById('inactividadBadge');
+    if (badge) badge.style.display = "none";
+    _arrancarContadorInactividad();
+}
+
+// Verifica el tiempo real al volver a primer plano; cierra si ya venció, o reanuda
+// el contador con el tiempo restante real (sin regalar otros 15 min).
+function _verificarInactividadAlVolver() {
+    if (!sessionStorage.getItem(SESSION_KEY)) return;
+    if (Date.now() - _ultimaActividad >= INACTIVIDAD_MS) cerrarSesion(true);
+    else _arrancarContadorInactividad();
 }
 
 function iniciarWatchdogInactividad() {
     const eventos = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"];
     eventos.forEach(ev => document.addEventListener(ev, resetearInactividad, { passive: true }));
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') _verificarInactividadAlVolver();
+    });
+    window.addEventListener('focus', _verificarInactividadAlVolver);
     resetearInactividad();
 }
 

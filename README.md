@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-05 — Cierre por inactividad confiable en segundo plano (15 min)
+- Antes el contador de inactividad restaba 1s por `setInterval`; en móvil, al dejar la app en segundo plano o fuera de la pestaña, el timer se congela y no descontaba el tiempo, así que la sesión no se cerraba tras 15 min fuera.
+- Fix: el tiempo restante ahora se calcula con la **hora real** (`Date.now() - última actividad`), y se agregó verificación en `visibilitychange`/`focus`: al volver a la app, si ya pasaron 15 min desde la última actividad, cierra sesión de inmediato; si no, reanuda el contador con el tiempo real restante.
+- Archivo modificado: `js/auth.js`. (Mismo patrón que ya usaba propi.solicitada; diario.propi también se corrigió.)
+
 #### 2026-07-05 — Nueva sección "PIN Diario": gestionar los PIN de diario.propi
 - Nueva pestaña **🔑 PIN Diario** para crear, cambiar, ver (recuperar) y quitar el **PIN de 4 dígitos** con que cada socio entra a la app **diario.propi**.
 - Los PIN se guardan en Supabase (tabla nueva `diario_pins`, base de socios) y se comparten con diario.propi. Filtro por área (Mesas, Máquinas, Técnicos, Cambistas).
