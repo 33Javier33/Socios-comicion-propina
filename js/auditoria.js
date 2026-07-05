@@ -108,7 +108,8 @@ function _audMetodoLegible(m) {
         pin_global:        'PIN global',
         clave_recuperacion:'Clave recup.',
         clave_recup:       'Clave recup.',
-        pin:               'PIN global'
+        pin:               'PIN global',
+        pin_diario:        'PIN diario'
     };
     return map[m] || (m ? String(m).replace(/_/g, ' ') : '');
 }
@@ -120,7 +121,7 @@ function _audRef(r) {
     const accion = r.accion || '';
     const det    = r.detalle || '';
     const ex     = r._extra || {};
-    const area   = r.area || (ex.responsable ? String(ex.responsable).split('|')[1] : '') || '';
+    const area   = r.area || ex.area || (ex.responsable ? String(ex.responsable).split('|')[1] : '') || '';
 
     // 1. Folios legibles (recibos, canjes, retiros con firma tipo ATC-…, CJ-…)
     if (accion === 'Imprimir Recibo' || accion === 'Canje') return id || '—';
