@@ -346,7 +346,7 @@ function verificarEscalamientos() {
 
     if (subieronReciente.length) {
         html += '<div style="margin-bottom:12px;">';
-        html += '<div style="font-size:0.78em;font-weight:800;text-transform:uppercase;color:#0891b2;letter-spacing:0.5px;margin-bottom:8px;">✅ Subieron recientemente — escalamiento ya aplicado</div>';
+        html += '<div style="font-size:0.78em;font-weight:800;text-transform:uppercase;color:#0891b2;letter-spacing:0.5px;margin-bottom:8px;">✅ Subieron recientemente — aumento ya aplicado</div>';
         subieronReciente.forEach(s => {
             const areaNom = s.area.charAt(0).toUpperCase() + s.area.slice(1);
             const diff    = s.puntosNuevos - s.puntosAntes;

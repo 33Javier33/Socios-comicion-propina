@@ -95,7 +95,7 @@
                     <span class="close-modal" onclick="document.getElementById('modalAyudaCompleta').style.display='none'">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <input class="ayuda-search" id="ayudaSearchInput" type="text" placeholder="🔍  Busca: anticipo, punto, arqueo, recibo, escalamiento..." oninput="ayudaCompleta_buscar(this.value)">
+                    <input class="ayuda-search" id="ayudaSearchInput" type="text" placeholder="🔍  Busca: anticipo, punto, arqueo, recibo, aumento de puntaje..." oninput="ayudaCompleta_buscar(this.value)">
                     <div class="ayuda-tags" id="ayudaTags">
                         <span class="ayuda-tag activo" onclick="ayudaCompleta_filtrar('',this)">Todas</span>
                         <span class="ayuda-tag" onclick="ayudaCompleta_filtrar('socios',this)">👥 Socios</span>
@@ -136,9 +136,9 @@
                     <span class="ms-val" id="totalPartTimeDash">0</span>
                     <span class="ms-label">S. Part-Time</span>
                 </div>
-                <div class="mini-stat orange clickable" onclick="verificarEscalamientos(); document.getElementById('panelEscalamientos').scrollIntoView({behavior:'smooth'})" title="Ver escalamientos pendientes">
+                <div class="mini-stat orange clickable" onclick="verificarEscalamientos(); document.getElementById('panelEscalamientos').scrollIntoView({behavior:'smooth'})" title="Socios próximos a subir de puntaje">
                     <span class="ms-val" id="contadorEscalamientos">🏆</span>
-                    <span class="ms-label">Escalamientos</span>
+                    <span class="ms-label">Próximos a subir</span>
                 </div>
                 <div class="mini-stat purple clickable" id="statPendientes" onclick="pendientes_mostrarPanel()" title="Socios pendientes de activación" style="display:none;">
                     <span class="ms-val" id="contadorPendientes">⏳</span>
@@ -147,7 +147,7 @@
             </div>
 
 
-            <!-- PANEL AVISOS ESCALAMIENTO DE PUNTOS -->
+            <!-- PANEL AVISOS: SOCIOS PRÓXIMOS A SUBIR DE PUNTAJE -->
             <!-- PANEL SOCIOS PENDIENTES DE ACTIVACIÓN -->
             <div id="panelPendientes" style="display:none; margin-bottom:20px;">
                 <div style="background:linear-gradient(135deg,#fff7ed,#ffedd5); border:1px solid #fb923c; border-radius:12px; padding:16px;">
@@ -170,7 +170,7 @@
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span style="font-size:1.3em;">🏆</span>
-                            <strong style="color:#e67e22; font-size:1em;">Escalamiento de Puntos</strong>
+                            <strong style="color:#e67e22; font-size:1em;">Socios próximos a subir de puntaje</strong>
                         </div>
                         <button onclick="document.getElementById('panelEscalamientos').style.display='none'"
                             style="background:none;border:none;color:#7f8c8d;font-size:1.3em;cursor:pointer;line-height:1;">✕</button>
@@ -1860,7 +1860,7 @@
                         <div style="display:flex; flex-direction:column; gap:7px;">
                             <div style="display:flex; align-items:center; gap:9px; background:rgba(255,255,255,0.7); border-radius:9px; padding:8px 11px;">
                                 <span style="font-size:16px;">👥</span>
-                                <div style="font-size:12px; color:#166534;"><strong>Socios</strong> — registro, puntos, antigüedad y escalamientos automáticos.</div>
+                                <div style="font-size:12px; color:#166534;"><strong>Socios</strong> — registro, puntos, antigüedad y aumentos de puntaje automáticos.</div>
                             </div>
                             <div style="display:flex; align-items:center; gap:9px; background:rgba(255,255,255,0.7); border-radius:9px; padding:8px 11px;">
                                 <span style="font-size:16px;">📑</span>
@@ -1908,7 +1908,7 @@
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                         <div style="background:#fff; border-radius:10px; padding:10px 12px; border:1px solid #e8d5f5;">
                             <div style="font-size:11px; font-weight:800; color:#9b59b6; margin-bottom:3px;">👥 Gestión de Socios</div>
-                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Registro, puntos, escalamientos, contratos y saldos individuales.</div>
+                            <div style="font-size:11px; color:#7f8c8d; line-height:1.4;">Registro, puntos, aumentos de puntaje, contratos y saldos individuales.</div>
                         </div>
                         <div style="background:#fff; border-radius:10px; padding:10px 12px; border:1px solid #d5f0e0;">
                             <div style="font-size:11px; font-weight:800; color:#27ae60; margin-bottom:3px;">📑 Anticipos y Ausencias</div>

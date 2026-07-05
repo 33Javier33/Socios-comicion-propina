@@ -35,10 +35,10 @@ const BASE_CONOCIMIENTO = [
           </div>
         </div>
       </div>`,
-      pasos:['Los 6 números del panel (Total Socios, Total Puntos, Pts Planta, S. Planta, S. Part-Time, Escalamientos) se actualizan solos al cargar','Presiona el nombre de cada área para desplegar las tarjetas de sus socios','Cada tarjeta muestra nombre, contrato, puntos actuales y botones de acción','El botón 🏆 Escalamientos te avisa quién sube puntos este mes o el próximo'],
+      pasos:['Los 6 números del panel (Total Socios, Total Puntos, Pts Planta, S. Planta, S. Part-Time, Próximos a subir) se actualizan solos al cargar','Presiona el nombre de cada área para desplegar las tarjetas de sus socios','Cada tarjeta muestra nombre, contrato, puntos actuales y botones de acción','El botón 🏆 Próximos a subir te avisa quién sube puntos este mes o el próximo'],
       nota:'Los socios con fecha de inicio de puntos en el futuro aparecen en la lista pero NO suman al total de puntos.' },
 
-    { id:'s2', cat:'socios', titulo:'¿Cómo funciona el escalamiento de puntos?', tags:['escalamiento','puntos','años','tope','antigüedad'],
+    { id:'s2', cat:'socios', titulo:'¿Cómo suben de puntaje los socios (aumento de puntos)?', tags:['escalamiento','aumento','subir','puntaje','puntos','años','tope','antigüedad'],
       resp:'Cada año de antigüedad en el casino suma <strong>+2 puntos</strong> al socio, comenzando desde 4 puntos base. Cada área tiene un tope que no se puede superar.',
       vista:`<div class="ayuda-vista">
         <div class="ayuda-vista-titulo">⭐ Topes por área</div>
@@ -52,8 +52,8 @@ const BASE_CONOCIMIENTO = [
         </div>
         <div class="ayuda-formula" style="margin-top:8px;">Puntos = 4 + (años × 2) → hasta el tope del área</div>
       </div>`,
-      pasos:['El sistema calcula los puntos automáticamente según la fecha de ingreso','Cuando un socio cumple años en el trabajo, aparece en el panel 🏆 Escalamientos','Si ya llegó al tope de su área, el recibo muestra "TOPE MÁXIMO"','La fecha de inicio de puntos puede ser diferente a la de ingreso (ej: si tuvo un período sin puntos)'],
-      nota:'El 🏆 en el panel muestra quiénes escalan este mes, el mes pasado y el próximo.' },
+      pasos:['El sistema calcula los puntos automáticamente según la fecha de ingreso','Cuando un socio cumple años en el trabajo, aparece en el panel 🏆 Próximos a subir','Si ya llegó al tope de su área, el recibo muestra "TOPE MÁXIMO"','La fecha de inicio de puntos puede ser diferente a la de ingreso (ej: si tuvo un período sin puntos)'],
+      nota:'El 🏆 en el panel muestra quiénes suben de puntaje este mes, el mes pasado y el próximo.' },
 
     { id:'s3', cat:'socios', titulo:'¿Cómo agrego o edito un socio?', tags:['agregar','nuevo','socio','registrar','editar'],
       resp:'Usa el botón <strong>➕ azul</strong> en la esquina inferior derecha para agregar. Para editar, abre la tarjeta del socio y usa el botón ✏️.',

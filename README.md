@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-05 — Renombrar "Escalamientos" → "Próximos a subir de puntaje"
+- En Gestión de Socios se renombró el término técnico "Escalamiento(s)" por uno más claro: el cuadro del panel ahora dice **"Próximos a subir"** y el panel **"Socios próximos a subir de puntaje"**.
+- Se actualizaron también textos de ayuda y el título de la guía. Los nombres internos de funciones/IDs (`verificarEscalamientos`, `panelEscalamientos`, etc.) se mantienen para no romper la lógica. La guía conserva el tag de búsqueda "escalamiento" para que siga siendo encontrable.
+- Archivos modificados: `index.html`, `js/socios.js`, `js/help.js`.
+
 #### 2026-07-05 — Informe de Desglose de Anticipos a dos columnas (menos hojas)
 - El informe de anticipos ahora imprime en **dos columnas por hoja** (43 filas por columna → 86 por hoja), con numeración secuencial, reduciendo a la mitad las hojas a imprimir.
 - Se quitó la columna vacía y el espacio horizontal desperdiciado; fuentes y celdas más compactas. Paginación en bloques de 86 con `page-break-after`.
