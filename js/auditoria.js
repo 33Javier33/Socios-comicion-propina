@@ -100,35 +100,73 @@ function auditoria_colorAccion(accion) {
     return entry ? entry[1] : { bg:'#f2f3f4', txt:'#717d7e' };
 }
 
-// Deriva una referencia legible a partir de la acción y el detalle
+// Nombre legible del método de ingreso/credencial
+function _audMetodoLegible(m) {
+    const map = {
+        pin_personal_nube: 'PIN personal',
+        pin_personal:      'PIN personal',
+        pin_global:        'PIN global',
+        clave_recuperacion:'Clave recup.',
+        clave_recup:       'Clave recup.',
+        pin:               'PIN global'
+    };
+    return map[m] || (m ? String(m).replace(/_/g, ' ') : '');
+}
+
+// Deriva una referencia legible a partir de la acción y los datos del registro.
+// Objetivo: que casi nunca quede en "—" y que se entienda a qué se refiere cada evento.
 function _audRef(r) {
     const id     = r.idAfectado || '';
     const accion = r.accion || '';
     const det    = r.detalle || '';
+    const ex     = r._extra || {};
+    const area   = r.area || (ex.responsable ? String(ex.responsable).split('|')[1] : '') || '';
 
-    // Canjes y Recibos ya tienen folio legible como idAfectado
-    if (accion === 'Imprimir Recibo' || accion === 'Canje') return id;
+    // 1. Folios legibles (recibos, canjes, retiros con firma tipo ATC-…, CJ-…)
+    if (accion === 'Imprimir Recibo' || accion === 'Canje') return id || '—';
+    if (id && /^(ATC|CJ|REC|CERT)/i.test(id)) return id;
 
-    // Intentar extraer fecha ISO del campo detalle
-    const fechaM = det.match(/(\d{4}-(\d{2})-(\d{2}))/);
+    // 2. Accesos / cierres de sesión → método de ingreso (+ área)
+    if (accion === 'Acceso' || accion === 'Cierre de Sesión') {
+        const met = _audMetodoLegible(ex.metodo);
+        if (met && area) return `${met} · ${area}`;
+        if (met) return met;
+        return area ? `Área ${area}` : '—';
+    }
+
+    // 3. Cambios de configuración / credenciales → parámetro afectado
+    if (ex.clave) {
+        const claves = { pin: 'PIN global', clave_recup: 'Clave recup.', clave_recuperacion: 'Clave recup.' };
+        return claves[ex.clave] || String(ex.clave).replace(/_/g, ' ');
+    }
+    if (accion === 'Cambiar PIN Personal') return area ? `PIN · ${area}` : 'PIN personal';
+
+    // 4. Fecha ISO en el detalle → PREFIJO dd/mm
+    const fechaM = det.match(/(\d{4})-(\d{2})-(\d{2})/);
     if (fechaM) {
         const dd = fechaM[3], mm = fechaM[2];
-        const pre = accion.includes('Anticipo') ? 'ANT'
-                  : accion.includes('Material') ? 'MAT'
-                  : accion.includes('Extra')    ? 'EXT'
-                  : accion.includes('Saldo')    ? 'SAL'
-                  : accion.includes('Cierre')   ? 'CIERRE'
-                  : accion.includes('Reiniciar')? 'RST'
-                  : accion.includes('Socio')    ? 'SOC'
+        const pre = accion.includes('Anticipo')     ? 'ANT'
+                  : accion.includes('Material')      ? 'MAT'
+                  : accion.includes('Extra')         ? 'EXT'
+                  : accion.includes('Saldo')         ? 'SAL'
+                  : accion.includes('Recaudación')   ? 'REC'
+                  : accion.includes('Divisor')       ? 'DIV'
+                  : accion.includes('Cierre')        ? 'CIERRE'
+                  : accion.includes('Reiniciar')     ? 'RST'
+                  : accion.includes('Socio')         ? 'SOC'
                   : accion.split(' ').map(w => w[0]).join('').toUpperCase();
         return `${pre} ${dd}/${mm}`;
     }
 
-    // Fallback: prefijo de acción + primeros 6 chars de UUID
-    if (id.length > 8) {
-        return id.substring(0, 8) + '…';
-    }
-    return id || '—';
+    // 5. Certificados → socio afectado
+    if (accion.includes('Certificado')) return id ? `SOC ${String(id).slice(0, 6)}` : 'Certificado';
+
+    // 6. id afectado corto
+    if (id && id.length > 8) return id.substring(0, 8) + '…';
+    if (id) return id;
+
+    // 7. Último recurso: área o guión
+    return area ? `Área ${area}` : '—';
 }
 
 function auditoria_renderizar(datos) {
@@ -185,6 +223,17 @@ function auditoria_renderizar(datos) {
                     <span style="font-size:0.78em;">Total: <b>${fmtM(snap.total)}</b></span>`;
                 reimpBtn = `<button onclick="auditoria_reimprimirCanje('${snap.folio}')"
                     style="margin-top:4px;background:#1b5e20;color:white;border:none;border-radius:5px;padding:3px 10px;font-size:0.76em;cursor:pointer;">🖨 Reimprimir</button>`;
+            }
+        } else {
+            // Enriquecer eventos genéricos con contexto extra (método de ingreso, área)
+            const ex = r._extra || {};
+            const met = _audMetodoLegible(ex.metodo);
+            const bits = [];
+            if (met)    bits.push('🔑 ' + met);
+            if (r.area) bits.push('📍 Área ' + r.area);
+            if (bits.length) {
+                detalleHtml = (r.detalle || '') +
+                    `<div style="font-size:0.74em;color:#94a3b8;margin-top:3px;">${bits.join(' &nbsp;·&nbsp; ')}</div>`;
             }
         }
 

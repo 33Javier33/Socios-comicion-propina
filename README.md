@@ -232,6 +232,15 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-05 — Auditoría: columna "Referencia" con datos útiles + más contexto
+- Antes la columna **Referencia** mostraba "—" en muchos eventos porque solo se armaba con folio o con una fecha dentro del detalle. Ahora `_audRef` deriva una referencia legible según el tipo de evento:
+  - Acceso / Cierre de Sesión → método de ingreso + área (ej: "PIN personal · S.J").
+  - Cambios de configuración/credenciales → parámetro afectado (PIN global, Clave recup., etc.).
+  - Anticipos, recaudaciones, divisores, saldos, cierres → prefijo + fecha (ej: "ANT 24/06").
+  - Certificados → socio afectado; folios de recibos/canjes tal cual.
+- Además, los eventos genéricos ahora muestran una línea de **contexto** (🔑 método de ingreso · 📍 área) para que se entienda mejor qué se está viendo. La mejora aplica también al informe impreso de auditoría.
+- Archivo modificado: `js/auditoria.js`.
+
 #### 2026-07-05 — Renombrar "Escalamientos" → "Próximos a subir de puntaje"
 - En Gestión de Socios se renombró el término técnico "Escalamiento(s)" por uno más claro: el cuadro del panel ahora dice **"Próximos a subir"** y el panel **"Socios próximos a subir de puntaje"**.
 - Se actualizaron también textos de ayuda y el título de la guía. Los nombres internos de funciones/IDs (`verificarEscalamientos`, `panelEscalamientos`, etc.) se mantienen para no romper la lógica. La guía conserva el tag de búsqueda "escalamiento" para que siga siendo encontrable.
