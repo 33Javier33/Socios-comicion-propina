@@ -397,7 +397,7 @@ async function dsg_guardarEdicion() {
     }
 }
 
-// ── Informe de anticipos (fechas y totales) ─────────────────
+// ── Informe de anticipos (fechas y totales) — 2 columnas por hoja ──
 function dsg_informe() {
     if (!_dsgFiltrados.length) { showToast('No hay registros para el informe', 'error'); return; }
     const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
@@ -414,38 +414,73 @@ function dsg_informe() {
     const hoy = new Date();
     const fechaHoyVis = hoy.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    const filas = registros.map((r, i) => {
+    // Layout de 2 columnas: 43 filas por columna → 86 por hoja, numeración secuencial
+    const ROWS_PER_COL = 43;
+    const PER_PAGE = ROWS_PER_COL * 2;
+
+    const filaHtml = (r, nGlobal) => {
         const fechaRaw = r.fecha || (r.created_at || '').slice(0, 10);
         let fechaVis = fechaRaw;
         if (fechaRaw && fechaRaw.includes('-')) { const p = fechaRaw.split('-'); if (p.length === 3) fechaVis = p[2] + '/' + p[1] + '/' + p[0]; }
-        const bg = i % 2 === 0 ? '#f7f7f7' : 'white';
+        const bg = nGlobal % 2 === 0 ? '#f2f2f2' : 'white';
         return `<tr style="background:${bg};">
-            <td style="padding:4px 8px;border:1px solid #ccc;text-align:center;">${i + 1}</td>
-            <td style="padding:4px 8px;border:1px solid #ccc;font-weight:700;">${_htmlEsc(r.socio_nombre || '—')}</td>
-            <td style="padding:4px 8px;border:1px solid #ccc;text-align:center;">${fechaVis}</td>
-            <td style="padding:4px 8px;border:1px solid #ccc;">${_htmlEsc(r.responsable || '')}</td>
-            <td style="padding:4px 8px;border:1px solid #ccc;text-align:right;font-weight:800;">${fmt(Number(r.monto || 0))}</td>
+            <td class="c-n">${nGlobal}</td>
+            <td class="c-soc">${_htmlEsc(r.socio_nombre || '—')}</td>
+            <td class="c-fec">${fechaVis}</td>
+            <td class="c-resp">${_htmlEsc(r.responsable || '')}</td>
+            <td class="c-mon">${fmt(Number(r.monto || 0))}</td>
         </tr>`;
-    }).join('');
+    };
+
+    const thead = '<thead><tr>'
+        + '<th class="c-n">N°</th><th class="c-soc" style="text-align:left">SOCIO</th>'
+        + '<th class="c-fec">FECHA</th><th class="c-resp" style="text-align:left">RESP.</th>'
+        + '<th class="c-mon">MONTO</th></tr></thead>';
+
+    // slice: registros de una columna; startIdx: índice base (0-based) para numerar
+    const buildCol = (slice, startIdx) => {
+        if (!slice.length) return '';
+        const rows = slice.map((r, i) => filaHtml(r, startIdx + i + 1)).join('');
+        return '<table class="inner">' + thead + '<tbody>' + rows + '</tbody></table>';
+    };
+
+    let pagesHtml = '';
+    for (let p = 0; p < registros.length; p += PER_PAGE) {
+        const pageRows = registros.slice(p, p + PER_PAGE);
+        const left  = pageRows.slice(0, ROWS_PER_COL);
+        const right = pageRows.slice(ROWS_PER_COL);
+        const isLast = (p + PER_PAGE) >= registros.length;
+        pagesHtml += '<table class="dos-cols"' + (isLast ? '' : ' style="page-break-after:always;"') + '><tr>'
+            + '<td class="col-cell" style="padding-right:3px;">' + buildCol(left, p) + '</td>'
+            + '<td style="width:1%;"></td>'
+            + '<td class="col-cell" style="padding-left:3px;">' + buildCol(right, p + ROWS_PER_COL) + '</td>'
+            + '</tr></table>';
+    }
 
     const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Informe Anticipos</title><style>'
         + '*{margin:0;padding:0;box-sizing:border-box;}'
-        + 'body{font-family:Arial,sans-serif;font-size:11px;color:#000;padding:14mm;}'
-        + 'h1{font-size:16px;text-align:center;font-weight:900;letter-spacing:1px;margin-bottom:2px;}'
-        + '.sub{text-align:center;font-size:9px;margin-bottom:10px;font-weight:600;color:#333;}'
-        + '.tothead{background:#1e3a5f;color:white;padding:6px 12px;font-size:12px;font-weight:900;display:flex;justify-content:space-between;margin-bottom:10px;border-radius:4px;}'
-        + 'table{width:100%;border-collapse:collapse;margin-bottom:10px;}'
-        + 'th{background:#2c3e50;color:white;padding:5px 8px;font-size:10px;border:1px solid #1a252f;}'
-        + '.totfinal{background:#c0392b;color:white;padding:6px 12px;font-weight:900;font-size:13px;text-align:right;border-radius:3px;}'
-        + '.footer{text-align:center;font-size:8px;color:#888;margin-top:10px;border-top:1px dashed #ccc;padding-top:6px;}'
-        + '@media print{@page{size:A4 portrait;margin:10mm;}body{padding:0;}}'
+        + 'body{font-family:Arial,sans-serif;font-size:8px;color:#000;padding:8mm;}'
+        + 'h1{font-size:14px;text-align:center;font-weight:900;letter-spacing:1px;margin-bottom:2px;}'
+        + '.sub{text-align:center;font-size:8px;margin-bottom:6px;font-weight:600;color:#333;}'
+        + '.tothead{background:#1e3a5f;color:white;padding:5px 10px;font-size:10px;font-weight:900;display:flex;justify-content:space-between;margin-bottom:8px;border-radius:4px;}'
+        + '.dos-cols{width:100%;border-collapse:collapse;}'
+        + '.col-cell{width:49.5%;vertical-align:top;}'
+        + 'table.inner{width:100%;border-collapse:collapse;table-layout:fixed;}'
+        + 'table.inner th{background:#2c3e50;color:white;padding:2px 3px;font-size:6.5px;border:1px solid #1a252f;text-align:center;}'
+        + 'table.inner td{padding:1.5px 3px;border:1px solid #ccc;font-size:7px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}'
+        + '.c-n{width:8%;text-align:center;}'
+        + '.c-soc{width:40%;text-align:left;font-weight:700;}'
+        + '.c-fec{width:19%;text-align:center;}'
+        + '.c-resp{width:15%;text-align:left;}'
+        + '.c-mon{width:18%;text-align:right;font-weight:800;}'
+        + '.totfinal{background:#c0392b;color:white;padding:6px 12px;font-weight:900;font-size:12px;text-align:right;border-radius:3px;margin-top:8px;}'
+        + '.footer{text-align:center;font-size:7px;color:#888;margin-top:8px;border-top:1px dashed #ccc;padding-top:5px;}'
+        + '@media print{@page{size:A4 portrait;margin:8mm;}body{padding:0;}}'
         + '</style></head><body>'
         + '<h1>INFORME DE ANTICIPOS</h1>'
         + '<div class="sub">FONDO DE SOLIDARIDAD — CASINO DE PUERTO VARAS | LEY 17312 DEL 29/07/70</div>'
         + '<div class="tothead"><span>' + _htmlEsc(periodoLabel) + '</span><span>' + registros.length + ' anticipo' + (registros.length !== 1 ? 's' : '') + '</span></div>'
-        + '<table><thead><tr>'
-        + '<th style="width:26px;">N°</th><th style="text-align:left;">SOCIO</th><th style="width:78px;">FECHA</th><th style="text-align:left;width:110px;">RESPONSABLE</th><th style="width:96px;text-align:right;">MONTO</th>'
-        + '</tr></thead><tbody>' + filas + '</tbody></table>'
+        + pagesHtml
         + '<div class="totfinal">TOTAL GENERAL: ' + fmt(totalGeneral) + '</div>'
         + '<div class="footer">Emitido: ' + fechaHoyVis + ' | Sistema Fondo Solidario — Casino de Puerto Varas</div>'
         + '</body></html>';

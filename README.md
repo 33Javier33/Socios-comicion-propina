@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-05 — Informe de Desglose de Anticipos a dos columnas (menos hojas)
+- El informe de anticipos ahora imprime en **dos columnas por hoja** (43 filas por columna → 86 por hoja), con numeración secuencial, reduciendo a la mitad las hojas a imprimir.
+- Se quitó la columna vacía y el espacio horizontal desperdiciado; fuentes y celdas más compactas. Paginación en bloques de 86 con `page-break-after`.
+- Archivo modificado: `js/desglose-anticipos.js` (función `dsg_informe`).
+
 #### 2026-07-02 — Desglose de Anticipos: editar (con PIN personal), reimprimir e informe
 - **Editar**: cada tarjeta de desglose tiene un botón ✏️ que abre un modal para corregir la fecha y el detalle de billetes (recalcula el total automáticamente). Para guardar se exige el **PIN personal** del responsable en sesión (validado contra `credencialesCache[ini|area]`). La clave de recuperación, la clave/PIN global y el PIN de ingreso **no** permiten editar. Si el responsable no tiene PIN personal configurado, no puede editar. Cada edición queda en auditoría (`Editar Desglose Anticipo`, con quién editó).
 - **Reimprimir**: botón 🖨 en cada tarjeta que reimprime el boucher del anticipo (reutiliza `generarBoucherAnticipo`).
