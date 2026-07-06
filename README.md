@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-06 — Desglose de Anticipos: fechas/horas en zona horaria de Chile
+- En el informe y las tarjetas, cuando un registro no tenía `fecha` propia se derivaba el día desde `created_at` en **UTC** (`.slice(0,10)`), corriéndose un día en registros de la noche. La hora se mostraba con la hora del dispositivo.
+- Fix: helpers `_dsgFechaISO` / `_dsgFechaVis` / `_dsgHoraChile` que usan la `fecha` elegida tal cual y, en el fallback, convierten `created_at` a **America/Santiago**. Se aplicó en informe (orden y filas), tarjetas, filtro por fecha, reimpresión de boucher y modal de edición. Se corrigió `_dsgCalcPeriodoInicio` para no depender de `toISOString()`/UTC.
+- Nota: los datos guardados estaban correctos (la `fecha` la elige el usuario); esto corrige la visualización/derivación por zona horaria.
+- Archivo modificado: `js/desglose-anticipos.js`.
+
 #### 2026-07-05 — Cierre por inactividad confiable en segundo plano (15 min)
 - Antes el contador de inactividad restaba 1s por `setInterval`; en móvil, al dejar la app en segundo plano o fuera de la pestaña, el timer se congela y no descontaba el tiempo, así que la sesión no se cerraba tras 15 min fuera.
 - Fix: el tiempo restante ahora se calcula con la **hora real** (`Date.now() - última actividad`), y se agregó verificación en `visibilitychange`/`focus`: al volver a la app, si ya pasaron 15 min desde la última actividad, cierra sesión de inmediato; si no, reanuda el contador con el tiempo real restante.

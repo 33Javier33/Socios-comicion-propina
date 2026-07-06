@@ -12,7 +12,9 @@ let _dsgPeriodos = [];              // períodos archivados disponibles
 function _dsgCalcPeriodoInicio() {
     const hoy = new Date();
     const y = hoy.getFullYear(), m = hoy.getMonth(), d = hoy.getDate();
-    return (d >= 15 ? new Date(y, m, 15) : new Date(y, m - 1, 15)).toISOString().split('T')[0];
+    const dt = (d >= 15) ? new Date(y, m, 15) : new Date(y, m - 1, 15);
+    // Construir la fecha con componentes locales (sin toISOString/UTC) → siempre el día 15
+    return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-15';
 }
 
 // "2026-06-15" → "15 Jun – 14 Jul 2026"
@@ -26,6 +28,37 @@ function _dsgFormatPeriodo(key) {
     const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     const fmt = dt => `${dt.getDate()} ${meses[dt.getMonth()]} ${dt.getFullYear()}`;
     return `${fmt(inicio)} – ${fmt(fin)}`;
+}
+
+// ── Fecha/hora en zona horaria de Chile ─────────────────────
+// Fecha ISO (YYYY-MM-DD): si el registro tiene `fecha` (date puro elegido por el
+// usuario) se usa tal cual; si no, se deriva de created_at PERO en hora de Chile
+// (no en UTC) para no correrse un día en registros de la noche.
+function _dsgFechaISO(r) {
+    if (r && r.fecha) {
+        const f = String(r.fecha);
+        if (/^\d{4}-\d{2}-\d{2}/.test(f)) return f.slice(0, 10);
+    }
+    if (r && r.created_at) {
+        try { return new Date(r.created_at).toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }); } catch(e) {}
+    }
+    return '';
+}
+
+// "DD/MM/YYYY" en zona Chile
+function _dsgFechaVis(r) {
+    const iso = _dsgFechaISO(r);
+    if (!iso) return '';
+    const p = iso.split('-');
+    return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso;
+}
+
+// Hora "HH:MM" en zona Chile a partir de created_at
+function _dsgHoraChile(r) {
+    if (!r || !r.created_at) return '';
+    try {
+        return new Date(r.created_at).toLocaleTimeString('es-CL', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hour12: false });
+    } catch(e) { return ''; }
 }
 
 // Cambia el período y recarga
@@ -140,7 +173,7 @@ function dsg_filtrar() {
 
     _dsgFiltrados = _dsgRegistros.filter(r => {
         if (nombre && !(r.socio_nombre || '').toLowerCase().includes(nombre)) return false;
-        const fechaReg = (r.fecha || (r.created_at || '').slice(0, 10));
+        const fechaReg = _dsgFechaISO(r);
         if (desde && fechaReg && fechaReg < desde) return false;
         if (hasta && fechaReg && fechaReg > hasta) return false;
         return true;
@@ -191,21 +224,8 @@ function dsg_renderHistorial() {
 function _dsgRenderCard(r) {
     const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
 
-    const fechaRaw = r.fecha || (r.created_at || '').slice(0, 10);
-    let fechaVis = fechaRaw;
-    if (fechaRaw && fechaRaw.includes('-')) {
-        const p = fechaRaw.split('-');
-        if (p.length === 3) fechaVis = p[2] + '/' + p[1] + '/' + p[0];
-    }
-
-    let horaVis = '';
-    if (r.created_at) {
-        try {
-            const d = new Date(r.created_at);
-            const pad = n => String(n).padStart(2, '0');
-            horaVis = pad(d.getHours()) + ':' + pad(d.getMinutes());
-        } catch(e) {}
-    }
+    const fechaVis = _dsgFechaVis(r);
+    const horaVis = _dsgHoraChile(r);
 
     const billetes = r.billetes || {};
     const totalBilletes = Object.entries(billetes).reduce((s, [den, cant]) => s + Number(den) * Number(cant), 0);
@@ -256,7 +276,7 @@ function dsg_reimprimir(firma) {
     const r = _dsgRegistros.find(x => x.firma === firma);
     if (!r) { showToast('Registro no encontrado', 'error'); return; }
     if (typeof generarBoucherAnticipo !== 'function') { showToast('Impresión no disponible', 'error'); return; }
-    const fecha = r.fecha || (r.created_at || '').slice(0, 10);
+    const fecha = _dsgFechaISO(r);
     generarBoucherAnticipo({
         id: r.socio_id || '',
         nombre: r.socio_nombre || '',
@@ -278,7 +298,7 @@ function dsg_abrirEditar(firma) {
     _dsgEditFirma = firma;
 
     const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
-    const fecha = r.fecha || (r.created_at || '').slice(0, 10);
+    const fecha = _dsgFechaISO(r);
     document.getElementById('dsg-edit-socio').textContent = r.socio_nombre || '—';
     document.getElementById('dsg-edit-firma').textContent = r.firma || '';
     document.getElementById('dsg-edit-fecha').value = fecha;
@@ -402,12 +422,8 @@ function dsg_informe() {
     if (!_dsgFiltrados.length) { showToast('No hay registros para el informe', 'error'); return; }
     const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
 
-    // Ordenar por fecha ascendente para el informe
-    const registros = [..._dsgFiltrados].sort((a, b) => {
-        const fa = a.fecha || (a.created_at || '').slice(0, 10);
-        const fb = b.fecha || (b.created_at || '').slice(0, 10);
-        return fa.localeCompare(fb);
-    });
+    // Ordenar por fecha ascendente para el informe (fecha en zona Chile)
+    const registros = [..._dsgFiltrados].sort((a, b) => _dsgFechaISO(a).localeCompare(_dsgFechaISO(b)));
 
     const totalGeneral = registros.reduce((s, r) => s + Number(r.monto || 0), 0);
     const periodoLabel = _dsgPeriodoSeleccionado ? _dsgFormatPeriodo(_dsgPeriodoSeleccionado) : 'Período Actual';
@@ -419,9 +435,7 @@ function dsg_informe() {
     const PER_PAGE = ROWS_PER_COL * 2;
 
     const filaHtml = (r, nGlobal) => {
-        const fechaRaw = r.fecha || (r.created_at || '').slice(0, 10);
-        let fechaVis = fechaRaw;
-        if (fechaRaw && fechaRaw.includes('-')) { const p = fechaRaw.split('-'); if (p.length === 3) fechaVis = p[2] + '/' + p[1] + '/' + p[0]; }
+        const fechaVis = _dsgFechaVis(r);
         const bg = nGlobal % 2 === 0 ? '#f2f2f2' : 'white';
         return `<tr style="background:${bg};">
             <td class="c-n">${nGlobal}</td>
