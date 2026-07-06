@@ -11,6 +11,22 @@ const TELEGRAM_CHAT_ID = '5981473068';
 const SB_URL = 'https://teemahksasdougehrcly.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlZW1haGtzYXNkb3VnZWhyY2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTkwNjIsImV4cCI6MjA5Njg3NTA2Mn0.EIQ7gRcwf3zYgvGESKw3s5lnZMABN_EuNWsrJK3L1zk';
 
+// ── SUPABASE (recaudaciones) — para que /recaudacion y /montos lean directo de Supabase ──
+const SB_REC_URL = 'https://lpulmjzboogixbdxxayo.supabase.co';
+const SB_REC_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwdWxtanpib29naXhiZHh4YXlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NjY0NzMsImV4cCI6MjA5MTI0MjQ3M30.vjebyQb4Bb62ZQlNaJZveuxdBYDOmtC4bM7uwAilDzY';
+
+function sbRecGet(path) {
+  try {
+    const res = UrlFetchApp.fetch(SB_REC_URL + '/rest/v1/' + path, {
+      method: 'get',
+      headers: { apikey: SB_REC_KEY, Authorization: 'Bearer ' + SB_REC_KEY },
+      muteHttpExceptions: true
+    });
+    const j = JSON.parse(res.getContentText());
+    return Array.isArray(j) ? j : [];
+  } catch (e) { Logger.log('sbRecGet error: ' + e); return []; }
+}
+
 function sbInsert(tabla, payload) {
   try {
     const res = UrlFetchApp.fetch(SB_URL + '/rest/v1/' + tabla, {
@@ -189,47 +205,65 @@ function doTelegramWebhook(e) {
 
 const URL_REC_TELEGRAM = 'https://script.google.com/macros/s/AKfycbz_kCb4aEe437zHGbRqnjCibw1NtAqfCbTNmsVPn9jaZOPBFaZ6-FwmiTLqVxq39X1P/exec';
 
+// Agrupa recaudaciones+divisores de Supabase por fecha: {fecha:{tipos:{}, divisor}}
+function _tgRecPorFecha() {
+  var recs = sbRecGet('recaudaciones?select=fecha,tipo,monto');
+  var divs = sbRecGet('divisores?select=fecha,valor');
+  var divMap = {};
+  divs.forEach(function(d){ if (d.fecha) { var v = Number(d.valor); divMap[d.fecha] = (v > 0) ? v : null; } });
+  var pFecha = {};
+  recs.forEach(function(r) {
+    if (!r.fecha) return;
+    if (!pFecha[r.fecha]) pFecha[r.fecha] = { tipos:{}, divisor: (divMap[r.fecha] || null) };
+    var t = r.tipo || 'Sin Tipo';
+    pFecha[r.fecha].tipos[t] = (pFecha[r.fecha].tipos[t] || 0) + (Number(r.monto) || 0);
+  });
+  return pFecha;
+}
+
+function _tgSum(obj) { var s = 0; Object.keys(obj).forEach(function(k){ s += obj[k]; }); return s; }
+
 function telegramGetRecaudacion() {
   try {
-    var respT = UrlFetchApp.fetch(URL_REC_TELEGRAM + '?action=getTotal', {muteHttpExceptions:true});
-    var dT = JSON.parse(respT.getContentText());
-    var total = (dT.totalAcumulado || 0) / 100;
-    var ultDia = (dT.totalLastDivisorDay || 0) / 100;
-    var divisor = dT.lastDivisor || 1;
-    var fechaDiv = dT.lastDivisorDate || 'N/A';
-    var punto = divisor > 1 ? Math.round(ultDia / divisor) : 0;
-    var desglose = dT.desgloseEsperado || [];
+    var pFecha = _tgRecPorFecha();
+    var todas = Object.keys(pFecha);
 
-    var respR = UrlFetchApp.fetch(URL_REC_TELEGRAM + '?action=get', {muteHttpExceptions:true});
-    var dR = JSON.parse(respR.getContentText());
-    var regs = dR.data || [];
-    var pFecha = {};
-    regs.forEach(function(r) {
-      if (!r.fecha) return;
-      if (!pFecha[r.fecha]) pFecha[r.fecha] = {tipos:{}, divisor:r.divisor};
-      pFecha[r.fecha].tipos[r.tipo] = (pFecha[r.fecha].tipos[r.tipo]||0) + (r.monto||0);
+    // Total acumulado + desglose por tipo
+    var total = 0; var desgloseMap = {};
+    todas.forEach(function(f) {
+      var tipos = pFecha[f].tipos;
+      Object.keys(tipos).forEach(function(t) {
+        total += tipos[t];
+        if (t !== 'Sin Tipo') desgloseMap[t] = (desgloseMap[t] || 0) + tipos[t];
+      });
     });
-    var fechas = Object.keys(pFecha).sort().reverse().slice(0,5);
 
-    var respN = UrlFetchApp.fetch(URL_REC_TELEGRAM + '?action=getNotes', {muteHttpExceptions:true});
-    var dN = JSON.parse(respN.getContentText());
-    var notas = (dN.data || []).slice(-3);
+    // Último día con divisor
+    var lastISO = null, lastDiv = 1, ultDia = 0;
+    todas.forEach(function(f) { if (pFecha[f].divisor && (!lastISO || f > lastISO)) { lastISO = f; lastDiv = pFecha[f].divisor; } });
+    if (lastISO) ultDia = _tgSum(pFecha[lastISO].tipos);
+    var fechaDiv = lastISO ? lastISO.split('-').reverse().join('-') : 'N/A';
+    var punto = lastDiv > 1 ? Math.round(ultDia / lastDiv) : 0;
+
+    var fechas = todas.sort().reverse().slice(0, 5);
+    var notas = sbRecGet('notas_recaudacion?select=autor,mensaje&order=created_at.asc').slice(-3);
 
     var m = '<b>Recaudacion del Periodo</b>\nCasino de Puerto Varas\n---------------------\n';
     m += '<b>Total acumulado:</b> $' + total.toLocaleString('es-CL') + '\n';
-    if (desglose.length > 0) {
+    var tipos = Object.keys(desgloseMap);
+    if (tipos.length > 0) {
       m += '\n<b>Por tipo:</b>\n';
-      desglose.forEach(function(d){ m += ' - ' + d.tipo + ': $' + ((d.monto||0)/100).toLocaleString('es-CL') + '\n'; });
+      tipos.forEach(function(t){ m += ' - ' + t + ': $' + desgloseMap[t].toLocaleString('es-CL') + '\n'; });
     }
     m += '\n<b>Ultimo dia con divisor:</b> ' + fechaDiv + '\n';
     m += ' Recaudado: $' + ultDia.toLocaleString('es-CL') + '\n';
-    m += ' Divisor: ' + divisor + '\n';
+    m += ' Divisor: ' + lastDiv + '\n';
     m += punto > 0 ? ' Punto noche: $' + punto.toLocaleString('es-CL') + '\n' : ' Sin divisor\n';
     if (fechas.length > 0) {
       m += '\n<b>Ultimos ' + fechas.length + ' dias:</b>\n';
       fechas.forEach(function(f) {
         var d = pFecha[f];
-        var tD = Object.values(d.tipos).reduce(function(a,b){return a+b;},0);
+        var tD = _tgSum(d.tipos);
         var fV = f.split('-').reverse().join('/');
         m += ' <b>' + fV + '</b>: $' + tD.toLocaleString('es-CL') + (d.divisor?' div:'+d.divisor:' SIN DIV') + '\n';
         Object.keys(d.tipos).forEach(function(t){ m += ' - '+t+': $'+d.tipos[t].toLocaleString('es-CL')+'\n'; });
@@ -246,21 +280,13 @@ function telegramGetRecaudacion() {
 
 function telegramGetMontosDiarios() {
   try {
-    var respR = UrlFetchApp.fetch(URL_REC_TELEGRAM + '?action=get', {muteHttpExceptions:true});
-    var dR = JSON.parse(respR.getContentText());
-    var regs = dR.data || [];
-    var pFecha = {};
-    regs.forEach(function(r) {
-      if (!r.fecha) return;
-      if (!pFecha[r.fecha]) pFecha[r.fecha] = {tipos:{}, divisor:r.divisor};
-      pFecha[r.fecha].tipos[r.tipo] = (pFecha[r.fecha].tipos[r.tipo]||0) + (r.monto||0);
-    });
+    var pFecha = _tgRecPorFecha();
     var fechas = Object.keys(pFecha).sort().reverse().slice(0, 10);
     if (!fechas.length) return 'Sin registros de recaudacion.';
     var m = '<b>Montos Diarios (ultimos ' + fechas.length + ' dias)</b>\nCasino de Puerto Varas\n---------------------\n';
     fechas.forEach(function(f) {
       var d = pFecha[f];
-      var tD = Object.values(d.tipos).reduce(function(a,b){return a+b;},0);
+      var tD = _tgSum(d.tipos);
       var fV = f.split('-').reverse().join('/');
       var div = d.divisor ? ' div:' + d.divisor + ' pto:$' + Math.round(tD/d.divisor).toLocaleString('es-CL') : ' SIN DIV';
       m += '\n<b>' + fV + '</b>: $' + tD.toLocaleString('es-CL') + div + '\n';
