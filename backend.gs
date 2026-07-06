@@ -27,6 +27,39 @@ function sbInsert(tabla, payload) {
   }
 }
 
+// GET a la API REST de Supabase (socios/anticipos). Devuelve array (o [] si falla).
+function sbGet(path) {
+  try {
+    const res = UrlFetchApp.fetch(SB_URL + '/rest/v1/' + path, {
+      method: 'get',
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY },
+      muteHttpExceptions: true
+    });
+    const j = JSON.parse(res.getContentText());
+    return Array.isArray(j) ? j : [];
+  } catch (e) { Logger.log('sbGet error: ' + e); return []; }
+}
+
+// Socios desde Supabase con la forma que usan las funciones de Telegram
+function tgSocios() {
+  const rows = sbGet('socios?select=id,nombre,apellido,area,contrato&order=nombre.asc');
+  return rows.map(function(s) {
+    return { ID: s.id, Nombre: s.nombre || '', Apellido: s.apellido || '', Area: s.area || '', TipoContrato: s.contrato || '' };
+  });
+}
+
+// Anticipos del período actual (periodo NULL) agrupados por socio: {socioId:[{fecha,monto,responsable}]}
+function tgAnticipos() {
+  const rows = sbGet('anticipos?select=socio_id,fecha,monto,responsable&periodo=is.null&order=fecha.asc');
+  const out = {};
+  rows.forEach(function(a) {
+    if (!a.socio_id) return;
+    if (!out[a.socio_id]) out[a.socio_id] = [];
+    out[a.socio_id].push({ fecha: a.fecha, monto: Number(a.monto) || 0, responsable: a.responsable || '' });
+  });
+  return out;
+}
+
 function telegramEnviar(mensaje) {
   try {
     const url = 'https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage';
@@ -89,7 +122,7 @@ function doTelegramWebhook(e) {
     } else if (texto === '/resumen') {
       telegramEnviarA(chatId, telegramObtenerResumen());
     } else if (texto === '/socios') {
-      var lista = getSocios();
+      var lista = tgSocios();
       var planta = lista.filter(function(s){ return s.TipoContrato === 'Planta'; }).length;
       var pt = lista.filter(function(s){ return s.TipoContrato === 'Part-Time'; }).length;
       telegramEnviarA(chatId,
@@ -97,7 +130,7 @@ function doTelegramWebhook(e) {
         'Total: ' + lista.length + '\nPlanta: ' + planta + '\nPart-Time: ' + pt
       );
     } else if (texto === '/anticipos') {
-      var ants = getAllAnticiposDesdeSheets();
+      var ants = tgAnticipos();
       var total = 0; var nSocios = Object.keys(ants).length;
       Object.values(ants).forEach(function(lista){ lista.forEach(function(a){ total += Number(a.monto) || 0; }); });
       telegramEnviarA(chatId,
@@ -272,8 +305,8 @@ function telegramGetOnline() {
 
 function telegramGetInformeAnticipos() {
   try {
-    var socios = getSocios();
-    var ants = getAllAnticiposDesdeSheets();
+    var socios = tgSocios();
+    var ants = tgAnticipos();
     var totalGeneral = 0;
     var lineas = [];
     socios.forEach(function(s) {
@@ -293,11 +326,11 @@ function telegramGetInformeAnticipos() {
 
 function telegramBuscarSocio(nombre) {
   try {
-    var socios = getSocios();
+    var socios = tgSocios();
     var q = nombre.toLowerCase();
     var encontrados = socios.filter(function(s){ return ((s.Nombre||'') + ' ' + (s.Apellido||'')).toLowerCase().includes(q); });
     if (!encontrados.length) return 'No se encontro ningun socio con "' + nombre + '".';
-    var ants = getAllAnticiposDesdeSheets();
+    var ants = tgAnticipos();
     var m = '';
     encontrados.slice(0, 3).forEach(function(s) {
       var lista = ants[s.ID] || [];
@@ -313,11 +346,11 @@ function telegramBuscarSocio(nombre) {
 
 function telegramGetHistorial(nombre) {
   try {
-    var socios = getSocios();
+    var socios = tgSocios();
     var q = nombre.toLowerCase();
     var encontrado = socios.find(function(s){ return ((s.Nombre||'') + ' ' + (s.Apellido||'')).toLowerCase().includes(q); });
     if (!encontrado) return 'No se encontro socio con "' + nombre + '".';
-    var ants = getAllAnticiposDesdeSheets();
+    var ants = tgAnticipos();
     var lista = ants[encontrado.ID] || [];
     if (!lista.length) return '👤 <b>' + encontrado.Nombre + ' ' + encontrado.Apellido + '</b>\nSin anticipos en el periodo actual.';
     var total = lista.reduce(function(a,b){ return a + (Number(b.monto)||0); }, 0);
@@ -334,8 +367,8 @@ function telegramGetHistorial(nombre) {
 
 function telegramObtenerResumen() {
   try {
-    const socios = getSocios();
-    const ants = getAllAnticiposDesdeSheets();
+    const socios = tgSocios();
+    const ants = tgAnticipos();
     const totalAnt = Object.values(ants).reduce((acc, lista) =>
       acc + lista.reduce((s, a) => s + (Number(a.monto) || 0), 0), 0);
     const nConAnt = Object.keys(ants).length;
