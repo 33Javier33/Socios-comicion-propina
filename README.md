@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-06 — Desglose de Anticipos: fechas corregidas para coincidir con los anticipos
+- Causa: 5 retiros antiguos tenían `fecha` en NULL, así que el desglose mostraba su fecha de creación (19/06) en vez de la fecha real del anticipo (18/06), no coincidiendo con Anticipos y Ausencias.
+- Data fix: se rellenó la `fecha` de esos registros tomándola de la `firma` (que la lleva embebida: `SOC-…|YYYY-MM-DD|…`). Quedaron 4 en 18/06 y 1 en 19/06 (correctos).
+- Red de seguridad en código: `_dsgFechaISO` ahora, si un registro no tiene `fecha`, extrae la fecha de la `firma` antes de caer a `created_at`, para que nunca vuelva a correrse un día.
+- Archivo modificado: `js/desglose-anticipos.js` (+ actualización de datos en Supabase).
+
 #### 2026-07-06 — Desglose de Anticipos: fechas/horas en zona horaria de Chile
 - En el informe y las tarjetas, cuando un registro no tenía `fecha` propia se derivaba el día desde `created_at` en **UTC** (`.slice(0,10)`), corriéndose un día en registros de la noche. La hora se mostraba con la hora del dispositivo.
 - Fix: helpers `_dsgFechaISO` / `_dsgFechaVis` / `_dsgHoraChile` que usan la `fecha` elegida tal cual y, en el fallback, convierten `created_at` a **America/Santiago**. Se aplicó en informe (orden y filas), tarjetas, filtro por fecha, reimpresión de boucher y modal de edición. Se corrigió `_dsgCalcPeriodoInicio` para no depender de `toISOString()`/UTC.

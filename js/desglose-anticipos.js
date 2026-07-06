@@ -39,6 +39,12 @@ function _dsgFechaISO(r) {
         const f = String(r.fecha);
         if (/^\d{4}-\d{2}-\d{2}/.test(f)) return f.slice(0, 10);
     }
+    // Red de seguridad: la firma lleva la fecha real del anticipo (SOC-…|YYYY-MM-DD|…)
+    if (r && r.firma) {
+        const m = String(r.firma).match(/\|(\d{4}-\d{2}-\d{2})\|/);
+        if (m) return m[1];
+    }
+    // Último recurso: derivar de created_at pero en hora de Chile (no UTC)
     if (r && r.created_at) {
         try { return new Date(r.created_at).toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }); } catch(e) {}
     }
