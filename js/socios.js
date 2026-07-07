@@ -152,7 +152,7 @@ function renderizarCards() {
             card.innerHTML = `
                 <div class="area-tag bg-${key}">${nombresArea[key] || socio.area}</div>
                 <div class="card-header"><h3>${socio.nombre} ${socio.apellido}</h3><span class="card-contract">${socio.contrato}</span></div>
-                <div class="card-body"><div><p style="margin:0; font-size:0.9em;">Antigüedad: ${socio.anios} años</p><small style="color:#7f8c8d;">${fechaVis}</small>${fipVis}</div><div class="points-badge"><span class="points-number">${socio.puntos}</span></div></div>
+                <div class="card-body"><div><p style="margin:0; font-size:0.9em;">Antigüedad: ${socio.anios} años</p><small style="color:#7f8c8d;">${fechaVis}</small>${fipVis}${socio.rut ? `<small style="display:block;margin-top:3px;color:#334155;">🪪 RUT: ${_htmlEscSoc(socio.rut)}</small>` : `<small style="display:block;margin-top:3px;color:#dc2626;font-weight:600;">🪪 RUT: — pendiente</small>`}</div><div class="points-badge"><span class="points-number">${socio.puntos}</span></div></div>
                 <div class="card-actions">
                     <button class="btn-card btn-edit" onclick="prepararEdicion('${socio.id}')">Editar</button>
                     <button class="btn-card btn-info" onclick="verEstadoFinanciero('${socio.id}')">&#128202; Estado</button>
@@ -207,6 +207,7 @@ function prepararEdicion(id) {
         if(areaVal === 'GastosComision' || areaVal.includes('gastos')) areaVal = 'GastosComision';
         document.getElementById('area').value = areaVal;
         document.getElementById('contrato').value = socio.contrato;
+        const _rutEl = document.getElementById('rutSocio'); if (_rutEl) _rutEl.value = socio.rut || '';
         document.getElementById('modalTitle').innerText = 'Editar Socio';
         document.getElementById('btnSubmit').innerText = 'Actualizar Datos';
         abrirModalRegistro();

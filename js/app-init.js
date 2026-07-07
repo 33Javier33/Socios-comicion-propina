@@ -302,9 +302,22 @@ document.addEventListener('DOMContentLoaded', function() {
             const fechaInicioVal = normalizarFechaInicioPuntos(fechaInicioRaw);
             const d = { Nombre: document.getElementById('nombre').value, Apellido: document.getElementById('apellido').value, FechaIngreso: document.getElementById('fechaIngreso').value, Area: document.getElementById('area').value, TipoContrato: document.getElementById('contrato').value, FechaInicioPuntos: fechaInicioVal || '' };
             const idEdit = document.getElementById('editId').value;
+            // RUT (opcional): validar/formatear si viene
+            const _rutRaw = (document.getElementById('rutSocio')?.value || '').trim();
+            let _rutFmt = '';
+            if (_rutRaw) {
+                if (typeof _rutValidar === 'function' && !_rutValidar(_rutRaw)) { showToast('RUT no válido. Ej: 12.345.678-9', 'error'); return; }
+                _rutFmt = (typeof _rutFormat === 'function') ? _rutFormat(_rutRaw) : _rutRaw;
+            }
             toggleLoader(true, isEditing ? "Actualizando..." : "Guardando...");
             try {
-                if (isEditing) { await callApiSocios('updateSocio', { socioId: idEdit, updates: d }); showToast('Socio actualizado', 'success'); }
+                if (isEditing) {
+                    await callApiSocios('updateSocio', { socioId: idEdit, updates: d });
+                    // Guardar el RUT directo en Supabase (socios.rut)
+                    await callApiSocios('guardarRutSocio', { socioId: idEdit, rut: _rutFmt, nombre: (d.Nombre + ' ' + d.Apellido).trim() });
+                    const _sc = (cacheSocios || []).find(s => s.id === idEdit); if (_sc) _sc.rut = _rutFmt;
+                    showToast('Socio actualizado', 'success');
+                }
                 else { await callApiSocios('addSocio', { socio: d }); showToast('Socio registrado', 'success'); }
                 cerrarModalRegistro(); fetchSociosDeGoogle();
             } catch (e) { showToast('Error al guardar', 'error'); } finally { toggleLoader(false); }

@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-06 — RUT visible en las tarjetas de Gestión de Socios + editable en el modal Editar
+- Cada tarjeta de socio ahora muestra el **RUT** ("🪪 RUT: …" o "🪪 RUT: — pendiente").
+- El modal **Editar Socio** tiene un campo **RUT**: se pre-llena con el actual y al guardar se persiste en `socios.rut` (vía `guardarRutSocio`), sin pisar el resto de la edición (que va por el flujo normal).
+- Complementa la edición inline del RUT en el detalle de Anticipos y Ausencias.
+- Archivos: `js/socios.js` (RUT en tarjeta + pre-llenar edición), `index.html` (campo RUT en modal), `js/app-init.js` (guardar RUT al editar).
+
 #### 2026-07-06 — RUT editable por el responsable en Gestión de Socios
 - En el detalle del socio, el RUT ahora es **editable**: si no tiene, aparece "➕ Agregar RUT"; si tiene, un ✏️ para editarlo. Valida RUT chileno y lo formatea.
 - Se guarda en `socios.rut` (acción `guardarRutSocio`, con auditoría "Registrar RUT"). Como es la misma columna que llena propi.solicitada, **al socio que ya tenga RUT (cargado por él o por el responsable) no le vuelve a aparecer el modal** en la app.
