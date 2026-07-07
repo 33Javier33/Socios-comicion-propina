@@ -122,10 +122,11 @@ function procesarDatosRecaudacion(datos, silent) {
                 const regPor = reg?.registrado_por_nombre || null;
                 const esArqueado = reg?.arqueado === true;
                 const arqueadoAt = reg?.arqueado_at || null;
+                const arqueadoPor = reg?.arqueado_por || null;
                 const billetesObj = reg?.billetes || {};
                 const detDataStr = JSON.stringify({
                     tipo: nombreTipo, fecha, monto: valorTipo,
-                    regPor, esArqueado, arqueadoAt, billetes: billetesObj
+                    regPor, esArqueado, arqueadoAt, arqueadoPor, billetes: billetesObj
                 }).replace(/"/g, '&quot;');
                 const arqueadoBadge = esArqueado
                     ? `<span title="Ingresado a caja" style="background:#15803d;color:#fff;border-radius:5px;padding:2px 8px;font-size:0.78em;font-weight:700;cursor:default;">✅ En caja</span>`
@@ -654,8 +655,11 @@ async function rec_confirmarVerificacion() {
     REC_DENOMS.forEach(v => { const q = parseInt(document.getElementById(`rv-${v}`).value) || 0; if (q > 0) billetes[v] = q; });
     document.getElementById('modalRecVerificar').style.display = 'none';
     toggleLoader(true, 'Verificando...');
+    // Responsable que realiza la verificación (queda guardado en arqueado_por)
+    const _ses = typeof getSesionResponsableObj === 'function' ? getSesionResponsableObj() : {};
+    const _responsable = _ses.ini ? (_ses.ini + (_ses.area ? ' (' + _ses.area + ')' : '')) : '';
     try {
-        const result = await rec_postRec({ action: 'arqueado', id: _recVerIdx, billetes });
+        const result = await rec_postRec({ action: 'arqueado', id: _recVerIdx, billetes, responsable: _responsable });
         if (!result || result.status !== 'success') throw new Error(result?.message || 'Error en base de datos');
         _rec_volcarBilletesAArqueo(_recVerTipo, billetes);
         showToast('Recaudación verificada en caja ✅', 'success');
@@ -742,6 +746,10 @@ function rec_abrirDetalle(d) {
             ${horaArqueado ? `<div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border-radius:8px;padding:8px 12px;">
                 <span style="font-size:0.82em;color:#64748b;font-weight:600;">Verificado el</span>
                 <span style="font-size:0.88em;font-weight:700;">🕐 ${horaArqueado}</span>
+            </div>` : ''}
+            ${d.esArqueado && d.arqueadoPor ? `<div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border-radius:8px;padding:8px 12px;">
+                <span style="font-size:0.82em;color:#64748b;font-weight:600;">Verificado por</span>
+                <span style="font-size:0.88em;font-weight:700;">✅ ${d.arqueadoPor}</span>
             </div>` : ''}
         </div>
         ${billetesHtml}`;

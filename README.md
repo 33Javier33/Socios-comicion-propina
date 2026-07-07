@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-06 — Montos Recaudados: guardar y mostrar el responsable de la verificación
+- Al verificar una recaudación en caja, ahora se guarda **quién** la verificó (responsable en sesión) en `recaudaciones.arqueado_por`.
+- En el detalle (🔍) de un monto verificado se agregó la fila **"Verificado por ✅ [responsable]"**, junto a la hora que ya se mostraba.
+- Archivos modificados: `js/recaudacion.js`, `js/supabase-config.js` (handler `arqueado` guarda `arqueado_por` + lectura `get` lo incluye).
+
 #### 2026-07-06 — Desglose de Anticipos: fechas corregidas para coincidir con los anticipos
 - Causa: 5 retiros antiguos tenían `fecha` en NULL, así que el desglose mostraba su fecha de creación (19/06) en vez de la fecha real del anticipo (18/06), no coincidiendo con Anticipos y Ausencias.
 - Data fix: se rellenó la `fecha` de esos registros tomándola de la `firma` (que la lleva embebida: `SOC-…|YYYY-MM-DD|…`). Quedaron 4 en 18/06 y 1 en 19/06 (correctos).

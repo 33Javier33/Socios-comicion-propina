@@ -1531,6 +1531,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     registrado_por_nombre: r.registrado_por_nombre || null,
                     arqueado: r.arqueado === true,
                     arqueado_at: r.arqueado_at || null,
+                    arqueado_por: r.arqueado_por || null,
                     billetes: r.billetes || {}
                 }));
                 return succ(data);
@@ -1559,16 +1560,23 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         // ── ARQUEADO: marcar recaudación como verificada en caja ─────
         if (action === 'arqueado') {
             try {
-                const { error } = await dbRec.from('recaudaciones').update({
+                const _updArq = {
                     arqueado: true,
                     billetes: body.billetes || {},
                     arqueado_at: new Date().toISOString()
-                }).eq('id', body.id);
+                };
+                if (body.responsable) _updArq.arqueado_por = body.responsable;
+                let { error } = await dbRec.from('recaudaciones').update(_updArq).eq('id', body.id);
+                // Si la columna arqueado_por no existiera, reintentar sin ella
+                if (error && error.message && error.message.includes('arqueado_por')) {
+                    delete _updArq.arqueado_por;
+                    ({ error } = await dbRec.from('recaudaciones').update(_updArq).eq('id', body.id));
+                }
                 if (error) throw error;
                 _sbAudit('Verificar Recaudación', {
                     idAfectado: body.id,
-                    detalle: `Recaudación verificada en caja | ID: ${String(body.id || '').substring(0, 8)}`,
-                    datos: { id: body.id, billetes: body.billetes }
+                    detalle: `Recaudación verificada en caja | ID: ${String(body.id || '').substring(0, 8)}${body.responsable ? ' | Por: ' + body.responsable : ''}`,
+                    datos: { id: body.id, billetes: body.billetes, arqueado_por: body.responsable || '' }
                 });
                 _notificarCambio();
                 return succ();
