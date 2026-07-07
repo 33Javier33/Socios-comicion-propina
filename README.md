@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Centro de Ayuda completo: todas las secciones documentadas
+- Se amplió la base de conocimiento del **Centro de Ayuda** (`js/help.js`, `BASE_CONOCIMIENTO`) para que **no quede nada sin explicar**. Nuevas entradas:
+  - **Egresos** (3): qué es un egreso pendiente, cómo procesarlo, cómo rechazarlo con motivo.
+  - **Mensajes** (2): enviar mensaje privado a un socio, ver respuestas/no leídos.
+  - **Documentación** (3): qué es, subir documento general, ver documentos por socio.
+  - **Certificados** (1), **Dineros Sobrantes** (1), **PIN Diario** (1), **Carpetas** (1), **Notas de Administración** (1).
+  - **Socios** (2): agregar/editar RUT (y para qué sirve), origen de la foto del socio.
+- Nuevas **categorías/filtros** en el modal de ayuda: 💸 Egresos, 💬 Mensajes, 📁 Documentación, 📜 Certificados, 💵 Dineros, 🔑 PIN Diario, 🗂️ Carpetas, 📝 Notas. Íconos añadidos al mapa `catIcon`.
+- Todo el contenido es buscable (título, tags, respuesta y pasos).
+- Archivos: `js/help.js` (entradas + íconos), `index.html` (botones de categoría).
+
 #### 2026-07-07 — Egresos: procesar o rechazar (con notificación al socio)
 - En el aviso **"💸 Egresos pendientes"** cada solicitud ahora tiene dos botones: **✅ Procesar** y **✖️ Rechazar**.
 - **Procesar**: abre el socio con el monto pre-cargado (igual que antes) y, al registrar el anticipo, marca la solicitud `PROCESADO` y le envía al socio un mensaje **"✅ Egreso procesado"**.

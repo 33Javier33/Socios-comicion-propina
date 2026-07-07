@@ -557,6 +557,129 @@ const BASE_CONOCIMIENTO = [
       </div>`,
       pasos:['Para instalar en iPhone: abre en Safari → botón Compartir → "Agregar a pantalla de inicio"','Para instalar en Android: abre en Chrome → menú ⋮ → "Instalar app" o "Agregar a pantalla de inicio"','Los datos se sincronizan en tiempo real entre todos los dispositivos vía Supabase','Si te quedas sin conexión, la app sigue funcionando con los datos en caché — los cambios se sincronizan al volver a conectarse'],
       nota:'No se necesita instalarla para usarla — funciona directo desde el navegador. La instalación solo añade el ícono en la pantalla de inicio y mejora la experiencia.' },
+
+    // ═══════════════════════════════════════════════════════
+    // EGRESOS (solicitudes de anticipo desde la app del socio)
+    // ═══════════════════════════════════════════════════════
+    { id:'eg1', cat:'egresos', titulo:'¿Qué es un "Egreso pendiente" y de dónde viene?', tags:['egreso','egresos','pendiente','solicitud','anticipo','socio','propi.solicitada','solicitar'],
+      resp:'Es una <strong>solicitud de anticipo</strong> que el socio envía desde su app <strong>propi.solicitada</strong> (botón "Solicitar Egreso"). Aparece como aviso en <strong>Anticipos y Ausencias</strong> para que tú la proceses o la rechaces.',
+      vista:`<div class="ayuda-vista">
+        <div class="ayuda-vista-titulo">💸 Aviso de egresos pendientes</div>
+        <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:10px;padding:10px;">
+          <div style="color:white;font-weight:800;font-size:0.85em;margin-bottom:8px;">💸 Egresos pendientes <span style="background:rgba(255,255,255,0.25);border-radius:8px;padding:1px 6px;">1</span></div>
+          <div style="background:white;border-radius:8px;padding:8px;">
+            <div style="font-weight:800;font-size:0.82em;color:#075985;">Juan Pérez</div>
+            <div style="font-size:0.72em;color:#0369a1;">Solicita $50.000 · gasto imprevisto</div>
+            <div style="display:flex;gap:6px;margin-top:7px;">
+              <div style="flex:1;background:#0284c7;color:white;border-radius:6px;padding:6px;text-align:center;font-size:0.72em;font-weight:800;">✅ Procesar</div>
+              <div style="flex:1;background:white;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:6px;text-align:center;font-size:0.72em;font-weight:800;">✖️ Rechazar</div>
+            </div>
+          </div>
+        </div>
+      </div>`,
+      pasos:['El socio pide el egreso desde su app indicando monto y (opcional) un motivo','El aviso aparece arriba en Anticipos y Ausencias, y el socio queda marcado con el badge 💸 EGRESO en la lista','Desde ahí decides: Procesar (registrar el anticipo) o Rechazar (con motivo)','El aviso se actualiza en tiempo real: si el socio pide otro, aparece al instante'],
+      nota:'Mientras no lo proceses ni rechaces, el socio ve en su app una tarjeta "Egreso solicitado · pendiente".' },
+
+    { id:'eg2', cat:'egresos', titulo:'¿Cómo proceso un egreso solicitado?', tags:['procesar','egreso','aceptar','anticipo','registrar','aprobar'],
+      resp:'Al tocar <strong>✅ Procesar</strong>, se abre el socio con el <strong>monto ya pre-cargado</strong> en el formulario de anticipo. Solo confirmas y registras el anticipo como siempre.',
+      pasos:['Toca ✅ Procesar en el aviso del egreso','Se selecciona el socio y el monto solicitado aparece cargado en "Monto"','Revisa la fecha y el responsable, y pulsa "Registrar Anticipo" (con su desglose de billetes)','Al registrarlo, la solicitud pasa a PROCESADO y el socio recibe el aviso "✅ Egreso procesado"'],
+      nota:'Si registras un anticipo normal sin pasar por el botón Procesar, la solicitud NO se cierra sola: usa el aviso para vincularla.' },
+
+    { id:'eg3', cat:'egresos', titulo:'¿Cómo rechazo un egreso e informo el motivo al socio?', tags:['rechazar','egreso','motivo','negar','denegar','nota','notificar'],
+      resp:'Al tocar <strong>✖️ Rechazar</strong>, el sistema te pide escribir el <strong>motivo</strong>. Ese motivo se le envía automáticamente al socio como <strong>mensaje del administrador</strong> en su app.',
+      pasos:['Toca ✖️ Rechazar en el aviso del egreso','Escribe el motivo del rechazo (es obligatorio; el socio lo verá)','La solicitud queda como RECHAZADO y desaparece de los pendientes','El socio recibe en su app (Mensajes → Admin) el aviso: "❌ Egreso rechazado" + tu motivo'],
+      nota:'El motivo queda guardado en la solicitud y también le llega al socio como notificación. Sé claro y breve.' },
+
+    // ═══════════════════════════════════════════════════════
+    // MENSAJES A SOCIOS (privado)
+    // ═══════════════════════════════════════════════════════
+    { id:'msg1', cat:'mensajes', titulo:'¿Cómo le envío un mensaje privado a un socio?', tags:['mensaje','mensajes','privado','chat','socio','escribir','comunicar','contactar'],
+      resp:'En la sección <strong>💬 Mensajes</strong> eliges un socio de la lista y le escribes. Solo ese socio lo verá, en su app (Mensajes → <strong>"Admin"</strong>), y puede responderte.',
+      vista:`<div class="ayuda-vista">
+        <div class="ayuda-vista-titulo">💬 Conversación con un socio</div>
+        <div style="background:#eef2f6;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;">
+          <div style="align-self:flex-end;background:#0284c7;color:white;border-radius:10px;padding:6px 10px;font-size:0.78em;max-width:80%;">Hola, pasa por oficina a firmar tu contrato.</div>
+          <div style="align-self:flex-start;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:6px 10px;font-size:0.78em;max-width:80%;">Ok, voy en la tarde 👍</div>
+        </div>
+      </div>`,
+      pasos:['Entra a la sección 💬 Mensajes del menú','Busca y selecciona el socio en la lista de la izquierda','Escribe tu mensaje abajo y pulsa Enviar','El socio lo recibe en su app y, si tiene notificaciones activadas, le llega un aviso al teléfono'],
+      nota:'Los mensajes de "❌ Egreso rechazado" y "✅ Egreso procesado" también le llegan al socio por este mismo canal.' },
+
+    { id:'msg2', cat:'mensajes', titulo:'¿Cómo sé si un socio me respondió?', tags:['respuesta','responder','nuevo','no leído','aviso','punto rojo','mensajes'],
+      resp:'Los socios con respuesta <strong>sin leer</strong> aparecen arriba en la lista con la etiqueta <strong>NUEVO</strong>, y el menú muestra un <strong>punto rojo</strong> en "💬 Mensajes".',
+      pasos:['Un punto rojo en el botón 💬 Mensajes del menú indica que hay respuestas nuevas','Al entrar, los socios con mensajes sin leer se ordenan primero, con la etiqueta NUEVO','Abre la conversación del socio para leer; al abrirla se marca como vista','Los socios con conversación (ya leída) muestran el ícono 💬'],
+      nota:'La lista y las conversaciones se actualizan en tiempo real: si el socio escribe mientras la tienes abierta, aparece al instante.' },
+
+    // ═══════════════════════════════════════════════════════
+    // DOCUMENTACIÓN
+    // ═══════════════════════════════════════════════════════
+    { id:'doc1', cat:'documentacion', titulo:'¿Qué es la sección Documentación?', tags:['documentación','documentos','archivos','contrato','reglamento','pdf','subir'],
+      resp:'Es donde se guardan y consultan <strong>documentos en PDF o imagen</strong>. Tiene dos vistas: <strong>Generales</strong> (compartidos, ej. el reglamento) y <strong>Por socio</strong> (lo que cada socio sube desde su app, ej. su contrato).',
+      pasos:['Abre la sección 📁 Documentación del menú','Pestaña "Generales": documentos para todos (reglamento, comunicados…)','Pestaña "Por socio": buscas un socio y ves los documentos que él subió','Cada documento se puede abrir/descargar y, en Generales, eliminar'],
+      nota:'Los documentos por socio los sube el propio socio desde propi.solicitada (Perfil → Mis Documentos). Son privados: solo el socio y la administración los ven.' },
+
+    { id:'doc2', cat:'documentacion', titulo:'¿Cómo subo un documento general (reglamento, comunicado)?', tags:['subir','documento','general','reglamento','pdf','imagen','compartir'],
+      resp:'En Documentación → pestaña <strong>Generales</strong>, pulsa <strong>"Subir documento general"</strong> y elige un PDF o imagen desde tu dispositivo.',
+      pasos:['Entra a Documentación → pestaña Generales','Pulsa "⬆️ Subir documento general (PDF/imagen)"','Selecciona el archivo; queda listado para todos','Puedes abrirlo para descargarlo/enviarlo, o eliminarlo si ya no aplica'],
+      nota:'Úsalo para el reglamento de la propina u otros documentos que todo el equipo deba tener a mano.' },
+
+    { id:'doc3', cat:'documentacion', titulo:'¿Cómo veo el contrato u otros documentos que sube un socio?', tags:['contrato','socio','documento','ver','privado','buscar'],
+      resp:'En Documentación → pestaña <strong>Por socio</strong>, buscas al socio por su nombre y se listan los archivos que él haya subido desde su app.',
+      pasos:['Entra a Documentación → pestaña Por socio','Escribe el nombre del socio en el buscador','Toca el socio para ver sus documentos','Abre cada archivo para revisarlo o descargarlo'],
+      nota:'Si un socio no tiene documentos, es porque aún no ha subido ninguno desde su app (Perfil → Mis Documentos).' },
+
+    // ═══════════════════════════════════════════════════════
+    // CERTIFICADOS
+    // ═══════════════════════════════════════════════════════
+    { id:'cert1', cat:'certificados', titulo:'¿Cómo genero un certificado para un socio?', tags:['certificado','certificados','documento','socio','rut','imprimir','pdf','constancia'],
+      resp:'En la sección <strong>📜 Certificados</strong> eliges un socio y el sistema genera su certificado del Fondo Solidario con sus datos (nombre y <strong>RUT</strong>), listo para imprimir o compartir.',
+      pasos:['Abre la sección 📜 Certificados del menú','Selecciona el socio para el que necesitas el certificado','Revisa que sus datos (nombre y RUT) estén correctos','Genera el certificado y descárgalo/imprímelo'],
+      nota:'Para que el certificado salga completo, el socio debe tener su RUT registrado (lo agrega él en su app, o tú en Gestión de Socios).' },
+
+    // ═══════════════════════════════════════════════════════
+    // DINEROS SOBRANTES
+    // ═══════════════════════════════════════════════════════
+    { id:'din1', cat:'dineros', titulo:'¿Qué es "Dineros Sobrantes"?', tags:['dineros','sobrantes','ingreso','retiro','caja','excedente','registro','anual'],
+      resp:'Es un <strong>registro de movimientos de dinero sobrante</strong> del fondo: puedes agregar <strong>Ingresos</strong> y <strong>Retiros</strong>, y ver un <strong>resumen anual</strong> de todo.',
+      pasos:['Abre la sección 💵 Dineros Sobrantes del menú','"↑ Agregar Ingreso" para registrar dinero que entra al sobrante','"↓ Agregar Retiro" para registrar dinero que sale','El resumen anual muestra el acumulado del período'],
+      nota:'Sirve para llevar el control claro del dinero que queda fuera del reparto normal (excedentes, ajustes, etc.).' },
+
+    // ═══════════════════════════════════════════════════════
+    // PIN DIARIO (usuarios de diario.propi)
+    // ═══════════════════════════════════════════════════════
+    { id:'pin1', cat:'pindiario', titulo:'¿Qué es "PIN Diario" (PIN de usuarios de diario.propi)?', tags:['pin','diario','diario.propi','clave','usuarios','recuperar','cambiar','acceso','4 dígitos'],
+      resp:'Es donde se administra el <strong>PIN de 4 dígitos</strong> con que cada socio entra a la app <strong>diario.propi</strong>: puedes <strong>crear, cambiar y recuperar</strong> ese PIN.',
+      pasos:['Abre la sección 🔑 PIN Diario del menú','Busca al socio/usuario correspondiente','Crea o cambia su PIN de 4 dígitos si lo necesita','Úsalo también para recuperar el acceso de quien olvidó su PIN de diario.propi'],
+      nota:'Es distinto del PIN con que TÚ entras a este sistema (ese se gestiona en Configuración / Seguridad). Este es el de los usuarios de diario.propi.' },
+
+    // ═══════════════════════════════════════════════════════
+    // CARPETAS (archivo de períodos)
+    // ═══════════════════════════════════════════════════════
+    { id:'carp1', cat:'carpetas', titulo:'¿Qué es la sección Carpetas (archivo de períodos)?', tags:['carpetas','archivar','archivero','período','histórico','nube','vaciar','respaldo'],
+      resp:'Son las <strong>carpetas archivadas</strong>: cada vez que cierras y archivas un período con "Vaciar Nube y Archivar Todo", queda aquí guardado como respaldo histórico consultable.',
+      pasos:['Abre la sección 📁 Carpetas del menú','Verás una carpeta por cada período que archivaste','Ábrelas para consultar los datos históricos de ese período','Se crean desde Montos Recaudados con "Vaciar Nube y Archivar Todo"'],
+      nota:'Archivar limpia la nube para empezar un período nuevo, pero nada se pierde: queda guardado aquí.' },
+
+    // ═══════════════════════════════════════════════════════
+    // NOTAS DE ADMINISTRACIÓN
+    // ═══════════════════════════════════════════════════════
+    { id:'not1', cat:'notas', titulo:'¿Qué son las "Notas de Administración"?', tags:['notas','tablero','administración','recados','compartido','avisos','pizarra'],
+      resp:'Es un <strong>espacio compartido</strong> para dejar mensajes/recados importantes <strong>visibles para todos los administradores</strong>. Se sincroniza en la nube automáticamente.',
+      pasos:['Abre la sección 📝 Notas del menú','Escribe una nota para dejar un aviso al resto del equipo administrativo','Las notas se sincronizan solas con la nube','Mantén presionada una nota para acciones adicionales (ej. fijar/eliminar)'],
+      nota:'Es interno de la administración: los socios NO ven estas notas. Para hablarle a un socio usa 💬 Mensajes.' },
+
+    // ═══════════════════════════════════════════════════════
+    // SOCIOS — RUT y FOTO
+    // ═══════════════════════════════════════════════════════
+    { id:'s4', cat:'socios', titulo:'¿Cómo agrego o edito el RUT de un socio y para qué sirve?', tags:['rut','socio','editar','agregar','certificado','recuperar pin','identificación'],
+      resp:'En <strong>Gestión de Socios</strong>, al abrir un socio puedes ver y <strong>editar su RUT</strong>. El RUT se usa para los <strong>certificados</strong> y para que el socio pueda <strong>recuperar su PIN</strong>.',
+      pasos:['Entra a Anticipos y Ausencias y selecciona el socio','En su ficha aparece el RUT; si falta o está mal, edítalo','Guárdalo con el formato chileno (12.345.678-9)','También el propio socio puede agregarlo desde su app la primera vez'],
+      nota:'Sin RUT, el socio no puede recuperar su PIN por sí mismo y los certificados salen incompletos.' },
+
+    { id:'s5', cat:'socios', titulo:'¿De dónde sale la foto del socio en las tarjetas?', tags:['foto','avatar','socio','perfil','imagen','tarjeta'],
+      resp:'La foto la sube el <strong>propio socio</strong> desde su app (propi.solicitada → Perfil). Si la subió, aparece como avatar en su tarjeta de Gestión de Socios; si no, se muestra su inicial.',
+      pasos:['El socio agrega su foto en su app (cámara o galería)','Automáticamente aparece en su tarjeta aquí en Gestión de Socios','También se ve en su propio login y perfil','Si no tiene foto, se muestra la primera letra de su nombre'],
+      nota:'La foto es opcional; el socio decide si la pone o no.' },
 ];
 
 // ══════════════════════════════════════════════════════════
@@ -738,7 +861,7 @@ function ayudaCompleta_filtrar(cat, btn) {
 function ayudaCompleta_renderizar(items, resaltar) {
     const cont = document.getElementById('ayudaResultados');
     if (!items.length) { cont.innerHTML = '<div class="ayuda-sin-result">😕 No encontramos respuesta.<br><small>Intenta: anticipo, punto, arqueo, recibo, divisor...</small></div>'; return; }
-    const catIcon = {socios:'👥',anticipos:'💰',recaudacion:'📊',arqueo:'🔒',puntos:'⭐',impresion:'🖨️',config:'⚙️',seguridad:'🔐',materiales:'📦'};
+    const catIcon = {socios:'👥',anticipos:'💰',recaudacion:'📊',arqueo:'🔒',puntos:'⭐',impresion:'🖨️',config:'⚙️',seguridad:'🔐',materiales:'📦',egresos:'💸',mensajes:'💬',documentacion:'📁',certificados:'📜',dineros:'💵',pindiario:'🔑',carpetas:'🗂️',notas:'📝'};
     cont.innerHTML = items.map((item, idx) => {
         let titulo = item.titulo;
         if (resaltar) { const re = new RegExp('('+resaltar.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'); titulo = titulo.replace(re,'<span class="ayuda-highlight">$1</span>'); }
