@@ -51,15 +51,18 @@ function egresos_render() {
     };
 
     const filas = egresosPendientes.map(e => `
-        <div onclick="egresos_irASocio('${e.id}')" style="display:flex;align-items:center;gap:10px;background:white;border:1px solid #bae6fd;border-radius:9px;padding:9px 11px;cursor:pointer;transition:0.15s;" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='white'">
-            <div style="width:30px;height:30px;border-radius:8px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;">💸</div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-weight:800;font-size:0.85em;color:#075985;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_escEgr(e.socio_nombre || 'Socio')}</div>
-                <div style="font-size:0.72em;color:#0369a1;">Solicita ${fmt(e.monto)}${e.nota ? ' · ' + _escEgr(e.nota) : ''}</div>
+        <div style="background:white;border:1px solid #bae6fd;border-radius:9px;padding:9px 11px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:30px;height:30px;border-radius:8px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;">💸</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:800;font-size:0.85em;color:#075985;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_escEgr(e.socio_nombre || 'Socio')}</div>
+                    <div style="font-size:0.72em;color:#0369a1;">Solicita ${fmt(e.monto)}${e.nota ? ' · ' + _escEgr(e.nota) : ''}</div>
+                </div>
+                <div style="font-size:0.62em;color:#0ea5e9;flex-shrink:0;">${_hora(e.created_at)}</div>
             </div>
-            <div style="text-align:right;flex-shrink:0;">
-                <div style="font-size:0.62em;color:#0ea5e9;">${_hora(e.created_at)}</div>
-                <div style="font-size:0.72em;color:#0284c7;font-weight:800;">Procesar →</div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+                <button onclick="egresos_irASocio('${e.id}')" style="flex:1;padding:7px;border:none;border-radius:7px;background:#0284c7;color:white;font-size:0.76em;font-weight:800;cursor:pointer;">✅ Procesar</button>
+                <button onclick="egresos_rechazar('${e.id}')" style="flex:1;padding:7px;border:1px solid #fca5a5;border-radius:7px;background:white;color:#dc2626;font-size:0.76em;font-weight:800;cursor:pointer;">✖️ Rechazar</button>
             </div>
         </div>`).join('');
 
@@ -96,6 +99,42 @@ function egresos_irASocio(solicitudId) {
     }, 300);
 }
 
+// Rechazar una solicitud: pide el motivo, marca RECHAZADO y notifica al socio
+async function egresos_rechazar(solicitudId) {
+    const e = egresosPendientes.find(x => x.id === solicitudId);
+    if (!e) return;
+    const fmt = v => '$' + (Number(v) || 0).toLocaleString('es-CL');
+    const raw = prompt(`Rechazar el egreso de ${e.socio_nombre || 'socio'} (${fmt(e.monto)}).\n\nEscribe el motivo del rechazo (el socio lo verá como nota):`, '');
+    if (raw === null) return;                 // canceló
+    const motivo = raw.trim();
+    if (!motivo) { if (typeof showToast === 'function') showToast('Debes indicar un motivo', 'warning'); return; }
+
+    const resp = (typeof getSesionResponsableObj === 'function') ? getSesionResponsableObj() : {};
+    const respTxt = (resp && resp.ini) ? (resp.ini + (resp.area ? ' ' + resp.area : '')) : 'ADM';
+
+    try {
+        await dbSoc.from('solicitudes_egreso').update({
+            estado: 'RECHAZADO', motivo_rechazo: motivo,
+            procesado_por: respTxt, procesado_at: new Date().toISOString()
+        }).eq('id', solicitudId);
+
+        // Notificar al socio como mensaje privado del administrador
+        const mid = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('MA-' + Date.now());
+        await dbSoc.from('mensajes_admin').insert({
+            id: mid, socio_id: String(e.socio_id), remitente: 'ADMIN', autor: 'Administración',
+            mensaje: `❌ Egreso rechazado\nSolicitaste ${fmt(e.monto)}.\nMotivo: ${motivo}`
+        });
+
+        if (typeof showToast === 'function') showToast('Egreso rechazado — se notificó al socio', 'success');
+    } catch (err) {
+        console.warn('[egresos] rechazar:', err);
+        if (typeof showToast === 'function') showToast('Error al rechazar el egreso', 'error');
+    }
+    // Si estaba vinculado en el panel, limpiar
+    if (_egresoVinculado && _egresoVinculado.id === solicitudId) egresos_cancelarVinculo();
+    egresos_cargarPendientes();
+}
+
 // Nota destacada dentro del panel del socio indicando la solicitud en curso
 function egresos_pintarAvisoPanel(e) {
     const aviso = document.getElementById('egresoVinculadoAviso');
@@ -124,6 +163,7 @@ function egresos_cancelarVinculo() {
 async function egresos_alRegistrarAnticipo(socioId, responsable) {
     if (!_egresoVinculado || String(_egresoVinculado.socioId) !== String(socioId)) return;
     const solId = _egresoVinculado.id;
+    const montoSol = Number(_egresoVinculado.monto) || 0;
     _egresoVinculado = null;
     const aviso = document.getElementById('egresoVinculadoAviso');
     if (aviso) { aviso.style.display = 'none'; aviso.innerHTML = ''; }
@@ -131,6 +171,12 @@ async function egresos_alRegistrarAnticipo(socioId, responsable) {
         await dbSoc.from('solicitudes_egreso')
             .update({ estado: 'PROCESADO', procesado_por: responsable || '', procesado_at: new Date().toISOString() })
             .eq('id', solId);
+        // Notificar al socio que su egreso fue procesado
+        const mid = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('MA-' + Date.now());
+        await dbSoc.from('mensajes_admin').insert({
+            id: mid, socio_id: String(socioId), remitente: 'ADMIN', autor: 'Administración',
+            mensaje: `✅ Egreso procesado\nSe registró tu anticipo por $${montoSol.toLocaleString('es-CL')}.`
+        });
     } catch (e) { console.warn('[egresos] no se pudo marcar procesado:', e); }
     egresos_cargarPendientes();
 }

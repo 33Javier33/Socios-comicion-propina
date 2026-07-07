@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Egresos: procesar o rechazar (con notificación al socio)
+- En el aviso **"💸 Egresos pendientes"** cada solicitud ahora tiene dos botones: **✅ Procesar** y **✖️ Rechazar**.
+- **Procesar**: abre el socio con el monto pre-cargado (igual que antes) y, al registrar el anticipo, marca la solicitud `PROCESADO` y le envía al socio un mensaje **"✅ Egreso procesado"**.
+- **Rechazar**: pide el **motivo** (nota), marca la solicitud `RECHAZADO` guardando `motivo_rechazo`, y le envía al socio una **notificación privada** (apartado "Admin" de su app): **"❌ Egreso rechazado"** + el motivo. La tarjeta de "pendiente" desaparece de su app.
+- Nueva columna `solicitudes_egreso.motivo_rechazo`. Reutiliza la tabla `mensajes_admin` para notificar.
+- Archivos: `js/egresos.js` (botones + `egresos_rechazar` + notificación al procesar).
+
 #### 2026-07-07 — Nueva sección "💬 Mensajes" (privado con cada socio)
 - **Nueva pestaña** para que el responsable envíe **mensajes privados** a un socio. Se elige el socio de una lista con búsqueda, se abre la conversación y se escribe.
 - El socio los recibe en la app propi.solicitada (Mensajes → **"Admin"**) y puede **responder**; las respuestas llegan aquí en **tiempo real**.
