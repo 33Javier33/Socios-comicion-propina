@@ -125,7 +125,7 @@ function procesarSocioDesdeGoogle(s) {
     if (_dbgSocio) { _dbgSocio = false; console.log('[DBG-SOCIO] FechaIngreso:', fechaStr, '| FechaInicioPuntos:', s.FechaInicioPuntos, '| año15:', año15, '| mes15:', mes15, '| fechaParaPuntos:', fechaParaPuntos, '| visible:', visible, '| Puntos SB:', s.Puntos); }
 
     if (areaNorm === 'gastoscomision' || areaNorm.includes('gastos')) {
-        return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: 'GastosComision', contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios: 0, puntos: puntosActivos ? 1 : 0, puntosActivos, visible, rut: s.Rut || "" };
+        return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: 'GastosComision', contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios: 0, puntos: puntosActivos ? 1 : 0, puntosActivos, visible, rut: s.Rut || "", fotoUrl: s.FotoUrl || "" };
     }
     let puntosMaximos = 10;
     if (areaNorm === 'mesas') puntosMaximos = 20;
@@ -139,5 +139,5 @@ function procesarSocioDesdeGoogle(s) {
     // puntosFinales: usa el valor guardado en Supabase si es positivo; 0 y null se tratan como "sin dato" → usa fórmula
     const ptsSB = Number(s.Puntos);
     const puntosFinales = (Number.isFinite(ptsSB) && ptsSB > 0) ? ptsSB : puntosMaxPosible;
-    return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: areaNorm, contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios, puntos: puntosFinales, puntosMaxPosible, puntosActivos, visible, rut: s.Rut || "" };
+    return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: areaNorm, contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios, puntos: puntosFinales, puntosMaxPosible, puntosActivos, visible, rut: s.Rut || "", fotoUrl: s.FotoUrl || "" };
 }

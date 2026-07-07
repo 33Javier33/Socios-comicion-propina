@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-06 — Foto del socio visible en Gestión de Socios
+- Las tarjetas de Gestión de Socios ahora muestran la **foto de perfil** del socio (si la subió en propi.solicitada) como avatar; si no tiene, muestra su inicial.
+- Se lee de `socios.foto_url` (bucket público `avatares`). Nuevo mapeo `FotoUrl` en getSocios y `fotoUrl` en el objeto socio.
+- Archivos: `js/supabase-config.js` (select+map), `js/api.js` (fotoUrl en socio), `js/socios.js` (avatar en tarjeta).
+
 #### 2026-07-06 — Nueva sección "Documentación" (documentos generales + por socio)
 - Nueva pestaña **📁 Documentación** con dos vistas:
   - **Generales**: subir/ver/eliminar documentos compartidos (ej. reglamento de la propina) en PDF/imagen, listos para descargar y enviar.

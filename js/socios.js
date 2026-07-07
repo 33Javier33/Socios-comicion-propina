@@ -149,9 +149,12 @@ function renderizarCards() {
                     fipVis = `<small style="color:#e67e22;font-size:0.75em;">⏱ Puntos desde: ${fipLabel}</small>`;
                 }
             }
+            const _foto = socio.fotoUrl
+                ? `<div style="width:40px;height:40px;border-radius:11px;background-image:url('${_htmlEscSoc(socio.fotoUrl)}');background-size:cover;background-position:center;flex-shrink:0;border:1px solid #e2e8f0;"></div>`
+                : `<div style="width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#1e3a5f,#2980b9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.05em;flex-shrink:0;">${(socio.nombre || '?').charAt(0).toUpperCase()}</div>`;
             card.innerHTML = `
                 <div class="area-tag bg-${key}">${nombresArea[key] || socio.area}</div>
-                <div class="card-header"><h3>${socio.nombre} ${socio.apellido}</h3><span class="card-contract">${socio.contrato}</span></div>
+                <div class="card-header" style="display:flex;align-items:center;gap:10px;">${_foto}<div style="flex:1;min-width:0;"><h3 style="margin:0;">${socio.nombre} ${socio.apellido}</h3><span class="card-contract">${socio.contrato}</span></div></div>
                 <div class="card-body"><div><p style="margin:0; font-size:0.9em;">Antigüedad: ${socio.anios} años</p><small style="color:#7f8c8d;">${fechaVis}</small>${fipVis}${socio.rut ? `<small style="display:block;margin-top:3px;color:#334155;">🪪 RUT: ${_htmlEscSoc(socio.rut)}</small>` : `<small style="display:block;margin-top:3px;color:#dc2626;font-weight:600;">🪪 RUT: — pendiente</small>`}</div><div class="points-badge"><span class="points-number">${socio.puntos}</span></div></div>
                 <div class="card-actions">
                     <button class="btn-card btn-edit" onclick="prepararEdicion('${socio.id}')">Editar</button>
