@@ -474,8 +474,11 @@ function cert_reimprimir(id) {
     const periodos = Array.isArray(r.periodos) && r.periodos.length
         ? r.periodos
         : (r.periodo_nombre ? [{ nombre: r.periodo_nombre, valorPunto: r.valor_punto || 0, total: r.total_recibir, tipo: 'exacto' }] : []);
+    // Buscar el RUT actual del socio (por id o por nombre) para incluirlo en el certificado
+    const _sc = (cacheSocios || []).find(s => s.id === r.socio_id)
+        || (cacheSocios || []).find(s => ((s.nombre || '') + ' ' + (s.apellido || '')).trim().toLowerCase() === ((r.socio_nombre || '') + ' ' + (r.socio_apellido || '')).trim().toLowerCase());
     cert_imprimir({
-        socio: { nombre: r.socio_nombre, apellido: r.socio_apellido, puntos: r.socio_puntos, contrato: r.socio_contrato || '' },
+        socio: { nombre: r.socio_nombre, apellido: r.socio_apellido, puntos: r.socio_puntos, contrato: r.socio_contrato || '', rut: (_sc && _sc.rut) || '' },
         periodos,
         total: r.total_recibir,
         responsable: r.responsable || ''
@@ -556,7 +559,7 @@ tbody td{font-size:10pt;color:#000;}
 <div class="lugar">${fechaLarga}</div>
 
 <p class="cuerpo">La Comisión del Fondo de Solidaridad de los Empleados del Casino de Juegos de
-Puerto Varas, certifica que el(la) Sr./Sra. <strong>${nombreCompleto}</strong> ha percibido
+Puerto Varas, certifica que el(la) Sr./Sra. <strong>${nombreCompleto}</strong>${socio.rut ? ', RUT ' + _cert_esc(socio.rut) + ',' : ''} ha percibido
 por concepto de propina, en los períodos que se señalan los siguientes valores:</p>
 
 <table>

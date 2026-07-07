@@ -124,7 +124,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         try {
             // 1. Intentar Supabase primero
             const sbRes = await _origFetch(
-                `${_SB_URL_SOC}/rest/v1/socios?select=id,nombre,apellido,area,contrato,fecha_ingreso,fecha_inicio_puntos,puntos&order=nombre.asc`,
+                `${_SB_URL_SOC}/rest/v1/socios?select=id,nombre,apellido,area,contrato,fecha_ingreso,fecha_inicio_puntos,puntos,rut&order=nombre.asc`,
                 { headers: { 'apikey': _SB_KEY_SOC, 'Authorization': 'Bearer ' + _SB_KEY_SOC } }
             );
             const sbData = sbRes.ok ? await sbRes.json() : [];
@@ -142,7 +142,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         TipoContrato: s.contrato || '',
                         FechaIngreso: s.fecha_ingreso || '',
                         FechaInicioPuntos: s.fecha_inicio_puntos || '',
-                        Puntos: Number(s.puntos) || 0
+                        Puntos: Number(s.puntos) || 0,
+                        Rut: s.rut || ''
                     }));
 
                 // Refrescar GAS en segundo plano → mantiene Supabase sincronizado con Sheets

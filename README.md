@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-06 — RUT del socio: capturado en propi.solicitada, usado en Gestión y Certificados
+- Nueva columna `socios.rut`. propi.solicitada pide el RUT al abrir (modal) y lo guarda ahí; se refleja automáticamente en socios-comicion.
+- Gestión de Socios: el detalle del socio ahora muestra el **RUT** (o "— (pendiente)" si aún no lo cargó).
+- Certificados: el certificado impreso ahora incluye el **RUT** del socio en el cuerpo ("…el(la) Sr./Sra. NOMBRE, RUT XX.XXX.XXX-X, ha percibido…"), tanto al generar como al reimprimir (busca el RUT actual del socio).
+- Archivos modificados: `js/supabase-config.js` (select+map rut), `js/api.js` (rut en objeto socio), `index.html` (detRut), `js/anticipos.js` (mostrar rut), `js/certificados.js` (rut en certificado).
+
 #### 2026-07-06 — Montos Recaudados: guardar y mostrar el responsable de la verificación
 - Al verificar una recaudación en caja, ahora se guarda **quién** la verificó (responsable en sesión) en `recaudaciones.arqueado_por`.
 - En el detalle (🔍) de un monto verificado se agregó la fila **"Verificado por ✅ [responsable]"**, junto a la hora que ya se mostraba.

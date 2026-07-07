@@ -1477,6 +1477,8 @@ function seleccionarSocio(id) {
     document.getElementById('detNombre').textContent = `${socio.nombre} ${socio.apellido}`;
     document.getElementById('detContrato').textContent = socio.contrato;
     document.getElementById('detArea').textContent = "Área: " + (socio.area || '').toUpperCase();
+    const _detRut = document.getElementById('detRut');
+    if (_detRut) _detRut.textContent = socio.rut ? ('RUT: ' + socio.rut) : 'RUT: — (pendiente)';
     document.getElementById('detPuntos').textContent = socio.puntos;
     document.getElementById('cardAusencias').style.display = (socio.contrato === 'Planta') ? 'block' : 'none';
 
