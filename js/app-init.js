@@ -107,6 +107,7 @@ function switchTab(tabName) {
     else if(tabName === 'dineros') { fabRec.style.display = 'none'; aq_detenerSync(); ds_cargar(); }
     else if(tabName === 'certificados') { fabRec.style.display = 'none'; aq_detenerSync(); cert_init(); }
     else if(tabName === 'diariopins') { fabRec.style.display = 'none'; aq_detenerSync(); dp_init(); }
+    else if(tabName === 'documentacion') { fabRec.style.display = 'none'; aq_detenerSync(); doc_init(); }
     else if(tabName === 'desglose') { fabRec.style.display = 'none'; aq_detenerSync(); if(typeof dsg_cargarHistorial === 'function' && _dsgRegistros.length === 0) dsg_cargarHistorial(); }
 }
 

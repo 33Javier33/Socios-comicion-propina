@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-06 — Nueva sección "Documentación" (documentos generales + por socio)
+- Nueva pestaña **📁 Documentación** con dos vistas:
+  - **Generales**: subir/ver/eliminar documentos compartidos (ej. reglamento de la propina) en PDF/imagen, listos para descargar y enviar.
+  - **Por socio**: buscar un socio y ver/descargar los documentos que él subió desde propi.solicitada (ej. su contrato).
+- Almacenamiento en **Supabase Storage** (bucket privado `documentos`) + tabla de metadatos `documentos`. Ver usa URL firmada (1h). Cada subida/eliminación queda en auditoría.
+- Archivos: nuevo `js/documentacion.js`; `index.html` (nav, tab, script), `js/app-init.js` (switchTab).
+
 #### 2026-07-06 — RUT visible en las tarjetas de Gestión de Socios + editable en el modal Editar
 - Cada tarjeta de socio ahora muestra el **RUT** ("🪪 RUT: …" o "🪪 RUT: — pendiente").
 - El modal **Editar Socio** tiene un campo **RUT**: se pre-llena con el actual y al guardar se persiste en `socios.rut` (vía `guardarRutSocio`), sin pisar el resto de la edición (que va por el flujo normal).

@@ -85,6 +85,7 @@
             <button class="nav-btn" data-tab="dineros" onclick="switchTab('dineros')">💵 Dineros Sobrantes</button>
             <button class="nav-btn" data-tab="certificados" onclick="switchTab('certificados')">📜 Certificados</button>
             <button class="nav-btn" data-tab="diariopins" onclick="switchTab('diariopins')">🔑 PIN Diario</button>
+            <button class="nav-btn" data-tab="documentacion" onclick="switchTab('documentacion')">📁 Documentación</button>
             <button onclick="ayudaCompleta_abrir()" style="background:#2c3e50;color:white;border:none;border-radius:20px;padding:6px 12px;font-size:0.78em;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto;">📖 Ayuda</button>
         </div>
         
@@ -1143,6 +1144,33 @@
             </div>
         </div>
 
+        <!-- PESTAÑA: DOCUMENTACIÓN -->
+        <div id="tab-documentacion" class="tab-content">
+            <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+                <div style="color:white;font-weight:800;font-size:1em;">📁 Documentación</div>
+                <div style="color:#bfdbfe;font-size:0.78em;margin-top:2px;">Documentos generales (reglamento, etc.) y documentos que suben los socios</div>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-bottom:16px;">
+                <button id="doc-tab-generales" onclick="doc_setTab('generales')" style="flex:1;padding:8px 12px;border-radius:20px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:0.84em;font-weight:800;cursor:pointer;">📋 Generales</button>
+                <button id="doc-tab-socios" onclick="doc_setTab('socios')" style="flex:1;padding:8px 12px;border-radius:20px;border:2px solid #2563eb;background:white;color:#2563eb;font-size:0.84em;font-weight:800;cursor:pointer;">👤 Por socio</button>
+            </div>
+
+            <!-- Panel: Documentos generales -->
+            <div id="doc-panel-generales">
+                <input type="file" id="doc-general-file" accept="application/pdf,image/*" style="display:none" onchange="doc_subirGeneral(this)">
+                <button onclick="document.getElementById('doc-general-file').click()" style="width:100%;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:white;border:none;border-radius:10px;padding:12px;font-weight:800;font-size:0.88em;cursor:pointer;margin-bottom:14px;">⬆️ Subir documento general (PDF/imagen)</button>
+                <div id="doc-generales-lista"></div>
+            </div>
+
+            <!-- Panel: Documentos por socio -->
+            <div id="doc-panel-socios" style="display:none;">
+                <input type="text" id="doc-socio-buscar" placeholder="Buscar socio por nombre..." oninput="doc_renderBusquedaSocios()"
+                    style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:9px;font-size:0.9em;box-sizing:border-box;margin-bottom:12px;">
+                <div id="doc-socios-lista"></div>
+            </div>
+        </div>
+
         <div id="tab-certificados" class="tab-content">
             <!-- Header -->
             <div style="background:linear-gradient(135deg,#1e3a5f,#2980b9);border-radius:16px;padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
@@ -1830,6 +1858,7 @@
     <script src="js/dineros.js"></script>
     <script src="js/certificados.js"></script>
     <script src="js/diario-pins.js"></script>
+    <script src="js/documentacion.js"></script>
     <script src="js/app-init.js"></script>
 
 <!-- ══════════════════════════════════════════
