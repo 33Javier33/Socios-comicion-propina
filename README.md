@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Nueva sección "💬 Mensajes" (privado con cada socio)
+- **Nueva pestaña** para que el responsable envíe **mensajes privados** a un socio. Se elige el socio de una lista con búsqueda, se abre la conversación y se escribe.
+- El socio los recibe en la app propi.solicitada (Mensajes → **"Admin"**) y puede **responder**; las respuestas llegan aquí en **tiempo real**.
+- La lista marca con **💬** a los socios con conversación y con **NUEVO** (y punto rojo en el nav) cuando hay respuestas sin leer.
+- Fuente: nueva tabla `mensajes_admin` (proyecto socios `teemahksasdougehrcly`, `dbSoc`, RLS anon, realtime).
+- Archivos: `js/mensajes-admin.js` (nuevo), `index.html` (pestaña + nav + script), `js/app-init.js` (branch en switchTab + init de aviso).
+
 #### 2026-07-07 — Egresos pendientes: solicitudes de anticipo desde propi.solicitada
 - **Nueva funcionalidad:** en **Anticipos y Ausencias** aparece un aviso **"💸 Egresos pendientes"** con las solicitudes que los socios envían desde la app propi.solicitada (botón "Solicitar Egreso").
 - Al **tocar un aviso**, se selecciona automáticamente al socio y se **pre-carga el monto** solicitado en el formulario de anticipo, con una nota destacada. Al **registrar el anticipo**, la solicitud pasa a `PROCESADO`.

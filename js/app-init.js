@@ -38,6 +38,8 @@ function iniciarApp() {
     initLayout();
     initDragReorder();
     initScrollTopFab();
+    // Mensajes privados admin↔socio: aviso en el nav aunque no se abra la pestaña
+    if (typeof msgAdmin_initRealtime === 'function') { msgAdmin_initRealtime(); setTimeout(msgAdmin_cargarResumen, 1500); }
     if(!URL_SOCIOS || URL_SOCIOS.includes('PEGA_AQUI')) {
         alert('Falta configurar URL_SOCIOS');
     } else {
@@ -110,6 +112,7 @@ function switchTab(tabName) {
     else if(tabName === 'certificados') { fabRec.style.display = 'none'; aq_detenerSync(); cert_init(); }
     else if(tabName === 'diariopins') { fabRec.style.display = 'none'; aq_detenerSync(); dp_init(); }
     else if(tabName === 'documentacion') { fabRec.style.display = 'none'; aq_detenerSync(); doc_init(); }
+    else if(tabName === 'mensajes') { fabRec.style.display = 'none'; aq_detenerSync(); msgAdmin_init(); }
     else if(tabName === 'desglose') { fabRec.style.display = 'none'; aq_detenerSync(); if(typeof dsg_cargarHistorial === 'function' && _dsgRegistros.length === 0) dsg_cargarHistorial(); }
 }
 
