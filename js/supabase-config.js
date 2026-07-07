@@ -946,6 +946,23 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             }
         }
 
+        // ── guardarRutSocio → actualizar el RUT del socio ──
+        if (action === 'guardarRutSocio') {
+            const _sid = body.socioId || body.id || '';
+            const _rut = (body.rut || '').trim();
+            if (!_sid) return _mockOk({ status: 'error', message: 'socioId requerido' });
+            try {
+                const { error } = await dbSoc.from('socios').update({ rut: _rut || null }).eq('id', _sid);
+                if (error) throw error;
+                _sbAudit('Registrar RUT', {
+                    idAfectado: _sid,
+                    detalle: _rut ? `RUT guardado desde Gestión: ${_rut}` : 'RUT eliminado desde Gestión',
+                    datos: { socio_id: _sid, rut: _rut }
+                });
+                return _mockOk({ status: 'success' });
+            } catch(e) { return _mockOk({ status: 'error', message: e.message }); }
+        }
+
         // ── registrarMaterial → Supabase primario, GAS en background ──
         if (action === 'registrarMaterial') {
             const uuid = 'mat-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);

@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-06 — RUT editable por el responsable en Gestión de Socios
+- En el detalle del socio, el RUT ahora es **editable**: si no tiene, aparece "➕ Agregar RUT"; si tiene, un ✏️ para editarlo. Valida RUT chileno y lo formatea.
+- Se guarda en `socios.rut` (acción `guardarRutSocio`, con auditoría "Registrar RUT"). Como es la misma columna que llena propi.solicitada, **al socio que ya tenga RUT (cargado por él o por el responsable) no le vuelve a aparecer el modal** en la app.
+- Archivos: `js/socios.js` (helpers + editar/guardar RUT), `js/anticipos.js` (usar gest_renderRut), `js/supabase-config.js` (handler `guardarRutSocio`).
+
 #### 2026-07-06 — RUT del socio: capturado en propi.solicitada, usado en Gestión y Certificados
 - Nueva columna `socios.rut`. propi.solicitada pide el RUT al abrir (modal) y lo guarda ahí; se refleja automáticamente en socios-comicion.
 - Gestión de Socios: el detalle del socio ahora muestra el **RUT** (o "— (pendiente)" si aún no lo cargó).

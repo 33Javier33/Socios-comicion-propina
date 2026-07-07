@@ -2,6 +2,85 @@
 // SOCIOS: RENDERIZADO, EDICIÓN, ESCALAMIENTOS Y PENDIENTES
 // ============================================================
 
+// ── RUT del socio (editable desde Gestión) ──────────────────
+function _rutClean(r) { return String(r || '').replace(/\./g, '').replace(/\s/g, '').toUpperCase(); }
+function _rutFormat(r) {
+    let clean = _rutClean(r).replace(/-/g, '');
+    if (clean.length < 2) return clean;
+    const dv = clean.slice(-1);
+    const body = clean.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return `${body}-${dv}`;
+}
+function _rutValidar(r) {
+    const clean = _rutClean(r).replace(/-/g, '');
+    if (clean.length < 7) return false;
+    const dv = clean.slice(-1), body = clean.slice(0, -1);
+    return /^\d+$/.test(body) && /^[\dK]$/.test(dv);
+}
+
+// Renderiza el bloque de RUT (lectura) en el detalle del socio
+function gest_renderRut(socio) {
+    const el = document.getElementById('detRut');
+    if (!el) return;
+    const id = socio.id;
+    if (socio.rut) {
+        el.innerHTML = `RUT: <b>${_htmlEscSoc(socio.rut)}</b> `
+            + `<button onclick="gest_editarRut('${id}')" title="Editar RUT" style="background:none;border:none;color:var(--secondary);cursor:pointer;font-size:0.95em;padding:0 2px;">✏️</button>`;
+    } else {
+        el.innerHTML = `RUT: <span style="color:#dc2626;font-weight:600;">— pendiente</span> `
+            + `<button onclick="gest_editarRut('${id}')" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:6px;padding:2px 8px;font-size:0.82em;font-weight:700;cursor:pointer;margin-left:4px;">➕ Agregar RUT</button>`;
+    }
+}
+
+// Cambia el bloque a modo edición
+function gest_editarRut(socioId) {
+    const el = document.getElementById('detRut');
+    if (!el) return;
+    const socio = (cacheSocios || []).find(s => s.id === socioId);
+    const actual = socio && socio.rut ? socio.rut : '';
+    el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px;">
+            <input id="gest-rut-input" value="${_htmlEscSoc(actual)}" placeholder="11.111.111-?" inputmode="text" maxlength="12"
+                onkeydown="if(event.key==='Enter')gest_guardarRut('${socioId}')"
+                style="padding:5px 9px;border:1.5px solid #cbd5e1;border-radius:7px;font-size:0.9em;width:150px;">
+            <button onclick="gest_guardarRut('${socioId}')" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:white;border:none;border-radius:7px;padding:5px 12px;font-size:0.82em;font-weight:800;cursor:pointer;">Guardar</button>
+            <button onclick="gest_cancelarRut('${socioId}')" style="background:none;border:1px solid #cbd5e1;color:#64748b;border-radius:7px;padding:5px 9px;font-size:0.82em;cursor:pointer;">✕</button>
+        </div>
+        <div id="gest-rut-error" style="display:none;color:#dc2626;font-size:0.78em;font-weight:600;margin-top:3px;"></div>`;
+    setTimeout(() => document.getElementById('gest-rut-input')?.focus(), 50);
+}
+
+function gest_cancelarRut(socioId) {
+    const socio = (cacheSocios || []).find(s => s.id === socioId);
+    if (socio) gest_renderRut(socio);
+}
+
+async function gest_guardarRut(socioId) {
+    const inp = document.getElementById('gest-rut-input');
+    const err = document.getElementById('gest-rut-error');
+    const raw = (inp?.value || '').trim();
+    if (!_rutValidar(raw)) { if (err) { err.textContent = 'RUT no válido. Ej: 12.345.678-9'; err.style.display = 'block'; } return; }
+    const rut = _rutFormat(raw);
+    const socio = (cacheSocios || []).find(s => s.id === socioId);
+    const nombre = socio ? ((socio.nombre || '') + ' ' + (socio.apellido || '')).trim() : '';
+    toggleLoader(true, 'Guardando RUT...');
+    try {
+        const res = await callApiSocios('guardarRutSocio', { socioId, rut, nombre });
+        if (res.status !== 'success') throw new Error(res.message || 'Error');
+        if (socio) socio.rut = rut;   // reflejar en cache (para certificados y detalle)
+        showToast('RUT guardado ✅', 'success');
+        if (socio) gest_renderRut(socio);
+    } catch(e) {
+        if (err) { err.textContent = 'No se pudo guardar: ' + e.message; err.style.display = 'block'; }
+    } finally {
+        toggleLoader(false);
+    }
+}
+
+function _htmlEscSoc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function renderizarCards() {
     const container = document.getElementById('mainSociosContainer');
     container.innerHTML = '';
