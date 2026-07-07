@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Egresos pendientes: solicitudes de anticipo desde propi.solicitada
+- **Nueva funcionalidad:** en **Anticipos y Ausencias** aparece un aviso **"💸 Egresos pendientes"** con las solicitudes que los socios envían desde la app propi.solicitada (botón "Solicitar Egreso").
+- Al **tocar un aviso**, se selecciona automáticamente al socio y se **pre-carga el monto** solicitado en el formulario de anticipo, con una nota destacada. Al **registrar el anticipo**, la solicitud pasa a `PROCESADO`.
+- La lista de socios muestra un badge **💸 EGRESO** en quienes tienen una solicitud pendiente. Actualización en **tiempo real** (postgres_changes sobre `solicitudes_egreso`).
+- Fuente: nueva tabla `solicitudes_egreso` (proyecto socios `teemahksasdougehrcly`, cliente `dbSoc`, RLS anon).
+- Archivos: `js/egresos.js` (nuevo), `index.html` (aviso + nota + script), `js/app-init.js` (carga en tab gestion), `js/anticipos.js` (marcar procesado tras registrar), `js/socios.js` (badge).
+
 #### 2026-07-06 — Foto del socio visible en Gestión de Socios
 - Las tarjetas de Gestión de Socios ahora muestran la **foto de perfil** del socio (si la subió en propi.solicitada) como avatar; si no tiene, muestra su inicial.
 - Se lee de `socios.foto_url` (bucket público `avatares`). Nuevo mapeo `FotoUrl` en getSocios y `fotoUrl` en el objeto socio.

@@ -1680,6 +1680,8 @@ async function confirmarDesgloseAnticipo() {
         if (typeof recalcularAnticipos === 'function') recalcularAnticipos();
         generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, billetes, folio });
         if (typeof dsg_onNuevoAnticipo === 'function') dsg_onNuevoAnticipo({ firma: folio, socio_nombre: nombre, socio_id: id, monto, fecha, billetes, responsable: respIni + (respArea ? ' ' + respArea : ''), created_at: new Date().toISOString() });
+        // Si este anticipo procesa una solicitud de egreso pendiente, marcarla
+        if (typeof egresos_alRegistrarAnticipo === 'function') egresos_alRegistrarAnticipo(id, respIni + (respArea ? ' ' + respArea : ''));
     } catch(e) {
         if (campoMonto) campoMonto.classList.remove('input-ok');
         showToast('Error al registrar anticipo', 'error');

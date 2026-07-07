@@ -96,6 +96,8 @@ function switchTab(tabName) {
         gestion_cargarTotalAnticipos();
         gestion_cargarTotalRemanentes();
         cierresMes_render();
+        if (typeof egresos_initRealtime === 'function') egresos_initRealtime();
+        if (typeof egresos_cargarPendientes === 'function') egresos_cargarPendientes();
     }
     else if(tabName === 'recaudacion') { fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones(); }
     else if(tabName === 'config') { fabRec.style.display = 'none'; aq_detenerSync(); cfg_limpiarCampos(); }

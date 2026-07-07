@@ -648,8 +648,9 @@ function renderizarListaBusqueda() {
             const mov = gestionSociosConMovimientos[s.id];
             const badgeAnt = mov && mov.anticipos ? '<span style="background:#fff3cd;color:#856404;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:4px;">💰 ANT</span>' : '';
             const badgeAus = mov && mov.ausencias ? '<span style="background:#fde8e8;color:#9b1c1c;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">📅 AUS</span>' : '';
+            const badgeEgr = (typeof egresosPorSocio !== 'undefined' && egresosPorSocio[s.id]) ? '<span style="background:#e0f2fe;color:#075985;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">💸 EGRESO</span>' : '';
 
-            div.innerHTML = `<strong>${s.nombre} ${s.apellido}</strong> <span style="font-size:0.8em;color:#7f8c8d;">${s.puntos} pts</span>${badgeAnt}${badgeAus}`;
+            div.innerHTML = `<strong>${s.nombre} ${s.apellido}</strong> <span style="font-size:0.8em;color:#7f8c8d;">${s.puntos} pts</span>${badgeAnt}${badgeAus}${badgeEgr}`;
             div.onclick = () => seleccionarSocio(s.id);
             lista.appendChild(div);
         });
