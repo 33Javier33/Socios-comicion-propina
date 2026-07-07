@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Ayuda: Cierre de Mes / "Estado de Cobros del Período" explicado a fondo
+- Nueva categoría **🔒 Cierre de Mes** en el Centro de Ayuda con **6 entradas** que explican todo el panel de "Estado de Cobros del Período":
+  - Qué es el panel y sus estados (⏳ Pendiente / 📩 En Sobre / 💵 Cobrado) y la etiqueta "X/Y · 💵N 📩M".
+  - Qué hace **🔒 Cerrar** un socio (cálculo Alcance + Saldo anterior − Anticipos, redondeo a mil, remanente que pasa al próximo mes, recibo, cobra ahora / en sobre).
+  - Significado de Pendiente/En Sobre/Cobrado y el botón 💵/📩.
+  - Qué hace **"Archivar anticipos y empezar nuevo mes"** (mueve a pestaña de respaldo y limpia; irreversible).
+  - Qué hace **"Reiniciar seguimiento"** (solo el marcado local, no datos).
+  - Qué muestran los totales **ANTICIPOS (Nube)** y **REMANENTES** del banner.
+- Archivos: `js/help.js` (entradas + ícono `cierre`), `index.html` (botón de categoría).
+
 #### 2026-07-07 — Centro de Ayuda completo: todas las secciones documentadas
 - Se amplió la base de conocimiento del **Centro de Ayuda** (`js/help.js`, `BASE_CONOCIMIENTO`) para que **no quede nada sin explicar**. Nuevas entradas:
   - **Egresos** (3): qué es un egreso pendiente, cómo procesarlo, cómo rechazarlo con motivo.

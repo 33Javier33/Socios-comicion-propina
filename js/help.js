@@ -680,6 +680,59 @@ const BASE_CONOCIMIENTO = [
       resp:'La foto la sube el <strong>propio socio</strong> desde su app (propi.solicitada → Perfil). Si la subió, aparece como avatar en su tarjeta de Gestión de Socios; si no, se muestra su inicial.',
       pasos:['El socio agrega su foto en su app (cámara o galería)','Automáticamente aparece en su tarjeta aquí en Gestión de Socios','También se ve en su propio login y perfil','Si no tiene foto, se muestra la primera letra de su nombre'],
       nota:'La foto es opcional; el socio decide si la pone o no.' },
+
+    // ═══════════════════════════════════════════════════════
+    // CIERRE DE MES / ESTADO DE COBROS DEL PERÍODO
+    // ═══════════════════════════════════════════════════════
+    { id:'cm1', cat:'cierre', titulo:'¿Qué es "Estado de Cobros del Período" (Cierre de Mes)?', tags:['cierre','cobros','período','estado','mes','panel','pendiente','sobre','cobrado','liquidar'],
+      resp:'Es el panel (en <strong>Anticipos y Ausencias</strong>) para <strong>liquidar el mes de cada socio</strong> y llevar el control de quién ya cobró. Muestra cuántos socios están <strong>Pendientes</strong>, <strong>En Sobre</strong> o <strong>Cobrados</strong>.',
+      vista:`<div class="ayuda-vista">
+        <div class="ayuda-vista-titulo">📊 Estado de Cobros del Período</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:6px;text-align:center;"><div style="font-weight:900;color:#dc2626;">3</div><div style="font-size:0.6em;font-weight:700;color:#991b1b;">⏳ PENDIENTE</div></div>
+          <div style="flex:1;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:6px;text-align:center;"><div style="font-weight:900;color:#b45309;">2</div><div style="font-size:0.6em;font-weight:700;color:#92400e;">📩 EN SOBRE</div></div>
+          <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:6px;text-align:center;"><div style="font-weight:900;color:#16a34a;">7</div><div style="font-size:0.6em;font-weight:700;color:#15803d;">💵 COBRADO</div></div>
+        </div>
+        <div style="font-size:0.72em;color:#475569;">La etiqueta del panel muestra <strong>7/12 · 💵7 📩2</strong> → 7 de 12 cerrados, 7 cobraron y 2 quedaron en sobre.</div>
+      </div>`,
+      pasos:['Ábrelo tocando "📊 Estado de Cobros del Período" en Anticipos y Ausencias','La etiqueta de color resume el avance: rojo (nadie cerrado), naranjo (algunos) o verde (todos)','Cada socio aparece en una de tres listas: ⏳ Pendiente, 📩 En Sobre o 💵 Cobrado','Puedes buscar un socio por nombre dentro del panel'],
+      nota:'“Cerrar” a un socio NO es lo mismo que “Archivar el período”. Primero cierras/cobras a cada uno; archivar es el paso final del mes.' },
+
+    { id:'cm2', cat:'cierre', titulo:'¿Qué hace el botón "🔒 Cerrar" de un socio y para qué sirve?', tags:['cerrar','cierre','socio','liquidar','pagar','remanente','saldo','recibo','cobrar'],
+      resp:'“Cerrar” <strong>liquida el mes de ese socio</strong>: calcula cuánto le toca cobrar, <strong>guarda el sobrante (remanente) como saldo del próximo mes</strong> y te pregunta si está cobrando ahora o queda en sobre.',
+      vista:`<div class="ayuda-vista">
+        <div class="ayuda-vista-titulo">🔒 Qué calcula al cerrar</div>
+        <div style="background:white;border:1px solid #eee;border-radius:8px;padding:8px;font-size:0.8em;">
+          <div style="display:flex;justify-content:space-between;"><span>Alcance (puntos × valor de días)</span><b>$180.000</b></div>
+          <div style="display:flex;justify-content:space-between;"><span>+ Saldo anterior</span><b>$8.000</b></div>
+          <div style="display:flex;justify-content:space-between;"><span>− Anticipos pedidos</span><b style="color:#dc2626;">-$20.000</b></div>
+          <hr style="border:none;border-top:1px solid #eee;margin:5px 0;">
+          <div style="display:flex;justify-content:space-between;"><span>💵 A pagar (redondeado a mil)</span><b style="color:#15803d;">$168.000</b></div>
+          <div style="display:flex;justify-content:space-between;"><span>💜 Remanente (pasa al próximo mes)</span><b style="color:#8e44ad;">$0</b></div>
+        </div>
+      </div>`,
+      pasos:['Toca 🔒 Cerrar en el socio (lista de Pendientes) y confirma','El sistema calcula: Alcance + Saldo anterior − Anticipos = lo que le corresponde','El “A pagar” se redondea hacia abajo al mil más cercano; lo que sobra es el remanente','El remanente se guarda automáticamente como su saldo anterior del próximo mes, y se genera el recibo','Te pregunta “¿está cobrando ahora?” → ✅ = 💵 Cobrado · ❌ = 📩 queda En Sobre'],
+      nota:'Cerrar es reversible en su estado (puedes cambiar Cobrado/En sobre), pero recalcula y guarda saldos: hazlo cuando los anticipos del socio ya estén completos.' },
+
+    { id:'cm3', cat:'cierre', titulo:'¿Qué significan Pendiente, En Sobre y Cobrado? ¿Y el botón 💵/📩?', tags:['pendiente','en sobre','cobrado','estado','sobre','marcar','cambiar','cobro'],
+      resp:'Son los tres estados de cada socio en el cierre: <strong>⏳ Pendiente</strong> (aún no cerrado), <strong>📩 En Sobre</strong> (cerrado, pero aún no cobra — la plata queda guardada) y <strong>💵 Cobrado</strong> (cerrado y ya cobró).',
+      pasos:['⏳ Pendiente: todavía no le cierras el mes','📩 En Sobre: ya lo cerraste, pero no vino a cobrar; su dinero queda en sobre','💵 Cobrado: ya cerró y cobró','El botón 💵/📩 de cada socio cerrado cambia su estado: cuando venga a cobrar el sobre, tócalo para pasarlo a Cobrado'],
+      nota:'Así sabes en todo momento a quién le falta cobrar (los que están En Sobre) sin volver a calcular nada.' },
+
+    { id:'cm4', cat:'cierre', titulo:'¿Qué hace "Archivar anticipos y empezar nuevo mes"?', tags:['archivar','finalizar','período','nuevo mes','reiniciar','vaciar','anticipos','limpiar'],
+      resp:'Es el <strong>paso final del mes</strong>: mueve TODOS los anticipos del período a una pestaña de respaldo (ej. <strong>Anticipos_JULIO_2026</strong>) y limpia la hoja activa y la nube para empezar el mes nuevo <strong>desde cero</strong>.',
+      pasos:['Úsalo SOLO cuando ya cerraste/cobraste a todos (idealmente el panel en verde)','Confirma el aviso: los anticipos se archivan en la pestaña del mes y se borran de lo activo','La lista de anticipos queda vacía para el mes nuevo','Los datos NO se pierden: quedan guardados en esa pestaña (y consultables en 🗂️ Carpetas)'],
+      nota:'⚠️ Es una acción fuerte y no se deshace. Si aún hay socios pendientes, el botón te lo advierte con “(N pendientes)”.' },
+
+    { id:'cm5', cat:'cierre', titulo:'¿Qué es "Reiniciar seguimiento" y qué borra?', tags:['reiniciar','seguimiento','local','borrar','estado','cobros','resetear'],
+      resp:'Borra <strong>solo el seguimiento local</strong> de quién está Pendiente/En Sobre/Cobrado en este dispositivo. <strong>No borra</strong> los anticipos ni los saldos guardados en la nube/Sheets.',
+      pasos:['Está abajo del panel: “↺ Reiniciar seguimiento”','Úsalo si el conteo de cobros de ESTE dispositivo quedó desordenado y quieres empezar el marcado de nuevo','Confirma el aviso','No afecta datos reales (anticipos, saldos ni archivos): solo el marcado de cobros local'],
+      nota:'Distinto de “Archivar”: reiniciar seguimiento no toca datos; archivar sí mueve y limpia los anticipos.' },
+
+    { id:'cm6', cat:'cierre', titulo:'¿Qué muestran "ANTICIPOS (Nube)" y "REMANENTES" arriba del panel?', tags:['anticipos','nube','remanentes','total','banner','cierre','detalle'],
+      resp:'Son totales de referencia del período: <strong>💰 ANTICIPOS (Nube)</strong> = suma de todos los anticipos registrados, y <strong>💜 REMANENTES</strong> = suma de los sobrantes guardados como saldo del próximo mes.',
+      pasos:['💰 ANTICIPOS (Nube): cuánto se ha adelantado en total este período','💜 REMANENTES: cuánto quedó guardado como saldo para el próximo mes','El botón “📋 Detalle Anticipos” abre el informe completo (para revisar o imprimir)','Se actualizan solos a medida que registras anticipos y cierras socios'],
+      nota:'Sirven para tener la foto global del período de un vistazo, sin abrir socio por socio.' },
 ];
 
 // ══════════════════════════════════════════════════════════
@@ -861,7 +914,7 @@ function ayudaCompleta_filtrar(cat, btn) {
 function ayudaCompleta_renderizar(items, resaltar) {
     const cont = document.getElementById('ayudaResultados');
     if (!items.length) { cont.innerHTML = '<div class="ayuda-sin-result">😕 No encontramos respuesta.<br><small>Intenta: anticipo, punto, arqueo, recibo, divisor...</small></div>'; return; }
-    const catIcon = {socios:'👥',anticipos:'💰',recaudacion:'📊',arqueo:'🔒',puntos:'⭐',impresion:'🖨️',config:'⚙️',seguridad:'🔐',materiales:'📦',egresos:'💸',mensajes:'💬',documentacion:'📁',certificados:'📜',dineros:'💵',pindiario:'🔑',carpetas:'🗂️',notas:'📝'};
+    const catIcon = {socios:'👥',anticipos:'💰',recaudacion:'📊',arqueo:'🔒',puntos:'⭐',impresion:'🖨️',config:'⚙️',seguridad:'🔐',materiales:'📦',egresos:'💸',mensajes:'💬',documentacion:'📁',certificados:'📜',dineros:'💵',pindiario:'🔑',carpetas:'🗂️',notas:'📝',cierre:'🔒'};
     cont.innerHTML = items.map((item, idx) => {
         let titulo = item.titulo;
         if (resaltar) { const re = new RegExp('('+resaltar.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'); titulo = titulo.replace(re,'<span class="ayuda-highlight">$1</span>'); }
