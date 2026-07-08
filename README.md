@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Horarios: grupo solo-rotativo + días libres bien marcados
+- El **editor de grupo** ahora es **solo la rotación**: nombre, color, **día en que comienza el ciclo (primer día libre)**, **días libres seguidos** y **días de trabajo**. Se quitó la selección de horarios/turnos y el editor manual del ciclo.
+- En el **calendario del socio los días libres se ven bien marcados y legibles**: fondo verde, borde verde y texto **"LIBRE"** en negrita. Los días de trabajo se muestran como "Trabaja".
+- Se guardan `dias_libres` y `dias_trabajo` en el grupo; el ciclo se arma con dos turnos base: **Libre** (verde) y **Trabaja** (azul), protegidos contra borrado.
+- La lista de grupos muestra la rotación como chips: 🌴 N libres · 💼 M trabajo · Comienza FECHA, con sus integrantes.
+- Migración: columnas `dias_libres`/`dias_trabajo` en `horarios_grupos`, turno `t_trabajo`, `t_libre` en verde.
+- Archivos: `index2.html`.
+
 #### 2026-07-07 — Horarios: ciclo rotativo por días libres + trabajo (como Turnos Pro)
 - El editor de grupo ahora arma el ciclo como se piensa realmente: **"Primer día libre" (fecha base)** + **días libres seguidos** + **días de trabajo** + **turno de trabajo** → botón **"Generar rotación"**.
 - Ejemplo confirmado: primer libre 7, 2 libres y 6 trabajo → libres 7‑8, trabajo 9‑14, libres 15‑16, trabajo 17‑22… (rota en bucle).

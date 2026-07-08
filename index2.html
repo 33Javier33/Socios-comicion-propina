@@ -312,9 +312,17 @@ function pintarCalendario(cont, date, socioId, excepciones, onDayClick){
     const t=turnoDeSocioEnFecha(socioId,d,excepciones);
     const iso=fechaISO(d); const esHoy=iso===hoyISO;
     let bg='#1e293b', col='#64748b', tno='', border=esHoy?'2px solid #38bdf8':'1px solid #293449';
-    if(t){ bg=t.color+'22'; col='#e2e8f0'; tno=`<span class="tno" style="color:${t.color}">${esc(t.es_libre?'Libre':t.nombre)}</span>`; border=`1px solid ${t.color}55`; if(esHoy) border='2px solid #38bdf8'; }
+    if(t){
+      if(t.es_libre){ // Día libre: bien visible y legible (verde)
+        bg='#10b98130'; col='#6ee7b7'; border=esHoy?'2px solid #38bdf8':'1.5px solid #10b981';
+        tno='<span class="tno" style="color:#34d399;font-weight:800;font-size:10px;">LIBRE</span>';
+      } else {
+        bg=t.color+'22'; col='#e2e8f0'; border=esHoy?'2px solid #38bdf8':`1px solid ${t.color}55`;
+        tno=`<span class="tno" style="color:${t.color}">${esc(t.nombre)}</span>`;
+      }
+    }
     const clk=onDayClick?`onclick="${onDayClick}('${iso}')" style="cursor:pointer;"`:'';
-    return `<div class="cal-cell" ${clk} style="background:${bg};border:${border};"><span style="color:${col}">${d.getDate()}</span>${tno}</div>`;
+    return `<div class="cal-cell" ${clk} style="background:${bg};border:${border};"><span style="color:${col};font-weight:${t&&t.es_libre?'800':'600'}">${d.getDate()}</span>${tno}</div>`;
   }).join('');
 }
 function leyendaTurnos(cont){
@@ -416,6 +424,7 @@ async function turnoGuardar(id){
   cerrarModal(); await cargarBase(); renderTurnos(); toast('Turno guardado');
 }
 async function turnoBorrar(id){
+  if(id==='t_libre'||id==='t_trabajo') return toast('Este turno base (Libre/Trabaja) no se puede borrar','#dc2626');
   const usado=grupos.some(g=>(g.ciclo||[]).includes(id));
   if(usado && !confirm('Este turno se usa en el ciclo de algún grupo. ¿Borrarlo igual?')) return;
   if(!usado && !confirm('¿Borrar este turno?')) return;
@@ -428,7 +437,8 @@ function renderGrupos(){
   if(!grupos.length){ c.innerHTML='<div class="text-slate-500 text-sm text-center py-6">Sin grupos. Crea el primero.</div>'; return; }
   c.innerHTML=grupos.map(g=>{
     const miembros=sociosMesas.filter(s=>asignaciones[s.id]===g.id);
-    const ciclo=(g.ciclo||[]).map(tid=>{const t=turnosMap[tid]; return t?`<span class="chip" style="background:${t.color}22;color:${t.color}">${esc(t.nombre)}</span>`:'';}).join(' ');
+    const libres=g.dias_libres||(g.ciclo||[]).filter(t=>{const x=turnosMap[t];return x&&x.es_libre;}).length;
+    const trab=g.dias_trabajo||((g.ciclo||[]).length-libres);
     return `<div class="card p-3">
       <div class="flex items-center gap-2 mb-2"><span class="w-4 h-4 rounded-full" style="background:${g.color}"></span>
         <b class="text-sm">${esc(g.nombre)}</b>
@@ -436,46 +446,43 @@ function renderGrupos(){
         <button onclick="grupoModal('${g.id}')" class="btn-ghost text-xs ml-auto">✎</button>
         <button onclick="grupoBorrar('${g.id}')" class="btn-ghost text-xs" style="background:#7f1d1d;color:#fecaca;">🗑</button>
       </div>
-      <div class="text-[11px] text-slate-400 mb-1">Ciclo de ${(g.ciclo||[]).length} días · primer libre: ${g.fecha_base}</div>
-      <div class="flex flex-wrap gap-1.5 mb-2">${ciclo||'<span class="text-xs text-slate-500">Ciclo vacío</span>'}</div>
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        <span class="chip" style="background:#10b98122;color:#10b981">🌴 ${libres} libre(s)</span>
+        <span class="chip" style="background:#0ea5e922;color:#38bdf8">💼 ${trab} trabajo</span>
+        <span class="chip" style="background:#33415544;color:#cbd5e1">Comienza ${g.fecha_base}</span>
+      </div>
       <div class="text-[11px] text-slate-500">${miembros.length?('👥 '+miembros.map(s=>esc(s.nombre+' '+s.apellido)).join(', ')):'Sin socios asignados'}</div>
     </div>`;
   }).join('');
 }
 function grupoModal(id){
-  const g=id?gruposMap[id]:{nombre:'',color:'#6366f1',ciclo:[],fecha_base:fechaISO(new Date())};
-  window._ciclo=[...(g.ciclo||[])]; window._gColor=g.color;
+  const g=id?gruposMap[id]:{nombre:'',color:'#6366f1',fecha_base:fechaISO(new Date()),dias_libres:2,dias_trabajo:6};
+  window._gColor=g.color;
   const colores=['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6','#8b5cf6'];
   abrirModal(`<h3 class="font-extrabold mb-4">${id?'Editar':'Nuevo'} grupo</h3>
     <label class="text-xs text-slate-400 font-semibold">Nombre del grupo</label>
     <input id="gNombre" class="fld mt-1 mb-3" value="${esc(g.nombre)}" placeholder="Ej: Grupo A">
     <label class="text-xs text-slate-400 font-semibold">Color</label>
-    <div id="gColores" class="flex flex-wrap gap-2 mt-1 mb-3">${colores.map(c=>`<button onclick="gPickColor('${c}')" data-c="${c}" class="w-8 h-8 rounded-full" style="background:${c};outline:${c===g.color?'3px solid #fff':'none'};outline-offset:2px;"></button>`).join('')}</div>
-    <label class="text-xs text-slate-400 font-semibold">Primer día libre (fecha base)</label>
-    <p class="text-[11px] text-slate-500 mb-1">Marca el día en que empiezan los libres. Desde ahí rota en bucle.</p>
-    <input id="gFecha" type="date" class="fld mt-1 mb-3" value="${g.fecha_base}">
-    <div class="card p-3 mb-3">
-      <div class="text-xs font-bold text-sky-300 mb-2">↻ Ciclo rotativo (libres + trabajo)</div>
-      <div class="grid grid-cols-2 gap-2 mb-2">
-        <div><label class="text-[11px] text-slate-400 font-semibold">Días libres seguidos</label><input id="gLibres" type="number" min="1" value="2" class="fld mt-1"></div>
-        <div><label class="text-[11px] text-slate-400 font-semibold">Días de trabajo</label><input id="gTrabajo" type="number" min="1" value="6" class="fld mt-1"></div>
+    <div id="gColores" class="flex flex-wrap gap-2 mt-1 mb-4">${colores.map(c=>`<button onclick="gPickColor('${c}')" data-c="${c}" class="w-8 h-8 rounded-full" style="background:${c};outline:${c===g.color?'3px solid #fff':'none'};outline-offset:2px;"></button>`).join('')}</div>
+
+    <div class="card p-3 mb-4">
+      <div class="text-xs font-bold text-emerald-300 mb-2">↻ Rotación del grupo</div>
+      <label class="text-[11px] text-slate-400 font-semibold">Día en que comienza el ciclo (primer día libre)</label>
+      <input id="gFecha" type="date" class="fld mt-1 mb-3" value="${g.fecha_base}">
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="text-[11px] text-slate-400 font-semibold">Días libres seguidos</label><input id="gLibres" type="number" min="1" value="${g.dias_libres||2}" class="fld mt-1"></div>
+        <div><label class="text-[11px] text-slate-400 font-semibold">Días de trabajo</label><input id="gTrabajo" type="number" min="1" value="${g.dias_trabajo||6}" class="fld mt-1"></div>
       </div>
-      <label class="text-[11px] text-slate-400 font-semibold">Turno de los días de trabajo</label>
-      <select id="gTurnoTrabajo" class="fld mt-1 mb-2">${turnos.filter(t=>!t.es_libre).map(t=>`<option value="${t.id}">${esc(t.nombre)}${t.hora_inicio?` (${t.hora_inicio}–${t.hora_fin})`:''}</option>`).join('')}</select>
-      <button onclick="generarCicloRapido()" class="btn-primary w-full text-sm">Generar rotación</button>
-      <p class="text-[11px] text-slate-500 mt-2">Ej: primer libre <b>7</b>, 2 libres y 6 trabajo → libres 7‑8, trabajo 9‑14, libres 15‑16, trabajo 17‑22…</p>
+      <p class="text-[11px] text-slate-500 mt-2">Ej: comienza el <b>7</b>, 2 libres y 6 trabajo → libres 7‑8, trabaja 9‑14, libres 15‑16… (rota en bucle).</p>
     </div>
-    <label class="text-xs text-slate-400 font-semibold">Ciclo resultante (avanzado — puedes ajustarlo a mano)</label>
-    <div class="flex flex-wrap gap-2 mt-1 mb-2">${turnos.map(t=>`<button onclick="cicloAdd('${t.id}')" class="chip" style="background:${t.color}22;color:${t.color}">+ ${esc(t.nombre)}</button>`).join('')}</div>
-    <div id="cicloActual" class="flex flex-wrap gap-1.5 min-h-[36px] p-2 rounded-lg mb-4" style="background:#0f172a;border:1px dashed #334155;"></div>
+
     <label class="text-xs text-slate-400 font-semibold">Socios de este grupo</label>
-    <p class="text-[11px] text-slate-500 mb-2">Los que marques compartirán el mismo ciclo, turnos y <b>días libres</b>.</p>
+    <p class="text-[11px] text-slate-500 mb-2">Los que marques comparten la misma rotación y los mismos <b>días libres</b>.</p>
     <input id="gSocioBuscar" oninput="renderGrupoSocios()" placeholder="🔍 Buscar socio..." class="fld mb-2">
     <div id="gSociosLista" class="space-y-1 mb-4" style="max-height:210px;overflow-y:auto;"></div>
     <button onclick="grupoGuardar('${id||''}')" class="btn-primary w-full">Guardar grupo</button>`);
   window._grupoEditId = id || '';
   window._grupoSocios = new Set(Object.keys(asignaciones).filter(sid=>asignaciones[sid]===id));
-  renderCicloActual();
   renderGrupoSocios();
 }
 function renderGrupoSocios(){
@@ -517,8 +524,13 @@ function renderCicloActual(){
 }
 async function grupoGuardar(id){
   const nombre=document.getElementById('gNombre').value.trim(); if(!nombre) return toast('Ponle un nombre','#dc2626');
+  const libres=Math.max(1,parseInt(document.getElementById('gLibres').value)||1);
+  const trabajo=Math.max(1,parseInt(document.getElementById('gTrabajo').value)||1);
+  const idLibre=(turnos.find(t=>t.es_libre)||{}).id||'t_libre';
+  const idTrab=(turnos.find(t=>t.id==='t_trabajo')||turnos.find(t=>!t.es_libre)||{}).id||'t_trabajo';
+  const ciclo=[]; for(let i=0;i<libres;i++)ciclo.push(idLibre); for(let i=0;i<trabajo;i++)ciclo.push(idTrab);
   const gid = id || uid('g');
-  const row={ nombre, color:window._gColor||'#6366f1', ciclo:window._ciclo, fecha_base:document.getElementById('gFecha').value||fechaISO(new Date()) };
+  const row={ nombre, color:window._gColor||'#6366f1', ciclo, dias_libres:libres, dias_trabajo:trabajo, fecha_base:document.getElementById('gFecha').value||fechaISO(new Date()) };
   if(id){ await db.from('horarios_grupos').update(row).eq('id',id); }
   else { await db.from('horarios_grupos').insert({ id:gid, ...row }); }
 
