@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Horarios: comparar grupos con su calendario de turnos
+- En la pestaña **Grupos** cada grupo se puede **desplegar** ("📅 Ver calendario") para ver un **mini calendario mensual de su rotación** (días libres en verde), además de sus socios (que ya se listaban).
+- **Navegación de mes compartida** en el panel: al cambiar de mes se actualizan todos los calendarios abiertos, para **comparar** entre grupos cuándo descansa cada uno en el mismo mes.
+- Nuevas funciones: `turnoDeGrupoEnFecha`, `miniCalGrupo`, `gruposMes`, `toggleGrupoCal`.
+- Archivos: `index2.html`.
+
 #### 2026-07-07 — Horarios: el botón "Instalar" se oculta si ya está instalada
 - **Fix:** el botón "📲 Instalar app" ahora **arranca oculto** y solo aparece cuando el navegador confirma que se puede instalar (evento `beforeinstallprompt`) o en iPhone que aún no esté en modo app.
 - Si la app ya está instalada / abierta en modo standalone (`display-mode: standalone` o `navigator.standalone`), el botón **no se muestra**. También se oculta tras instalarse (`appinstalled`).

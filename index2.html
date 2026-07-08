@@ -441,14 +441,45 @@ async function turnoBorrar(id){
 }
 
 // ── Grupos ──
+let gruposViewDate=new Date();
+let gruposExpand=new Set();
+function gruposMes(delta){ gruposViewDate=new Date(gruposViewDate.getFullYear(),gruposViewDate.getMonth()+delta,1); renderGrupos(); }
+function toggleGrupoCal(id){ if(gruposExpand.has(id)) gruposExpand.delete(id); else gruposExpand.add(id); renderGrupos(); }
+function turnoDeGrupoEnFecha(g,d){
+  if(!g||!Array.isArray(g.ciclo)||!g.ciclo.length) return null;
+  let idx=diasEntre(g.fecha_base,d)%g.ciclo.length; if(idx<0) idx+=g.ciclo.length;
+  return turnosMap[g.ciclo[idx]]||null;
+}
+function miniCalGrupo(g){
+  const hoyISO=fechaISO(new Date());
+  const head=['L','M','X','J','V','S','D'].map(d=>`<div class="text-center text-[8px] text-slate-500 font-bold">${d}</div>`).join('');
+  const cells=celdasMes(gruposViewDate).map(d=>{
+    if(!d) return '<div></div>';
+    const t=turnoDeGrupoEnFecha(g,d); const hoy=fechaISO(d)===hoyISO;
+    let bg='#0f172a',col='#475569',txt='';
+    if(t&&t.es_libre){ bg='#10b98130'; col='#6ee7b7'; txt='<span style="font-size:7px;font-weight:800;color:#34d399;line-height:1">L</span>'; }
+    else if(t){ bg=t.color+'22'; col='#cbd5e1'; }
+    return `<div style="aspect-ratio:1;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:${bg};${hoy?'outline:1.5px solid #38bdf8;outline-offset:-1px;':''}"><span style="font-size:9px;font-weight:${t&&t.es_libre?'800':'600'};color:${col}">${d.getDate()}</span>${txt}</div>`;
+  }).join('');
+  return `<div class="mt-3 p-2 rounded-lg" style="background:#0b1220;border:1px solid #1e293b;">
+    <div class="grid grid-cols-7 gap-1 mb-1">${head}</div>
+    <div class="grid grid-cols-7 gap-1">${cells}</div>
+  </div>`;
+}
 function renderGrupos(){
   const c=document.getElementById('gruposLista');
-  if(!grupos.length){ c.innerHTML='<div class="text-slate-500 text-sm text-center py-6">Sin grupos. Crea el primero.</div>'; return; }
-  c.innerHTML=grupos.map(g=>{
+  const nav=`<div class="card p-2 flex items-center justify-between mb-3">
+      <button onclick="gruposMes(-1)" class="btn-ghost">‹</button>
+      <div class="font-extrabold text-sm">${MESES[gruposViewDate.getMonth()]} ${gruposViewDate.getFullYear()}</div>
+      <button onclick="gruposMes(1)" class="btn-ghost">›</button>
+    </div>`;
+  if(!grupos.length){ c.innerHTML=nav+'<div class="text-slate-500 text-sm text-center py-6">Sin grupos. Crea el primero.</div>'; return; }
+  c.innerHTML=nav+'<p class="text-[11px] text-slate-500 mb-2">Toca “📅 Ver calendario” en cada grupo para comparar sus libres en el mismo mes.</p>'+grupos.map(g=>{
     const miembros=sociosMesas.filter(s=>asignaciones[s.id]===g.id);
     const libres=g.dias_libres||(g.ciclo||[]).filter(t=>{const x=turnosMap[t];return x&&x.es_libre;}).length;
     const trab=g.dias_trabajo||((g.ciclo||[]).length-libres);
-    return `<div class="card p-3">
+    const abierto=gruposExpand.has(g.id);
+    return `<div class="card p-3 mb-3">
       <div class="flex items-center gap-2 mb-2"><span class="w-4 h-4 rounded-full" style="background:${g.color}"></span>
         <b class="text-sm">${esc(g.nombre)}</b>
         <span class="text-xs text-slate-400">· ${miembros.length} socio(s)</span>
@@ -460,7 +491,9 @@ function renderGrupos(){
         <span class="chip" style="background:#0ea5e922;color:#38bdf8">💼 ${trab} trabajo</span>
         <span class="chip" style="background:#33415544;color:#cbd5e1">Comienza ${g.fecha_base}</span>
       </div>
-      <div class="text-[11px] text-slate-500">${miembros.length?('👥 '+miembros.map(s=>esc(s.nombre+' '+s.apellido)).join(', ')):'Sin socios asignados'}</div>
+      <div class="text-[11px] text-slate-500 mb-2">${miembros.length?('👥 '+miembros.map(s=>esc(s.nombre+' '+s.apellido)).join(', ')):'Sin socios asignados'}</div>
+      <button onclick="toggleGrupoCal('${g.id}')" class="btn-ghost text-xs w-full">${abierto?'▲ Ocultar calendario':'📅 Ver calendario'}</button>
+      ${abierto?miniCalGrupo(g):''}
     </div>`;
   }).join('');
 }
