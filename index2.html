@@ -58,7 +58,7 @@
       <div class="flex-1"><div class="font-bold">Soy Supervisor</div><div class="text-xs text-slate-400">Crear y asignar turnos</div></div>
       <span class="text-slate-500">›</span>
     </button>
-    <button id="btnInstalar" onclick="instalarApp()" class="w-full mt-5 py-3 rounded-xl text-sm font-bold" style="background:#1e293b;border:1px solid #334155;color:#38bdf8;">📲 Instalar app en este dispositivo</button>
+    <button id="btnInstalar" onclick="instalarApp()" class="w-full mt-5 py-3 rounded-xl text-sm font-bold" style="display:none;background:#1e293b;border:1px solid #334155;color:#38bdf8;">📲 Instalar app en este dispositivo</button>
   </div>
 </div>
 
@@ -678,18 +678,23 @@ if('serviceWorker' in navigator){
       .catch(err => console.warn('[Horarios SW] error:', err));
   });
 }
-// ── Botón instalar (Android/Chrome/Edge muestran prompt; iOS: instrucciones) ──
+// ── Botón instalar: solo visible si la app NO está instalada ──
 let _deferredPrompt=null;
-window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); _deferredPrompt=e; });
+function _estaInstalada(){ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
+function _mostrarBtnInstalar(v){ const b=document.getElementById('btnInstalar'); if(b) b.style.display = (v && !_estaInstalada()) ? 'block' : 'none'; }
+window.addEventListener('DOMContentLoaded', ()=>{
+  if(_estaInstalada()){ _mostrarBtnInstalar(false); return; }
+  // iOS no dispara beforeinstallprompt: mostramos el botón con instrucciones si aún no está en modo app
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent)) _mostrarBtnInstalar(true);
+});
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); _deferredPrompt=e; _mostrarBtnInstalar(true); });
+window.addEventListener('appinstalled', ()=>{ _deferredPrompt=null; _mostrarBtnInstalar(false); });
 async function instalarApp(){
-  if(_deferredPrompt){ _deferredPrompt.prompt(); await _deferredPrompt.userChoice; _deferredPrompt=null; return; }
-  const iOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
-  if(window.matchMedia('(display-mode: standalone)').matches){ alert('La app ya está instalada 🎉'); return; }
-  alert(iOS
+  if(_deferredPrompt){ _deferredPrompt.prompt(); const r=await _deferredPrompt.userChoice; _deferredPrompt=null; if(r&&r.outcome==='accepted') _mostrarBtnInstalar(false); return; }
+  alert(/iphone|ipad|ipod/i.test(navigator.userAgent)
     ? '📱 En iPhone/iPad:\n\n1) Toca el botón Compartir (cuadrado con flecha ↑)\n2) "Agregar a pantalla de inicio"\n3) Ábrela desde el ícono'
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
-window.addEventListener('appinstalled', ()=>{ const b=document.getElementById('btnInstalar'); if(b) b.style.display='none'; });
 </script>
 </body>
 </html>

@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Horarios: el botón "Instalar" se oculta si ya está instalada
+- **Fix:** el botón "📲 Instalar app" ahora **arranca oculto** y solo aparece cuando el navegador confirma que se puede instalar (evento `beforeinstallprompt`) o en iPhone que aún no esté en modo app.
+- Si la app ya está instalada / abierta en modo standalone (`display-mode: standalone` o `navigator.standalone`), el botón **no se muestra**. También se oculta tras instalarse (`appinstalled`).
+- Archivos: `index2.html`.
+
 #### 2026-07-07 — Horarios: PWA instalable (manifest + service worker)
 - La app de Horarios (`index2.html`) ahora es **instalable** en celular y computador (PWA).
 - Nuevos archivos: `manifest2.json`, `sw2.js` (Service Worker) e iconos `img/horarios-192.png` / `img/horarios-512.png` (calendario, generados a medida).
