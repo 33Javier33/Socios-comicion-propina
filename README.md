@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Horarios: sistema de vacaciones (v15 hábiles / v6 corridos)
+- Se implementó el sistema de **vacaciones** de Turnos Pro en `index2.html`. En la ventana de calendarios del grupo, cada socio tiene un botón **"🏖️ Vacaciones"**.
+- Dos tipos: **v15 = 15 días hábiles** (cuenta solo días hábiles, **saltando fines de semana y feriados chilenos**; marca toda la franja) y **v6 = 6 días adicionales** (corridos). Calcula la **fecha de regreso** (siguiente día hábil).
+- Feriados de Chile calculados por año (fijos + Viernes/Sábado Santo vía cálculo de Pascua).
+- Los días de vacaciones se marcan en el calendario (ámbar v15 / morado v6, con "VAC") y el socio los ve en su app. Se pueden **listar y quitar**.
+- Implementación: se guardan en `horarios_vacaciones` (registro con inicio/regreso/días) y los días se marcan como excepciones con turnos base `t_vac15`/`t_vac6` (protegidos). Migración de tablas/turnos incluida.
+- Archivos: `index2.html`.
+
 #### 2026-07-07 — Horarios: ventana de calendarios por socio del grupo (comparar y editar)
 - Al **pinchar un grupo** (o "📅 Ver calendarios") se abre una **ventana** con el **calendario de cada socio** del grupo, uno debajo del otro, para **compararlos** en el mismo mes (con navegación de mes).
 - Desde ahí, **tocar un día** de cualquier socio abre el selector de turno y **cambia el turno de ese socio solo ese día** (excepción sobre el ciclo). Los días con cambio se marcan con borde ámbar.

@@ -216,7 +216,28 @@ function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.r
 function toast(msg,color){ const t=document.getElementById('toast'); t.textContent=msg; t.style.background=color||'#0284c7'; t.style.bottom='24px'; setTimeout(()=>t.style.bottom='-80px',2600); }
 function fechaISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function diasEntre(baseISO, d){ const [by,bm,bd]=baseISO.split('-').map(Number); const a=Date.UTC(by,bm-1,bd); const b=Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()); return Math.round((b-a)/86400000); }
-function esFuturoInicial(){ return true; }
+
+// ── Feriados de Chile / días hábiles (para vacaciones v15) ──
+function _pascua(y){ const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mes=Math.floor((h+l-7*m+114)/31),dia=((h+l-7*m+114)%31)+1; return new Date(y,mes-1,dia); }
+const _feriadosCache={};
+function _feriados(y){
+  if(_feriadosCache[y]) return _feriadosCache[y];
+  const s=new Set(['01-01','05-01','05-21','06-20','06-29','07-16','08-15','09-18','09-19','10-12','10-31','11-01','12-08','12-25']);
+  const mm=d=>String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const p=_pascua(y); const vs=new Date(p); vs.setDate(p.getDate()-2); const ss=new Date(p); ss.setDate(p.getDate()-1);
+  s.add(mm(vs)); s.add(mm(ss));
+  _feriadosCache[y]=s; return s;
+}
+function esFeriado(d){ return _feriados(d.getFullYear()).has(String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')); }
+function esHabil(d){ const w=d.getDay(); return w!==0 && w!==6 && !esFeriado(d); }
+// Calcula los días de una vacación y la fecha de regreso (siguiente hábil)
+function calcVacacion(tipo, inicioISO){
+  const [y,m,dd]=inicioISO.split('-').map(Number); let cur=new Date(y,m-1,dd); const dias=[];
+  if(tipo==='v6'){ for(let i=0;i<6;i++){ dias.push(fechaISO(cur)); cur.setDate(cur.getDate()+1); } }
+  else { let hab=0; let guard=0; while(hab<15 && guard<60){ dias.push(fechaISO(cur)); if(esHabil(cur)) hab++; cur.setDate(cur.getDate()+1); guard++; } }
+  let reg=new Date(cur); let g2=0; while(!esHabil(reg) && g2<30){ reg.setDate(reg.getDate()+1); g2++; }
+  return { dias, fecha_regreso: fechaISO(reg) };
+}
 
 // ══════════ Carga de datos ══════════
 async function cargarBase(){
@@ -326,8 +347,9 @@ function pintarCalendario(cont, date, socioId, excepciones, onDayClick){
         bg='#10b98130'; col='#6ee7b7'; border=esHoy?'2px solid #38bdf8':'1.5px solid #10b981';
         tno='<span class="tno" style="color:#34d399;font-weight:800;font-size:10px;">LIBRE</span>';
       } else {
+        const esVac=(t.id==='t_vac15'||t.id==='t_vac6');
         bg=t.color+'22'; col='#e2e8f0'; border=esHoy?'2px solid #38bdf8':`1px solid ${t.color}55`;
-        tno=`<span class="tno" style="color:${t.color}">${esc(t.nombre)}</span>`;
+        tno=`<span class="tno" style="color:${t.color};${esVac?'font-weight:800;':''}">${esVac?'VAC':esc(t.nombre)}</span>`;
       }
     }
     const clk=onDayClick?`onclick="${onDayClick}('${iso}')" style="cursor:pointer;"`:'';
@@ -433,7 +455,7 @@ async function turnoGuardar(id){
   cerrarModal(); await cargarBase(); renderTurnos(); toast('Turno guardado');
 }
 async function turnoBorrar(id){
-  if(id==='t_libre'||id==='t_trabajo') return toast('Este turno base (Libre/Trabaja) no se puede borrar','#dc2626');
+  if(['t_libre','t_trabajo','t_vac15','t_vac6'].includes(id)) return toast('Este turno base no se puede borrar','#dc2626');
   const usado=grupos.some(g=>(g.ciclo||[]).includes(id));
   if(usado && !confirm('Este turno se usa en el ciclo de algún grupo. ¿Borrarlo igual?')) return;
   if(!usado && !confirm('¿Borrar este turno?')) return;
@@ -510,14 +532,59 @@ function gcalSocioCard(s){
     const esExc=exc[iso]!==undefined;
     let bg='#0f172a',col='#475569',txt='';
     if(t&&t.es_libre){ bg='#10b98130'; col='#6ee7b7'; txt='<span style="font-size:7px;font-weight:800;color:#34d399;line-height:1">L</span>'; }
-    else if(t){ bg=t.color+'22'; col='#cbd5e1'; txt=`<span style="font-size:6px;font-weight:700;color:${t.color};line-height:1">${esc((t.nombre||'').slice(0,4))}</span>`; }
+    else if(t){ const esVac=(t.id==='t_vac15'||t.id==='t_vac6'); bg=t.color+'22'; col='#cbd5e1'; txt=`<span style="font-size:${esVac?'7px':'6px'};font-weight:${esVac?'800':'700'};color:${t.color};line-height:1">${esVac?'VAC':esc((t.nombre||'').slice(0,4))}</span>`; }
     return `<div onclick="gcalDia('${s.id}','${iso}')" style="cursor:pointer;aspect-ratio:1;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:${bg};outline:${hoy?'1.5px solid #38bdf8':(esExc?'1.5px solid #f59e0b':'none')};outline-offset:-1px;"><span style="font-size:9px;font-weight:${t&&t.es_libre?'800':'600'};color:${col}">${d.getDate()}</span>${txt}</div>`;
   }).join('');
   return `<div class="card p-2 mb-3">
-    <div class="text-xs font-bold mb-1">${esc(s.nombre)} ${esc(s.apellido)}</div>
+    <div class="flex items-center gap-2 mb-1">
+      <div class="text-xs font-bold flex-1 min-w-0 truncate">${esc(s.nombre)} ${esc(s.apellido)}</div>
+      <button onclick="vacModal('${s.id}')" class="btn-ghost" style="font-size:11px;padding:4px 8px;">🏖️ Vacaciones</button>
+    </div>
     <div class="grid grid-cols-7 gap-1 mb-1">${head}</div>
     <div class="grid grid-cols-7 gap-1">${cells}</div>
   </div>`;
+}
+async function vacModal(socioId){
+  const s=sociosMesas.find(x=>x.id===socioId);
+  const {data}=await db.from('horarios_vacaciones').select('*').eq('socio_id',socioId).order('fecha_inicio');
+  const lista=(data||[]).map(v=>{
+    const col=v.tipo==='v6'?'#8b5cf6':'#f59e0b'; const nom=v.tipo==='v6'?'6 días adicionales':'15 días hábiles';
+    return `<div class="card p-2 flex items-center gap-2 mb-2"><span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${col}"></span>
+      <div class="flex-1 min-w-0"><div class="text-xs font-bold">${nom}</div><div class="text-[11px] text-slate-400">${v.fecha_inicio} → regreso ${v.fecha_regreso||'-'} · ${(v.dias||[]).length} días</div></div>
+      <button onclick="vacQuitar('${v.id}','${socioId}')" class="btn-ghost text-xs" style="background:#7f1d1d;color:#fecaca;">🗑</button></div>`;
+  }).join('') || '<div class="text-slate-500 text-xs text-center py-3">Sin vacaciones registradas</div>';
+  abrirModal(`<h3 class="font-extrabold mb-1">🏖️ Vacaciones</h3>
+    <p class="text-xs text-slate-400 mb-3">${esc(s?s.nombre+' '+s.apellido:'')}</p>
+    <label class="text-[11px] text-slate-400 font-semibold">Tipo</label>
+    <select id="vacTipo" class="fld mt-1 mb-2">
+      <option value="v15">15 días hábiles (salta fines de semana y feriados)</option>
+      <option value="v6">6 días adicionales (corridos)</option>
+    </select>
+    <label class="text-[11px] text-slate-400 font-semibold">Fecha de inicio</label>
+    <input id="vacInicio" type="date" class="fld mt-1 mb-3" value="${fechaISO(_gcalDate)}">
+    <button onclick="vacGuardar('${socioId}')" class="btn-primary w-full mb-4">Agregar vacaciones</button>
+    <div class="text-xs text-slate-400 font-semibold mb-2">Registradas</div>
+    ${lista}
+    <button onclick="gcalRender()" class="w-full btn-ghost mt-2">‹ Volver a los calendarios</button>`);
+}
+async function vacGuardar(socioId){
+  const tipo=document.getElementById('vacTipo').value;
+  const inicio=document.getElementById('vacInicio').value;
+  if(!inicio) return toast('Elige la fecha de inicio','#dc2626');
+  const {dias,fecha_regreso}=calcVacacion(tipo,inicio);
+  const vturno = tipo==='v6' ? 't_vac6' : 't_vac15';
+  await db.from('horarios_vacaciones').insert({ id:uid('vac'), socio_id:socioId, tipo, fecha_inicio:inicio, fecha_regreso, dias });
+  const rows=dias.map(f=>({ id:uid('ex'), socio_id:socioId, fecha:f, turno_id:vturno }));
+  for(let j=0;j<rows.length;j+=200){ await db.from('horarios_excepciones').upsert(rows.slice(j,j+200),{onConflict:'socio_id,fecha'}); }
+  toast('Vacaciones agregadas ('+dias.length+' días)'); vacModal(socioId);
+}
+async function vacQuitar(recId, socioId){
+  if(!confirm('¿Quitar estas vacaciones?')) return;
+  const {data}=await db.from('horarios_vacaciones').select('dias').eq('id',recId).maybeSingle();
+  const dias=(data&&data.dias)||[];
+  for(let j=0;j<dias.length;j+=200){ await db.from('horarios_excepciones').delete().eq('socio_id',socioId).in('fecha',dias.slice(j,j+200)); }
+  await db.from('horarios_vacaciones').delete().eq('id',recId);
+  toast('Vacaciones quitadas'); vacModal(socioId);
 }
 function gcalDia(socioId, iso){
   const opts=turnos.map(t=>`<button onclick="gcalPoner('${socioId}','${iso}','${t.id}')" class="w-full card p-3 flex items-center gap-3 text-left mb-2"><span class="w-4 h-4 rounded-full" style="background:${t.color}"></span><span class="font-semibold text-sm">${esc(t.nombre)}</span>${t.hora_inicio?`<span class="text-xs text-slate-400 ml-auto">${t.hora_inicio}–${t.hora_fin}</span>`:''}</button>`).join('');
