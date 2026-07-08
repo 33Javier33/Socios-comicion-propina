@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Horarios: importar JSON desde la app de Horarios (Turnos Pro)
+- Nuevo botón **⬇️ Importar JSON** en el supervisor (pestaña Turnos) de `index2.html`.
+- Acepta el archivo JSON exportado de Turnos Pro (`{ profiles:[ { name, shifts:[{id,name,color,startTime,endTime}], assignedShifts:{"YYYY-MM-DD":shiftId} } ] }`), por archivo o pegado.
+- **Importa los turnos** (dedup por nombre, con su color y horario) y permite **mapear cada perfil a un socio**, trayendo su horario **día por día** como excepciones (`horarios_excepciones`).
+- El calendario del socio ahora se muestra aunque no tenga grupo, si tiene turnos asignados por día (import).
+- Archivos: `index2.html`.
+
 #### 2026-07-07 — Nueva app separada de Horarios (`index2.html`)
 - **App independiente** en el mismo repo (`index2.html`), no toca ni interfiere con la app principal (`index.html`). Se accede en `…/index2.html`.
 - **Para el equipo de Mesas**: toma los socios cuya área contiene "mesa" desde la tabla `socios`.

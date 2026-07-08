@@ -144,7 +144,10 @@
     <!-- PANEL: TURNOS -->
     <div id="panTurnos" class="sup-panel">
       <div class="flex items-center justify-between mb-3"><h3 class="font-extrabold">Turnos</h3>
-        <button onclick="turnoModal()" class="btn-primary text-sm px-3 py-2">+ Nuevo turno</button></div>
+        <div class="flex gap-2">
+          <button onclick="importModal()" class="btn-ghost text-sm px-3 py-2">⬇️ Importar JSON</button>
+          <button onclick="turnoModal()" class="btn-primary text-sm px-3 py-2">+ Nuevo</button>
+        </div></div>
       <div id="turnosLista" class="space-y-2"></div>
     </div>
 
@@ -323,12 +326,13 @@ function leyendaTurnos(cont){
 async function renderSocioApp(){
   document.getElementById('socioNombreHdr').textContent=sesion.nombre;
   const gid=asignaciones[sesion.id]; const g=gid?gruposMap[gid]:null;
-  document.getElementById('socioGrupoHdr').textContent=g?('Grupo: '+g.nombre):'Sin grupo asignado';
   document.getElementById('socioMesLabel').textContent=MESES[socioViewDate.getMonth()]+' '+socioViewDate.getFullYear();
-  const sinGrupo=document.getElementById('socioSinGrupo');
-  if(!gid){ sinGrupo.classList.remove('hidden'); document.getElementById('socioCal').innerHTML=''; document.getElementById('socioLeyenda').innerHTML=''; return; }
-  sinGrupo.classList.add('hidden');
   const exc=await excepcionesDe(sesion.id, socioViewDate);
+  const hasExc=Object.keys(exc).length>0;
+  document.getElementById('socioGrupoHdr').textContent = g?('Grupo: '+g.nombre):(hasExc?'Turnos asignados por día':'Sin grupo asignado');
+  const sinGrupo=document.getElementById('socioSinGrupo');
+  if(!gid && !hasExc){ sinGrupo.classList.remove('hidden'); document.getElementById('socioCal').innerHTML=''; document.getElementById('socioLeyenda').innerHTML=''; return; }
+  sinGrupo.classList.add('hidden');
   pintarCalendario(document.getElementById('socioCal'), socioViewDate, sesion.id, exc, null);
   leyendaTurnos(document.getElementById('socioLeyenda'));
 }
@@ -502,6 +506,85 @@ async function resetPinSocio(socioId, nombre){
   if(!confirm(`¿Reiniciar el PIN de ${nombre}?\n\nSu clave actual se borrará y el socio creará una nueva la próxima vez que entre.`)) return;
   await db.from('horarios_pins').delete().eq('usuario',socioId);
   toast('PIN reiniciado — el socio creará uno nuevo');
+}
+
+// ── Importar desde Horarios (Turnos Pro) ──
+let _importData=null;
+function importModal(){
+  _importData=null;
+  abrirModal(`<h3 class="font-extrabold mb-1">Importar desde Horarios (JSON)</h3>
+    <p class="text-xs text-slate-400 mb-3">Sube el archivo JSON que exportaste de tu app de Horarios. Se importan los <b>turnos</b> y, opcionalmente, el horario de cada perfil hacia un socio (día por día).</p>
+    <input type="file" id="impFile" accept="application/json,.json" class="fld mb-2" onchange="importCargarArchivo(this)">
+    <p class="text-[11px] text-slate-500 mb-2">…o pega el contenido del JSON:</p>
+    <textarea id="impPaste" class="fld mb-2" rows="3" placeholder='{"profiles":[ ... ]}'></textarea>
+    <button onclick="importParsePaste()" class="btn-ghost w-full mb-3">Leer JSON pegado</button>
+    <div id="impResumen"></div>`);
+}
+function importCargarArchivo(inp){
+  const f=inp.files&&inp.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{ try{ importProcesar(JSON.parse(e.target.result)); }catch(err){ toast('JSON inválido','#dc2626'); } };
+  r.readAsText(f);
+}
+function importParsePaste(){
+  const t=(document.getElementById('impPaste').value||'').trim(); if(!t) return toast('Pega el JSON primero','#dc2626');
+  try{ importProcesar(JSON.parse(t)); }catch(e){ toast('JSON inválido','#dc2626'); }
+}
+function importProcesar(data){
+  const profiles = Array.isArray(data && data.profiles) ? data.profiles
+    : (Array.isArray(data) ? data : (data && data.name && data.shifts ? [data] : []));
+  if(!profiles.length){ document.getElementById('impResumen').innerHTML='<div class="text-red-400 text-sm mt-2">No encontré perfiles/horarios en ese JSON.</div>'; return; }
+  _importData=profiles;
+  const shifts={}; profiles.forEach(p=>(p.shifts||[]).forEach(s=>{ if(s&&s.id) shifts[s.id]=s; }));
+  const nShifts=Object.keys(shifts).length;
+  const optSoc='<option value="">— no importar —</option>'+sociosMesas.map(s=>`<option value="${s.id}">${esc(s.nombre)} ${esc(s.apellido)}</option>`).join('');
+  const filas=profiles.map((p,i)=>{
+    const nAsig=Object.keys(p.assignedShifts||{}).length;
+    return `<div class="card p-2 flex items-center gap-2 mb-2">
+      <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(p.name||('Perfil '+(i+1)))}</div><div class="text-[11px] text-slate-400">${nAsig} día(s) con turno</div></div>
+      <select id="impMap${i}" class="fld" style="width:auto;max-width:150px;padding:6px;">${optSoc}</select>
+    </div>`;
+  }).join('');
+  document.getElementById('impResumen').innerHTML=`
+    <div class="card p-3 mb-3 text-sm">📋 <b>${profiles.length}</b> perfil(es) · <b>${nShifts}</b> turno(s) en el archivo</div>
+    <label class="inline-flex items-center gap-2 mb-3 text-sm"><input type="checkbox" id="impTurnos" checked> Importar los turnos (Mañana, Tarde…)</label>
+    <div class="text-xs text-slate-400 font-semibold mb-2">Asigna cada perfil a un socio (opcional — deja "no importar" si no corresponde):</div>
+    ${filas}
+    <button onclick="importEjecutar()" class="btn-primary w-full mt-1">Importar ahora</button>`;
+}
+async function importEjecutar(){
+  if(!_importData) return;
+  const impTurnos=document.getElementById('impTurnos').checked;
+  toast('Importando…');
+  await cargarBase();
+  const shifts={}; _importData.forEach(p=>(p.shifts||[]).forEach(s=>{ if(s&&s.id) shifts[s.id]=s; }));
+  const porNombre={}; turnos.forEach(t=>porNombre[(t.nombre||'').toLowerCase()]=t);
+  const shiftMap={}, nuevos=[];
+  for(const sid in shifts){
+    const s=shifts[sid]; const key=(s.name||'').toLowerCase();
+    if(porNombre[key]){ shiftMap[sid]=porNombre[key].id; }
+    else if(impTurnos){
+      const id=uid('t');
+      nuevos.push({ id, nombre:s.name||'Turno', color:s.color||'#3b82f6', hora_inicio:s.startTime||null, hora_fin:s.endTime||null, es_libre:false, orden:(turnos.length+nuevos.length+1) });
+      shiftMap[sid]=id; porNombre[key]={id};
+    }
+  }
+  if(nuevos.length) await db.from('horarios_turnos').insert(nuevos);
+
+  let totalDias=0, perfilesImp=0;
+  for(let i=0;i<_importData.length;i++){
+    const socioId=(document.getElementById('impMap'+i)||{}).value; if(!socioId) continue;
+    const asig=_importData[i].assignedShifts||{}; const rows=[];
+    for(const fecha in asig){
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) continue;
+      const tid=shiftMap[asig[fecha]]; if(!tid) continue;
+      rows.push({ id:uid('ex'), socio_id:socioId, fecha, turno_id:tid });
+    }
+    for(let j=0;j<rows.length;j+=200){ await db.from('horarios_excepciones').upsert(rows.slice(j,j+200),{onConflict:'socio_id,fecha'}); }
+    totalDias+=rows.length; if(rows.length) perfilesImp++;
+  }
+  cerrarModal(); await cargarBase(); renderTurnos(); renderGrupos(); supLlenarSelectSocios(); renderAsignaciones();
+  toast(`✅ ${nuevos.length} turno(s), ${perfilesImp} socio(s), ${totalDias} día(s) importados`);
 }
 
 // ── Modal ──
