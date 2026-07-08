@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Horarios: PWA instalable (manifest + service worker)
+- La app de Horarios (`index2.html`) ahora es **instalable** en celular y computador (PWA).
+- Nuevos archivos: `manifest2.json`, `sw2.js` (Service Worker) e iconos `img/horarios-192.png` / `img/horarios-512.png` (calendario, generados a medida).
+- **Aislamiento:** el Service Worker se registra con **scope `/index2`**, así **no afecta la app principal** (`index.html`, que sigue sin SW). Cachea `index2.html` para abrir rápido.
+- Se agregaron metas de iOS (apple-touch-icon, standalone) y un botón **"📲 Instalar app"** en la pantalla inicial (usa el prompt nativo en Android/Chrome/Edge; en iPhone muestra las instrucciones de "Agregar a inicio").
+- Archivos: `index2.html` (link manifest + metas + registro SW + botón instalar), `manifest2.json`, `sw2.js`, `img/`.
+
 #### 2026-07-07 — Horarios: grupo solo-rotativo + días libres bien marcados
 - El **editor de grupo** ahora es **solo la rotación**: nombre, color, **día en que comienza el ciclo (primer día libre)**, **días libres seguidos** y **días de trabajo**. Se quitó la selección de horarios/turnos y el editor manual del ciclo.
 - En el **calendario del socio los días libres se ven bien marcados y legibles**: fondo verde, borde verde y texto **"LIBRE"** en negrita. Los días de trabajo se muestran como "Trabaja".

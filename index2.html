@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Horarios Mesas — Comisión Propina</title>
 <meta name="theme-color" content="#0f172a">
+<!-- PWA (instalable en celular y computador) -->
+<link rel="manifest" href="manifest2.json">
+<link rel="apple-touch-icon" href="img/horarios-192.png">
+<link rel="icon" type="image/png" href="img/horarios-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Horarios">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -50,6 +58,7 @@
       <div class="flex-1"><div class="font-bold">Soy Supervisor</div><div class="text-xs text-slate-400">Crear y asignar turnos</div></div>
       <span class="text-slate-500">›</span>
     </button>
+    <button id="btnInstalar" onclick="instalarApp()" class="w-full mt-5 py-3 rounded-xl text-sm font-bold" style="background:#1e293b;border:1px solid #334155;color:#38bdf8;">📲 Instalar app en este dispositivo</button>
   </div>
 </div>
 
@@ -660,6 +669,27 @@ async function importEjecutar(){
 // ── Modal ──
 function abrirModal(html){ document.getElementById('modalContent').innerHTML=html; document.getElementById('modalBox').classList.add('active'); }
 function cerrarModal(){ document.getElementById('modalBox').classList.remove('active'); }
+
+// ── PWA: Service Worker (acotado a /index2, no afecta la app principal) ──
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw2.js', { scope: '/index2' })
+      .then(reg => console.log('[Horarios SW] registrado:', reg.scope))
+      .catch(err => console.warn('[Horarios SW] error:', err));
+  });
+}
+// ── Botón instalar (Android/Chrome/Edge muestran prompt; iOS: instrucciones) ──
+let _deferredPrompt=null;
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); _deferredPrompt=e; });
+async function instalarApp(){
+  if(_deferredPrompt){ _deferredPrompt.prompt(); await _deferredPrompt.userChoice; _deferredPrompt=null; return; }
+  const iOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  if(window.matchMedia('(display-mode: standalone)').matches){ alert('La app ya está instalada 🎉'); return; }
+  alert(iOS
+    ? '📱 En iPhone/iPad:\n\n1) Toca el botón Compartir (cuadrado con flecha ↑)\n2) "Agregar a pantalla de inicio"\n3) Ábrela desde el ícono'
+    : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
+}
+window.addEventListener('appinstalled', ()=>{ const b=document.getElementById('btnInstalar'); if(b) b.style.display='none'; });
 </script>
 </body>
 </html>
