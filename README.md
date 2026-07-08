@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Horarios: ventana de calendarios por socio del grupo (comparar y editar)
+- Al **pinchar un grupo** (o "📅 Ver calendarios") se abre una **ventana** con el **calendario de cada socio** del grupo, uno debajo del otro, para **compararlos** en el mismo mes (con navegación de mes).
+- Desde ahí, **tocar un día** de cualquier socio abre el selector de turno y **cambia el turno de ese socio solo ese día** (excepción sobre el ciclo). Los días con cambio se marcan con borde ámbar.
+- Reemplaza el calendario único por grupo por esta vista comparativa por socio.
+- Nuevas funciones: `grupoCalendarios`, `gcalRender`, `gcalSocioCard`, `gcalDia`, `gcalPoner`, `gcalQuitar`.
+- Archivos: `index2.html`.
+
 #### 2026-07-07 — Horarios: comparar grupos con su calendario de turnos
 - En la pestaña **Grupos** cada grupo se puede **desplegar** ("📅 Ver calendario") para ver un **mini calendario mensual de su rotación** (días libres en verde), además de sus socios (que ya se listaban).
 - **Navegación de mes compartida** en el panel: al cambiar de mes se actualizan todos los calendarios abiertos, para **comparar** entre grupos cuándo descansa cada uno en el mismo mes.
