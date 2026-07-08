@@ -436,7 +436,7 @@ function renderGrupos(){
         <button onclick="grupoModal('${g.id}')" class="btn-ghost text-xs ml-auto">✎</button>
         <button onclick="grupoBorrar('${g.id}')" class="btn-ghost text-xs" style="background:#7f1d1d;color:#fecaca;">🗑</button>
       </div>
-      <div class="text-[11px] text-slate-400 mb-1">Ciclo (${(g.ciclo||[]).length} días) desde ${g.fecha_base}:</div>
+      <div class="text-[11px] text-slate-400 mb-1">Ciclo de ${(g.ciclo||[]).length} días · primer libre: ${g.fecha_base}</div>
       <div class="flex flex-wrap gap-1.5 mb-2">${ciclo||'<span class="text-xs text-slate-500">Ciclo vacío</span>'}</div>
       <div class="text-[11px] text-slate-500">${miembros.length?('👥 '+miembros.map(s=>esc(s.nombre+' '+s.apellido)).join(', ')):'Sin socios asignados'}</div>
     </div>`;
@@ -451,11 +451,22 @@ function grupoModal(id){
     <input id="gNombre" class="fld mt-1 mb-3" value="${esc(g.nombre)}" placeholder="Ej: Grupo A">
     <label class="text-xs text-slate-400 font-semibold">Color</label>
     <div id="gColores" class="flex flex-wrap gap-2 mt-1 mb-3">${colores.map(c=>`<button onclick="gPickColor('${c}')" data-c="${c}" class="w-8 h-8 rounded-full" style="background:${c};outline:${c===g.color?'3px solid #fff':'none'};outline-offset:2px;"></button>`).join('')}</div>
-    <label class="text-xs text-slate-400 font-semibold">Fecha base (día 1 del ciclo)</label>
-    <input id="gFecha" type="date" class="fld mt-1 mb-4" value="${g.fecha_base}">
-    <label class="text-xs text-slate-400 font-semibold">Ciclo de turnos (en orden)</label>
-    <p class="text-[11px] text-slate-500 mb-2">Toca turnos para agregarlos al ciclo. Se repite en bucle desde la fecha base.</p>
-    <div class="flex flex-wrap gap-2 mb-2">${turnos.map(t=>`<button onclick="cicloAdd('${t.id}')" class="chip" style="background:${t.color}22;color:${t.color}">+ ${esc(t.nombre)}</button>`).join('')}</div>
+    <label class="text-xs text-slate-400 font-semibold">Primer día libre (fecha base)</label>
+    <p class="text-[11px] text-slate-500 mb-1">Marca el día en que empiezan los libres. Desde ahí rota en bucle.</p>
+    <input id="gFecha" type="date" class="fld mt-1 mb-3" value="${g.fecha_base}">
+    <div class="card p-3 mb-3">
+      <div class="text-xs font-bold text-sky-300 mb-2">↻ Ciclo rotativo (libres + trabajo)</div>
+      <div class="grid grid-cols-2 gap-2 mb-2">
+        <div><label class="text-[11px] text-slate-400 font-semibold">Días libres seguidos</label><input id="gLibres" type="number" min="1" value="2" class="fld mt-1"></div>
+        <div><label class="text-[11px] text-slate-400 font-semibold">Días de trabajo</label><input id="gTrabajo" type="number" min="1" value="6" class="fld mt-1"></div>
+      </div>
+      <label class="text-[11px] text-slate-400 font-semibold">Turno de los días de trabajo</label>
+      <select id="gTurnoTrabajo" class="fld mt-1 mb-2">${turnos.filter(t=>!t.es_libre).map(t=>`<option value="${t.id}">${esc(t.nombre)}${t.hora_inicio?` (${t.hora_inicio}–${t.hora_fin})`:''}</option>`).join('')}</select>
+      <button onclick="generarCicloRapido()" class="btn-primary w-full text-sm">Generar rotación</button>
+      <p class="text-[11px] text-slate-500 mt-2">Ej: primer libre <b>7</b>, 2 libres y 6 trabajo → libres 7‑8, trabajo 9‑14, libres 15‑16, trabajo 17‑22…</p>
+    </div>
+    <label class="text-xs text-slate-400 font-semibold">Ciclo resultante (avanzado — puedes ajustarlo a mano)</label>
+    <div class="flex flex-wrap gap-2 mt-1 mb-2">${turnos.map(t=>`<button onclick="cicloAdd('${t.id}')" class="chip" style="background:${t.color}22;color:${t.color}">+ ${esc(t.nombre)}</button>`).join('')}</div>
     <div id="cicloActual" class="flex flex-wrap gap-1.5 min-h-[36px] p-2 rounded-lg mb-4" style="background:#0f172a;border:1px dashed #334155;"></div>
     <label class="text-xs text-slate-400 font-semibold">Socios de este grupo</label>
     <p class="text-[11px] text-slate-500 mb-2">Los que marques compartirán el mismo ciclo, turnos y <b>días libres</b>.</p>
@@ -484,6 +495,19 @@ function renderGrupoSocios(){
 }
 function gSocioToggle(id){ if(window._grupoSocios.has(id)) window._grupoSocios.delete(id); else window._grupoSocios.add(id); renderGrupoSocios(); }
 function gPickColor(c){ window._gColor=c; document.querySelectorAll('#gColores button').forEach(b=>b.style.outline=b.dataset.c===c?'3px solid #fff':'none'); }
+function generarCicloRapido(){
+  const rest=Math.max(1,parseInt(document.getElementById('gLibres').value)||1);
+  const work=Math.max(1,parseInt(document.getElementById('gTrabajo').value)||1);
+  const wt=document.getElementById('gTurnoTrabajo').value;
+  const libre=(turnos.find(t=>t.es_libre)||{}).id;
+  if(!libre) return toast('Crea primero un turno marcado como "Libre"','#dc2626');
+  if(!wt) return toast('Crea/elige un turno de trabajo','#dc2626');
+  window._ciclo=[];
+  for(let i=0;i<rest;i++) window._ciclo.push(libre);
+  for(let i=0;i<work;i++) window._ciclo.push(wt);
+  renderCicloActual();
+  toast(`Ciclo de ${rest+work} días: ${rest} libre(s) + ${work} trabajo`);
+}
 function cicloAdd(tid){ window._ciclo.push(tid); renderCicloActual(); }
 function cicloDel(i){ window._ciclo.splice(i,1); renderCicloActual(); }
 function renderCicloActual(){

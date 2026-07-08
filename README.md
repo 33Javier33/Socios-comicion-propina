@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Horarios: ciclo rotativo por días libres + trabajo (como Turnos Pro)
+- El editor de grupo ahora arma el ciclo como se piensa realmente: **"Primer día libre" (fecha base)** + **días libres seguidos** + **días de trabajo** + **turno de trabajo** → botón **"Generar rotación"**.
+- Ejemplo confirmado: primer libre 7, 2 libres y 6 trabajo → libres 7‑8, trabajo 9‑14, libres 15‑16, trabajo 17‑22… (rota en bucle).
+- Internamente genera el `ciclo` = [Libre×N, Trabajo×M]; se mantiene el editor manual (avanzado) para ajustes finos.
+- Etiqueta del grupo actualizada a "Ciclo de N días · primer libre: FECHA".
+- Archivos: `index2.html`.
+
 #### 2026-07-07 — Horarios: elegir los socios desde el propio grupo
 - En el editor de grupo (`index2.html`) ahora se **eligen los socios del grupo** con una lista de casillas (con buscador). Todos los socios marcados comparten el mismo ciclo, turnos y **días libres**.
 - Al guardar, se aplican las asignaciones: los marcados pasan a este grupo (moviéndolos de otro si estaban), y los desmarcados que estaban antes se quitan.
