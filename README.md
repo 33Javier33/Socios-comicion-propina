@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Horarios: elegir los socios desde el propio grupo
+- En el editor de grupo (`index2.html`) ahora se **eligen los socios del grupo** con una lista de casillas (con buscador). Todos los socios marcados comparten el mismo ciclo, turnos y **días libres**.
+- Al guardar, se aplican las asignaciones: los marcados pasan a este grupo (moviéndolos de otro si estaban), y los desmarcados que estaban antes se quitan.
+- La lista de grupos muestra ahora los **nombres de los integrantes**. Si un socio ya está en otro grupo, la casilla lo indica.
+- Sigue disponible también la pestaña "Asignar" (por socio). Archivos: `index2.html`.
+
 #### 2026-07-07 — Horarios: importar JSON desde la app de Horarios (Turnos Pro)
 - Nuevo botón **⬇️ Importar JSON** en el supervisor (pestaña Turnos) de `index2.html`.
 - Acepta el archivo JSON exportado de Turnos Pro (`{ profiles:[ { name, shifts:[{id,name,color,startTime,endTime}], assignedShifts:{"YYYY-MM-DD":shiftId} } ] }`), por archivo o pegado.
