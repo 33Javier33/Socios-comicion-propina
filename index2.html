@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Horarios Mesas — Comisión Propina</title>
+<meta name="theme-color" content="#0f172a">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{ -webkit-tap-highlight-color:transparent; box-sizing:border-box; }
+  body{ font-family:'Inter',sans-serif; background:#0f172a; color:#e2e8f0; margin:0; min-height:100dvh; }
+  .screen{ display:none; }
+  .screen.active{ display:flex; }
+  input,select{ font-family:inherit; }
+  .cal-cell{ aspect-ratio:1/1; border-radius:11px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:12px; font-weight:600; position:relative; overflow:hidden; }
+  .cal-cell .tno{ font-size:9px; font-weight:700; line-height:1.05; margin-top:2px; padding:0 2px; text-align:center; }
+  .pin-dot{ width:16px; height:16px; border-radius:50%; border:2px solid #475569; transition:all .15s; }
+  .pin-dot.on{ background:#38bdf8; border-color:#38bdf8; }
+  .keypad-btn{ height:64px; border-radius:16px; background:#1e293b; border:1px solid #334155; font-size:24px; font-weight:700; color:#e2e8f0; cursor:pointer; transition:.1s; }
+  .keypad-btn:active{ transform:scale(0.95); background:#334155; }
+  .tab-btn{ flex:1; padding:10px; font-size:12px; font-weight:700; color:#94a3b8; border:none; background:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .tab-btn.active{ color:#38bdf8; }
+  .sup-panel{ display:none; }
+  .sup-panel.active{ display:block; }
+  .chip{ display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+  ::-webkit-scrollbar{ width:0; }
+  .card{ background:#1e293b; border:1px solid #334155; border-radius:16px; }
+  .btn-primary{ background:linear-gradient(135deg,#0ea5e9,#0284c7); color:#fff; font-weight:700; border:none; border-radius:12px; padding:12px; cursor:pointer; }
+  .btn-ghost{ background:#334155; color:#e2e8f0; font-weight:600; border:none; border-radius:10px; padding:9px 12px; cursor:pointer; }
+  .fld{ width:100%; background:#0f172a; border:1px solid #334155; border-radius:10px; padding:10px 12px; color:#e2e8f0; font-size:14px; }
+</style>
+</head>
+<body class="flex flex-col">
+
+<!-- ══════════ LOGIN: ROL ══════════ -->
+<div id="scrRole" class="screen active flex-col items-center justify-center min-h-[100dvh] p-6">
+  <div class="w-full max-w-sm text-center">
+    <div class="w-20 h-20 rounded-3xl bg-sky-500/15 border border-sky-500/30 mx-auto mb-5 flex items-center justify-center text-4xl">🗓️</div>
+    <h1 class="text-2xl font-extrabold mb-1">Horarios Mesas</h1>
+    <p class="text-sm text-slate-400 mb-8">Turnos del equipo de Mesas — Comisión Propina</p>
+    <button onclick="irSocioPick()" class="w-full card p-4 flex items-center gap-3 mb-3 text-left hover:border-sky-500 transition-colors">
+      <div class="w-11 h-11 rounded-xl bg-sky-500/15 flex items-center justify-center text-xl">👤</div>
+      <div class="flex-1"><div class="font-bold">Soy Socio</div><div class="text-xs text-slate-400">Ver mis turnos</div></div>
+      <span class="text-slate-500">›</span>
+    </button>
+    <button onclick="irSupervisor()" class="w-full card p-4 flex items-center gap-3 text-left hover:border-indigo-500 transition-colors">
+      <div class="w-11 h-11 rounded-xl bg-indigo-500/15 flex items-center justify-center text-xl">🛡️</div>
+      <div class="flex-1"><div class="font-bold">Soy Supervisor</div><div class="text-xs text-slate-400">Crear y asignar turnos</div></div>
+      <span class="text-slate-500">›</span>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════ LOGIN: ELEGIR SOCIO ══════════ -->
+<div id="scrSocioPick" class="screen flex-col min-h-[100dvh] p-6">
+  <div class="w-full max-w-sm mx-auto flex-1 flex flex-col">
+    <button onclick="volverRol()" class="text-slate-400 text-sm mb-4 self-start">‹ Volver</button>
+    <h2 class="text-xl font-extrabold mb-1">¿Quién eres?</h2>
+    <p class="text-sm text-slate-400 mb-4">Elige tu nombre de la lista</p>
+    <input id="socioBuscar" oninput="renderSocioLista()" placeholder="🔍 Buscar por nombre..." class="fld mb-3">
+    <div id="socioLista" class="flex-1 overflow-y-auto space-y-2 pb-4"></div>
+  </div>
+</div>
+
+<!-- ══════════ PIN ══════════ -->
+<div id="scrPin" class="screen flex-col items-center justify-center min-h-[100dvh] p-6">
+  <div class="w-full max-w-sm text-center">
+    <button onclick="pinCancelar()" class="text-slate-400 text-sm mb-6 self-start block">‹ Volver</button>
+    <div id="pinAvatar" class="w-16 h-16 rounded-2xl bg-sky-500/15 border border-sky-500/30 mx-auto mb-4 flex items-center justify-center text-2xl font-bold text-sky-300">?</div>
+    <h2 id="pinTitulo" class="text-xl font-extrabold mb-1">Ingresa tu PIN</h2>
+    <p id="pinSub" class="text-sm text-slate-400 mb-6">4 dígitos</p>
+    <div class="flex justify-center gap-3 mb-2"><span class="pin-dot" id="pd0"></span><span class="pin-dot" id="pd1"></span><span class="pin-dot" id="pd2"></span><span class="pin-dot" id="pd3"></span></div>
+    <p id="pinError" class="text-sm text-red-400 h-5 mb-4"></p>
+    <div class="grid grid-cols-3 gap-3 max-w-[280px] mx-auto">
+      <button class="keypad-btn" onclick="pinTecla('1')">1</button>
+      <button class="keypad-btn" onclick="pinTecla('2')">2</button>
+      <button class="keypad-btn" onclick="pinTecla('3')">3</button>
+      <button class="keypad-btn" onclick="pinTecla('4')">4</button>
+      <button class="keypad-btn" onclick="pinTecla('5')">5</button>
+      <button class="keypad-btn" onclick="pinTecla('6')">6</button>
+      <button class="keypad-btn" onclick="pinTecla('7')">7</button>
+      <button class="keypad-btn" onclick="pinTecla('8')">8</button>
+      <button class="keypad-btn" onclick="pinTecla('9')">9</button>
+      <button class="keypad-btn" style="background:none;border:none;" onclick="pinBorrar()">⌫</button>
+      <button class="keypad-btn" onclick="pinTecla('0')">0</button>
+      <button class="keypad-btn" style="background:none;border:none;"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ APP SOCIO ══════════ -->
+<div id="appSocio" class="screen flex-col min-h-[100dvh]">
+  <div class="p-5 pt-8" style="background:linear-gradient(135deg,#0369a1,#0284c7);">
+    <div class="flex items-center justify-between">
+      <div><div class="text-xs text-sky-100/80">Mis turnos</div><div id="socioNombreHdr" class="text-lg font-extrabold text-white">...</div><div id="socioGrupoHdr" class="text-xs text-sky-100/80 mt-0.5"></div></div>
+      <button onclick="logout()" class="text-sky-100/90 text-xs bg-white/15 rounded-lg px-3 py-2">Salir</button>
+    </div>
+  </div>
+  <div class="p-4 flex-1 overflow-y-auto pb-8">
+    <div class="flex items-center justify-between mb-3">
+      <button onclick="socioMes(-1)" class="btn-ghost">‹</button>
+      <div id="socioMesLabel" class="font-extrabold text-base"></div>
+      <button onclick="socioMes(1)" class="btn-ghost">›</button>
+    </div>
+    <div class="grid grid-cols-7 gap-1.5 mb-1 text-center text-[10px] font-bold text-slate-500">
+      <div>LU</div><div>MA</div><div>MI</div><div>JU</div><div>VI</div><div>SÁ</div><div>DO</div>
+    </div>
+    <div id="socioCal" class="grid grid-cols-7 gap-1.5"></div>
+    <div id="socioLeyenda" class="mt-5"></div>
+    <div id="socioSinGrupo" class="hidden mt-6 card p-5 text-center text-sm text-slate-400">
+      Aún no tienes un grupo asignado. Pídele al <b>supervisor</b> que te asigne a un grupo de turnos.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ APP SUPERVISOR ══════════ -->
+<div id="appSuper" class="screen flex-col min-h-[100dvh]">
+  <div class="p-4 pt-7 flex items-center justify-between" style="background:linear-gradient(135deg,#4338ca,#6366f1);">
+    <div><div class="text-xs text-indigo-100/80">Supervisor</div><div class="text-lg font-extrabold text-white">Gestión de Horarios</div></div>
+    <button onclick="logout()" class="text-indigo-100/90 text-xs bg-white/15 rounded-lg px-3 py-2">Salir</button>
+  </div>
+
+  <div class="flex-1 overflow-y-auto p-4 pb-24">
+    <!-- PANEL: CALENDARIO -->
+    <div id="panCalendario" class="sup-panel active">
+      <div class="card p-3 mb-4">
+        <label class="text-xs text-slate-400 font-semibold">Ver calendario de un socio</label>
+        <select id="supVerSocio" class="fld mt-1" onchange="supRenderCal()"><option value="">— elige un socio —</option></select>
+      </div>
+      <div id="supCalWrap" class="hidden">
+        <div class="flex items-center justify-between mb-3">
+          <button onclick="supMes(-1)" class="btn-ghost">‹</button>
+          <div id="supMesLabel" class="font-extrabold text-base"></div>
+          <button onclick="supMes(1)" class="btn-ghost">›</button>
+        </div>
+        <div class="grid grid-cols-7 gap-1.5 mb-1 text-center text-[10px] font-bold text-slate-500"><div>LU</div><div>MA</div><div>MI</div><div>JU</div><div>VI</div><div>SÁ</div><div>DO</div></div>
+        <div id="supCal" class="grid grid-cols-7 gap-1.5"></div>
+        <p class="text-[11px] text-slate-500 mt-3">💡 Toca un día para poner una <b>excepción</b> (cambiar el turno solo ese día).</p>
+      </div>
+    </div>
+
+    <!-- PANEL: TURNOS -->
+    <div id="panTurnos" class="sup-panel">
+      <div class="flex items-center justify-between mb-3"><h3 class="font-extrabold">Turnos</h3>
+        <button onclick="turnoModal()" class="btn-primary text-sm px-3 py-2">+ Nuevo turno</button></div>
+      <div id="turnosLista" class="space-y-2"></div>
+    </div>
+
+    <!-- PANEL: GRUPOS -->
+    <div id="panGrupos" class="sup-panel">
+      <div class="flex items-center justify-between mb-3"><h3 class="font-extrabold">Grupos y ciclos</h3>
+        <button onclick="grupoModal()" class="btn-primary text-sm px-3 py-2">+ Nuevo grupo</button></div>
+      <p class="text-[11px] text-slate-500 mb-3">Un grupo rota por un <b>ciclo</b> de turnos (ej. Mañana, Mañana, Tarde, Libre) desde una fecha base. Todos sus socios siguen ese ciclo.</p>
+      <div id="gruposLista" class="space-y-3"></div>
+    </div>
+
+    <!-- PANEL: SOCIOS -->
+    <div id="panSocios" class="sup-panel">
+      <h3 class="font-extrabold mb-3">Asignar socios a grupos</h3>
+      <input id="asigBuscar" oninput="renderAsignaciones()" placeholder="🔍 Buscar socio..." class="fld mb-3">
+      <div id="asigLista" class="space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- Nav supervisor -->
+  <div class="fixed bottom-0 left-0 right-0 flex" style="background:#0f172a;border-top:1px solid #334155;padding-bottom:env(safe-area-inset-bottom);">
+    <button class="tab-btn active" data-pan="Calendario" onclick="supTab('Calendario')"><span>🗓️</span>Calendario</button>
+    <button class="tab-btn" data-pan="Turnos" onclick="supTab('Turnos')"><span>⏰</span>Turnos</button>
+    <button class="tab-btn" data-pan="Grupos" onclick="supTab('Grupos')"><span>👥</span>Grupos</button>
+    <button class="tab-btn" data-pan="Socios" onclick="supTab('Socios')"><span>🧩</span>Asignar</button>
+  </div>
+</div>
+
+<!-- ══════════ MODAL GENÉRICO ══════════ -->
+<div id="modalBox" class="screen fixed inset-0 z-50 items-end justify-center" style="background:rgba(0,0,0,0.6);" onclick="if(event.target===this)cerrarModal()">
+  <div class="w-full max-w-md bg-slate-800 rounded-t-3xl p-5 pb-8 max-h-[90dvh] overflow-y-auto">
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- ══════════ TOAST ══════════ -->
+<div id="toast" class="fixed left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow-lg transition-all" style="bottom:-80px;background:#0284c7;"></div>
+
+<script>
+// ══════════ Supabase ══════════
+const SB_URL = 'https://teemahksasdougehrcly.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlZW1haGtzYXNkb3VnZWhyY2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTkwNjIsImV4cCI6MjA5Njg3NTA2Mn0.EIQ7gRcwf3zYgvGESKw3s5lnZMABN_EuNWsrJK3L1zk';
+const db = supabase.createClient(SB_URL, SB_KEY);
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+// ══════════ Estado ══════════
+let sociosMesas = [], turnos = [], turnosMap = {}, grupos = [], gruposMap = {}, asignaciones = {};
+let sesion = null;               // { rol:'socio'|'super', id, nombre }
+let socioViewDate = new Date();
+let supViewDate = new Date();
+let supSocioSel = '';
+let pinBuffer = '', pinCtx = null; // { modo:'create'|'verify', titulo, sub, avatar, onOk(pin) }
+
+function uid(p){ return (p||'') + Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function toast(msg,color){ const t=document.getElementById('toast'); t.textContent=msg; t.style.background=color||'#0284c7'; t.style.bottom='24px'; setTimeout(()=>t.style.bottom='-80px',2600); }
+function fechaISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function diasEntre(baseISO, d){ const [by,bm,bd]=baseISO.split('-').map(Number); const a=Date.UTC(by,bm-1,bd); const b=Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()); return Math.round((b-a)/86400000); }
+function esFuturoInicial(){ return true; }
+
+// ══════════ Carga de datos ══════════
+async function cargarBase(){
+  const [rs, rt, rg, ra] = await Promise.all([
+    db.from('socios').select('id,nombre,apellido,area').eq('activo',true),
+    db.from('horarios_turnos').select('*').order('orden'),
+    db.from('horarios_grupos').select('*').order('created_at'),
+    db.from('horarios_socio_grupo').select('*')
+  ]);
+  sociosMesas = (rs.data||[]).filter(s => (s.area||'').toLowerCase().includes('mesa'))
+    .sort((a,b)=>`${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`));
+  turnos = rt.data||[]; turnosMap={}; turnos.forEach(t=>turnosMap[t.id]=t);
+  grupos = rg.data||[]; gruposMap={}; grupos.forEach(g=>gruposMap[g.id]=g);
+  asignaciones = {}; (ra.data||[]).forEach(a=>asignaciones[a.socio_id]=a.grupo_id);
+}
+
+// ══════════ Login ══════════
+function volverRol(){ show('scrRole'); }
+async function irSocioPick(){ await cargarBase(); renderSocioLista(); show('scrSocioPick'); }
+function renderSocioLista(){
+  const term=(document.getElementById('socioBuscar').value||'').toLowerCase();
+  const cont=document.getElementById('socioLista');
+  const list=sociosMesas.filter(s=>`${s.nombre} ${s.apellido}`.toLowerCase().includes(term));
+  if(!list.length){ cont.innerHTML='<div class="text-center text-slate-500 text-sm py-6">Sin resultados</div>'; return; }
+  cont.innerHTML=list.map(s=>`<button onclick="socioElegido('${s.id}')" class="w-full card p-3 flex items-center gap-3 text-left hover:border-sky-500 transition-colors">
+    <div class="w-9 h-9 rounded-full bg-sky-500/15 text-sky-300 flex items-center justify-center font-bold text-sm">${esc((s.nombre||'?').charAt(0))}</div>
+    <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(s.nombre)} ${esc(s.apellido)}</div><div class="text-[11px] text-slate-400">${esc(s.area)}</div></div>
+  </button>`).join('');
+}
+
+async function socioElegido(id){
+  const s=sociosMesas.find(x=>x.id===id); if(!s) return;
+  const {data}=await db.from('horarios_pins').select('pin').eq('usuario',id).maybeSingle();
+  const nombre=`${s.nombre} ${s.apellido}`;
+  if(data && data.pin){
+    abrirPin({modo:'verify', titulo:'Ingresa tu PIN', sub:nombre, avatar:(s.nombre||'?').charAt(0), pinReal:data.pin,
+      onOk:()=>entrarSocio(s)});
+  } else {
+    abrirPin({modo:'create', titulo:'Crea tu PIN', sub:'Será tu clave para entrar', avatar:(s.nombre||'?').charAt(0),
+      onOk:async(pin)=>{ await db.from('horarios_pins').upsert({usuario:id,pin}); entrarSocio(s); }});
+  }
+}
+function entrarSocio(s){ sesion={rol:'socio',id:s.id,nombre:`${s.nombre} ${s.apellido}`}; socioViewDate=new Date(); renderSocioApp(); show('appSocio'); }
+
+async function irSupervisor(){
+  await cargarBase();
+  const {data}=await db.from('horarios_pins').select('pin').eq('usuario','SUPERVISOR').maybeSingle();
+  if(data && data.pin){
+    abrirPin({modo:'verify', titulo:'PIN de Supervisor', sub:'Acceso de gestión', avatar:'🛡️', pinReal:data.pin, onOk:entrarSuper});
+  } else {
+    abrirPin({modo:'create', titulo:'Crea el PIN de Supervisor', sub:'Guárdalo bien: da acceso a la gestión', avatar:'🛡️',
+      onOk:async(pin)=>{ await db.from('horarios_pins').upsert({usuario:'SUPERVISOR',pin}); entrarSuper(); }});
+  }
+}
+function entrarSuper(){ sesion={rol:'super'}; supViewDate=new Date(); renderSuper(); show('appSuper'); }
+
+function logout(){ sesion=null; pinBuffer=''; show('scrRole'); }
+
+// ══════════ PIN ══════════
+function abrirPin(ctx){ pinCtx=ctx; pinBuffer=''; document.getElementById('pinTitulo').textContent=ctx.titulo; document.getElementById('pinSub').textContent=ctx.sub||''; document.getElementById('pinAvatar').textContent=ctx.avatar||'?'; document.getElementById('pinError').textContent=''; pinPintar(); show('scrPin'); }
+function pinPintar(){ for(let i=0;i<4;i++){ document.getElementById('pd'+i).classList.toggle('on', i<pinBuffer.length); } }
+function pinTecla(n){ if(pinBuffer.length>=4) return; pinBuffer+=n; pinPintar(); if(pinBuffer.length===4) setTimeout(pinValidar,120); }
+function pinBorrar(){ pinBuffer=pinBuffer.slice(0,-1); pinPintar(); document.getElementById('pinError').textContent=''; }
+function pinCancelar(){ if(sesion) return; if(pinCtx && pinCtx.avatar==='🛡️') show('scrRole'); else show('scrSocioPick'); }
+function pinValidar(){
+  if(pinCtx.modo==='verify'){
+    if(pinBuffer===String(pinCtx.pinReal)){ pinCtx.onOk(pinBuffer); }
+    else { document.getElementById('pinError').textContent='PIN incorrecto'; pinBuffer=''; pinPintar(); }
+  } else { // create
+    const pin=pinBuffer; pinCtx.onOk(pin); }
+}
+
+// ══════════ Cálculo del turno de un día ══════════
+function turnoDeSocioEnFecha(socioId, d, excepciones){
+  const iso=fechaISO(d);
+  if(excepciones && excepciones[iso]!==undefined){ const t=turnosMap[excepciones[iso]]; return t||null; }
+  const gid=asignaciones[socioId]; if(!gid) return undefined; // undefined = sin grupo
+  const g=gruposMap[gid]; if(!g || !Array.isArray(g.ciclo) || !g.ciclo.length) return null;
+  let idx=diasEntre(g.fecha_base, d) % g.ciclo.length; if(idx<0) idx+=g.ciclo.length;
+  return turnosMap[g.ciclo[idx]] || null;
+}
+
+// ══════════ Calendario (render genérico) ══════════
+function celdasMes(date){ // devuelve array de días alineado a Lunes
+  const y=date.getFullYear(), m=date.getMonth();
+  const primero=new Date(y,m,1); let dow=primero.getDay(); dow=(dow===0?6:dow-1); // Lunes=0
+  const dias=new Date(y,m+1,0).getDate();
+  const cells=[]; for(let i=0;i<dow;i++) cells.push(null);
+  for(let d=1; d<=dias; d++) cells.push(new Date(y,m,d));
+  return cells;
+}
+async function excepcionesDe(socioId, date){
+  const y=date.getFullYear(), m=date.getMonth();
+  const desde=fechaISO(new Date(y,m,1)), hasta=fechaISO(new Date(y,m+1,0));
+  const {data}=await db.from('horarios_excepciones').select('fecha,turno_id').eq('socio_id',socioId).gte('fecha',desde).lte('fecha',hasta);
+  const map={}; (data||[]).forEach(e=>map[e.fecha.substring(0,10)]=e.turno_id); return map;
+}
+function pintarCalendario(cont, date, socioId, excepciones, onDayClick){
+  const hoyISO=fechaISO(new Date());
+  cont.innerHTML=celdasMes(date).map(d=>{
+    if(!d) return '<div></div>';
+    const t=turnoDeSocioEnFecha(socioId,d,excepciones);
+    const iso=fechaISO(d); const esHoy=iso===hoyISO;
+    let bg='#1e293b', col='#64748b', tno='', border=esHoy?'2px solid #38bdf8':'1px solid #293449';
+    if(t){ bg=t.color+'22'; col='#e2e8f0'; tno=`<span class="tno" style="color:${t.color}">${esc(t.es_libre?'Libre':t.nombre)}</span>`; border=`1px solid ${t.color}55`; if(esHoy) border='2px solid #38bdf8'; }
+    const clk=onDayClick?`onclick="${onDayClick}('${iso}')" style="cursor:pointer;"`:'';
+    return `<div class="cal-cell" ${clk} style="background:${bg};border:${border};"><span style="color:${col}">${d.getDate()}</span>${tno}</div>`;
+  }).join('');
+}
+function leyendaTurnos(cont){
+  cont.innerHTML='<div class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Turnos</div><div class="flex flex-wrap gap-2">'+
+    turnos.map(t=>`<span class="chip" style="background:${t.color}22;color:${t.color}">${esc(t.nombre)}${t.hora_inicio?` · ${t.hora_inicio}–${t.hora_fin}`:''}</span>`).join('')+'</div>';
+}
+
+// ══════════ App Socio ══════════
+async function renderSocioApp(){
+  document.getElementById('socioNombreHdr').textContent=sesion.nombre;
+  const gid=asignaciones[sesion.id]; const g=gid?gruposMap[gid]:null;
+  document.getElementById('socioGrupoHdr').textContent=g?('Grupo: '+g.nombre):'Sin grupo asignado';
+  document.getElementById('socioMesLabel').textContent=MESES[socioViewDate.getMonth()]+' '+socioViewDate.getFullYear();
+  const sinGrupo=document.getElementById('socioSinGrupo');
+  if(!gid){ sinGrupo.classList.remove('hidden'); document.getElementById('socioCal').innerHTML=''; document.getElementById('socioLeyenda').innerHTML=''; return; }
+  sinGrupo.classList.add('hidden');
+  const exc=await excepcionesDe(sesion.id, socioViewDate);
+  pintarCalendario(document.getElementById('socioCal'), socioViewDate, sesion.id, exc, null);
+  leyendaTurnos(document.getElementById('socioLeyenda'));
+}
+function socioMes(delta){ socioViewDate=new Date(socioViewDate.getFullYear(), socioViewDate.getMonth()+delta, 1); renderSocioApp(); }
+
+// ══════════ App Supervisor ══════════
+function renderSuper(){ supTab('Calendario'); supLlenarSelectSocios(); renderTurnos(); renderGrupos(); renderAsignaciones(); }
+function supTab(pan){
+  document.querySelectorAll('#appSuper .tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.pan===pan));
+  document.querySelectorAll('#appSuper .sup-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pan'+pan).classList.add('active');
+}
+function supLlenarSelectSocios(){
+  document.getElementById('supVerSocio').innerHTML='<option value="">— elige un socio —</option>'+
+    sociosMesas.map(s=>`<option value="${s.id}">${esc(s.nombre)} ${esc(s.apellido)}${asignaciones[s.id]?'':' (sin grupo)'}</option>`).join('');
+}
+async function supRenderCal(){
+  supSocioSel=document.getElementById('supVerSocio').value;
+  const wrap=document.getElementById('supCalWrap');
+  if(!supSocioSel){ wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  document.getElementById('supMesLabel').textContent=MESES[supViewDate.getMonth()]+' '+supViewDate.getFullYear();
+  const exc=await excepcionesDe(supSocioSel, supViewDate);
+  window._supExc=exc;
+  pintarCalendario(document.getElementById('supCal'), supViewDate, supSocioSel, exc, 'supDiaClick');
+}
+function supMes(delta){ supViewDate=new Date(supViewDate.getFullYear(), supViewDate.getMonth()+delta, 1); supRenderCal(); }
+function supDiaClick(iso){
+  if(!supSocioSel) return;
+  const actual=(window._supExc&&window._supExc[iso]!==undefined)?window._supExc[iso]:'';
+  const opts=turnos.map(t=>`<button onclick="supPonerExcepcion('${iso}','${t.id}')" class="w-full card p-3 flex items-center gap-3 text-left mb-2"><span class="w-4 h-4 rounded-full" style="background:${t.color}"></span><span class="font-semibold text-sm">${esc(t.nombre)}</span>${t.hora_inicio?`<span class="text-xs text-slate-400 ml-auto">${t.hora_inicio}–${t.hora_fin}</span>`:''}</button>`).join('');
+  abrirModal(`<h3 class="font-extrabold mb-1">Excepción · ${iso}</h3>
+    <p class="text-xs text-slate-400 mb-4">Cambia el turno solo para este día (anula el ciclo).</p>
+    ${opts}
+    <button onclick="supQuitarExcepcion('${iso}')" class="w-full btn-ghost mt-1">↺ Quitar excepción (volver al ciclo)</button>`);
+}
+async function supPonerExcepcion(iso, turnoId){
+  await db.from('horarios_excepciones').upsert({id:uid('ex'),socio_id:supSocioSel,fecha:iso,turno_id:turnoId},{onConflict:'socio_id,fecha'});
+  cerrarModal(); toast('Excepción guardada'); supRenderCal();
+}
+async function supQuitarExcepcion(iso){
+  await db.from('horarios_excepciones').delete().eq('socio_id',supSocioSel).eq('fecha',iso);
+  cerrarModal(); toast('Excepción eliminada'); supRenderCal();
+}
+
+// ── Turnos ──
+function renderTurnos(){
+  const c=document.getElementById('turnosLista');
+  if(!turnos.length){ c.innerHTML='<div class="text-slate-500 text-sm text-center py-6">Sin turnos. Crea el primero.</div>'; return; }
+  c.innerHTML=turnos.map(t=>`<div class="card p-3 flex items-center gap-3">
+    <span class="w-5 h-5 rounded-full flex-shrink-0" style="background:${t.color}"></span>
+    <div class="flex-1 min-w-0"><div class="font-bold text-sm">${esc(t.nombre)}</div><div class="text-xs text-slate-400">${t.es_libre?'Día libre':(t.hora_inicio?`${t.hora_inicio} – ${t.hora_fin}`:'Sin horario')}</div></div>
+    <button onclick="turnoModal('${t.id}')" class="btn-ghost text-xs">✎</button>
+    <button onclick="turnoBorrar('${t.id}')" class="btn-ghost text-xs" style="background:#7f1d1d;color:#fecaca;">🗑</button>
+  </div>`).join('');
+}
+function turnoModal(id){
+  const t=id?turnosMap[id]:{nombre:'',color:'#3b82f6',hora_inicio:'',hora_fin:'',es_libre:false};
+  const colores=['#f59e0b','#3b82f6','#6366f1','#10b981','#ef4444','#ec4899','#14b8a6','#94a3b8','#8b5cf6','#eab308'];
+  abrirModal(`<h3 class="font-extrabold mb-4">${id?'Editar':'Nuevo'} turno</h3>
+    <label class="text-xs text-slate-400 font-semibold">Nombre</label>
+    <input id="tNombre" class="fld mt-1 mb-3" value="${esc(t.nombre)}" placeholder="Ej: Mañana">
+    <label class="text-xs text-slate-400 font-semibold">Color</label>
+    <div id="tColores" class="flex flex-wrap gap-2 mt-1 mb-3">${colores.map(c=>`<button onclick="tPickColor('${c}')" data-c="${c}" class="w-8 h-8 rounded-full" style="background:${c};outline:${c===t.color?'3px solid #fff':'none'};outline-offset:2px;"></button>`).join('')}</div>
+    <label class="inline-flex items-center gap-2 mb-3 text-sm"><input type="checkbox" id="tLibre" ${t.es_libre?'checked':''} onchange="document.getElementById('tHoras').style.display=this.checked?'none':'flex'"> Es día libre (sin horario)</label>
+    <div id="tHoras" class="flex gap-2 mb-4" style="display:${t.es_libre?'none':'flex'}">
+      <div class="flex-1"><label class="text-xs text-slate-400 font-semibold">Entrada</label><input id="tIni" type="time" class="fld mt-1" value="${t.hora_inicio||''}"></div>
+      <div class="flex-1"><label class="text-xs text-slate-400 font-semibold">Salida</label><input id="tFin" type="time" class="fld mt-1" value="${t.hora_fin||''}"></div>
+    </div>
+    <button onclick="turnoGuardar('${id||''}')" class="btn-primary w-full">Guardar</button>`);
+  window._tColor=t.color;
+}
+function tPickColor(c){ window._tColor=c; document.querySelectorAll('#tColores button').forEach(b=>b.style.outline=b.dataset.c===c?'3px solid #fff':'none'); }
+async function turnoGuardar(id){
+  const nombre=document.getElementById('tNombre').value.trim(); if(!nombre) return toast('Ponle un nombre','#dc2626');
+  const libre=document.getElementById('tLibre').checked;
+  const row={ nombre, color:window._tColor||'#3b82f6', es_libre:libre,
+    hora_inicio: libre?null:(document.getElementById('tIni').value||null), hora_fin: libre?null:(document.getElementById('tFin').value||null) };
+  if(id){ await db.from('horarios_turnos').update(row).eq('id',id); }
+  else { row.id=uid('t'); row.orden=(turnos.length+1); await db.from('horarios_turnos').insert(row); }
+  cerrarModal(); await cargarBase(); renderTurnos(); toast('Turno guardado');
+}
+async function turnoBorrar(id){
+  const usado=grupos.some(g=>(g.ciclo||[]).includes(id));
+  if(usado && !confirm('Este turno se usa en el ciclo de algún grupo. ¿Borrarlo igual?')) return;
+  if(!usado && !confirm('¿Borrar este turno?')) return;
+  await db.from('horarios_turnos').delete().eq('id',id); await cargarBase(); renderTurnos(); renderGrupos(); toast('Turno eliminado');
+}
+
+// ── Grupos ──
+function renderGrupos(){
+  const c=document.getElementById('gruposLista');
+  if(!grupos.length){ c.innerHTML='<div class="text-slate-500 text-sm text-center py-6">Sin grupos. Crea el primero.</div>'; return; }
+  c.innerHTML=grupos.map(g=>{
+    const nSoc=Object.values(asignaciones).filter(x=>x===g.id).length;
+    const ciclo=(g.ciclo||[]).map(tid=>{const t=turnosMap[tid]; return t?`<span class="chip" style="background:${t.color}22;color:${t.color}">${esc(t.nombre)}</span>`:'';}).join(' ');
+    return `<div class="card p-3">
+      <div class="flex items-center gap-2 mb-2"><span class="w-4 h-4 rounded-full" style="background:${g.color}"></span>
+        <b class="text-sm">${esc(g.nombre)}</b>
+        <span class="text-xs text-slate-400">· ${nSoc} socio(s)</span>
+        <button onclick="grupoModal('${g.id}')" class="btn-ghost text-xs ml-auto">✎</button>
+        <button onclick="grupoBorrar('${g.id}')" class="btn-ghost text-xs" style="background:#7f1d1d;color:#fecaca;">🗑</button>
+      </div>
+      <div class="text-[11px] text-slate-400 mb-1">Ciclo (${(g.ciclo||[]).length} días) desde ${g.fecha_base}:</div>
+      <div class="flex flex-wrap gap-1.5">${ciclo||'<span class="text-xs text-slate-500">Ciclo vacío</span>'}</div>
+    </div>`;
+  }).join('');
+}
+function grupoModal(id){
+  const g=id?gruposMap[id]:{nombre:'',color:'#6366f1',ciclo:[],fecha_base:fechaISO(new Date())};
+  window._ciclo=[...(g.ciclo||[])]; window._gColor=g.color;
+  const colores=['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6','#8b5cf6'];
+  abrirModal(`<h3 class="font-extrabold mb-4">${id?'Editar':'Nuevo'} grupo</h3>
+    <label class="text-xs text-slate-400 font-semibold">Nombre del grupo</label>
+    <input id="gNombre" class="fld mt-1 mb-3" value="${esc(g.nombre)}" placeholder="Ej: Grupo A">
+    <label class="text-xs text-slate-400 font-semibold">Color</label>
+    <div id="gColores" class="flex flex-wrap gap-2 mt-1 mb-3">${colores.map(c=>`<button onclick="gPickColor('${c}')" data-c="${c}" class="w-8 h-8 rounded-full" style="background:${c};outline:${c===g.color?'3px solid #fff':'none'};outline-offset:2px;"></button>`).join('')}</div>
+    <label class="text-xs text-slate-400 font-semibold">Fecha base (día 1 del ciclo)</label>
+    <input id="gFecha" type="date" class="fld mt-1 mb-4" value="${g.fecha_base}">
+    <label class="text-xs text-slate-400 font-semibold">Ciclo de turnos (en orden)</label>
+    <p class="text-[11px] text-slate-500 mb-2">Toca turnos para agregarlos al ciclo. Se repite en bucle desde la fecha base.</p>
+    <div class="flex flex-wrap gap-2 mb-2">${turnos.map(t=>`<button onclick="cicloAdd('${t.id}')" class="chip" style="background:${t.color}22;color:${t.color}">+ ${esc(t.nombre)}</button>`).join('')}</div>
+    <div id="cicloActual" class="flex flex-wrap gap-1.5 min-h-[36px] p-2 rounded-lg mb-4" style="background:#0f172a;border:1px dashed #334155;"></div>
+    <button onclick="grupoGuardar('${id||''}')" class="btn-primary w-full">Guardar grupo</button>`);
+  renderCicloActual();
+}
+function gPickColor(c){ window._gColor=c; document.querySelectorAll('#gColores button').forEach(b=>b.style.outline=b.dataset.c===c?'3px solid #fff':'none'); }
+function cicloAdd(tid){ window._ciclo.push(tid); renderCicloActual(); }
+function cicloDel(i){ window._ciclo.splice(i,1); renderCicloActual(); }
+function renderCicloActual(){
+  const c=document.getElementById('cicloActual'); if(!c) return;
+  if(!window._ciclo.length){ c.innerHTML='<span class="text-xs text-slate-500">Ciclo vacío — agrega turnos arriba</span>'; return; }
+  c.innerHTML=window._ciclo.map((tid,i)=>{const t=turnosMap[tid];return `<span class="chip" style="background:${t?t.color+'22':'#334155'};color:${t?t.color:'#94a3b8'}">${i+1}. ${esc(t?t.nombre:'?')} <b onclick="cicloDel(${i})" style="cursor:pointer;margin-left:2px;">✕</b></span>`;}).join('');
+}
+async function grupoGuardar(id){
+  const nombre=document.getElementById('gNombre').value.trim(); if(!nombre) return toast('Ponle un nombre','#dc2626');
+  const row={ nombre, color:window._gColor||'#6366f1', ciclo:window._ciclo, fecha_base:document.getElementById('gFecha').value||fechaISO(new Date()) };
+  if(id){ await db.from('horarios_grupos').update(row).eq('id',id); }
+  else { row.id=uid('g'); await db.from('horarios_grupos').insert(row); }
+  cerrarModal(); await cargarBase(); renderGrupos(); supLlenarSelectSocios(); renderAsignaciones(); toast('Grupo guardado');
+}
+async function grupoBorrar(id){
+  if(!confirm('¿Borrar este grupo? Los socios quedarán sin grupo.')) return;
+  await db.from('horarios_grupos').delete().eq('id',id);
+  await db.from('horarios_socio_grupo').delete().eq('grupo_id',id);
+  await cargarBase(); renderGrupos(); supLlenarSelectSocios(); renderAsignaciones(); toast('Grupo eliminado');
+}
+
+// ── Asignaciones socio→grupo ──
+function renderAsignaciones(){
+  const term=(document.getElementById('asigBuscar').value||'').toLowerCase();
+  const c=document.getElementById('asigLista');
+  const list=sociosMesas.filter(s=>`${s.nombre} ${s.apellido}`.toLowerCase().includes(term));
+  const optGrupos='<option value="">— sin grupo —</option>'+grupos.map(g=>`<option value="${g.id}">${esc(g.nombre)}</option>`).join('');
+  c.innerHTML=list.map(s=>{
+    const gid=asignaciones[s.id]||'';
+    return `<div class="card p-3 flex items-center gap-2">
+      <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(s.nombre)} ${esc(s.apellido)}</div><div class="text-[11px] text-slate-400">${esc(s.area)}</div></div>
+      <select class="fld" style="width:auto;padding:7px 8px;" onchange="asignar('${s.id}',this.value)">${optGrupos.replace(`value="${gid}"`,`value="${gid}" selected`)}</select>
+      <button onclick="resetPinSocio('${s.id}','${esc(s.nombre)} ${esc(s.apellido)}')" title="Reiniciar PIN del socio" class="btn-ghost text-xs" style="padding:7px 9px;">🔑</button>
+    </div>`;
+  }).join('');
+}
+async function asignar(socioId, grupoId){
+  if(grupoId){ await db.from('horarios_socio_grupo').upsert({socio_id:socioId,grupo_id:grupoId,updated_at:new Date().toISOString()}); asignaciones[socioId]=grupoId; }
+  else { await db.from('horarios_socio_grupo').delete().eq('socio_id',socioId); delete asignaciones[socioId]; }
+  renderGrupos(); supLlenarSelectSocios(); toast('Asignación guardada');
+}
+
+async function resetPinSocio(socioId, nombre){
+  if(!confirm(`¿Reiniciar el PIN de ${nombre}?\n\nSu clave actual se borrará y el socio creará una nueva la próxima vez que entre.`)) return;
+  await db.from('horarios_pins').delete().eq('usuario',socioId);
+  toast('PIN reiniciado — el socio creará uno nuevo');
+}
+
+// ── Modal ──
+function abrirModal(html){ document.getElementById('modalContent').innerHTML=html; document.getElementById('modalBox').classList.add('active'); }
+function cerrarModal(){ document.getElementById('modalBox').classList.remove('active'); }
+</script>
+</body>
+</html>

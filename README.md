@@ -232,6 +232,15 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Nueva app separada de Horarios (`index2.html`)
+- **App independiente** en el mismo repo (`index2.html`), no toca ni interfiere con la app principal (`index.html`). Se accede en `…/index2.html`.
+- **Para el equipo de Mesas**: toma los socios cuya área contiene "mesa" desde la tabla `socios`.
+- **Login con dos accesos**: "Soy Socio" (elige su nombre y crea/ingresa su PIN de 4 dígitos) y "Soy Supervisor" (PIN de 4 dígitos propio, lo crea la primera vez).
+- **Modelo: ciclo rotativo por grupos.** El supervisor crea **turnos predefinidos** (nombre, color, horario), crea **grupos** con un **ciclo** de turnos (se repite en bucle desde una fecha base) y **asigna** socios a grupos. Cada socio ve su **calendario mensual** con sus turnos calculados desde el ciclo de su grupo.
+- El supervisor también puede poner **excepciones por día** (cambiar el turno de un socio solo esa fecha) y **reiniciar el PIN** de un socio que lo olvidó.
+- **Backend Supabase** (proyecto socios, RLS anon): tablas `horarios_turnos`, `horarios_grupos` (con `ciclo` jsonb + `fecha_base`), `horarios_socio_grupo`, `horarios_pins`, `horarios_excepciones`. Se sembraron 4 turnos de ejemplo (Mañana/Tarde/Noche/Libre).
+- Un solo archivo autocontenido (HTML+CSS+JS inline, Tailwind CDN + supabase-js). Sin Service Worker.
+
 #### 2026-07-07 — Ayuda: Cierre de Mes / "Estado de Cobros del Período" explicado a fondo
 - Nueva categoría **🔒 Cierre de Mes** en el Centro de Ayuda con **6 entradas** que explican todo el panel de "Estado de Cobros del Período":
   - Qué es el panel y sus estados (⏳ Pendiente / 📩 En Sobre / 💵 Cobrado) y la etiqueta "X/Y · 💵N 📩M".
