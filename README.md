@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-09 — Campana de notificaciones + ir directo a escribir + FAB no tapa Enviar
+- **Campana de notificaciones (🔔) en el encabezado**: muestra un contador de socios con mensajes sin leer y, al pincharla, despliega un menú con cada socio (foto, último texto y hora). Al tocar un ítem lleva directo a **Mensajes** y abre esa conversación. Mismo comportamiento que la campana de propi.solicitada.
+- **Abrir un socio lleva a escribir**: al pinchar un socio en Mensajes, ahora se hace scroll a la conversación y se enfoca el campo de texto (útil en móvil).
+- **FAB "⬆ Inicio" ya no interfiere**: en la sección Mensajes el botón flotante de volver arriba se oculta para no tapar el botón Enviar.
+- Archivos: `index.html` (botón campana + menú), `js/mensajes-admin.js` (funciones `msgAdminBell_*`, resumen ahora trae `mensaje`/`autor`/`foto_url`, scroll+focus al abrir), `js/utils.js` (`checkScroll` oculta el FAB en Mensajes).
+
 #### 2026-07-07 — Mensajes a socios: enviar fotos (visibles en propi.solicitada)
 - En **Mensajes** (conversación privada con el socio) el responsable puede **adjuntar una foto** (botón 📷). Se sube al bucket público `avatares` (carpeta `chat/`) y se guarda en `mensajes_admin.foto_url` (nueva columna).
 - Las fotos se muestran en el hilo (ampliables al tocarlas) y **le llegan al socio** en propi.solicitada (canal "Admin").

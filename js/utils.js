@@ -142,6 +142,9 @@ function initScrollTopFab() {
     if (!fab) return;
 
     function checkScroll() {
+        // En la sección Mensajes el botón "⬆ Inicio" tapa el botón Enviar → ocultarlo ahí
+        const enMensajes = document.getElementById('tab-mensajes') && document.getElementById('tab-mensajes').classList.contains('active');
+        if (enMensajes) { fab.style.display = 'none'; return; }
         const appMain = document.querySelector('.app-main');
         const mainY = appMain ? appMain.scrollTop : 0;
         const winY  = window.scrollY || document.documentElement.scrollTop || 0;

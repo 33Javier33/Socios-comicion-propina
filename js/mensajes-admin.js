@@ -30,21 +30,26 @@ function msgAdmin_init() {
 async function msgAdmin_cargarResumen() {
     try {
         const { data, error } = await dbSoc.from('mensajes_admin')
-            .select('socio_id, remitente, created_at, estado');
+            .select('socio_id, remitente, created_at, estado, mensaje, autor, foto_url');
         if (error) { console.warn('[msgAdmin] resumen:', error.message); return; }
         msgAdminPorSocio = {};
         (data || []).forEach(m => {
             if (m.estado === 'DELETED') return;
             const k = String(m.socio_id);
-            if (!msgAdminPorSocio[k]) msgAdminPorSocio[k] = { total: 0, ultimaSocioTs: 0 };
+            if (!msgAdminPorSocio[k]) msgAdminPorSocio[k] = { total: 0, ultimaSocioTs: 0, ultimoTexto: '', ultimoAutor: '' };
             msgAdminPorSocio[k].total++;
             if (m.remitente === 'SOCIO') {
                 const ts = new Date(m.created_at).getTime();
-                if (ts > msgAdminPorSocio[k].ultimaSocioTs) msgAdminPorSocio[k].ultimaSocioTs = ts;
+                if (ts > msgAdminPorSocio[k].ultimaSocioTs) {
+                    msgAdminPorSocio[k].ultimaSocioTs = ts;
+                    msgAdminPorSocio[k].ultimoTexto = m.mensaje || (m.foto_url ? '📷 Foto' : '');
+                    msgAdminPorSocio[k].ultimoAutor = m.autor || '';
+                }
             }
         });
         msgAdmin_actualizarNavDot();
         msgAdmin_renderLista();
+        msgAdminBell_render();
     } catch (e) { console.warn('[msgAdmin]', e); }
 }
 
@@ -57,7 +62,90 @@ function msgAdmin_actualizarNavDot() {
     const hay = Object.keys(msgAdminPorSocio).some(id => msgAdmin_hayNoLeidos(id));
     const dot = document.getElementById('msgAdminNavDot');
     if (dot) dot.style.display = hay ? 'block' : 'none';
+    msgAdminBell_render();
 }
+
+// ── CAMPANA DE NOTIFICACIONES (mensajes de socios sin leer) ───────────────
+function msgAdminBell_items() {
+    const socios = (typeof cacheSocios !== 'undefined' ? cacheSocios : []);
+    return Object.keys(msgAdminPorSocio)
+        .filter(id => msgAdmin_hayNoLeidos(id))
+        .map(id => {
+            const s = socios.find(x => String(x.id) === String(id));
+            const r = msgAdminPorSocio[String(id)];
+            return {
+                id,
+                nombre: s ? `${s.nombre} ${s.apellido}` : ('Socio ' + id),
+                fotoUrl: s ? s.fotoUrl : '',
+                texto: (r && r.ultimoTexto) || '',
+                ts: (r && r.ultimaSocioTs) || 0
+            };
+        })
+        .sort((a, b) => b.ts - a.ts);
+}
+
+function msgAdminBell_render() {
+    const badge = document.getElementById('msgAdminBellBadge');
+    const menu  = document.getElementById('msgAdminBellMenu');
+    const items = msgAdminBell_items();
+    if (badge) {
+        if (items.length) { badge.textContent = items.length > 99 ? '99+' : String(items.length); badge.style.display = 'block'; }
+        else badge.style.display = 'none';
+    }
+    if (menu && menu.style.display !== 'none') msgAdminBell_pintarMenu(items);
+}
+
+function msgAdminBell_pintarMenu(items) {
+    const menu = document.getElementById('msgAdminBellMenu');
+    if (!menu) return;
+    if (!items.length) {
+        menu.innerHTML = '<div style="padding:18px 12px;text-align:center;color:#94a3b8;font-size:0.85em;">Sin mensajes nuevos 🎉</div>';
+        return;
+    }
+    const _hora = ts => { try { return new Date(ts).toLocaleString('es-CL', { timeZone: 'America/Santiago', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { return ''; } };
+    menu.innerHTML = '<div style="padding:8px 10px 6px;font-weight:800;font-size:0.82em;color:var(--text-color,#1e293b);border-bottom:1px solid var(--border,#eef2f6);margin-bottom:4px;">🔔 Mensajes sin leer (' + items.length + ')</div>'
+        + items.map(it => `<div onclick="msgAdminBell_ir('${_msgEsc(it.id)}')" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;cursor:pointer;margin-bottom:2px;" onmouseover="this.style.background='rgba(2,132,199,0.08)'" onmouseout="this.style.background='transparent'">
+            ${avatarHTML(it.fotoUrl, it.nombre, 34)}
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:700;font-size:0.84em;color:var(--text-color,#1e293b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_msgEsc(it.nombre)}</div>
+                <div style="font-size:0.75em;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_msgEsc(it.texto) || '<span style=\'color:#94a3b8\'>Nuevo mensaje</span>'}</div>
+                <div style="font-size:0.66em;color:#94a3b8;">${_hora(it.ts)}</div>
+            </div>
+            <span style="background:#dc2626;color:#fff;font-size:0.6em;font-weight:800;padding:2px 6px;border-radius:8px;flex-shrink:0;">NUEVO</span>
+        </div>`).join('');
+}
+
+function msgAdminBell_toggle() {
+    const menu = document.getElementById('msgAdminBellMenu');
+    if (!menu) return;
+    if (menu.style.display === 'none' || !menu.style.display) {
+        msgAdminBell_pintarMenu(msgAdminBell_items());
+        menu.style.display = 'block';
+    } else {
+        menu.style.display = 'none';
+    }
+}
+
+function msgAdminBell_cerrar() {
+    const menu = document.getElementById('msgAdminBellMenu');
+    if (menu) menu.style.display = 'none';
+}
+
+function msgAdminBell_ir(socioId) {
+    msgAdminBell_cerrar();
+    if (typeof switchTab === 'function') switchTab('mensajes');
+    setTimeout(() => msgAdmin_abrir(socioId), 60);
+}
+
+// Cerrar el menú al tocar fuera de la campana
+document.addEventListener('click', function (e) {
+    const menu = document.getElementById('msgAdminBellMenu');
+    const bell = document.getElementById('msgAdminBell');
+    if (!menu || menu.style.display === 'none') return;
+    if (bell && bell.contains(e.target)) return;
+    if (menu.contains(e.target)) return;
+    menu.style.display = 'none';
+});
 
 function msgAdmin_renderLista() {
     const cont = document.getElementById('msgAdmin-lista');
@@ -108,6 +196,13 @@ function msgAdmin_abrir(socioId) {
     msgAdmin_actualizarNavDot();
     msgAdmin_renderLista();
     msgAdmin_cargarHilo();
+    // Llevar a la conversación / campo de escribir (útil en móvil)
+    setTimeout(() => {
+        const conv = document.getElementById('msgAdmin-conv');
+        if (conv && conv.scrollIntoView) conv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const inp = document.getElementById('msgAdmin-input');
+        if (inp) inp.focus();
+    }, 150);
 }
 
 async function msgAdmin_cargarHilo() {

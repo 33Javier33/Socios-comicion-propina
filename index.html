@@ -71,11 +71,17 @@
                 <div class="fecha-badge" id="fechaHoyBadge"></div>
                 <div id="sesionRespBadge" style="display:none;background:rgba(52,152,219,0.12);color:var(--secondary);border:1px solid rgba(52,152,219,0.3);border-radius:20px;padding:5px 12px;font-size:0.78em;font-weight:700;">👤 <span id="sesionRespNombre"></span></div>
                 <div id="inactividadBadge" style="display:none; background:#fff3cd; color:#856404; border:1px solid #ffc107; border-radius:20px; padding:6px 12px; font-size:0.78em; font-weight:700;">⏱ <span id="inactividadTimer">15:00</span></div>
+                <div style="position:relative;">
+                    <button onclick="msgAdminBell_toggle()" id="msgAdminBell" title="Mensajes sin leer" style="background:var(--card-bg);color:var(--text-color);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:1em;line-height:1;cursor:pointer;transition:0.2s;position:relative;">🔔<span id="msgAdminBellBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;font-size:0.62em;font-weight:800;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:9px;padding:0 3px;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></span></button>
+                </div>
                 <button onclick="toggleDarkMode()" id="darkModeBtn" style="background:var(--card-bg);color:var(--text-color);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:0.85em;cursor:pointer;transition:0.2s;" title="Modo oscuro">🌙</button>
                 <button onclick="toggleAbout(true)" style="background:#2c3e50; color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">ℹ️ Acerca de</button>
                 <button onclick="cerrarSesion()" style="background:var(--danger); color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔒 Cerrar sesión</button>
             </div>
         </div>
+
+        <!-- MENÚ DESPLEGABLE campana de notificaciones (mensajes de socios sin leer) -->
+        <div id="msgAdminBellMenu" style="display:none;position:fixed;top:70px;right:10px;width:320px;max-width:calc(100vw - 20px);max-height:64vh;overflow-y:auto;background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;box-shadow:0 14px 44px rgba(0,0,0,0.22);z-index:9997;padding:6px;"></div>
 
         <div class="nav-tabs">
             <button class="nav-btn active" data-tab="registro" onclick="switchTab('registro')">Gestión de Socios</button>
