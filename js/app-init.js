@@ -97,6 +97,7 @@ function switchTab(tabName) {
         renderizarListaBusqueda();
         gestion_cargarTotalAnticipos();
         gestion_cargarTotalRemanentes();
+        gestion_cargarRemanenteVivo();
         cierresMes_render();
         if (typeof egresos_initRealtime === 'function') egresos_initRealtime();
         if (typeof egresos_cargarPendientes === 'function') egresos_cargarPendientes();

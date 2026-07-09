@@ -352,12 +352,12 @@
                 <div>
                     <div style="color:white; font-weight:800; font-size:1em;">🔒 Cierre de Mes</div>
                     <div style="color:#e8d5f5; font-size:0.78em; margin-top:2px;">Guarda el remanente de cada socio como saldo del próximo mes</div>
-                    <div style="color:#e8d5f5; font-size:0.8em; margin-top:6px; display:flex; flex-wrap:wrap; gap:14px;">
+                    <div id="gestionPeriodoRemanentes" style="color:#f3e8ff; font-size:0.82em; font-weight:700; margin-top:6px; background:rgba(255,255,255,0.12); border-radius:7px; padding:3px 9px; display:inline-block;">📅 Período actual…</div>
+                    <div style="color:#e8d5f5; font-size:0.8em; margin-top:6px; display:flex; flex-direction:column; gap:4px;">
                         <span>💰 ANTICIPOS (Nube): <strong id="gestionTotalAnticipos" style="color:white; font-size:1.05em;">...</strong></span>
-                        <span style="display:flex;flex-direction:column;gap:1px;">
-                            <span>💜 REMANENTES: <strong id="gestionTotalRemanentes" style="color:#e9d5ff; font-size:1.05em;">...</strong> <span id="gestionPeriodoRemanentes" style="font-size:0.82em; color:#c4b5fd; font-weight:400;"></span></span>
-                            <span id="gestionRemAnteriores" style="display:none; font-size:0.78em; color:#c4b5fd;"></span>
-                        </span>
+                        <span>💜 Remanente guardado <span style="opacity:0.75;">(último cierre)</span>: <strong id="gestionTotalRemanentes" style="color:#e9d5ff; font-size:1.05em;">...</strong></span>
+                        <span>📈 Remanente <b>en vivo</b> <span style="opacity:0.75;">(si se cierra hoy)</span>: <strong id="gestionRemanenteVivo" style="color:#a7f3d0; font-size:1.05em;">...</strong></span>
+                        <span id="gestionRemAnteriores" style="display:none; font-size:0.78em; color:#c4b5fd;"></span>
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">

@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Remanente EN VIVO + período más legible en Anticipos y Ausencias
+- El banner ahora distingue **💜 Remanente guardado (último cierre)** — la suma de `saldos_socio`, que solo cambia al cerrar el mes — de **📈 Remanente en vivo (si se cierra hoy)**, que **se recalcula día a día** con las recaudaciones actuales.
+- El remanente en vivo suma, socio por socio, lo que le quedaría de remanente si se cerrara hoy (mismo cálculo que el detalle: alcance por puntos/días − anticipos + saldo anterior, redondeo al mil). Se calcula en el cliente con los datos ya cacheados (`fetchAllDataCached`) + `saldos_socio`, sin llamadas por socio.
+- **Fecha/período más legible:** ahora se muestra el **período actual** en una etiqueta destacada (`📅 Período actual: 15 jun – 14 jul 2026`), calculado con `aq_calcularPeriodoActual` (ciclo 15‑a‑14), en vez de derivarlo de la última fecha guardada.
+- Archivos: `index.html` (banner), `js/anticipos.js` (`gestion_cargarRemanenteVivo`, `_remFmtPeriodo`), `js/app-init.js` (llamada al entrar a Gestión).
+
 #### 2026-07-07 — Subir foto del socio: elegir Cámara o Galería
 - Al agregar/cambiar la foto desde Gestión ahora hay **dos opciones**: **📷 Cámara** (abre la cámara — `capture="environment"`) y **🖼️ Galería** (elegir una imagen existente), como en propi.solicitada.
 - Archivos: `js/socios.js` (`gest_renderFoto` con dos inputs).

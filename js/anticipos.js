@@ -1439,20 +1439,6 @@ async function gestion_cargarTotalRemanentes() {
         if (total === null) { el.textContent = 'N/D'; return; }
         el.textContent = formatearMoneda(total);
         el.style.color = total < 0 ? '#fca5a5' : '#e9d5ff';
-        if (elPer && res.ultimaFecha) {
-            const d = new Date(res.ultimaFecha);
-            const anio = d.getFullYear(), mes = d.getMonth();
-            let inicio, fin;
-            if (d.getDate() >= 15) {
-                inicio = new Date(anio, mes, 15);
-                fin    = new Date(anio, mes + 1, 14);
-            } else {
-                inicio = new Date(anio, mes - 1, 15);
-                fin    = new Date(anio, mes, 14);
-            }
-            const fmt = dt => dt.toLocaleString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '');
-            elPer.textContent = `(${fmt(inicio)} – ${fmt(fin)} ${fin.getFullYear()})`;
-        }
         if (elAnt && res.periodoAnterior) {
             const pa = res.periodoAnterior;
             const totalAnt = Number(pa.datos?.total || 0);
@@ -1461,6 +1447,74 @@ async function gestion_cargarTotalRemanentes() {
             elAnt.style.display = '';
         }
     } catch(e) {
+        el.textContent = 'Error';
+    }
+}
+
+// Formatea el período (dos ISO) a algo legible: "15 jun – 14 jul 2026"
+function _remFmtPeriodo(inicioISO, finISO) {
+    const p = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+    const fmt = dt => dt.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '');
+    const a = p(inicioISO), b = p(finISO);
+    return `${fmt(a)} – ${fmt(b)} ${b.getFullYear()}`;
+}
+
+// Remanente EN VIVO: suma de lo que le quedaría a cada socio si se cerrara hoy.
+// Cambia día a día con las nuevas recaudaciones (usa el mismo cálculo del detalle).
+async function gestion_cargarRemanenteVivo() {
+    const el = document.getElementById('gestionRemanenteVivo');
+    const elPer = document.getElementById('gestionPeriodoRemanentes');
+    if (!el) return;
+    el.textContent = '...';
+    try {
+        const [allData, saldosRes] = await Promise.all([
+            fetchAllDataCached(),
+            (typeof dbSoc !== 'undefined' ? dbSoc.from('saldos_socio').select('id, monto') : Promise.resolve({ data: [] }))
+        ]);
+        const saldos = {};
+        (saldosRes.data || []).forEach(r => { saldos[r.id] = Number(r.monto || 0); });
+        const { inicio, fin } = aq_calcularPeriodoActual();
+        if (elPer) elPer.innerHTML = '📅 Período actual: <b>' + _remFmtPeriodo(inicio, fin) + '</b>';
+
+        const antObj = allData.anticipos || {};
+        const extObj = allData.extras || {};
+        let totalRem = 0;
+
+        (cacheSocios || []).forEach(socio => {
+            const pts = Number(socio.puntos) || 0;
+            // Anticipos del período
+            let sumaAnt = 0; const vistos = new Set();
+            (antObj[socio.id] || []).forEach(a => {
+                const m = parseFloat(a.cantidad) || 0; if (!m) return;
+                let f = a.fecha || ''; if (f.includes('T')) f = f.split('T')[0];
+                if (f < inicio || f > fin) return;
+                const firma = f + '|' + m; if (vistos.has(firma)) return; vistos.add(firma);
+                sumaAnt += m;
+            });
+            // Ausencias
+            const aus = new Set();
+            (extObj[socio.id] || []).forEach(e => {
+                if (e.tipo && e.tipo.toLowerCase().includes('ausencia')) {
+                    let f = e.fecha || ''; if (f.includes('T')) f = f.split('T')[0]; aus.add(f);
+                }
+            });
+            // Alcance (según contrato)
+            let alcance = 0;
+            if (socio.contrato === 'Part-Time') {
+                (globalDiasPT[socio.id] || []).forEach(d => { if (!aus.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
+            } else {
+                for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) { if (!aus.has(dia) && valor) alcance += valor; }
+            }
+            alcance *= pts;
+            const saldoAnterior = saldos[socio.id] || 0;
+            const saldoReal = alcance + saldoAnterior - sumaAnt;
+            const rem = saldoReal > 0 ? Math.round(saldoReal - Math.floor(saldoReal / 1000) * 1000) : Math.round(saldoReal);
+            totalRem += rem;
+        });
+
+        el.textContent = formatearMoneda(totalRem);
+        el.style.color = totalRem < 0 ? '#fca5a5' : '#a7f3d0';
+    } catch (e) {
         el.textContent = 'Error';
     }
 }
