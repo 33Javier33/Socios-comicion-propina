@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Materiales: foto opcional del gasto, "comprado por" y montos con separador de miles
+- **Foto opcional en el gasto:** al registrar un Gasto se puede adjuntar una foto (📷 Cámara / 🖼️ Galería) de la compra. Se sube al bucket público `avatares` (carpeta `materiales/`) y se muestra como miniatura en la lista, **ampliable al tocarla** (lightbox). Es opcional.
+- **Comprado por:** campo opcional en el gasto para indicar quién realizó la compra cuando no fue el responsable. Se muestra en la lista.
+- **Montos con separador de miles:** el campo Monto ahora formatea con puntos de mil mientras se escribe (`formatearInputMonto`).
+- Migración: columnas `foto_url` y `comprador` en `materiales`; lectura/escritura actualizadas (`registrarMaterial`, `getAllMaterialesDesdeSheets`).
+- Archivos: `index.html` (modal), `js/materiales.js` (foto + comprador + formato + render), `js/supabase-config.js` (handler + select).
+
 #### 2026-07-07 — Informe "Montos Diarios" incluye Remanente por área
 - El **informe de Montos Diarios** (sección Montos Recaudados) ahora agrega al final una tabla **"REMANENTE POR ÁREA"** (en vivo, proyectado si se cierra hoy), con el mismo criterio del banner: Part-Time aparte, GastosComisión excluida, Mesas+Cambistas unidas, y su total.
 - Se refactorizó el cálculo a una función reutilizable `calcularRemanenteVivo()` (usada por el banner y el informe).

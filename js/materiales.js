@@ -110,12 +110,18 @@ function mat_render() {
         const montoSigno = esIngreso ? '+' : '-';
         const fechaDisplay = r.fecha ? r.fecha.split('-').reverse().join('/') : '';
         const notaDisplay = r.nota ? `<div style="font-size:0.78em;color:#374151;margin-top:2px;">${r.nota}</div>` : '';
+        const compDisplay = r.comprador ? `<div style="font-size:0.72em;color:#0369a1;margin-top:1px;">🛒 Comprado por: ${r.comprador}</div>` : '';
+        const fotoThumb = r.foto_url
+            ? `<div onclick="event.stopPropagation();verFotoGrande('${(r.foto_url + '').replace(/'/g, '%27')}')" title="Ver foto de la compra" style="width:34px;height:34px;border-radius:7px;background-image:url('${(r.foto_url + '').replace(/'/g, '%27')}');background-size:cover;background-position:center;border:1px solid #cbd5e1;cursor:zoom-in;flex-shrink:0;"></div>`
+            : '';
         return `<div style="background:white;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
             <span style="background:${badgeBg};color:${badgeColor};font-size:0.65em;font-weight:800;padding:3px 7px;border-radius:5px;letter-spacing:0.04em;white-space:nowrap;">${r.tipo.toUpperCase()}</span>
             <div style="flex:1;min-width:0;">
                 <div style="font-size:0.82em;font-weight:700;color:#2c3e50;">${fechaDisplay}</div>
                 ${notaDisplay}
+                ${compDisplay}
             </div>
+            ${fotoThumb}
             <div style="font-weight:800;color:${montoColor};font-size:0.92em;white-space:nowrap;">${montoSigno}${formatearMoneda(mat_monto(r))}</div>
             <button onclick="mat_borrar('${r.uuid}')" style="background:none;border:none;cursor:pointer;font-size:1.1em;padding:2px 4px;color:#94a3b8;line-height:1;" title="Eliminar">🗑️</button>
         </div>`;
@@ -256,6 +262,8 @@ function mat_abrirModal(tipo = 'Ingreso') {
     if (elFecha) elFecha.value = new Date().toISOString().split('T')[0];
     if (elMonto) elMonto.value = '';
     if (elNota)  elNota.value  = '';
+    const elComp = document.getElementById('mat-modal-comprador'); if (elComp) elComp.value = '';
+    mat_fotoQuitar();
     mat_toggleTipo(tipo);
     document.getElementById('mat-modal-titulo').textContent = tipo === 'Ingreso' ? 'Nuevo Ingreso' : 'Nuevo Gasto';
     modal.style.display = 'flex';
@@ -283,6 +291,33 @@ function mat_toggleTipo(tipo) {
             ? 'Descripción (ej: Aporte mensual)'
             : 'Descripción (ej: Compra de materiales)';
     }
+    // Comprador + foto solo para Gasto
+    const extra = document.getElementById('mat-gasto-extra');
+    if (extra) extra.style.display = (tipo === 'Gasto') ? 'block' : 'none';
+}
+
+// Foto de la compra (opcional) — se guarda en memoria hasta guardar el registro
+let _matFotoFile = null;
+function mat_fotoElegida(input) {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    if (!f.type.startsWith('image/')) { showToast('Debe ser una imagen', 'error'); return; }
+    _matFotoFile = f;
+    const prev = document.getElementById('mat-foto-preview');
+    if (prev) {
+        const url = URL.createObjectURL(f);
+        prev.style.display = 'flex';
+        prev.innerHTML = `<img src="${url}" style="width:36px;height:36px;border-radius:7px;object-fit:cover;border:1px solid #cbd5e1;">
+            <span style="font-size:0.78em;color:#059669;font-weight:700;">✓ foto lista</span>
+            <button type="button" onclick="mat_fotoQuitar()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.9em;">✕</button>`;
+    }
+}
+function mat_fotoQuitar() {
+    _matFotoFile = null;
+    const prev = document.getElementById('mat-foto-preview');
+    if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
+    const c = document.getElementById('mat-foto-cam'); if (c) c.value = '';
+    const g = document.getElementById('mat-foto-gal'); if (g) g.value = '';
 }
 
 // Guarda un nuevo registro
@@ -300,10 +335,21 @@ async function mat_guardar() {
 
     const responsable = getSesionResponsable();
     const periodo = mat_periodoDesFecha(fecha);
+    const comprador = (tipo === 'Gasto') ? ((document.getElementById('mat-modal-comprador') || {}).value || '').trim() : '';
 
     try {
         toggleLoader(true, 'Guardando...');
-        await callApiSocios('registrarMaterial', { fecha, tipo, monto, nota, responsable, periodo });
+        // Subir foto (opcional, solo gasto) al bucket público avatares (carpeta materiales)
+        let foto_url = '';
+        if (tipo === 'Gasto' && _matFotoFile && typeof dbSoc !== 'undefined') {
+            try {
+                const ext = (_matFotoFile.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+                const path = 'materiales/' + Date.now() + '_' + Math.random().toString(36).slice(2, 7) + '.' + ext;
+                const up = await dbSoc.storage.from('avatares').upload(path, _matFotoFile, { contentType: _matFotoFile.type, upsert: true });
+                if (!up.error) { foto_url = dbSoc.storage.from('avatares').getPublicUrl(path).data.publicUrl; }
+            } catch (eF) { console.warn('[mat] foto:', eF); }
+        }
+        await callApiSocios('registrarMaterial', { fecha, tipo, monto, nota, responsable, periodo, comprador, foto_url });
         document.getElementById('mat-modal').style.display = 'none';
         showToast('Registro guardado', 'success');
         await mat_cargar();

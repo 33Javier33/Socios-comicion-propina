@@ -992,7 +992,9 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 nota:        body.nota         || null,
                 responsable: body.responsable  || null,
                 periodo:     body.periodo      || null,
-                estado:      'activo'
+                estado:      'activo',
+                comprador:   body.comprador    || null,
+                foto_url:    body.foto_url     || null
             };
             try {
                 const { error } = await dbSoc.from('materiales').insert(row);
@@ -1261,14 +1263,15 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     let sbMat = [];
                     try {
                         const { data: matRows, error: matErr } = await dbSoc.from('materiales')
-                            .select('id, uuid, fecha, tipo, monto, nota, responsable, periodo, estado')
+                            .select('id, uuid, fecha, tipo, monto, nota, responsable, periodo, estado, foto_url, comprador')
                             .neq('estado', 'borrado')
                             .order('fecha', { ascending: false });
                         if (!matErr) {
                             sbMat = (matRows || []).map(r => ({
                                 uuid: r.uuid || r.id, fecha: r.fecha || '', tipo: r.tipo || '',
                                 monto: Number(r.monto || 0), nota: r.nota || '',
-                                responsable: r.responsable || '', periodo: r.periodo || '', estado: r.estado || 'activo'
+                                responsable: r.responsable || '', periodo: r.periodo || '', estado: r.estado || 'activo',
+                                foto_url: r.foto_url || '', comprador: r.comprador || ''
                             }));
                         }
                     } catch(e) { console.warn('[SB-MAT] read error:', e.message); }
