@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Subir foto del socio: elegir Cámara o Galería
+- Al agregar/cambiar la foto desde Gestión ahora hay **dos opciones**: **📷 Cámara** (abre la cámara — `capture="environment"`) y **🖼️ Galería** (elegir una imagen existente), como en propi.solicitada.
+- Archivos: `js/socios.js` (`gest_renderFoto` con dos inputs).
+
 #### 2026-07-07 — Foto del socio en todas las secciones + subir foto desde Gestión
 - **Foto ampliable:** helper reutilizable `avatarHTML(fotoUrl, nombre, size)` + **lightbox** (`verFotoGrande`) — al tocar cualquier avatar con foto se ve en grande. En `js/utils.js` + overlay en `index.html`.
 - **La foto del socio ahora aparece** donde aparece el socio: Gestión de Socios (ampliable), **panel de detalle de Anticipos y Ausencias**, **Certificados** (búsqueda + ficha), **Mensajes** (lista y cabecera), **PIN Diario** y **Documentación** (búsqueda y ficha por socio).

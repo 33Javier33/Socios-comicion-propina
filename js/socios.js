@@ -38,11 +38,15 @@ function gest_renderFoto(socio) {
     const el = document.getElementById('detFoto');
     if (wrap) wrap.innerHTML = avatarHTML(socio.fotoUrl, socio.nombre, 64);
     if (el) {
+        const tiene = !!socio.fotoUrl;
         el.innerHTML =
-            `<input type="file" id="gest-foto-input" accept="image/*" style="display:none" onchange="gest_subirFoto('${socio.id}', this)">`
-            + (socio.fotoUrl
-                ? `<button onclick="document.getElementById('gest-foto-input').click()" style="background:#f1f5f9;border:1px solid #cbd5e1;color:#334155;border-radius:6px;padding:2px 9px;font-size:0.8em;font-weight:700;cursor:pointer;">📷 Cambiar foto</button>`
-                : `<button onclick="document.getElementById('gest-foto-input').click()" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:6px;padding:2px 9px;font-size:0.8em;font-weight:700;cursor:pointer;">📷 Agregar foto</button>`);
+            `<input type="file" id="gest-foto-cam" accept="image/*" capture="environment" style="display:none" onchange="gest_subirFoto('${socio.id}', this)">
+             <input type="file" id="gest-foto-gal" accept="image/*" style="display:none" onchange="gest_subirFoto('${socio.id}', this)">
+             <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+               <span style="font-size:0.78em;color:#64748b;">${tiene ? 'Cambiar foto:' : 'Agregar foto:'}</span>
+               <button onclick="document.getElementById('gest-foto-cam').click()" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:6px;padding:3px 10px;font-size:0.8em;font-weight:700;cursor:pointer;">📷 Cámara</button>
+               <button onclick="document.getElementById('gest-foto-gal').click()" style="background:#f1f5f9;border:1px solid #cbd5e1;color:#334155;border-radius:6px;padding:3px 10px;font-size:0.8em;font-weight:700;cursor:pointer;">🖼️ Galería</button>
+             </div>`;
     }
 }
 async function gest_subirFoto(socioId, input) {
