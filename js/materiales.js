@@ -111,8 +111,12 @@ function mat_render() {
         const fechaDisplay = r.fecha ? r.fecha.split('-').reverse().join('/') : '';
         const notaDisplay = r.nota ? `<div style="font-size:0.78em;color:#374151;margin-top:2px;">${r.nota}</div>` : '';
         const compDisplay = r.comprador ? `<div style="font-size:0.72em;color:#0369a1;margin-top:1px;">🛒 Comprado por: ${r.comprador}</div>` : '';
+        const _fu = (r.foto_url + '').replace(/'/g, '%27');
+        const verFotoBtn = r.foto_url
+            ? `<div onclick="verFotoGrande('${_fu}')" style="display:inline-flex;align-items:center;gap:4px;margin-top:4px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:6px;padding:2px 8px;font-size:0.72em;font-weight:700;cursor:pointer;">📷 Ver foto</div>`
+            : '';
         const fotoThumb = r.foto_url
-            ? `<div onclick="event.stopPropagation();verFotoGrande('${(r.foto_url + '').replace(/'/g, '%27')}')" title="Ver foto de la compra" style="width:34px;height:34px;border-radius:7px;background-image:url('${(r.foto_url + '').replace(/'/g, '%27')}');background-size:cover;background-position:center;border:1px solid #cbd5e1;cursor:zoom-in;flex-shrink:0;"></div>`
+            ? `<div onclick="event.stopPropagation();verFotoGrande('${_fu}')" title="Ver foto de la compra" style="width:34px;height:34px;border-radius:7px;background-image:url('${_fu}');background-size:cover;background-position:center;border:1px solid #cbd5e1;cursor:zoom-in;flex-shrink:0;"></div>`
             : '';
         return `<div style="background:white;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
             <span style="background:${badgeBg};color:${badgeColor};font-size:0.65em;font-weight:800;padding:3px 7px;border-radius:5px;letter-spacing:0.04em;white-space:nowrap;">${r.tipo.toUpperCase()}</span>
@@ -120,6 +124,7 @@ function mat_render() {
                 <div style="font-size:0.82em;font-weight:700;color:#2c3e50;">${fechaDisplay}</div>
                 ${notaDisplay}
                 ${compDisplay}
+                ${verFotoBtn}
             </div>
             ${fotoThumb}
             <div style="font-weight:800;color:${montoColor};font-size:0.92em;white-space:nowrap;">${montoSigno}${formatearMoneda(mat_monto(r))}</div>
