@@ -1451,6 +1451,16 @@ async function gestion_cargarTotalRemanentes() {
     }
 }
 
+// Normaliza el área para el remanente: une Mesas + Mesas-Cambistas, excluye GastosComision.
+function _remAreaNorm(areaRaw) {
+    const a = (areaRaw || '').trim().toLowerCase();
+    if (a.includes('gasto') || a.includes('comision') || a.includes('comisión')) return { excl: true };
+    if (a.includes('mesa') || a.includes('cambista')) return { key: 'mesas', label: 'Mesas' };
+    if (a.includes('maquina') || a.includes('máquina')) return { key: 'maquinas', label: 'Máquinas' };
+    if (a.includes('boveda') || a.includes('bóveda')) return { key: 'boveda', label: 'Bóveda' };
+    return { key: a || 'sin', label: (areaRaw || 'Sin área').trim() };
+}
+
 // Formatea el período (dos ISO) a algo legible: "15 jun – 14 jul 2026"
 function _remFmtPeriodo(inicioISO, finISO) {
     const p = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
@@ -1467,12 +1477,16 @@ async function gestion_cargarRemanenteVivo() {
     if (!el) return;
     el.textContent = '...';
     try {
-        const [allData, saldosRes] = await Promise.all([
+        const [allData, saldosRes, diasRes] = await Promise.all([
             fetchAllDataCached(),
-            (typeof dbSoc !== 'undefined' ? dbSoc.from('saldos_socio').select('id, monto') : Promise.resolve({ data: [] }))
+            (typeof dbSoc !== 'undefined' ? dbSoc.from('saldos_socio').select('id, monto') : Promise.resolve({ data: [] })),
+            (typeof dbSoc !== 'undefined' ? dbSoc.from('dias_pt').select('socio_id, dias') : Promise.resolve({ data: [] }))
         ]);
         const saldos = {};
         (saldosRes.data || []).forEach(r => { saldos[r.id] = Number(r.monto || 0); });
+        // Días part-time frescos (evita que falten si globalDiasPT no cargó aún)
+        const diasPT = {};
+        (diasRes.data || []).forEach(r => { if (Array.isArray(r.dias)) diasPT[r.socio_id] = r.dias; });
         const { inicio, fin } = aq_calcularPeriodoActual();
         if (elPer) elPer.innerHTML = '📅 Período actual: <b>' + _remFmtPeriodo(inicio, fin) + '</b>';
 
@@ -1482,6 +1496,8 @@ async function gestion_cargarRemanenteVivo() {
         const remPorArea = {}; // key(lowercase) -> { label, total }
 
         (cacheSocios || []).forEach(socio => {
+            const _area = _remAreaNorm(socio.area);
+            if (_area.excl) return; // GastosComision no tiene remanente (se retira completo)
             const pts = Number(socio.puntos) || 0;
             // Anticipos del período
             let sumaAnt = 0; const vistos = new Set();
@@ -1502,7 +1518,7 @@ async function gestion_cargarRemanenteVivo() {
             // Alcance (según contrato)
             let alcance = 0;
             if (socio.contrato === 'Part-Time') {
-                (globalDiasPT[socio.id] || []).forEach(d => { if (!aus.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
+                (diasPT[socio.id] || globalDiasPT[socio.id] || []).forEach(d => { if (!aus.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
             } else {
                 for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) { if (!aus.has(dia) && valor) alcance += valor; }
             }
@@ -1511,11 +1527,9 @@ async function gestion_cargarRemanenteVivo() {
             const saldoReal = alcance + saldoAnterior - sumaAnt;
             const rem = saldoReal > 0 ? Math.round(saldoReal - Math.floor(saldoReal / 1000) * 1000) : Math.round(saldoReal);
             totalRem += rem;
-            // Acumular por área (fusionando por may/minúsculas)
-            const areaRaw = (socio.area || 'Sin área').trim();
-            const key = areaRaw.toLowerCase();
-            if (!remPorArea[key]) remPorArea[key] = { label: areaRaw, total: 0 };
-            remPorArea[key].total += rem;
+            // Acumular por área (Mesas + Mesas‑Cambistas juntos; GastosComision ya excluida)
+            if (!remPorArea[_area.key]) remPorArea[_area.key] = { label: _area.label, total: 0 };
+            remPorArea[_area.key].total += rem;
         });
 
         el.textContent = formatearMoneda(totalRem);

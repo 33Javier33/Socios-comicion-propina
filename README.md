@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Remanente en vivo: incluye Part-Time, excluye GastosComisión, une Mesas+Cambistas
+- **Part-Time incluido:** el remanente en vivo ahora lee los días PT directo de `dias_pt` (evita que faltaran si `globalDiasPT` no había cargado). Sus remanentes suman al total y a su área.
+- **GastosComisión excluida:** ese dinero se retira completo (no tiene remanente), así que sus socios ya no cuentan en el total ni aparecen como área.
+- **Mesas + Mesas‑Cambistas unidas:** se muestran como una sola área "Mesas" (misma bolsa de remanente). También se fusionan variantes por mayúsculas/minúsculas.
+- Nuevo helper `_remAreaNorm` (normaliza/excluye áreas).
+- Archivos: `js/anticipos.js`.
+
 #### 2026-07-07 — Remanente en vivo desglosado por área
 - Bajo el remanente en vivo se muestran **chips por área** (Mesas, Máquinas, Bóveda…) con el remanente proyectado en vivo de cada una, ordenadas de mayor a menor. Se fusionan variantes por mayúsculas/minúsculas.
 - Archivos: `index.html` (contenedor `gestionRemVivoAreas`), `js/anticipos.js` (acumulación por área en `gestion_cargarRemanenteVivo`).
