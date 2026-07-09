@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Horarios: tipo de contrato (Planta/Part-Time) + intercambio de días
+- Se trae el campo `contrato` de `socios` y se muestra el badge **Planta / Part-Time** en la ventana de calendarios del grupo, en la lista de asignación, en los integrantes del grupo y en la cabecera del socio.
+- **Flexibilidad Part-Time:** el editor de día ahora tiene acciones rápidas **💼 Trabajar** / **🌴 Dejar libre** y un botón **🔁 Intercambiar con otro día** (elige otro día y se cruzan los turnos: trabaja un día que no le tocaba y se libera otro). Para Part-Time se muestra un aviso de "horario flexible".
+- Todos siguen su ciclo; los cambios se guardan como excepciones por día (no alteran el ciclo del grupo).
+- Archivos: `index2.html`.
+
 #### 2026-07-07 — Horarios: sistema de vacaciones (v15 hábiles / v6 corridos)
 - Se implementó el sistema de **vacaciones** de Turnos Pro en `index2.html`. En la ventana de calendarios del grupo, cada socio tiene un botón **"🏖️ Vacaciones"**.
 - Dos tipos: **v15 = 15 días hábiles** (cuenta solo días hábiles, **saltando fines de semana y feriados chilenos**; marca toda la franja) y **v6 = 6 días adicionales** (corridos). Calcula la **fecha de regreso** (siguiente día hábil).

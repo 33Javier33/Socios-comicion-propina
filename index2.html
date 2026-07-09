@@ -212,6 +212,9 @@ let pinBuffer = '', pinCtx = null; // { modo:'create'|'verify', titulo, sub, ava
 
 function uid(p){ return (p||'') + Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function esPartTime(s){ return /part/i.test((s&&s.contrato)||''); }
+function badgeContrato(s){ const pt=esPartTime(s); return `<span style="display:inline-block;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:${pt?'#8b5cf622':'#0ea5e922'};color:${pt?'#c4b5fd':'#7dd3fc'}">${pt?'Part-Time':'Planta'}</span>`; }
+function _fechaDesdeISO(iso){ const [y,m,d]=iso.split('-').map(Number); return new Date(y,m-1,d); }
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
 function toast(msg,color){ const t=document.getElementById('toast'); t.textContent=msg; t.style.background=color||'#0284c7'; t.style.bottom='24px'; setTimeout(()=>t.style.bottom='-80px',2600); }
 function fechaISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -242,7 +245,7 @@ function calcVacacion(tipo, inicioISO){
 // ══════════ Carga de datos ══════════
 async function cargarBase(){
   const [rs, rt, rg, ra] = await Promise.all([
-    db.from('socios').select('id,nombre,apellido,area').eq('activo',true),
+    db.from('socios').select('id,nombre,apellido,area,contrato').eq('activo',true),
     db.from('horarios_turnos').select('*').order('orden'),
     db.from('horarios_grupos').select('*').order('created_at'),
     db.from('horarios_socio_grupo').select('*')
@@ -280,7 +283,7 @@ async function socioElegido(id){
       onOk:async(pin)=>{ await db.from('horarios_pins').upsert({usuario:id,pin}); entrarSocio(s); }});
   }
 }
-function entrarSocio(s){ sesion={rol:'socio',id:s.id,nombre:`${s.nombre} ${s.apellido}`}; socioViewDate=new Date(); renderSocioApp(); show('appSocio'); }
+function entrarSocio(s){ sesion={rol:'socio',id:s.id,nombre:`${s.nombre} ${s.apellido}`,contrato:s.contrato}; socioViewDate=new Date(); renderSocioApp(); show('appSocio'); }
 
 async function irSupervisor(){
   await cargarBase();
@@ -368,7 +371,8 @@ async function renderSocioApp(){
   document.getElementById('socioMesLabel').textContent=MESES[socioViewDate.getMonth()]+' '+socioViewDate.getFullYear();
   const exc=await excepcionesDe(sesion.id, socioViewDate);
   const hasExc=Object.keys(exc).length>0;
-  document.getElementById('socioGrupoHdr').textContent = g?('Grupo: '+g.nombre):(hasExc?'Turnos asignados por día':'Sin grupo asignado');
+  const _cont = esPartTime(sesion) ? 'Part-Time' : 'Planta';
+  document.getElementById('socioGrupoHdr').textContent = (g?('Grupo: '+g.nombre):(hasExc?'Turnos asignados por día':'Sin grupo asignado')) + ' · ' + _cont;
   const sinGrupo=document.getElementById('socioSinGrupo');
   if(!gid && !hasExc){ sinGrupo.classList.remove('hidden'); document.getElementById('socioCal').innerHTML=''; document.getElementById('socioLeyenda').innerHTML=''; return; }
   sinGrupo.classList.add('hidden');
@@ -481,7 +485,7 @@ function renderGrupos(){
         <span class="chip" style="background:#0ea5e922;color:#38bdf8">💼 ${trab} trabajo</span>
         <span class="chip" style="background:#33415544;color:#cbd5e1">Comienza ${g.fecha_base}</span>
       </div>
-      <div class="text-[11px] text-slate-500 mb-2">${miembros.length?('👥 '+miembros.map(s=>esc(s.nombre+' '+s.apellido)).join(', ')):'Sin socios asignados'}</div>
+      <div class="text-[11px] text-slate-500 mb-2">${miembros.length?('👥 '+miembros.map(s=>esc(s.nombre+' '+s.apellido)+(esPartTime(s)?' (PT)':'')).join(', ')):'Sin socios asignados'}</div>
       <div class="flex gap-2">
         <button onclick="grupoCalendarios('${g.id}')" class="btn-primary text-xs flex-1 py-2">📅 Ver calendarios (comparar)</button>
         <button onclick="grupoModal('${g.id}')" class="btn-ghost text-xs" style="padding:7px 12px;">✎</button>
@@ -537,8 +541,9 @@ function gcalSocioCard(s){
   }).join('');
   return `<div class="card p-2 mb-3">
     <div class="flex items-center gap-2 mb-1">
-      <div class="text-xs font-bold flex-1 min-w-0 truncate">${esc(s.nombre)} ${esc(s.apellido)}</div>
-      <button onclick="vacModal('${s.id}')" class="btn-ghost" style="font-size:11px;padding:4px 8px;">🏖️ Vacaciones</button>
+      <div class="text-xs font-bold min-w-0 truncate">${esc(s.nombre)} ${esc(s.apellido)}</div>
+      ${badgeContrato(s)}
+      <button onclick="vacModal('${s.id}')" class="btn-ghost ml-auto" style="font-size:11px;padding:4px 8px;">🏖️</button>
     </div>
     <div class="grid grid-cols-7 gap-1 mb-1">${head}</div>
     <div class="grid grid-cols-7 gap-1">${cells}</div>
@@ -586,15 +591,59 @@ async function vacQuitar(recId, socioId){
   await db.from('horarios_vacaciones').delete().eq('id',recId);
   toast('Vacaciones quitadas'); vacModal(socioId);
 }
+function _turnoEfectivoId(socioId, iso){
+  const exc=_gcalExc[socioId]||{};
+  if(exc[iso]!==undefined) return exc[iso];
+  const t=turnoDeSocioEnFecha(socioId,_fechaDesdeISO(iso),{});
+  return t?t.id:'t_trabajo';
+}
 function gcalDia(socioId, iso){
-  const opts=turnos.map(t=>`<button onclick="gcalPoner('${socioId}','${iso}','${t.id}')" class="w-full card p-3 flex items-center gap-3 text-left mb-2"><span class="w-4 h-4 rounded-full" style="background:${t.color}"></span><span class="font-semibold text-sm">${esc(t.nombre)}</span>${t.hora_inicio?`<span class="text-xs text-slate-400 ml-auto">${t.hora_inicio}–${t.hora_fin}</span>`:''}</button>`).join('');
   const s=sociosMesas.find(x=>x.id===socioId);
-  abrirModal(`<h3 class="font-extrabold mb-1">Cambiar turno</h3>
-    <p class="text-xs text-slate-400 mb-1">${esc(s?s.nombre+' '+s.apellido:'')} · ${iso}</p>
-    <p class="text-[11px] text-slate-500 mb-4">Cambia el turno solo para este socio y este día (anula el ciclo).</p>
-    ${opts}
+  const pt=esPartTime(s);
+  const otros=turnos.filter(t=>t.id!=='t_libre'&&t.id!=='t_trabajo');
+  const opts=otros.map(t=>`<button onclick="gcalPoner('${socioId}','${iso}','${t.id}')" class="w-full card p-2.5 flex items-center gap-3 text-left mb-2"><span class="w-4 h-4 rounded-full" style="background:${t.color}"></span><span class="font-semibold text-sm">${esc(t.nombre)}</span>${t.hora_inicio?`<span class="text-xs text-slate-400 ml-auto">${t.hora_inicio}–${t.hora_fin}</span>`:''}</button>`).join('');
+  abrirModal(`<h3 class="font-extrabold mb-1">Cambiar día</h3>
+    <div class="flex items-center gap-2 mb-1"><p class="text-xs text-slate-400">${esc(s?s.nombre+' '+s.apellido:'')} · ${iso}</p>${s?badgeContrato(s):''}</div>
+    ${pt?'<p class="text-[11px] text-purple-300 mb-3">🔓 Part-Time: horario flexible — puedes hacerlo trabajar un día que no le toca e intercambiarlo por otro.</p>':'<p class="text-[11px] text-slate-500 mb-3">Cambia el turno solo para este día (anula el ciclo).</p>'}
+    <div class="grid grid-cols-2 gap-2 mb-2">
+      <button onclick="gcalPoner('${socioId}','${iso}','t_trabajo')" class="btn-ghost" style="background:#0ea5e922;color:#7dd3fc;font-weight:800;">💼 Trabajar</button>
+      <button onclick="gcalPoner('${socioId}','${iso}','t_libre')" class="btn-ghost" style="background:#10b98122;color:#6ee7b7;font-weight:800;">🌴 Dejar libre</button>
+    </div>
+    <button onclick="gcalSwapInicio('${socioId}','${iso}')" class="btn-primary w-full mb-3" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);">🔁 Intercambiar con otro día</button>
+    <div class="text-[11px] text-slate-400 font-semibold mb-1">Otros turnos</div>
+    ${opts||'<div class="text-[11px] text-slate-500 mb-2">Sin turnos con horario. Créalos en la pestaña Turnos.</div>'}
     <button onclick="gcalQuitar('${socioId}','${iso}')" class="w-full btn-ghost mt-1 mb-2">↺ Volver al ciclo (quitar cambio)</button>
     <button onclick="gcalRender()" class="w-full btn-ghost">‹ Volver a los calendarios</button>`);
+}
+// Intercambio de días: elegir el otro día y se cruzan los turnos (trabajar uno, liberar el otro)
+function gcalSwapInicio(socioId, isoA){
+  const s=sociosMesas.find(x=>x.id===socioId);
+  const exc=_gcalExc[socioId]||{}; const hoyISO=fechaISO(new Date());
+  const head=['L','M','X','J','V','S','D'].map(d=>`<div class="text-center text-[8px] text-slate-500 font-bold">${d}</div>`).join('');
+  const cells=celdasMes(_gcalDate).map(d=>{
+    if(!d) return '<div></div>';
+    const iso=fechaISO(d); const t=turnoDeSocioEnFecha(socioId,d,exc);
+    let bg='#0f172a',col='#475569',txt='';
+    if(t&&t.es_libre){ bg='#10b98130'; col='#6ee7b7'; txt='<span style="font-size:7px;font-weight:800;color:#34d399">L</span>'; }
+    else if(t){ bg=t.color+'22'; col='#cbd5e1'; }
+    const sel = iso===isoA ? 'outline:2px solid #a78bfa;outline-offset:-2px;' : (iso===hoyISO?'outline:1.5px solid #38bdf8;outline-offset:-1px;':'');
+    return `<div onclick="gcalSwapFin('${socioId}','${isoA}','${iso}')" style="cursor:pointer;aspect-ratio:1;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:${bg};${sel}"><span style="font-size:9px;font-weight:600;color:${col}">${d.getDate()}</span>${txt}</div>`;
+  }).join('');
+  abrirModal(`<h3 class="font-extrabold mb-1">🔁 Intercambiar con otro día</h3>
+    <p class="text-xs text-slate-400 mb-1">${esc(s?s.nombre+' '+s.apellido:'')}</p>
+    <p class="text-[11px] text-slate-500 mb-3">Día elegido: <b style="color:#a78bfa">${isoA}</b>. Toca el <b>otro día</b>: se cruzarán los turnos (uno pasa a trabajar y el otro a libre).</p>
+    <div class="grid grid-cols-7 gap-1 mb-1">${head}</div>
+    <div class="grid grid-cols-7 gap-1 mb-3">${cells}</div>
+    <button onclick="gcalDia('${socioId}','${isoA}')" class="w-full btn-ghost">‹ Volver</button>`);
+}
+async function gcalSwapFin(socioId, isoA, isoB){
+  if(isoA===isoB) return toast('Elige un día distinto','#dc2626');
+  const tA=_turnoEfectivoId(socioId,isoA), tB=_turnoEfectivoId(socioId,isoB);
+  await db.from('horarios_excepciones').upsert([
+    {id:uid('ex'),socio_id:socioId,fecha:isoA,turno_id:tB},
+    {id:uid('ex'),socio_id:socioId,fecha:isoB,turno_id:tA}
+  ],{onConflict:'socio_id,fecha'});
+  toast('Días intercambiados'); gcalRender();
 }
 async function gcalPoner(socioId,iso,turnoId){ await db.from('horarios_excepciones').upsert({id:uid('ex'),socio_id:socioId,fecha:iso,turno_id:turnoId},{onConflict:'socio_id,fecha'}); toast('Turno cambiado'); gcalRender(); }
 async function gcalQuitar(socioId,iso){ await db.from('horarios_excepciones').delete().eq('socio_id',socioId).eq('fecha',iso); toast('Cambio quitado'); gcalRender(); }
@@ -703,7 +752,7 @@ function renderAsignaciones(){
   c.innerHTML=list.map(s=>{
     const gid=asignaciones[s.id]||'';
     return `<div class="card p-3 flex items-center gap-2">
-      <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(s.nombre)} ${esc(s.apellido)}</div><div class="text-[11px] text-slate-400">${esc(s.area)}</div></div>
+      <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(s.nombre)} ${esc(s.apellido)}</div><div class="text-[11px] text-slate-400 flex items-center gap-1">${badgeContrato(s)} ${esc(s.area)}</div></div>
       <select class="fld" style="width:auto;padding:7px 8px;" onchange="asignar('${s.id}',this.value)">${optGrupos.replace(`value="${gid}"`,`value="${gid}" selected`)}</select>
       <button onclick="resetPinSocio('${s.id}','${esc(s.nombre)} ${esc(s.apellido)}')" title="Reiniciar PIN del socio" class="btn-ghost text-xs" style="padding:7px 9px;">🔑</button>
     </div>`;
