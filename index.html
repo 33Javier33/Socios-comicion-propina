@@ -1601,7 +1601,14 @@
                 <div style="background:white; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border:1px solid #eee;">
                     <h3 style="margin:0 0 12px 0; color:var(--primary); font-size:1em;">✏️ Nueva Nota</h3>
                     <textarea id="notaInputMsg" rows="3" placeholder="Escribe una nota para el equipo..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:0.95em; resize:vertical; box-sizing:border-box; font-family:inherit;"></textarea>
-                    <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+                    <input type="file" id="nota-foto-cam" accept="image/*" capture="environment" style="display:none" onchange="notasFotoElegida(this)">
+                    <input type="file" id="nota-foto-gal" accept="image/*" style="display:none" onchange="notasFotoElegida(this)">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; gap:8px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <button type="button" onclick="document.getElementById('nota-foto-cam').click()" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:7px;padding:6px 11px;font-size:0.82em;font-weight:700;cursor:pointer;">📷 Cámara</button>
+                            <button type="button" onclick="document.getElementById('nota-foto-gal').click()" style="background:#f1f5f9;border:1px solid #cbd5e1;color:#334155;border-radius:7px;padding:6px 11px;font-size:0.82em;font-weight:700;cursor:pointer;">🖼️ Foto</button>
+                            <div id="nota-foto-preview" style="display:none;align-items:center;gap:6px;"></div>
+                        </div>
                         <button onclick="notasPublicar()" class="btn-submit" style="padding:9px 24px;">📤 Publicar</button>
                     </div>
                 </div>

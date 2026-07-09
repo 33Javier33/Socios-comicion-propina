@@ -70,6 +70,7 @@ function notasCrearElemento(n, idx) {
             </div>
         </div>
         <div style="font-size:0.95em;color:#333;line-height:1.5;white-space:pre-wrap;margin-bottom:10px">${notasFormatearMensaje(n.mensaje||'')}</div>
+        ${n.foto_url ? `<img src="${(n.foto_url+'').replace(/"/g,'%22')}" onclick="verFotoGrande('${(n.foto_url+'').replace(/'/g,'%27')}')" style="max-width:180px;max-height:180px;border-radius:10px;border:1px solid #e2e8f0;object-fit:cover;cursor:zoom-in;margin-bottom:10px;display:block;">` : ''}
         <div style="display:flex;gap:6px;flex-wrap:wrap">${rxBtns}</div>
         ${rxSummary ? `<div style="font-size:0.72em;color:#7f8c8d;margin-top:5px;line-height:1.4">${rxSummary}</div>` : ''}`;
     return div;
@@ -117,20 +118,55 @@ async function notasCargar() {
 
 async function notasPublicar() {
     const msg = document.getElementById('notaInputMsg').value.trim();
-    if (!msg) return showToast('Escribe algo antes de publicar','error');
+    if (!msg && !_notaFotoFile) return showToast('Escribe algo o adjunta una foto','error');
     const btnPub = document.querySelector('#tab-notas .btn-submit');
     if (btnPub) { btnPub.disabled=true; btnPub.textContent='Publicando...'; }
     try {
-        await fetch(URL_RECAUDACIONES,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'addNote',autor:'Admin',mensaje:msg})});
+        // Subir foto (opcional) al bucket público avatares (carpeta notas)
+        let foto_url = '';
+        if (_notaFotoFile && typeof dbSoc !== 'undefined') {
+            try {
+                const ext = (_notaFotoFile.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+                const path = 'notas/' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + '.' + ext;
+                const up = await dbSoc.storage.from('avatares').upload(path, _notaFotoFile, { contentType:_notaFotoFile.type, upsert:true });
+                if (!up.error) foto_url = dbSoc.storage.from('avatares').getPublicUrl(path).data.publicUrl;
+            } catch(eF) { console.warn('[notas] foto:', eF); }
+        }
+        await fetch(URL_RECAUDACIONES,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'addNote',autor:'Admin',mensaje:msg,foto_url})});
         document.getElementById('notaInputMsg').value='';
         showToast('Nota publicada','success');
         const cont = document.getElementById('notasListaContainer');
         if (cont.querySelector('div[style*="padding:30px"]')) cont.innerHTML='';
-        const el = notasCrearElemento({fecha:new Date().toISOString(),autor:'Admin',mensaje:msg},-1);
+        const el = notasCrearElemento({fecha:new Date().toISOString(),autor:'Admin',mensaje:msg,foto_url},-1);
         cont.insertBefore(el,cont.firstChild);
+        notasFotoQuitar();
         try { localStorage.removeItem(CACHE_KEY_NOTAS); } catch(e) {}
     } catch(e) { showToast('Error al publicar nota','error'); }
     finally { if(btnPub){btnPub.disabled=false;btnPub.textContent='Publicar';} }
+}
+
+// Foto opcional de la nota
+let _notaFotoFile = null;
+function notasFotoElegida(input) {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    if (!f.type.startsWith('image/')) { showToast('Debe ser una imagen','error'); return; }
+    _notaFotoFile = f;
+    const prev = document.getElementById('nota-foto-preview');
+    if (prev) {
+        const url = URL.createObjectURL(f);
+        prev.style.display = 'flex';
+        prev.innerHTML = `<img src="${url}" style="width:38px;height:38px;border-radius:7px;object-fit:cover;border:1px solid #cbd5e1;">
+            <span style="font-size:0.78em;color:#059669;font-weight:700;">✓ foto lista</span>
+            <button type="button" onclick="notasFotoQuitar()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.9em;">✕</button>`;
+    }
+}
+function notasFotoQuitar() {
+    _notaFotoFile = null;
+    const prev = document.getElementById('nota-foto-preview');
+    if (prev) { prev.style.display='none'; prev.innerHTML=''; }
+    const cam = document.getElementById('nota-foto-cam'); if (cam) cam.value='';
+    const gal = document.getElementById('nota-foto-gal'); if (gal) gal.value='';
 }
 
 async function notasBorrar(btnEl) {

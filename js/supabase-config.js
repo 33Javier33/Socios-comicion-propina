@@ -1740,7 +1740,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     autor: m.autor || 'Admin',
                     mensaje: m.mensaje || '',
                     pinned: m.pinned || false,
-                    reactions: m.reactions || {}
+                    reactions: m.reactions || {},
+                    foto_url: m.foto_url || ''
                 }));
                 mapped.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
                 return ok({ data: mapped });
@@ -1752,7 +1753,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 await dbRec.from('notas_recaudacion').insert({
                     id: crypto.randomUUID(),
                     autor: body.autor || 'Admin',
-                    mensaje: body.mensaje || ''
+                    mensaje: body.mensaje || '',
+                    foto_url: body.foto_url || null
                 });
             } catch (e) { console.error('[supabase-config] addNote:', e); }
             return ok({ success: true });
