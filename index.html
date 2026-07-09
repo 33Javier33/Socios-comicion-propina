@@ -59,6 +59,12 @@
     <div class="container">
         <div id="toast-container"></div>
 
+        <!-- LIGHTBOX: foto de socio ampliada -->
+        <div id="fotoGrandeOverlay" onclick="cerrarFotoGrande()" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.9);align-items:center;justify-content:center;padding:24px;flex-direction:column;gap:16px;">
+            <img id="fotoGrandeImg" src="" alt="Foto" style="max-width:100%;max-height:82vh;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.5);object-fit:contain;">
+            <button onclick="cerrarFotoGrande()" style="background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.3rem;cursor:pointer;">✕</button>
+        </div>
+
         <div class="header-section">
             <h1>Sistema Integral <small style="font-size:0.5em; color:#7f8c8d;">Fondo Solidario</small></h1>
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -404,11 +410,15 @@
                     <input type="hidden" id="gestionSocioRemanente" value="0">
                     
                     <div class="detail-header">
-                        <div>
-                            <h2 id="detNombre" style="margin:0; color:var(--primary);">Nombre Socio</h2>
-                            <span id="detContrato" class="card-contract" style="font-size:1em; margin-top:5px;">PLANTA</span>
-                            <div style="margin-top:5px; color:#7f8c8d;" id="detArea">Área</div>
-                            <div style="margin-top:3px; color:#7f8c8d; font-size:0.85em;" id="detRut"></div>
+                        <div style="display:flex; align-items:flex-start; gap:12px;">
+                            <div id="detFotoWrap"></div>
+                            <div>
+                                <h2 id="detNombre" style="margin:0; color:var(--primary);">Nombre Socio</h2>
+                                <span id="detContrato" class="card-contract" style="font-size:1em; margin-top:5px;">PLANTA</span>
+                                <div style="margin-top:5px; color:#7f8c8d;" id="detArea">Área</div>
+                                <div style="margin-top:3px; color:#7f8c8d; font-size:0.85em;" id="detRut"></div>
+                                <div style="margin-top:4px;" id="detFoto"></div>
+                            </div>
                         </div>
                         <div class="points-badge" style="width:70px; height:70px;">
                             <span id="detPuntos" class="points-number" style="font-size:1.6em;">0</span>

@@ -101,9 +101,12 @@ function dp_render() {
             ? `<button onclick="dp_quitarPin('${s.id}')" style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:5px 9px;font-size:0.74em;font-weight:700;cursor:pointer;">🗑</button>` : '';
         return `<div style="background:white;border-radius:10px;border:1px solid #e2e8f0;padding:11px 13px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-                <div style="flex:1;min-width:0;">
-                    <div style="font-weight:800;font-size:0.92em;color:#0f172a;">${_htmlEscDp(s.nombre)} ${_htmlEscDp(s.apellido)}</div>
-                    <div style="font-size:0.72em;color:#64748b;margin-top:2px;">PIN actual: ${pinView} ${badge}</div>
+                <div style="flex:1;min-width:0;display:flex;align-items:center;gap:9px;">
+                    ${avatarHTML(s.fotoUrl, s.nombre, 34)}
+                    <div style="min-width:0;">
+                        <div style="font-weight:800;font-size:0.92em;color:#0f172a;">${_htmlEscDp(s.nombre)} ${_htmlEscDp(s.apellido)}</div>
+                        <div style="font-size:0.72em;color:#64748b;margin-top:2px;">PIN actual: ${pinView} ${badge}</div>
+                    </div>
                 </div>
                 <div style="display:flex;gap:5px;flex-shrink:0;">${btnVer}${btnQuitar}</div>
             </div>

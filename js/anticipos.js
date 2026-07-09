@@ -1478,6 +1478,7 @@ function seleccionarSocio(id) {
     document.getElementById('detContrato').textContent = socio.contrato;
     document.getElementById('detArea').textContent = "Área: " + (socio.area || '').toUpperCase();
     if (typeof gest_renderRut === 'function') gest_renderRut(socio);
+    if (typeof gest_renderFoto === 'function') gest_renderFoto(socio);
     document.getElementById('detPuntos').textContent = socio.puntos;
     document.getElementById('cardAusencias').style.display = (socio.contrato === 'Planta') ? 'block' : 'none';
 

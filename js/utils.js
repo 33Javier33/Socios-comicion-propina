@@ -81,6 +81,23 @@ function showToast(message, type = 'info') {
     setTimeout(() => t.classList.add('show'), 10); setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 3000);
 }
 
+// ── AVATAR de socio (foto o inicial) + lightbox para ampliar ──────────────
+function _avEsc(s){ return String(s == null ? '' : s).replace(/'/g, '%27').replace(/"/g, '%22'); }
+function avatarHTML(fotoUrl, nombre, size) {
+    size = size || 40;
+    const r = Math.round(size * 0.28);
+    if (fotoUrl) {
+        return `<div onclick="event.stopPropagation();verFotoGrande('${_avEsc(fotoUrl)}')" title="Ver foto" style="width:${size}px;height:${size}px;border-radius:${r}px;background-image:url('${_avEsc(fotoUrl)}');background-size:cover;background-position:center;flex-shrink:0;border:1px solid #e2e8f0;cursor:zoom-in;"></div>`;
+    }
+    return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;background:linear-gradient(135deg,#1e3a5f,#2980b9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:${Math.round(size*0.42)}px;flex-shrink:0;">${(nombre || '?').charAt(0).toUpperCase()}</div>`;
+}
+function verFotoGrande(url) {
+    if (!url) return;
+    const o = document.getElementById('fotoGrandeOverlay'); const im = document.getElementById('fotoGrandeImg');
+    if (!o || !im) return; im.src = url; o.style.display = 'flex';
+}
+function cerrarFotoGrande() { const o = document.getElementById('fotoGrandeOverlay'); if (o) o.style.display = 'none'; }
+
 // ── Log de acciones ───────────────────────────────────────
 function logAccion(tipo, detalle) {
     try {

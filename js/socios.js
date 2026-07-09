@@ -32,6 +32,46 @@ function gest_renderRut(socio) {
     }
 }
 
+// ── Foto del socio en el panel de detalle (avatar grande + subir) ──
+function gest_renderFoto(socio) {
+    const wrap = document.getElementById('detFotoWrap');
+    const el = document.getElementById('detFoto');
+    if (wrap) wrap.innerHTML = avatarHTML(socio.fotoUrl, socio.nombre, 64);
+    if (el) {
+        el.innerHTML =
+            `<input type="file" id="gest-foto-input" accept="image/*" style="display:none" onchange="gest_subirFoto('${socio.id}', this)">`
+            + (socio.fotoUrl
+                ? `<button onclick="document.getElementById('gest-foto-input').click()" style="background:#f1f5f9;border:1px solid #cbd5e1;color:#334155;border-radius:6px;padding:2px 9px;font-size:0.8em;font-weight:700;cursor:pointer;">📷 Cambiar foto</button>`
+                : `<button onclick="document.getElementById('gest-foto-input').click()" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:6px;padding:2px 9px;font-size:0.8em;font-weight:700;cursor:pointer;">📷 Agregar foto</button>`);
+    }
+}
+async function gest_subirFoto(socioId, input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { showToast('Debe ser una imagen', 'error'); return; }
+    const socio = (cacheSocios || []).find(s => s.id === socioId);
+    toggleLoader(true, 'Subiendo foto...');
+    try {
+        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const path = 'socios/' + socioId + '_' + Date.now() + '.' + ext;
+        const up = await dbSoc.storage.from('avatares').upload(path, file, { contentType: file.type, upsert: true });
+        if (up.error) throw up.error;
+        const { data } = dbSoc.storage.from('avatares').getPublicUrl(path);
+        const url = data.publicUrl;
+        const res = await callApiSocios('guardarFotoSocio', { socioId, url, nombre: socio ? (socio.nombre + ' ' + socio.apellido).trim() : '' });
+        if (res.status !== 'success') throw new Error(res.message || 'Error');
+        if (socio) socio.fotoUrl = url; // reflejar en cache
+        showToast('Foto guardada ✅', 'success');
+        if (socio) gest_renderFoto(socio);
+        if (typeof renderizarListaBusqueda === 'function') renderizarListaBusqueda();
+    } catch (e) {
+        showToast('No se pudo subir la foto: ' + (e.message || e), 'error');
+    } finally {
+        toggleLoader(false);
+        input.value = '';
+    }
+}
+
 // Cambia el bloque a modo edición
 function gest_editarRut(socioId) {
     const el = document.getElementById('detRut');
@@ -149,9 +189,7 @@ function renderizarCards() {
                     fipVis = `<small style="color:#e67e22;font-size:0.75em;">⏱ Puntos desde: ${fipLabel}</small>`;
                 }
             }
-            const _foto = socio.fotoUrl
-                ? `<div style="width:40px;height:40px;border-radius:11px;background-image:url('${_htmlEscSoc(socio.fotoUrl)}');background-size:cover;background-position:center;flex-shrink:0;border:1px solid #e2e8f0;"></div>`
-                : `<div style="width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#1e3a5f,#2980b9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.05em;flex-shrink:0;">${(socio.nombre || '?').charAt(0).toUpperCase()}</div>`;
+            const _foto = avatarHTML(socio.fotoUrl, socio.nombre, 40);
             card.innerHTML = `
                 <div class="area-tag bg-${key}">${nombresArea[key] || socio.area}</div>
                 <div class="card-header" style="display:flex;align-items:center;gap:10px;">${_foto}<div style="flex:1;min-width:0;"><h3 style="margin:0;">${socio.nombre} ${socio.apellido}</h3><span class="card-contract">${socio.contrato}</span></div></div>

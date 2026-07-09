@@ -87,7 +87,7 @@ function msgAdmin_renderLista() {
             ? '<span style="background:#dc2626;color:white;font-size:0.62em;font-weight:800;padding:1px 6px;border-radius:8px;margin-left:5px;">NUEVO</span>'
             : (tieneConv ? '<span style="margin-left:5px;">💬</span>' : '');
         return `<div onclick="msgAdmin_abrir('${_msgEsc(s.id)}')" style="display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid ${activo ? '#0284c7' : '#eef2f6'};background:${activo ? '#e0f2fe' : 'white'};border-radius:10px;margin-bottom:6px;cursor:pointer;">
-            <div style="width:32px;height:32px;border-radius:50%;background:#0284c7;color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85em;flex-shrink:0;">${_msgEsc((s.nombre || '?').charAt(0))}</div>
+            ${avatarHTML(s.fotoUrl, s.nombre, 34)}
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:700;font-size:0.86em;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_msgEsc(s.nombre)} ${_msgEsc(s.apellido)}${badge}</div>
                 <div style="font-size:0.72em;color:#94a3b8;">${_msgEsc((s.area || '').toUpperCase())}</div>
@@ -102,7 +102,7 @@ function msgAdmin_abrir(socioId) {
     msgAdminSocioActual = { id: s.id, nombre: `${s.nombre} ${s.apellido}` };
     document.getElementById('msgAdmin-placeholder').style.display = 'none';
     document.getElementById('msgAdmin-conv').style.display = 'block';
-    document.getElementById('msgAdmin-header').textContent = msgAdminSocioActual.nombre;
+    document.getElementById('msgAdmin-header').innerHTML = `<div style="display:flex;align-items:center;gap:9px;">${avatarHTML(s.fotoUrl, s.nombre, 30)}<span>${_msgEsc(msgAdminSocioActual.nombre)}</span></div>`;
     document.getElementById('msgAdmin-hilo').innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:0.85em;padding:20px;">Cargando…</div>';
     _msgAdminMarcarVisto(s.id);
     msgAdmin_actualizarNavDot();

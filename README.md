@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Foto del socio en todas las secciones + subir foto desde Gestión
+- **Foto ampliable:** helper reutilizable `avatarHTML(fotoUrl, nombre, size)` + **lightbox** (`verFotoGrande`) — al tocar cualquier avatar con foto se ve en grande. En `js/utils.js` + overlay en `index.html`.
+- **La foto del socio ahora aparece** donde aparece el socio: Gestión de Socios (ampliable), **panel de detalle de Anticipos y Ausencias**, **Certificados** (búsqueda + ficha), **Mensajes** (lista y cabecera), **PIN Diario** y **Documentación** (búsqueda y ficha por socio).
+- **Subir foto desde Gestión:** en el panel de detalle (junto al RUT) el responsable puede **📷 Agregar/Cambiar foto** del socio si no tiene. Sube al bucket público `avatares` (`dbSoc.storage`) y guarda `socios.foto_url` con el nuevo handler `guardarFotoSocio` (espejo de `guardarRutSocio`, con auditoría). Se refleja en cache y en propi.solicitada.
+- Archivos: `js/utils.js`, `index.html`, `js/socios.js` (avatar card + `gest_renderFoto`/`gest_subirFoto`), `js/anticipos.js` (llamada en seleccionarSocio), `js/supabase-config.js` (handler), `js/mensajes-admin.js`, `js/diario-pins.js`, `js/documentacion.js`, `js/certificados.js`.
+
 #### 2026-07-07 — Horarios: tipo de contrato (Planta/Part-Time) + intercambio de días
 - Se trae el campo `contrato` de `socios` y se muestra el badge **Planta / Part-Time** en la ventana de calendarios del grupo, en la lista de asignación, en los integrantes del grupo y en la cabecera del socio.
 - **Flexibilidad Part-Time:** el editor de día ahora tiene acciones rápidas **💼 Trabajar** / **🌴 Dejar libre** y un botón **🔁 Intercambiar con otro día** (elige otro día y se cruzan los turnos: trabaja un día que no le tocaba y se libera otro). Para Part-Time se muestra un aviso de "horario flexible".

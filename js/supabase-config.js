@@ -964,6 +964,23 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             } catch(e) { return _mockOk({ status: 'error', message: e.message }); }
         }
 
+        // ── guardarFotoSocio → actualizar la foto del socio (bucket avatares) ──
+        if (action === 'guardarFotoSocio') {
+            const _sid = body.socioId || body.id || '';
+            const _url = (body.url || '').trim();
+            if (!_sid) return _mockOk({ status: 'error', message: 'socioId requerido' });
+            try {
+                const { error } = await dbSoc.from('socios').update({ foto_url: _url || null }).eq('id', _sid);
+                if (error) throw error;
+                _sbAudit('Registrar Foto', {
+                    idAfectado: _sid,
+                    detalle: _url ? 'Foto de socio agregada/cambiada desde Gestión' : 'Foto de socio eliminada desde Gestión',
+                    datos: { socio_id: _sid }
+                });
+                return _mockOk({ status: 'success' });
+            } catch(e) { return _mockOk({ status: 'error', message: e.message }); }
+        }
+
         // ── registrarMaterial → Supabase primario, GAS en background ──
         if (action === 'registrarMaterial') {
             const uuid = 'mat-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);

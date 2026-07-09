@@ -94,8 +94,9 @@ function doc_renderBusquedaSocios() {
     socios = socios.slice().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '')).slice(0, 40);
     if (!socios.length) { cont.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.85em;">Sin socios.</div>'; return; }
     cont.innerHTML = socios.map(s =>
-        `<button onclick="doc_verSocio('${s.id}')" style="width:100%;text-align:left;background:white;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;margin-bottom:6px;cursor:pointer;font-size:0.88em;font-weight:700;color:#0f172a;">
-            👤 ${_docEsc(s.nombre)} ${_docEsc(s.apellido)} <span style="font-weight:500;color:#94a3b8;font-size:0.85em;">· ${_docEsc(s.area || '')}</span>
+        `<button onclick="doc_verSocio('${s.id}')" style="width:100%;text-align:left;background:white;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;margin-bottom:6px;cursor:pointer;font-size:0.88em;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:9px;">
+            ${avatarHTML(s.fotoUrl, s.nombre, 32)}
+            <span>${_docEsc(s.nombre)} ${_docEsc(s.apellido)} <span style="font-weight:500;color:#94a3b8;font-size:0.85em;">· ${_docEsc(s.area || '')}</span></span>
         </button>`
     ).join('');
 }
@@ -106,7 +107,7 @@ async function doc_verSocio(socioId) {
     const cont = document.getElementById('doc-socios-lista');
     if (!cont) return;
     cont.innerHTML = `<button onclick="doc_volverSocios()" style="background:none;border:1px solid #cbd5e1;color:#64748b;border-radius:8px;padding:5px 12px;font-size:0.8em;font-weight:700;cursor:pointer;margin-bottom:10px;">← Volver</button>
-        <div style="font-weight:800;font-size:0.95em;color:#0f172a;margin-bottom:8px;">📁 ${socio ? _docEsc(socio.nombre + ' ' + socio.apellido) : 'Socio'}</div>
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;">${socio ? avatarHTML(socio.fotoUrl, socio.nombre, 36) : ''}<div style="font-weight:800;font-size:0.95em;color:#0f172a;">${socio ? _docEsc(socio.nombre + ' ' + socio.apellido) : 'Socio'}</div></div>
         <div id="doc-socio-docs" style="text-align:center;padding:16px;color:#94a3b8;font-size:0.85em;">⏳ Cargando...</div>`;
     try {
         const { data } = await dbSoc.from('documentos').select('*').eq('socio_id', String(socioId)).eq('categoria', 'socio').order('created_at', { ascending: false });

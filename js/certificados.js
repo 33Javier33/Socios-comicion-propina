@@ -94,10 +94,11 @@ function cert_buscarSocio() {
     results.style.display = 'block';
     results.innerHTML = matches.map(s =>
         `<div onclick="cert_seleccionarSocio('${_cert_esc(s.id)}')"
-              style="padding:9px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:0.88em;"
+              style="padding:9px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:0.88em;display:flex;align-items:center;gap:9px;"
               onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-            <div style="font-weight:700;color:#0f172a;">${_cert_esc(s.nombre)} ${_cert_esc(s.apellido)}</div>
-            <div style="font-size:0.75em;color:#64748b;">${s.puntos} pts · ${s.area || ''} · ${s.contrato || ''}</div>
+            ${avatarHTML(s.fotoUrl, s.nombre, 32)}
+            <div style="min-width:0;"><div style="font-weight:700;color:#0f172a;">${_cert_esc(s.nombre)} ${_cert_esc(s.apellido)}</div>
+            <div style="font-size:0.75em;color:#64748b;">${s.puntos} pts · ${s.area || ''} · ${s.contrato || ''}</div></div>
         </div>`
     ).join('');
 }
@@ -112,7 +113,7 @@ function cert_seleccionarSocio(id) {
     const info = document.getElementById('cert-socio-info');
     if (info && _certSocioSel) {
         info.style.display = 'block';
-        info.innerHTML = `<strong>${_cert_esc(_certSocioSel.nombre)} ${_cert_esc(_certSocioSel.apellido)}</strong>&nbsp;·&nbsp;${_certSocioSel.puntos} puntos&nbsp;·&nbsp;${_certSocioSel.contrato || _certSocioSel.area || ''}`;
+        info.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">${avatarHTML(_certSocioSel.fotoUrl, _certSocioSel.nombre, 40)}<div><strong>${_cert_esc(_certSocioSel.nombre)} ${_cert_esc(_certSocioSel.apellido)}</strong>&nbsp;·&nbsp;${_certSocioSel.puntos} puntos&nbsp;·&nbsp;${_certSocioSel.contrato || _certSocioSel.area || ''}</div></div>`;
     }
 
     cert_generarListaPeriodos();
