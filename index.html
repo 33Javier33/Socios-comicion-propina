@@ -1214,7 +1214,10 @@
                         <div style="background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
                             <div id="msgAdmin-header" style="background:linear-gradient(135deg,#0369a1,#0284c7);color:white;padding:11px 14px;font-weight:800;font-size:0.92em;"></div>
                             <div id="msgAdmin-hilo" style="height:46vh;min-height:260px;overflow-y:auto;padding:12px;background:#eef2f6;display:flex;flex-direction:column;gap:8px;"></div>
-                            <div style="display:flex;gap:8px;padding:10px;border-top:1px solid #e2e8f0;">
+                            <div id="msgAdmin-foto-preview" style="display:none;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid #e2e8f0;"></div>
+                            <input type="file" id="msgAdmin-foto-input" accept="image/*" style="display:none" onchange="msgAdmin_fotoElegida(this)">
+                            <div style="display:flex;gap:8px;padding:10px;border-top:1px solid #e2e8f0;align-items:center;">
+                                <button type="button" onclick="document.getElementById('msgAdmin-foto-input').click()" title="Adjuntar foto" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:50%;width:40px;height:40px;font-size:1.1em;cursor:pointer;flex-shrink:0;">📷</button>
                                 <input type="text" id="msgAdmin-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')msgAdmin_enviar()"
                                     style="flex:1;padding:10px 12px;border:1px solid #ddd;border-radius:20px;font-size:0.9em;">
                                 <button onclick="msgAdmin_enviar()" style="background:#0284c7;color:white;border:none;border-radius:20px;padding:10px 20px;font-weight:800;cursor:pointer;">Enviar</button>

@@ -141,10 +141,14 @@ function msgAdmin_renderHilo() {
         const col = esAdmin ? 'white' : '#1e293b';
         const border = esAdmin ? 'none' : '1px solid #e2e8f0';
         const autor = esAdmin ? '' : `<div style="font-size:0.68em;font-weight:800;color:#0369a1;margin-bottom:2px;">${_msgEsc(m.autor || 'Socio')}</div>`;
+        const fotoHtml = m.foto_url
+            ? `<img src="${(m.foto_url + '').replace(/"/g, '%22')}" onclick="verFotoGrande('${(m.foto_url + '').replace(/'/g, '%27')}')" style="max-width:170px;max-height:190px;border-radius:9px;margin-top:${m.mensaje ? '5px' : '0'};object-fit:cover;cursor:zoom-in;display:block;">`
+            : '';
         return `<div style="align-self:${align};max-width:80%;">
             <div style="background:${bg};color:${col};border:${border};border-radius:12px;padding:8px 11px;box-shadow:0 1px 2px rgba(0,0,0,0.08);">
                 ${autor}
-                <div style="font-size:0.9em;line-height:1.4;word-break:break-word;white-space:pre-wrap;">${_msgEsc(m.mensaje)}</div>
+                ${m.mensaje ? `<div style="font-size:0.9em;line-height:1.4;word-break:break-word;white-space:pre-wrap;">${_msgEsc(m.mensaje)}</div>` : ''}
+                ${fotoHtml}
                 <div style="font-size:0.62em;color:${esAdmin ? 'rgba(255,255,255,0.75)' : '#94a3b8'};text-align:right;margin-top:3px;">${_hora(m.created_at)}</div>
             </div>
         </div>`;
@@ -152,19 +156,52 @@ function msgAdmin_renderHilo() {
     cont.scrollTop = cont.scrollHeight;
 }
 
+let _msgAdminFotoFile = null;
+function msgAdmin_fotoElegida(input) {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    if (!f.type.startsWith('image/')) { showToast('Debe ser una imagen', 'error'); return; }
+    _msgAdminFotoFile = f;
+    const prev = document.getElementById('msgAdmin-foto-preview');
+    if (prev) {
+        const u = URL.createObjectURL(f);
+        prev.style.display = 'flex';
+        prev.innerHTML = `<img src="${u}" style="width:34px;height:34px;border-radius:6px;object-fit:cover;">
+            <span style="font-size:0.75em;color:#059669;font-weight:700;">foto lista</span>
+            <button type="button" onclick="msgAdmin_fotoQuitar()" style="background:none;border:none;color:#ef4444;cursor:pointer;">✕</button>`;
+    }
+}
+function msgAdmin_fotoQuitar() {
+    _msgAdminFotoFile = null;
+    const prev = document.getElementById('msgAdmin-foto-preview');
+    if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
+    const g = document.getElementById('msgAdmin-foto-input'); if (g) g.value = '';
+}
+
 async function msgAdmin_enviar() {
     if (!msgAdminSocioActual) return;
     const input = document.getElementById('msgAdmin-input');
     const texto = (input.value || '').trim();
-    if (!texto) return;
+    if (!texto && !_msgAdminFotoFile) return;
     input.value = '';
+    // Subir foto (opcional) al bucket público avatares (carpeta chat)
+    let foto_url = '';
+    if (_msgAdminFotoFile) {
+        try {
+            const ext = (_msgAdminFotoFile.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const path = 'chat/adm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + '.' + ext;
+            const up = await dbSoc.storage.from('avatares').upload(path, _msgAdminFotoFile, { contentType: _msgAdminFotoFile.type, upsert: true });
+            if (!up.error) foto_url = dbSoc.storage.from('avatares').getPublicUrl(path).data.publicUrl;
+        } catch (eF) { console.warn('[msgAdmin] foto:', eF); }
+        msgAdmin_fotoQuitar();
+    }
     const id = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('MA-' + Date.now());
-    const optim = { id, socio_id: String(msgAdminSocioActual.id), remitente: 'ADMIN', autor: 'Administración', mensaje: texto, estado: 'ACTIVE', created_at: new Date().toISOString() };
+    const optim = { id, socio_id: String(msgAdminSocioActual.id), remitente: 'ADMIN', autor: 'Administración', mensaje: texto, foto_url, estado: 'ACTIVE', created_at: new Date().toISOString() };
     msgAdminHilo.push(optim);
     msgAdmin_renderHilo();
     try {
         const { error } = await dbSoc.from('mensajes_admin').insert({
-            id, socio_id: String(msgAdminSocioActual.id), remitente: 'ADMIN', autor: 'Administración', mensaje: texto
+            id, socio_id: String(msgAdminSocioActual.id), remitente: 'ADMIN', autor: 'Administración', mensaje: texto, foto_url: foto_url || null
         });
         if (error) { console.warn('[msgAdmin] enviar:', error.message); if (typeof showToast === 'function') showToast('No se pudo enviar', 'error'); }
         _msgAdminMarcarVisto(msgAdminSocioActual.id);

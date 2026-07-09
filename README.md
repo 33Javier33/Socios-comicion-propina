@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Mensajes a socios: enviar fotos (visibles en propi.solicitada)
+- En **Mensajes** (conversación privada con el socio) el responsable puede **adjuntar una foto** (botón 📷). Se sube al bucket público `avatares` (carpeta `chat/`) y se guarda en `mensajes_admin.foto_url` (nueva columna).
+- Las fotos se muestran en el hilo (ampliables al tocarlas) y **le llegan al socio** en propi.solicitada (canal "Admin").
+- Archivos: `js/mensajes-admin.js` (foto + render), `index.html` (botón 📷 + preview).
+
 #### 2026-07-07 — Notas: adjuntar foto (visible también en propi.solicitada)
 - En la sección **Notas** ahora se puede **adjuntar una foto** opcional a la nota (📷 Cámara / 🖼️ Foto). Se muestra en la nota, ampliable al tocarla.
 - Las notas van a `notas_recaudacion` (el mismo tablero que el socio ve en **Soporte** de propi.solicitada), así que la **foto también le llega al socio**.
