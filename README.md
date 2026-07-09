@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Remanente en vivo desglosado por área
+- Bajo el remanente en vivo se muestran **chips por área** (Mesas, Máquinas, Bóveda…) con el remanente proyectado en vivo de cada una, ordenadas de mayor a menor. Se fusionan variantes por mayúsculas/minúsculas.
+- Archivos: `index.html` (contenedor `gestionRemVivoAreas`), `js/anticipos.js` (acumulación por área en `gestion_cargarRemanenteVivo`).
+
 #### 2026-07-07 — Remanente EN VIVO + período más legible en Anticipos y Ausencias
 - El banner ahora distingue **💜 Remanente guardado (último cierre)** — la suma de `saldos_socio`, que solo cambia al cerrar el mes — de **📈 Remanente en vivo (si se cierra hoy)**, que **se recalcula día a día** con las recaudaciones actuales.
 - El remanente en vivo suma, socio por socio, lo que le quedaría de remanente si se cerrara hoy (mismo cálculo que el detalle: alcance por puntos/días − anticipos + saldo anterior, redondeo al mil). Se calcula en el cliente con los datos ya cacheados (`fetchAllDataCached`) + `saldos_socio`, sin llamadas por socio.

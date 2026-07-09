@@ -1479,6 +1479,7 @@ async function gestion_cargarRemanenteVivo() {
         const antObj = allData.anticipos || {};
         const extObj = allData.extras || {};
         let totalRem = 0;
+        const remPorArea = {}; // key(lowercase) -> { label, total }
 
         (cacheSocios || []).forEach(socio => {
             const pts = Number(socio.puntos) || 0;
@@ -1510,10 +1511,24 @@ async function gestion_cargarRemanenteVivo() {
             const saldoReal = alcance + saldoAnterior - sumaAnt;
             const rem = saldoReal > 0 ? Math.round(saldoReal - Math.floor(saldoReal / 1000) * 1000) : Math.round(saldoReal);
             totalRem += rem;
+            // Acumular por área (fusionando por may/minúsculas)
+            const areaRaw = (socio.area || 'Sin área').trim();
+            const key = areaRaw.toLowerCase();
+            if (!remPorArea[key]) remPorArea[key] = { label: areaRaw, total: 0 };
+            remPorArea[key].total += rem;
         });
 
         el.textContent = formatearMoneda(totalRem);
         el.style.color = totalRem < 0 ? '#fca5a5' : '#a7f3d0';
+
+        // Desglose por área (en vivo)
+        const elAreas = document.getElementById('gestionRemVivoAreas');
+        if (elAreas) {
+            const arr = Object.values(remPorArea).sort((a, b) => b.total - a.total);
+            elAreas.innerHTML = arr.map(a =>
+                `<span style="background:rgba(255,255,255,0.12); border-radius:12px; padding:2px 9px; font-size:0.78em; color:#f3e8ff;">${_htmlEscSoc ? _htmlEscSoc(a.label) : a.label}: <strong style="color:${a.total < 0 ? '#fca5a5' : '#a7f3d0'};">${formatearMoneda(a.total)}</strong></span>`
+            ).join('');
+        }
     } catch (e) {
         el.textContent = 'Error';
     }
