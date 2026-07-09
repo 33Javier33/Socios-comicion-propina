@@ -175,7 +175,7 @@ function msgAdmin_fotoQuitar() {
     _msgAdminFotoFile = null;
     const prev = document.getElementById('msgAdmin-foto-preview');
     if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
-    const g = document.getElementById('msgAdmin-foto-input'); if (g) g.value = '';
+    ['msgAdmin-foto-cam', 'msgAdmin-foto-gal'].forEach(id => { const g = document.getElementById(id); if (g) g.value = ''; });
 }
 
 async function msgAdmin_enviar() {
