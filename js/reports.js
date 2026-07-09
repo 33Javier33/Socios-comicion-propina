@@ -248,6 +248,36 @@ async function informeMontosDiarios() {
         const promedio = sumTotal / diasArr.length;
         const periodoVis = inicio.split('-').reverse().join('/') + " AL " + fin.split('-').reverse().join('/');
 
+        // ── Remanente EN VIVO por área (proyectado si se cierra hoy) ──
+        let remHtml = '';
+        try {
+            if (typeof calcularRemanenteVivo === 'function') {
+                const remData = await calcularRemanenteVivo();
+                const filasRem = remData.porArea.map(a =>
+                    `<tr><td style="border:1px solid #000; padding:4px;">${a.label}</td>
+                         <td style="border:1px solid #000; padding:4px; text-align:right; font-weight:bold;">${fmt(a.total)}</td></tr>`
+                ).join('');
+                remHtml = `
+                <div style="margin-top:22px; page-break-inside:avoid;">
+                    <h3 style="text-align:center; font-size:14px; font-weight:bold; letter-spacing:1px; margin:0 0 6px;">
+                        REMANENTE POR ÁREA <span style="font-weight:normal; font-size:10px;">(en vivo — proyectado si se cierra hoy · ${periodoVis})</span>
+                    </h3>
+                    <table style="width:60%; margin:0 auto; border-collapse:collapse;">
+                        <thead><tr>
+                            <th style="border:1px solid #000; background:#000; color:#fff; padding:4px;">Área</th>
+                            <th style="border:1px solid #000; background:#000; color:#fff; padding:4px;">Remanente</th>
+                        </tr></thead>
+                        <tbody>${filasRem}</tbody>
+                        <tfoot><tr style="background:#ffffcc; font-weight:bold;">
+                            <td style="border:1px solid #000; padding:4px;">TOTAL</td>
+                            <td style="border:1px solid #000; padding:4px; text-align:right;">${fmt(remData.total)}</td>
+                        </tr></tfoot>
+                    </table>
+                    <p style="text-align:center; font-size:8px; color:#555; margin-top:4px;">Los Part-Time se muestran aparte; GastosComisión no lleva remanente. Cambia día a día con las recaudaciones.</p>
+                </div>`;
+            }
+        } catch (eRem) { console.warn('[informe] remanente:', eRem); }
+
         const html = `
         <html><head><title>${fileName}</title><style>
             body { font-family: Arial, sans-serif; font-size: 10px; }
@@ -294,6 +324,7 @@ async function informeMontosDiarios() {
                     </tr>
                 </tfoot>
             </table>
+            ${remHtml}
         </body></html>`;
 
         printHTML(html, fileName);

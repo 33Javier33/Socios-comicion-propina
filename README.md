@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-07 — Informe "Montos Diarios" incluye Remanente por área
+- El **informe de Montos Diarios** (sección Montos Recaudados) ahora agrega al final una tabla **"REMANENTE POR ÁREA"** (en vivo, proyectado si se cierra hoy), con el mismo criterio del banner: Part-Time aparte, GastosComisión excluida, Mesas+Cambistas unidas, y su total.
+- Se refactorizó el cálculo a una función reutilizable `calcularRemanenteVivo()` (usada por el banner y el informe).
+- Archivos: `js/anticipos.js` (`calcularRemanenteVivo`), `js/reports.js` (sección en `informeMontosDiarios`).
+
 #### 2026-07-07 — Remanente en vivo: incluye Part-Time, excluye GastosComisión, une Mesas+Cambistas
 - **Part-Time incluido:** el remanente en vivo ahora lee los días PT directo de `dias_pt` (evita que faltaran si `globalDiasPT` no había cargado). Sus remanentes suman al total y a su área.
 - **GastosComisión excluida:** ese dinero se retira completo (no tiene remanente), así que sus socios ya no cuentan en el total ni aparecen como área.

@@ -1469,79 +1469,75 @@ function _remFmtPeriodo(inicioISO, finISO) {
     return `${fmt(a)} – ${fmt(b)} ${b.getFullYear()}`;
 }
 
-// Remanente EN VIVO: suma de lo que le quedaría a cada socio si se cerrara hoy.
-// Cambia día a día con las nuevas recaudaciones (usa el mismo cálculo del detalle).
+// Cálculo puro del remanente EN VIVO (total + desglose por área). Reutilizable.
+// Devuelve { total, porArea:[{label,total}], inicio, fin }. Part-Time va en su propio grupo.
+async function calcularRemanenteVivo() {
+    const [allData, saldosRes, diasRes] = await Promise.all([
+        fetchAllDataCached(),
+        (typeof dbSoc !== 'undefined' ? dbSoc.from('saldos_socio').select('id, monto') : Promise.resolve({ data: [] })),
+        (typeof dbSoc !== 'undefined' ? dbSoc.from('dias_pt').select('socio_id, dias') : Promise.resolve({ data: [] }))
+    ]);
+    const saldos = {};
+    (saldosRes.data || []).forEach(r => { saldos[r.id] = Number(r.monto || 0); });
+    const diasPT = {};
+    (diasRes.data || []).forEach(r => { if (Array.isArray(r.dias)) diasPT[r.socio_id] = r.dias; });
+    const { inicio, fin } = aq_calcularPeriodoActual();
+    const antObj = allData.anticipos || {};
+    const extObj = allData.extras || {};
+    let total = 0;
+    const porAreaMap = {};
+
+    (cacheSocios || []).forEach(socio => {
+        const _area = _remAreaNorm(socio.area);
+        if (_area.excl) return; // GastosComision no tiene remanente (se retira completo)
+        const pts = Number(socio.puntos) || 0;
+        let sumaAnt = 0; const vistos = new Set();
+        (antObj[socio.id] || []).forEach(a => {
+            const m = parseFloat(a.cantidad) || 0; if (!m) return;
+            let f = a.fecha || ''; if (f.includes('T')) f = f.split('T')[0];
+            if (f < inicio || f > fin) return;
+            const firma = f + '|' + m; if (vistos.has(firma)) return; vistos.add(firma);
+            sumaAnt += m;
+        });
+        const aus = new Set();
+        (extObj[socio.id] || []).forEach(e => {
+            if (e.tipo && e.tipo.toLowerCase().includes('ausencia')) {
+                let f = e.fecha || ''; if (f.includes('T')) f = f.split('T')[0]; aus.add(f);
+            }
+        });
+        let alcance = 0;
+        if (socio.contrato === 'Part-Time') {
+            (diasPT[socio.id] || globalDiasPT[socio.id] || []).forEach(d => { if (!aus.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
+        } else {
+            for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) { if (!aus.has(dia) && valor) alcance += valor; }
+        }
+        alcance *= pts;
+        const saldoReal = alcance + (saldos[socio.id] || 0) - sumaAnt;
+        const rem = saldoReal > 0 ? Math.round(saldoReal - Math.floor(saldoReal / 1000) * 1000) : Math.round(saldoReal);
+        total += rem;
+        const gk = (socio.contrato === 'Part-Time') ? { key: 'parttime', label: 'Part-Time' } : _area;
+        if (!porAreaMap[gk.key]) porAreaMap[gk.key] = { label: gk.label, total: 0 };
+        porAreaMap[gk.key].total += rem;
+    });
+
+    const porArea = Object.values(porAreaMap).sort((a, b) => b.total - a.total);
+    return { total, porArea, inicio, fin };
+}
+
+// Remanente EN VIVO en el banner de Gestión (usa el cálculo puro de arriba).
 async function gestion_cargarRemanenteVivo() {
     const el = document.getElementById('gestionRemanenteVivo');
     const elPer = document.getElementById('gestionPeriodoRemanentes');
     if (!el) return;
     el.textContent = '...';
     try {
-        const [allData, saldosRes, diasRes] = await Promise.all([
-            fetchAllDataCached(),
-            (typeof dbSoc !== 'undefined' ? dbSoc.from('saldos_socio').select('id, monto') : Promise.resolve({ data: [] })),
-            (typeof dbSoc !== 'undefined' ? dbSoc.from('dias_pt').select('socio_id, dias') : Promise.resolve({ data: [] }))
-        ]);
-        const saldos = {};
-        (saldosRes.data || []).forEach(r => { saldos[r.id] = Number(r.monto || 0); });
-        // Días part-time frescos (evita que falten si globalDiasPT no cargó aún)
-        const diasPT = {};
-        (diasRes.data || []).forEach(r => { if (Array.isArray(r.dias)) diasPT[r.socio_id] = r.dias; });
-        const { inicio, fin } = aq_calcularPeriodoActual();
+        const { total, porArea, inicio, fin } = await calcularRemanenteVivo();
         if (elPer) elPer.innerHTML = '📅 Período actual: <b>' + _remFmtPeriodo(inicio, fin) + '</b>';
-
-        const antObj = allData.anticipos || {};
-        const extObj = allData.extras || {};
-        let totalRem = 0;
-        const remPorArea = {}; // key(lowercase) -> { label, total }
-
-        (cacheSocios || []).forEach(socio => {
-            const _area = _remAreaNorm(socio.area);
-            if (_area.excl) return; // GastosComision no tiene remanente (se retira completo)
-            const pts = Number(socio.puntos) || 0;
-            // Anticipos del período
-            let sumaAnt = 0; const vistos = new Set();
-            (antObj[socio.id] || []).forEach(a => {
-                const m = parseFloat(a.cantidad) || 0; if (!m) return;
-                let f = a.fecha || ''; if (f.includes('T')) f = f.split('T')[0];
-                if (f < inicio || f > fin) return;
-                const firma = f + '|' + m; if (vistos.has(firma)) return; vistos.add(firma);
-                sumaAnt += m;
-            });
-            // Ausencias
-            const aus = new Set();
-            (extObj[socio.id] || []).forEach(e => {
-                if (e.tipo && e.tipo.toLowerCase().includes('ausencia')) {
-                    let f = e.fecha || ''; if (f.includes('T')) f = f.split('T')[0]; aus.add(f);
-                }
-            });
-            // Alcance (según contrato)
-            let alcance = 0;
-            if (socio.contrato === 'Part-Time') {
-                (diasPT[socio.id] || globalDiasPT[socio.id] || []).forEach(d => { if (!aus.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
-            } else {
-                for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) { if (!aus.has(dia) && valor) alcance += valor; }
-            }
-            alcance *= pts;
-            const saldoAnterior = saldos[socio.id] || 0;
-            const saldoReal = alcance + saldoAnterior - sumaAnt;
-            const rem = saldoReal > 0 ? Math.round(saldoReal - Math.floor(saldoReal / 1000) * 1000) : Math.round(saldoReal);
-            totalRem += rem;
-            // Acumular por área. Los Part-Time se especifican en su propio grupo (aparte de Mesas),
-            // pero igual suman al total. El resto usa su área (Mesas+Cambistas unidas).
-            const gk = (socio.contrato === 'Part-Time') ? { key: 'parttime', label: 'Part-Time' } : _area;
-            if (!remPorArea[gk.key]) remPorArea[gk.key] = { label: gk.label, total: 0 };
-            remPorArea[gk.key].total += rem;
-        });
-
-        el.textContent = formatearMoneda(totalRem);
-        el.style.color = totalRem < 0 ? '#fca5a5' : '#a7f3d0';
-
-        // Desglose por área (en vivo)
+        el.textContent = formatearMoneda(total);
+        el.style.color = total < 0 ? '#fca5a5' : '#a7f3d0';
         const elAreas = document.getElementById('gestionRemVivoAreas');
         if (elAreas) {
-            const arr = Object.values(remPorArea).sort((a, b) => b.total - a.total);
-            elAreas.innerHTML = arr.map(a =>
+            elAreas.innerHTML = porArea.map(a =>
                 `<span style="background:rgba(255,255,255,0.12); border-radius:12px; padding:2px 9px; font-size:0.78em; color:#f3e8ff;">${_htmlEscSoc ? _htmlEscSoc(a.label) : a.label}: <strong style="color:${a.total < 0 ? '#fca5a5' : '#a7f3d0'};">${formatearMoneda(a.total)}</strong></span>`
             ).join('');
         }
