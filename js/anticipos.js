@@ -1527,9 +1527,11 @@ async function gestion_cargarRemanenteVivo() {
             const saldoReal = alcance + saldoAnterior - sumaAnt;
             const rem = saldoReal > 0 ? Math.round(saldoReal - Math.floor(saldoReal / 1000) * 1000) : Math.round(saldoReal);
             totalRem += rem;
-            // Acumular por área (Mesas + Mesas‑Cambistas juntos; GastosComision ya excluida)
-            if (!remPorArea[_area.key]) remPorArea[_area.key] = { label: _area.label, total: 0 };
-            remPorArea[_area.key].total += rem;
+            // Acumular por área. Los Part-Time se especifican en su propio grupo (aparte de Mesas),
+            // pero igual suman al total. El resto usa su área (Mesas+Cambistas unidas).
+            const gk = (socio.contrato === 'Part-Time') ? { key: 'parttime', label: 'Part-Time' } : _area;
+            if (!remPorArea[gk.key]) remPorArea[gk.key] = { label: gk.label, total: 0 };
+            remPorArea[gk.key].total += rem;
         });
 
         el.textContent = formatearMoneda(totalRem);
