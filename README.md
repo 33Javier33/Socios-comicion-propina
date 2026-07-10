@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-09 — Documentación: enviar documentos a un socio (le aparecen en "Mis Documentos")
+- En **Documentación → pestaña Socios**, al abrir un socio ahora hay un botón **"📤 Enviar documento a este socio"** (PDF o imagen, hasta 20 MB).
+- El documento se sube al bucket `documentos` (ruta `socio/<id>/…`) y se registra en la tabla `documentos` con `categoria='socio'`, `socio_id` y `subido_por='Administración (…)'`.
+- Así **le aparece al socio en propi.solicitada → Perfil → Mis Documentos** (destacado como "Enviado por administración"; el socio no puede borrarlo, solo verlo).
+- Queda registrado en Auditoría como "Enviar Documento".
+- Archivos: `js/documentacion.js` (`doc_subirSocio` + botón en `doc_verSocio`).
+
 #### 2026-07-09 — Campana de notificaciones + ir directo a escribir + FAB no tapa Enviar
 - **Campana de notificaciones (🔔) en el encabezado**: muestra un contador de socios con mensajes sin leer y, al pincharla, despliega un menú con cada socio (foto, último texto y hora). Al tocar un ítem lleva directo a **Mensajes** y abre esa conversación. Mismo comportamiento que la campana de propi.solicitada.
 - **Abrir un socio lleva a escribir**: al pinchar un socio en Mensajes, ahora se hace scroll a la conversación y se enfoca el campo de texto (útil en móvil).

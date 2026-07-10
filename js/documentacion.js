@@ -108,6 +108,11 @@ async function doc_verSocio(socioId) {
     if (!cont) return;
     cont.innerHTML = `<button onclick="doc_volverSocios()" style="background:none;border:1px solid #cbd5e1;color:#64748b;border-radius:8px;padding:5px 12px;font-size:0.8em;font-weight:700;cursor:pointer;margin-bottom:10px;">← Volver</button>
         <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;">${socio ? avatarHTML(socio.fotoUrl, socio.nombre, 36) : ''}<div style="font-weight:800;font-size:0.95em;color:#0f172a;">${socio ? _docEsc(socio.nombre + ' ' + socio.apellido) : 'Socio'}</div></div>
+        <label style="display:flex;align-items:center;justify-content:center;gap:7px;background:#2563eb;color:white;border-radius:9px;padding:9px 12px;font-size:0.82em;font-weight:700;cursor:pointer;margin-bottom:12px;">
+            📤 Enviar documento a este socio
+            <input type="file" accept="application/pdf,image/*" onchange="doc_subirSocio(this,'${_docEsc(socioId)}')" style="display:none;">
+        </label>
+        <div style="font-size:0.72em;color:#94a3b8;margin:-6px 0 10px;text-align:center;">Le aparecerá en <b>Mis Documentos</b> dentro de su app.</div>
         <div id="doc-socio-docs" style="text-align:center;padding:16px;color:#94a3b8;font-size:0.85em;">⏳ Cargando...</div>`;
     try {
         const { data } = await dbSoc.from('documentos').select('*').eq('socio_id', String(socioId)).eq('categoria', 'socio').order('created_at', { ascending: false });
@@ -121,6 +126,33 @@ async function doc_verSocio(socioId) {
 }
 
 function doc_volverSocios() { _docSocioSel = null; doc_renderBusquedaSocios(); }
+
+// El responsable sube un documento PARA un socio → le aparece en "Mis Documentos"
+async function doc_subirSocio(input, socioId) {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { showToast('El archivo supera 20 MB', 'error'); return; }
+    const socio = (cacheSocios || []).find(s => String(s.id) === String(socioId));
+    const socioNombre = socio ? (socio.nombre + ' ' + socio.apellido).trim() : null;
+    const sesion = typeof getSesionResponsableObj === 'function' ? getSesionResponsableObj() : {};
+    const quien = sesion.ini ? ('Administración (' + sesion.ini + (sesion.area ? ' · ' + sesion.area : '') + ')') : 'Administración';
+    const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = 'socio/' + socioId + '/' + Date.now() + '_' + safe;
+    toggleLoader(true, 'Enviando documento...');
+    try {
+        const up = await dbSoc.storage.from('documentos').upload(path, file, { contentType: file.type, upsert: false });
+        if (up.error) throw up.error;
+        await dbSoc.from('documentos').insert({
+            id: crypto.randomUUID(), socio_id: String(socioId), socio_nombre: socioNombre, categoria: 'socio',
+            nombre_archivo: file.name, storage_path: path, mime: file.type, tamano: file.size, subido_por: quien
+        });
+        if (typeof sbAuditLog === 'function') sbAuditLog('Enviar Documento', { detalle: 'Documento a socio ' + (socioNombre || socioId) + ': ' + file.name, datos: { socioId, nombre: file.name } });
+        showToast('Documento enviado al socio ✅', 'success');
+        doc_verSocio(socioId);
+    } catch(e) { showToast('No se pudo enviar: ' + (e.message || e), 'error'); }
+    finally { toggleLoader(false); }
+}
 
 // ── Compartidas: ver (URL firmada) y borrar ─────────────────
 async function doc_ver(path) {
