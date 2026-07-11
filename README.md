@@ -232,11 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
-#### 2026-07-09 — Estado de Cobros: "Saldo real a pagar" que se vacía al ir cobrando
-- Dentro del panel **📊 Estado de Cobros del Período** (Anticipos y Ausencias) se agregó un bloque **💵 Saldo real a pagar (falta entregar)** que muestra cuánto dinero queda por entregar a los socios.
-- El monto **se va vaciando** a medida que marcas a cada socio como 💵 Cobrado (llega a **$0** cuando están todos pagados), con barra de progreso y desglose "Total del período" / "Ya cobrado". Sirve para **cuadrar lo recaudado contra los anticipos**.
-- Usa los montos ya guardados en cada cierre (`aPagar` + `estadoCobro`), sin consultas extra. Si aún quedan socios sin cerrar, avisa que su monto todavía no entra en el total.
-- Archivos: `js/anticipos.js` (`_cierresMesResumenPagoHTML` + llamada dentro de `cierresMes_render`).
+#### 2026-07-09 — Estado de Cobros: "Saldo real a pagar" en vivo que se vacía al ir cobrando
+- Dentro del panel **📊 Estado de Cobros del Período** (Anticipos y Ausencias) se agregó el bloque **💵 Saldo real a pagar (falta entregar)** con el total real que queda por entregar a los socios.
+- Muestra el **saldo real a pagar en vivo de TODOS los socios** (mismo cálculo del informe): al abrir el panel calcula el `aPagar` de los socios que aún no están cerrados y lo suma a los ya cerrados. Así el total **ya no aparece en $0** cuando todavía no cierras a nadie.
+- El monto **se va vaciando** a medida que marcas a cada socio como 💵 Cobrado (barra de progreso + desglose "Total del período" / "Ya cobrado"), y llega a **$0** cuando están todos pagados. Sirve para **cuadrar lo recaudado contra los anticipos**.
+- Los socios ya cerrados usan su `aPagar` congelado del cierre; los sin cerrar usan el cálculo en vivo (con caché `cacheSocioIndividual`, hasta 6 en paralelo). Botón 🔄 para recalcular.
+- Archivos: `js/anticipos.js` (`_cierresMesResumenPagoHTML`, `cierresMes_cargarSaldosLive`, disparo en `toggleCierreMes`).
 
 #### 2026-07-09 — Saldo real a pagar: vista consolidada de todos los socios (solo consulta)
 - Nuevo botón **"📊 Saldo real a pagar"** en la cabecera de **Anticipos y Ausencias**. Abre un modal que calcula **en vivo** (sin modificar nada) cuánto le queda a **cada socio**: Alcance, **Saldo Real**, A Pagar y Remanente, con totales.

@@ -1086,34 +1086,63 @@ function toggleCierreMes() {
     body.style.display = open ? 'none' : 'block';
     if (icon) icon.textContent = open ? '▼' : '▲';
     if (open) _cierreMesFiltro = ''; // limpiar filtro al cerrar
-    if (!open) cierresMes_render();
+    if (!open) { cierresMes_render(); cierresMes_cargarSaldosLive(); }
 }
 
-// Bloque "Saldo real a pagar" que se va vaciando a medida que se cobra a cada socio.
-// Usa los montos ya guardados en cada cierre (aPagar) — sin consultas extra.
-function _cierresMesResumenPagoHTML(cerrados, nPendientes, fmtM) {
-    const totalAPagar   = cerrados.reduce((s, c) => s + (Number(c.aPagar) || 0), 0);
-    const cobradoAPagar = cerrados.filter(c => c.estadoCobro === 'cobrado').reduce((s, c) => s + (Number(c.aPagar) || 0), 0);
-    const pendientePagar = totalAPagar - cobradoAPagar; // lo que falta entregar (socios en sobre)
-    const pct = totalAPagar > 0 ? Math.round((cobradoAPagar / totalAPagar) * 100) : 0;
-    const colorPend = pendientePagar > 0 ? '#0f766e' : '#16a34a';
+// ── Saldo real a pagar dentro de "Estado de Cobros" ──────────────────────
+// Suma el saldo real a pagar de TODOS los socios (en vivo, mismo cálculo que el
+// informe). El total se va "vaciando" a medida que cada socio queda 💵 Cobrado.
+//  - Socio ya cerrado  → usa el aPagar congelado en el cierre.
+//  - Socio sin cerrar   → usa el aPagar calculado en vivo (_cierresMesSaldoLive).
+let _cierresMesSaldoLive = {};       // socioId -> { aPagar, saldoReal }
+let _cierresMesSaldoCargando = false;
+let _cierresMesSaldoListo = false;
+
+function _cierresMesResumenPagoHTML(cerrados, fmtM) {
+    const cerradosMap = {};
+    cerrados.forEach(c => { cerradosMap[c.id] = c; });
+
+    let total = 0, cobrado = 0, faltanCalcular = 0;
+    (cacheSocios || []).forEach(s => {
+        const c = cerradosMap[s.id];
+        if (c) {
+            const ap = Number(c.aPagar) || 0;
+            total += ap;
+            if (c.estadoCobro === 'cobrado') cobrado += ap;
+        } else {
+            const live = _cierresMesSaldoLive[s.id];
+            if (live && typeof live.aPagar === 'number') total += live.aPagar; // pendiente
+            else faltanCalcular++;
+        }
+    });
+
+    const faltaEntregar = total - cobrado;
+    const pct = total > 0 ? Math.round((cobrado / total) * 100) : 0;
+    const colorPend = faltaEntregar > 0 ? '#0f766e' : '#16a34a';
 
     let nota = '';
-    if (nPendientes > 0) {
-        nota = `<div style="margin-top:7px;font-size:0.72em;color:#b45309;font-weight:700;">⚠️ ${nPendientes} socio(s) aún sin cerrar — su monto todavía no entra en este total.</div>`;
-    } else if (totalAPagar > 0 && pendientePagar === 0) {
+    if (_cierresMesSaldoCargando) {
+        nota = `<div style="margin-top:7px;font-size:0.72em;color:#0f766e;font-weight:700;">⏳ Calculando saldo real de los socios sin cerrar…</div>`;
+    } else if (faltanCalcular > 0) {
+        nota = `<div style="margin-top:7px;font-size:0.72em;color:#b45309;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            ⚠️ Faltan ${faltanCalcular} socio(s) por calcular.
+            <button onclick="cierresMes_cargarSaldosLive(true)" style="background:#0d9488;color:white;border:none;border-radius:6px;padding:3px 10px;font-size:0.95em;font-weight:700;cursor:pointer;">📊 Calcular saldo</button>
+        </div>`;
+    } else if (total > 0 && faltaEntregar === 0) {
         nota = `<div style="margin-top:7px;font-size:0.72em;color:#16a34a;font-weight:700;">✅ Todo pagado — el saldo real a pagar quedó en $0.</div>`;
     }
 
     return `<div style="background:linear-gradient(135deg,#ecfeff,#f0fdfa);border:1px solid #99f6e4;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
             <div>
-                <div style="font-size:0.68em;text-transform:uppercase;letter-spacing:0.04em;color:#0f766e;font-weight:800;">💵 Saldo real a pagar <span style="font-weight:600;opacity:0.8;">(falta entregar)</span></div>
-                <div style="font-size:1.5em;font-weight:900;color:${colorPend};">${fmtM(pendientePagar)}</div>
+                <div style="font-size:0.68em;text-transform:uppercase;letter-spacing:0.04em;color:#0f766e;font-weight:800;">💵 Saldo real a pagar <span style="font-weight:600;opacity:0.8;">(falta entregar)</span>
+                    <button onclick="cierresMes_cargarSaldosLive(true)" title="Recalcular" style="background:none;border:none;cursor:pointer;font-size:1.1em;line-height:1;padding:0 0 0 4px;">🔄</button>
+                </div>
+                <div style="font-size:1.5em;font-weight:900;color:${colorPend};">${fmtM(faltaEntregar)}</div>
             </div>
             <div style="text-align:right;font-size:0.73em;color:#475569;line-height:1.55;">
-                <div>Total del período: <b style="color:#0f172a;">${fmtM(totalAPagar)}</b></div>
-                <div>Ya cobrado: <b style="color:#16a34a;">${fmtM(cobradoAPagar)}</b></div>
+                <div>Total del período: <b style="color:#0f172a;">${fmtM(total)}</b></div>
+                <div>Ya cobrado: <b style="color:#16a34a;">${fmtM(cobrado)}</b></div>
             </div>
         </div>
         <div style="margin-top:9px;height:8px;background:#cffafe;border-radius:6px;overflow:hidden;">
@@ -1121,6 +1150,49 @@ function _cierresMesResumenPagoHTML(cerrados, nPendientes, fmtM) {
         </div>
         ${nota}
     </div>`;
+}
+
+// Calcula en vivo el aPagar de los socios que aún NO tienen cierre y lo cachea.
+async function cierresMes_cargarSaldosLive(forzar = false) {
+    if (_cierresMesSaldoCargando) return;
+    if (!cacheSocios || !cacheSocios.length) return;
+
+    const cerradosIds = new Set(cierresMes_obtener().map(c => c.id));
+    const pendientes = cacheSocios.filter(s => !cerradosIds.has(s.id) && (forzar || !_cierresMesSaldoLive[s.id]));
+    if (!pendientes.length) { _cierresMesSaldoListo = true; return; }
+
+    _cierresMesSaldoCargando = true;
+    cierresMes_render();
+
+    const CONC = 6;
+    async function uno(socio) {
+        try {
+            let data = {};
+            const cached = cacheSocioIndividual[socio.id];
+            if (!forzar && cached && (Date.now() - cached.ts < CACHE_SOCIO_TTL)) {
+                data = cached.data || {};
+            } else {
+                const resp = await fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${socio.id}`);
+                const res = await resp.json();
+                if (res && res.status === 'success') {
+                    data = res.data || {};
+                    cacheSocioIndividual[socio.id] = { ts: Date.now(), data };
+                }
+            }
+            const calc = _calcSaldoRealSocio(socio, data);
+            _cierresMesSaldoLive[socio.id] = { aPagar: calc.aPagar, saldoReal: calc.saldoReal };
+        } catch (e) {
+            _cierresMesSaldoLive[socio.id] = { aPagar: 0, saldoReal: 0, error: true };
+        }
+    }
+
+    for (let i = 0; i < pendientes.length; i += CONC) {
+        await Promise.all(pendientes.slice(i, i + CONC).map(uno));
+    }
+
+    _cierresMesSaldoCargando = false;
+    _cierresMesSaldoListo = true;
+    cierresMes_render();
 }
 
 function cierresMes_render(refocusBuscador = false) {
@@ -1207,7 +1279,7 @@ function cierresMes_render(refocusBuscador = false) {
                 <div style="font-size:0.68em;text-transform:uppercase;font-weight:700;color:#1e40af;letter-spacing:0.04em;">Total</div>
             </div>
         </div>
-        ${_cierresMesResumenPagoHTML(cerrados, nPendientes, fmtM)}
+        ${_cierresMesResumenPagoHTML(cerrados, fmtM)}
         <div style="position:relative;margin-bottom:12px;">
             <input id="cierreMesBuscador" type="text" placeholder="🔍 Buscar por nombre..." value="${_cierreMesFiltro.replace(/"/g,'&quot;')}"
                 oninput="_cierreMesFiltro=this.value;cierresMes_render(true);"
@@ -1295,6 +1367,7 @@ async function cierresMes_finalizarPeriodo() {
         showToast('✅ Anticipos archivados en ' + tabNombre, 'success');
         logAccion('Finalizar Período', `Archivado en ${tabNombre}`);
         localStorage.removeItem(cierresMes_getClave());
+        _cierresMesSaldoLive = {}; _cierresMesSaldoListo = false;
         cierresMes_render();
         const idActivo = document.getElementById('gestionSocioId').value;
         if (idActivo) cargarHistorialSocio(idActivo);
