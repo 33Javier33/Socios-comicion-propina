@@ -1102,35 +1102,46 @@ function _cierresMesResumenPagoHTML(cerrados, fmtM) {
     const cerradosMap = {};
     cerrados.forEach(c => { cerradosMap[c.id] = c; });
 
-    let total = 0, cobrado = 0, faltanCalcular = 0;
+    // enSobre    = cerrados pero aún NO cobrados (plata apartada en el sobre)
+    // sinCerrar  = socios sin cerrar (cálculo en vivo)
+    // cobrado    = ya retiraron su sobre
+    let enSobre = 0, sinCerrar = 0, cobrado = 0, faltanCalcular = 0;
     (cacheSocios || []).forEach(s => {
         const c = cerradosMap[s.id];
         if (c) {
             const ap = Number(c.aPagar) || 0;
-            total += ap;
             if (c.estadoCobro === 'cobrado') cobrado += ap;
+            else enSobre += ap;
         } else {
             const live = _cierresMesSaldoLive[s.id];
-            if (live && typeof live.aPagar === 'number') total += live.aPagar; // pendiente
+            if (live && typeof live.aPagar === 'number') sinCerrar += live.aPagar;
             else faltanCalcular++;
         }
     });
 
-    const faltaEntregar = total - cobrado;
+    const total = enSobre + sinCerrar + cobrado;
+    const faltaEntregar = enSobre + sinCerrar; // todo lo que aún no se paga
     const pct = total > 0 ? Math.round((cobrado / total) * 100) : 0;
     const colorPend = faltaEntregar > 0 ? '#0f766e' : '#16a34a';
 
     let nota = '';
     if (_cierresMesSaldoCargando) {
-        nota = `<div style="margin-top:7px;font-size:0.72em;color:#0f766e;font-weight:700;">⏳ Calculando saldo real de los socios sin cerrar…</div>`;
+        nota = `<div style="margin-top:8px;font-size:0.72em;color:#0f766e;font-weight:700;">⏳ Calculando saldo real de los socios sin cerrar…</div>`;
     } else if (faltanCalcular > 0) {
-        nota = `<div style="margin-top:7px;font-size:0.72em;color:#b45309;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        nota = `<div style="margin-top:8px;font-size:0.72em;color:#b45309;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             ⚠️ Faltan ${faltanCalcular} socio(s) por calcular.
             <button onclick="cierresMes_cargarSaldosLive(true)" style="background:#0d9488;color:white;border:none;border-radius:6px;padding:3px 10px;font-size:0.95em;font-weight:700;cursor:pointer;">📊 Calcular saldo</button>
         </div>`;
     } else if (total > 0 && faltaEntregar === 0) {
-        nota = `<div style="margin-top:7px;font-size:0.72em;color:#16a34a;font-weight:700;">✅ Todo pagado — el saldo real a pagar quedó en $0.</div>`;
+        nota = `<div style="margin-top:8px;font-size:0.72em;color:#16a34a;font-weight:700;">✅ Todos cobraron — no queda nada en sobres.</div>`;
     }
+
+    // Desglose: En sobres (listo para pagar) / Sin cerrar / Ya cobrado
+    const chip = (emoji, label, valor, color, bg) =>
+        `<div style="flex:1;min-width:96px;background:${bg};border-radius:8px;padding:7px 9px;">
+            <div style="font-size:0.64em;text-transform:uppercase;letter-spacing:0.03em;font-weight:800;color:${color};">${emoji} ${label}</div>
+            <div style="font-size:0.98em;font-weight:900;color:${color};">${fmtM(valor)}</div>
+        </div>`;
 
     return `<div style="background:linear-gradient(135deg,#ecfeff,#f0fdfa);border:1px solid #99f6e4;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -1142,11 +1153,15 @@ function _cierresMesResumenPagoHTML(cerrados, fmtM) {
             </div>
             <div style="text-align:right;font-size:0.73em;color:#475569;line-height:1.55;">
                 <div>Total del período: <b style="color:#0f172a;">${fmtM(total)}</b></div>
-                <div>Ya cobrado: <b style="color:#16a34a;">${fmtM(cobrado)}</b></div>
             </div>
         </div>
         <div style="margin-top:9px;height:8px;background:#cffafe;border-radius:6px;overflow:hidden;">
             <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#0d9488,#22c55e);border-radius:6px;transition:width 0.3s;"></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;">
+            ${chip('📩', 'En sobres', enSobre, '#b45309', '#fefce8')}
+            ${chip('⏳', 'Sin cerrar', sinCerrar, '#0369a1', '#eff6ff')}
+            ${chip('💵', 'Ya cobrado', cobrado, '#15803d', '#f0fdf4')}
         </div>
         ${nota}
     </div>`;

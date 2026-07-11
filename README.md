@@ -237,6 +237,7 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 - Muestra el **saldo real a pagar en vivo de TODOS los socios** (mismo cálculo del informe): al abrir el panel calcula el `aPagar` de los socios que aún no están cerrados y lo suma a los ya cerrados. Así el total **ya no aparece en $0** cuando todavía no cierras a nadie.
 - El monto **se va vaciando** a medida que marcas a cada socio como 💵 Cobrado (barra de progreso + desglose "Total del período" / "Ya cobrado"), y llega a **$0** cuando están todos pagados. Sirve para **cuadrar lo recaudado contra los anticipos**.
 - Los socios ya cerrados usan su `aPagar` congelado del cierre; los sin cerrar usan el cálculo en vivo (con caché `cacheSocioIndividual`, hasta 6 en paralelo). Botón 🔄 para recalcular.
+- **Desglose en 3 montos**: **📩 En sobres** (cerrados listos para pagar, apartados), **⏳ Sin cerrar** (aún no cerrados) y **💵 Ya cobrado**. El monto **En sobres** baja cada vez que un socio pasa a Cobrado (botón 💵/📩 por socio en la lista). Sirve para saber cuánta plata queda físicamente en sobres esperando ser retirada.
 - Archivos: `js/anticipos.js` (`_cierresMesResumenPagoHTML`, `cierresMes_cargarSaldosLive`, disparo en `toggleCierreMes`).
 
 #### 2026-07-09 — Saldo real a pagar: vista consolidada de todos los socios (solo consulta)
