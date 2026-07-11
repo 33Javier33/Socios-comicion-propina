@@ -368,6 +368,9 @@
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button onclick="verSaldosRealesTodos()" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.5); border-radius:8px; padding:9px 18px; font-weight:800; font-size:0.85em; cursor:pointer; white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                        📊 Saldo real a pagar
+                    </button>
                     <button onclick="informeAnticipos()" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.5); border-radius:8px; padding:9px 18px; font-weight:800; font-size:0.85em; cursor:pointer; white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
                         📋 Detalle Anticipos
                     </button>
@@ -877,6 +880,33 @@
                     <div style="display:flex; gap:10px;">
                         <button id="btnConfirmarCierreTodos" onclick="ejecutarCierreTodos()" class="btn-submit" style="flex:1; background:linear-gradient(135deg,#6c3483,#8e44ad); border:none;">✅ Confirmar y Ejecutar</button>
                         <button onclick="document.getElementById('modalCierreTodos').style.display='none'" class="btn-submit" style="flex:1; background:#999; border:none;">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: SALDO REAL A PAGAR DE TODOS LOS SOCIOS (solo consulta) -->
+        <div id="modalSaldosReales" class="modal">
+            <div class="modal-content" style="max-width:640px; margin-top:6%;">
+                <div class="modal-header" style="background:linear-gradient(135deg,#0f766e,#0d9488); border-radius:12px 12px 0 0;">
+                    <h2 style="color:white; margin:0;">📊 Saldo real a pagar — Todos los socios</h2>
+                    <span class="close-modal" onclick="document.getElementById('modalSaldosReales').style.display='none'" style="color:white;">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p style="color:#64748b; font-size:0.85em; margin:0 0 12px;">Cálculo <b>en vivo</b> del período actual (alcance + saldo anterior − anticipos pedidos). <b>No modifica nada</b>: solo consulta.</p>
+                    <div id="saldosRealesProgreso" style="margin-bottom:14px; display:none;">
+                        <div style="background:#e2e8f0; border-radius:8px; overflow:hidden; height:11px; margin-bottom:7px;">
+                            <div id="saldosRealesBar" style="height:100%; background:linear-gradient(90deg,#0d9488,#22c55e); border-radius:8px; width:0%; transition:width 0.3s;"></div>
+                        </div>
+                        <div id="saldosRealesStatus" style="font-size:0.82em; color:#7f8c8d; text-align:center;">Calculando...</div>
+                    </div>
+                    <div style="position:relative; margin-bottom:10px;">
+                        <input id="saldosRealesBuscar" type="text" placeholder="🔍 Buscar socio..." oninput="_saldosRealesFiltro=this.value;_saldosRealesRender();" style="width:100%; box-sizing:border-box; padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.87em; outline:none;">
+                    </div>
+                    <div id="saldosRealesResultado" style="max-height:52vh; overflow:auto; margin-bottom:14px;"></div>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="_saldosRealesImprimir()" class="btn-submit" style="flex:1; background:#0d9488; border:none;">🖨 Imprimir / PDF</button>
+                        <button onclick="document.getElementById('modalSaldosReales').style.display='none'" class="btn-submit" style="flex:1; background:#999; border:none;">Cerrar</button>
                     </div>
                 </div>
             </div>

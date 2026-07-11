@@ -1843,3 +1843,169 @@ function generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, b
 
     printHTML(contenido, 'Anticipo ' + nombre + ' ' + fechaVis.replace(/\//g,'-'));
 }
+
+// ============================================================
+// SALDO REAL A PAGAR — vista consolidada de TODOS los socios (solo consulta)
+// Calcula en vivo, sin escribir nada, cuánto le queda a cada socio.
+// ============================================================
+let _saldosRealesData = [];
+let _saldosRealesFiltro = '';
+
+function _srEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Mismo cálculo que el cierre de mes, pero solo devuelve los números (no guarda).
+function _calcSaldoRealSocio(socio, data) {
+    const saldoAnterior = Number(data.saldoAnterior || 0);
+    let sumaPedido = 0;
+    if (data.anticipos && Array.isArray(data.anticipos)) {
+        data.anticipos.forEach(a => { sumaPedido += Number(a.cantidad || a.monto || 0); });
+    }
+    const fechasAusencia = new Set();
+    if (data.extras && Array.isArray(data.extras)) {
+        data.extras.forEach(e => {
+            if (e.tipo && e.tipo.toLowerCase().includes('ausencia')) {
+                let f = e.fecha; if (f && String(f).includes('T')) f = String(f).split('T')[0];
+                fechasAusencia.add(f);
+            }
+        });
+    }
+    let alcance = 0;
+    if (socio.contrato === 'Part-Time') {
+        (globalDiasPT[socio.id] || []).forEach(d => { if (!fechasAusencia.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
+        alcance *= socio.puntos;
+    } else {
+        for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
+            if (!fechasAusencia.has(dia) && valor) alcance += valor;
+        }
+        alcance *= socio.puntos;
+    }
+    const saldoReal = alcance + saldoAnterior - sumaPedido;
+    const aPagar = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
+    const remanente = saldoReal > 0 ? Math.round(saldoReal - aPagar) : Math.round(saldoReal);
+    return { alcance, saldoAnterior, sumaPedido, saldoReal, aPagar, remanente };
+}
+
+async function verSaldosRealesTodos() {
+    if (!cacheSocios || !cacheSocios.length) { showToast('No hay socios cargados', 'error'); return; }
+    const modal = document.getElementById('modalSaldosReales');
+    if (modal) modal.style.display = 'block';
+    _saldosRealesData = [];
+    _saldosRealesFiltro = '';
+    const buscar = document.getElementById('saldosRealesBuscar'); if (buscar) buscar.value = '';
+    const cont = document.getElementById('saldosRealesResultado'); if (cont) cont.innerHTML = '';
+    const prog = document.getElementById('saldosRealesProgreso'); if (prog) prog.style.display = 'block';
+    const status = document.getElementById('saldosRealesStatus');
+    const bar = document.getElementById('saldosRealesBar');
+
+    const socios = cacheSocios.slice();
+    const total = socios.length;
+    let done = 0;
+    const CONC = 6; // hasta 6 consultas en paralelo
+
+    async function procesarUno(socio) {
+        try {
+            const resp = await fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${socio.id}`);
+            const res = await resp.json();
+            const data = (res && res.status === 'success') ? (res.data || {}) : {};
+            const calc = _calcSaldoRealSocio(socio, data);
+            _saldosRealesData.push(Object.assign({ socio, error: !(res && res.status === 'success') }, calc));
+        } catch (e) {
+            _saldosRealesData.push({ socio, error: true, alcance: 0, saldoAnterior: 0, sumaPedido: 0, saldoReal: 0, aPagar: 0, remanente: 0 });
+        } finally {
+            done++;
+            if (status) status.textContent = `Calculando ${done}/${total}...`;
+            if (bar) bar.style.width = Math.round((done / total) * 100) + '%';
+        }
+    }
+
+    for (let i = 0; i < socios.length; i += CONC) {
+        await Promise.all(socios.slice(i, i + CONC).map(procesarUno));
+    }
+
+    if (prog) prog.style.display = 'none';
+    _saldosRealesRender();
+}
+
+function _saldosRealesRender() {
+    const cont = document.getElementById('saldosRealesResultado');
+    if (!cont) return;
+    const fmtM = v => formatearMoneda(Math.round(v || 0));
+    const filtro = (_saldosRealesFiltro || '').toLowerCase().trim();
+
+    let filas = _saldosRealesData.slice().sort((a, b) => b.saldoReal - a.saldoReal);
+    if (filtro) filas = filas.filter(f => `${f.socio.nombre} ${f.socio.apellido}`.toLowerCase().includes(filtro));
+
+    if (!filas.length) {
+        cont.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:0.85em;padding:22px;">Sin resultados</div>';
+        return;
+    }
+
+    const totSaldo = filas.reduce((s, f) => s + f.saldoReal, 0);
+    const totPagar = filas.reduce((s, f) => s + f.aPagar, 0);
+    const totRem = filas.reduce((s, f) => s + f.remanente, 0);
+
+    const th = t => `<th style="padding:7px 8px;text-align:right;font-size:0.72em;text-transform:uppercase;letter-spacing:0.03em;color:#475569;">${t}</th>`;
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:0.83em;">'
+        + '<thead><tr style="background:#f0fdfa;border-bottom:2px solid #99f6e4;">'
+        + '<th style="padding:7px 8px;text-align:left;font-size:0.72em;text-transform:uppercase;letter-spacing:0.03em;color:#475569;">Socio</th>'
+        + th('Alcance') + th('Saldo real') + th('A pagar') + th('Remanente')
+        + '</tr></thead><tbody>';
+
+    filas.forEach(f => {
+        const nm = `${f.socio.nombre} ${f.socio.apellido}`;
+        const colSaldo = f.saldoReal < 0 ? '#dc2626' : '#0f766e';
+        html += `<tr style="border-bottom:1px solid #eef2f6;">
+            <td style="padding:6px 8px;">
+                <div style="font-weight:700;color:#0f172a;">${_srEsc(nm)}${f.error ? ' <span title="No se pudo leer" style="color:#dc2626;">⚠️</span>' : ''}</div>
+                <div style="font-size:0.72em;color:#94a3b8;">${_srEsc((f.socio.area || '').toUpperCase())}</div>
+            </td>
+            <td style="padding:6px 8px;text-align:right;color:#334155;">${fmtM(f.alcance)}</td>
+            <td style="padding:6px 8px;text-align:right;font-weight:800;color:${colSaldo};">${fmtM(f.saldoReal)}</td>
+            <td style="padding:6px 8px;text-align:right;color:#15803d;font-weight:700;">${fmtM(f.aPagar)}</td>
+            <td style="padding:6px 8px;text-align:right;color:#8e44ad;">${fmtM(f.remanente)}</td>
+        </tr>`;
+    });
+
+    html += `</tbody><tfoot><tr style="background:#f8fafc;border-top:2px solid #cbd5e1;font-weight:800;">
+        <td style="padding:8px;color:#0f172a;">TOTAL (${filas.length})</td>
+        <td style="padding:8px;text-align:right;"></td>
+        <td style="padding:8px;text-align:right;color:${totSaldo < 0 ? '#dc2626' : '#0f766e'};">${fmtM(totSaldo)}</td>
+        <td style="padding:8px;text-align:right;color:#15803d;">${fmtM(totPagar)}</td>
+        <td style="padding:8px;text-align:right;color:#8e44ad;">${fmtM(totRem)}</td>
+    </tr></tfoot></table>`;
+
+    cont.innerHTML = html;
+}
+
+function _saldosRealesImprimir() {
+    if (!_saldosRealesData.length) { showToast('Primero calcula los saldos', 'error'); return; }
+    const fmtM = v => formatearMoneda(Math.round(v || 0));
+    const filas = _saldosRealesData.slice().sort((a, b) => `${a.socio.nombre} ${a.socio.apellido}`.localeCompare(`${b.socio.nombre} ${b.socio.apellido}`));
+    const totSaldo = filas.reduce((s, f) => s + f.saldoReal, 0);
+    const totPagar = filas.reduce((s, f) => s + f.aPagar, 0);
+    const totRem = filas.reduce((s, f) => s + f.remanente, 0);
+    const hoy = new Date().toLocaleString('es-CL');
+
+    let filasHtml = filas.map(f => `<tr>
+        <td>${_srEsc(f.socio.nombre + ' ' + f.socio.apellido)}</td>
+        <td style="text-transform:uppercase;font-size:11px;color:#666;">${_srEsc(f.socio.area || '')}</td>
+        <td class="num">${fmtM(f.alcance)}</td>
+        <td class="num" style="font-weight:bold;">${fmtM(f.saldoReal)}</td>
+        <td class="num">${fmtM(f.aPagar)}</td>
+        <td class="num">${fmtM(f.remanente)}</td>
+    </tr>`).join('');
+
+    const html = '<html><head><meta charset="utf-8"><title>Saldo Real a Pagar</title>'
+        + '<style>body{font-family:Arial,sans-serif;padding:20px;color:#111;}h1{font-size:18px;margin:0 0 4px;}'
+        + '.sub{font-size:12px;color:#666;margin-bottom:14px;}table{width:100%;border-collapse:collapse;font-size:12px;}'
+        + 'th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;}th{background:#0d9488;color:#fff;font-size:11px;text-transform:uppercase;}'
+        + '.num{text-align:right;}tfoot td{background:#f0f0f0;font-weight:bold;}</style></head><body>'
+        + '<h1>📊 Saldo Real a Pagar — Todos los Socios</h1>'
+        + '<div class="sub">Generado: ' + hoy + ' · ' + filas.length + ' socios · Cálculo del período actual</div>'
+        + '<table><thead><tr><th>Socio</th><th>Área</th><th>Alcance</th><th>Saldo Real</th><th>A Pagar</th><th>Remanente</th></tr></thead>'
+        + '<tbody>' + filasHtml + '</tbody>'
+        + '<tfoot><tr><td colspan="2">TOTAL (' + filas.length + ')</td><td class="num"></td><td class="num">' + fmtM(totSaldo) + '</td><td class="num">' + fmtM(totPagar) + '</td><td class="num">' + fmtM(totRem) + '</td></tr></tfoot>'
+        + '</table></body></html>';
+
+    printHTML(html, 'Saldo Real a Pagar ' + new Date().toLocaleDateString('es-CL').replace(/\//g, '-'));
+}

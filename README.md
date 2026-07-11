@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-09 — Saldo real a pagar: vista consolidada de todos los socios (solo consulta)
+- Nuevo botón **"📊 Saldo real a pagar"** en la cabecera de **Anticipos y Ausencias**. Abre un modal que calcula **en vivo** (sin modificar nada) cuánto le queda a **cada socio**: Alcance, **Saldo Real**, A Pagar y Remanente, con totales.
+- Antes había que abrir socio por socio (o ejecutar el Cierre de Mes) para ver estos números; ahora se ven todos juntos de una sola vez.
+- Mismo cálculo que el Cierre de Mes (`alcance + saldo anterior − anticipos pedidos`), pero es **solo lectura**: no guarda remanentes ni archiva nada.
+- Incluye **buscador** por nombre y botón **🖨 Imprimir / PDF** con el listado completo.
+- Consulta hasta 6 socios en paralelo para ir más rápido. Archivos: `index.html` (botón + `#modalSaldosReales`), `js/anticipos.js` (`verSaldosRealesTodos`, `_calcSaldoRealSocio`, `_saldosRealesRender`, `_saldosRealesImprimir`).
+
 #### 2026-07-09 — Documentación: enviar documentos a un socio (le aparecen en "Mis Documentos")
 - En **Documentación → pestaña Socios**, al abrir un socio ahora hay un botón **"📤 Enviar documento a este socio"** (PDF o imagen, hasta 20 MB).
 - El documento se sube al bucket `documentos` (ruta `socio/<id>/…`) y se registra en la tabla `documentos` con `categoria='socio'`, `socio_id` y `subido_por='Administración (…)'`.
