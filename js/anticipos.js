@@ -1089,6 +1089,40 @@ function toggleCierreMes() {
     if (!open) cierresMes_render();
 }
 
+// Bloque "Saldo real a pagar" que se va vaciando a medida que se cobra a cada socio.
+// Usa los montos ya guardados en cada cierre (aPagar) — sin consultas extra.
+function _cierresMesResumenPagoHTML(cerrados, nPendientes, fmtM) {
+    const totalAPagar   = cerrados.reduce((s, c) => s + (Number(c.aPagar) || 0), 0);
+    const cobradoAPagar = cerrados.filter(c => c.estadoCobro === 'cobrado').reduce((s, c) => s + (Number(c.aPagar) || 0), 0);
+    const pendientePagar = totalAPagar - cobradoAPagar; // lo que falta entregar (socios en sobre)
+    const pct = totalAPagar > 0 ? Math.round((cobradoAPagar / totalAPagar) * 100) : 0;
+    const colorPend = pendientePagar > 0 ? '#0f766e' : '#16a34a';
+
+    let nota = '';
+    if (nPendientes > 0) {
+        nota = `<div style="margin-top:7px;font-size:0.72em;color:#b45309;font-weight:700;">⚠️ ${nPendientes} socio(s) aún sin cerrar — su monto todavía no entra en este total.</div>`;
+    } else if (totalAPagar > 0 && pendientePagar === 0) {
+        nota = `<div style="margin-top:7px;font-size:0.72em;color:#16a34a;font-weight:700;">✅ Todo pagado — el saldo real a pagar quedó en $0.</div>`;
+    }
+
+    return `<div style="background:linear-gradient(135deg,#ecfeff,#f0fdfa);border:1px solid #99f6e4;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div>
+                <div style="font-size:0.68em;text-transform:uppercase;letter-spacing:0.04em;color:#0f766e;font-weight:800;">💵 Saldo real a pagar <span style="font-weight:600;opacity:0.8;">(falta entregar)</span></div>
+                <div style="font-size:1.5em;font-weight:900;color:${colorPend};">${fmtM(pendientePagar)}</div>
+            </div>
+            <div style="text-align:right;font-size:0.73em;color:#475569;line-height:1.55;">
+                <div>Total del período: <b style="color:#0f172a;">${fmtM(totalAPagar)}</b></div>
+                <div>Ya cobrado: <b style="color:#16a34a;">${fmtM(cobradoAPagar)}</b></div>
+            </div>
+        </div>
+        <div style="margin-top:9px;height:8px;background:#cffafe;border-radius:6px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#0d9488,#22c55e);border-radius:6px;transition:width 0.3s;"></div>
+        </div>
+        ${nota}
+    </div>`;
+}
+
 function cierresMes_render(refocusBuscador = false) {
     const badge = document.getElementById('cierreMesBadge');
     const body = document.getElementById('cierreMesBody');
@@ -1173,6 +1207,7 @@ function cierresMes_render(refocusBuscador = false) {
                 <div style="font-size:0.68em;text-transform:uppercase;font-weight:700;color:#1e40af;letter-spacing:0.04em;">Total</div>
             </div>
         </div>
+        ${_cierresMesResumenPagoHTML(cerrados, nPendientes, fmtM)}
         <div style="position:relative;margin-bottom:12px;">
             <input id="cierreMesBuscador" type="text" placeholder="🔍 Buscar por nombre..." value="${_cierreMesFiltro.replace(/"/g,'&quot;')}"
                 oninput="_cierreMesFiltro=this.value;cierresMes_render(true);"

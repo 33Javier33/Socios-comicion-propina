@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-09 — Estado de Cobros: "Saldo real a pagar" que se vacía al ir cobrando
+- Dentro del panel **📊 Estado de Cobros del Período** (Anticipos y Ausencias) se agregó un bloque **💵 Saldo real a pagar (falta entregar)** que muestra cuánto dinero queda por entregar a los socios.
+- El monto **se va vaciando** a medida que marcas a cada socio como 💵 Cobrado (llega a **$0** cuando están todos pagados), con barra de progreso y desglose "Total del período" / "Ya cobrado". Sirve para **cuadrar lo recaudado contra los anticipos**.
+- Usa los montos ya guardados en cada cierre (`aPagar` + `estadoCobro`), sin consultas extra. Si aún quedan socios sin cerrar, avisa que su monto todavía no entra en el total.
+- Archivos: `js/anticipos.js` (`_cierresMesResumenPagoHTML` + llamada dentro de `cierresMes_render`).
+
 #### 2026-07-09 — Saldo real a pagar: vista consolidada de todos los socios (solo consulta)
 - Nuevo botón **"📊 Saldo real a pagar"** en la cabecera de **Anticipos y Ausencias**. Abre un modal que calcula **en vivo** (sin modificar nada) cuánto le queda a **cada socio**: Alcance, **Saldo Real**, A Pagar y Remanente, con totales.
 - Antes había que abrir socio por socio (o ejecutar el Cierre de Mes) para ver estos números; ahora se ven todos juntos de una sola vez.
