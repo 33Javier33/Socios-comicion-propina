@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-09 — Recibo de cierre: impresión copia a copia automática (Admin → Socio)
+- En **imprimir recibo del socio** (al Cerrar Mes desde el detalle del socio), la opción **"por separado"** ahora imprime **primero la copia ADMINISTRADOR y enseguida, sola y automática, la del SOCIO** — ya no hay que volver a elegir ni presionar.
+- La otra opción sigue igual: **"las dos copias en una sola hoja"** (Admin + Socio con corte entre ambas).
+- Se quitó la segunda pregunta ("¿qué copia imprimir?") que obligaba a imprimir de a una.
+- Nota: entre una impresión y otra hay un pequeño retardo; si el navegador bloquea la segunda ventana emergente, el recibo del socio se descarga como archivo (igual queda disponible).
+- Archivos: `js/reports.js` (`imprimirReciboSocio`).
+
 #### 2026-07-09 — Estado de Cobros: "Saldo real a pagar" en vivo que se vacía al ir cobrando
 - Dentro del panel **📊 Estado de Cobros del Período** (Anticipos y Ausencias) se agregó el bloque **💵 Saldo real a pagar (falta entregar)** con el total real que queda por entregar a los socios.
 - Muestra el **saldo real a pagar en vivo de TODOS los socios** (mismo cálculo del informe): al abrir el panel calcula el `aPagar` de los socios que aún no están cerrados y lo suma a los ya cerrados. Así el total **ya no aparece en $0** cuando todavía no cierras a nadie.

@@ -502,19 +502,6 @@ async function imprimirReciboSocio() {
         @media screen { body { background:#ddd; } .page { background:white; box-shadow:0 2px 12px rgba(0,0,0,0.2); } }
         </style></head><body><div class='page'>`;
 
-    const opcion = window.confirm('¿Cómo imprimir?\n\nOK → Copia a copia (seleccionar después)\nCANCELAR → Dos copias en una hoja');
-
-    let contenido;
-    if (opcion) {
-        const cual = window.confirm('¿Qué copia imprimir?\n\nOK → Administrador\nCANCELAR → Socio');
-        const label = cual ? '★ COPIA ADMINISTRADOR ★' : '★ COMPROBANTE SOCIO ★';
-        contenido = htmlBase + bloqueRecibo(label) + '</div></body></html>';
-    } else {
-        contenido = htmlBase + bloqueRecibo('★ COPIA ADMINISTRADOR ★') + '</div>' +
-                      '<div style="page-break-after:always;break-after:page;height:0;overflow:hidden;"></div>' +
-                      '<div class="page">' + bloqueRecibo('★ COMPROBANTE SOCIO ★') + '</div></body></html>';
-    }
-
     // Snapshot completo para auditoría y reimpresión
     const reciboSnapshot = {
         folio, socioId: id, nombre: nombreSocio, area, contrato,
@@ -524,7 +511,25 @@ async function imprimirReciboSocio() {
         fechaEmision: fechaHoyVis, movHtml
     };
 
-    printHTML(contenido, fileName);
+    const opcion = window.confirm('¿Cómo imprimir el recibo?\n\nOK → Por separado: primero ADMINISTRADOR y enseguida (automático) la del SOCIO\nCANCELAR → Las dos copias en una sola hoja');
+
+    if (opcion) {
+        // Copia a copia AUTOMÁTICA: se imprime la del Administrador y, al terminar,
+        // sale sola la del Socio — sin volver a presionar nada.
+        const adminHtml = htmlBase + bloqueRecibo('★ COPIA ADMINISTRADOR ★') + '</div></body></html>';
+        const socioHtml = htmlBase + bloqueRecibo('★ COMPROBANTE SOCIO ★') + '</div></body></html>';
+        if (typeof showToast === 'function') showToast('🖨 Imprimiendo copia ADMINISTRADOR…', 'info');
+        printHTML(adminHtml, fileName + ' - Admin');
+        setTimeout(() => {
+            if (typeof showToast === 'function') showToast('🖨 Ahora la copia del SOCIO…', 'info');
+            printHTML(socioHtml, fileName + ' - Socio');
+        }, 1500);
+    } else {
+        const contenido = htmlBase + bloqueRecibo('★ COPIA ADMINISTRADOR ★') + '</div>' +
+                      '<div style="page-break-after:always;break-after:page;height:0;overflow:hidden;"></div>' +
+                      '<div class="page">' + bloqueRecibo('★ COMPROBANTE SOCIO ★') + '</div></body></html>';
+        printHTML(contenido, fileName);
+    }
 
     // Registrar en auditoría — GAS (historial Sheets) + Supabase (detalle completo)
     const _audUsuario = (_resp.ini || '') + (_resp.area ? ' (' + _resp.area + ')' : '');
