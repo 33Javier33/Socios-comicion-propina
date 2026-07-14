@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-09 — Correo en tarjetas de Gestión + app admin instalable (PWA) y auto-actualizable
+- **Correo en Gestión de Socios**: además del detalle y el formulario, el correo (✉️) ahora aparece en cada **tarjeta de socio** (junto al RUT; muestra "— pendiente" si falta).
+- **App admin instalable (descargable) + auto-actualizable**: se agregó `manifest.json` + iconos propios (`img/fondo-192/512.png`, moneda dorada sobre navy) + `sw.js` (Service Worker network-first) y el registro en `index.html`, con **banner de "Nueva versión disponible"** (cuenta 10s y recarga; o al tocar Actualizar). Chequea updates cada 45s. Ahora la app se puede "Agregar a pantalla de inicio" y se actualiza sola con cada versión nueva.
+- `vercel.json` ampliado (sw.js/manifest.json/js/css/html con no-cache).
+- Archivos: `js/socios.js` (correo en tarjeta), `manifest.json` (nuevo), `sw.js` (nuevo), `img/fondo-192/512.png` (nuevos), `index.html` (manifest + registro SW + banner), `vercel.json`, `certificados.js`.
+
 #### 2026-07-09 — Fix: el correo no aparecía (caché de JS) + correo en certificados
 - **Causa**: la app admin (`index.html`) no registra Service Worker y cargaba los JS sin cache-busting, así que el navegador servía versiones viejas de `socios.js`/`api.js`/`supabase-config.js` (sin el código del correo) — por eso el correo (que sí está en Supabase) no aparecía.
 - **Fix**: se agregó **`?v=2`** a todos los `<script src="js/…">` de `index.html` (fuerza descarga fresca) y un **`vercel.json`** con `Cache-Control: no-cache, must-revalidate` para JS/CSS/HTML, para que no se vuelva a quedar pegado en versiones viejas.
