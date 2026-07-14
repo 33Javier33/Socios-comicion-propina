@@ -1759,7 +1759,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     mensaje: m.mensaje || '',
                     pinned: m.pinned || false,
                     reactions: m.reactions || {},
-                    foto_url: m.foto_url || ''
+                    foto_url: m.foto_url || '',
+                    destacados: m.destacados || ''
                 }));
                 mapped.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
                 return ok({ data: mapped });
@@ -1772,7 +1773,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     id: crypto.randomUUID(),
                     autor: body.autor || 'Admin',
                     mensaje: body.mensaje || '',
-                    foto_url: body.foto_url || null
+                    foto_url: body.foto_url || null,
+                    destacados: body.destacados || null
                 });
             } catch (e) { console.error('[supabase-config] addNote:', e); }
             return ok({ success: true });

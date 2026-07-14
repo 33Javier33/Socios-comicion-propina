@@ -1656,6 +1656,16 @@
                 <div style="background:white; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border:1px solid #eee;">
                     <h3 style="margin:0 0 12px 0; color:var(--primary); font-size:1em;">✏️ Nueva Nota</h3>
                     <textarea id="notaInputMsg" rows="3" placeholder="Escribe una nota para el equipo..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:0.95em; resize:vertical; box-sizing:border-box; font-family:inherit;"></textarea>
+                    <!-- Destacar la nota para socios específicos (es para todos, pero resaltada para ellos) -->
+                    <div style="margin-top:10px;">
+                        <button type="button" id="notaDestacarBtn" onclick="notaDestacarToggle()" style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:7px;padding:6px 11px;font-size:0.82em;font-weight:700;cursor:pointer;">⭐ Destacar para socios</button>
+                        <span id="notaDestacarResumen" style="font-size:0.8em;color:#64748b;margin-left:8px;"></span>
+                        <div id="notaDestacarPanel" style="display:none;margin-top:8px;border:1px solid #e2e8f0;border-radius:10px;padding:10px;background:#f8fafc;">
+                            <p style="margin:0 0 8px;font-size:0.78em;color:#64748b;">La nota la ven todos, pero aparece <b>destacada</b> para los socios que marques aquí.</p>
+                            <input type="text" id="notaDestacarBuscar" onkeyup="notaDestacarRender()" placeholder="Buscar socio..." style="width:100%;padding:7px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:0.85em;box-sizing:border-box;margin-bottom:8px;">
+                            <div id="notaDestacarLista" style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;"></div>
+                        </div>
+                    </div>
                     <input type="file" id="nota-foto-cam" accept="image/*" capture="environment" style="display:none" onchange="notasFotoElegida(this)">
                     <input type="file" id="nota-foto-gal" accept="image/*" style="display:none" onchange="notasFotoElegida(this)">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; gap:8px; flex-wrap:wrap;">
@@ -1951,34 +1961,34 @@
         </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/constants.js?v=3"></script>
-    <script src="js/utils.js?v=3"></script>
-    <script src="js/cache.js?v=3"></script>
-    <script src="js/auth.js?v=3"></script>
-    <script src="js/config.js?v=3"></script>
-    <script src="js/supabase-config.js?v=3"></script>
-    <script src="js/api.js?v=3"></script>
-    <script src="js/socios.js?v=3"></script>
-    <script src="js/puntos.js?v=3"></script>
-    <script src="js/anticipos.js?v=3"></script>
-    <script src="js/desglose-anticipos.js?v=3"></script>
-    <script src="js/batch-dias-pt.js?v=3"></script>
-    <script src="js/recaudacion.js?v=3"></script>
-    <script src="js/arqueo.js?v=3"></script>
-    <script src="js/canje.js?v=3"></script>
-    <script src="js/notas.js?v=3"></script>
-    <script src="js/reports.js?v=3"></script>
-    <script src="js/help.js?v=3"></script>
-    <script src="js/auditoria.js?v=3"></script>
-    <script src="js/carpetas.js?v=3"></script>
-    <script src="js/materiales.js?v=3"></script>
-    <script src="js/dineros.js?v=3"></script>
-    <script src="js/certificados.js?v=3"></script>
-    <script src="js/diario-pins.js?v=3"></script>
-    <script src="js/documentacion.js?v=3"></script>
-    <script src="js/egresos.js?v=3"></script>
-    <script src="js/mensajes-admin.js?v=3"></script>
-    <script src="js/app-init.js?v=3"></script>
+    <script src="js/constants.js?v=4"></script>
+    <script src="js/utils.js?v=4"></script>
+    <script src="js/cache.js?v=4"></script>
+    <script src="js/auth.js?v=4"></script>
+    <script src="js/config.js?v=4"></script>
+    <script src="js/supabase-config.js?v=4"></script>
+    <script src="js/api.js?v=4"></script>
+    <script src="js/socios.js?v=4"></script>
+    <script src="js/puntos.js?v=4"></script>
+    <script src="js/anticipos.js?v=4"></script>
+    <script src="js/desglose-anticipos.js?v=4"></script>
+    <script src="js/batch-dias-pt.js?v=4"></script>
+    <script src="js/recaudacion.js?v=4"></script>
+    <script src="js/arqueo.js?v=4"></script>
+    <script src="js/canje.js?v=4"></script>
+    <script src="js/notas.js?v=4"></script>
+    <script src="js/reports.js?v=4"></script>
+    <script src="js/help.js?v=4"></script>
+    <script src="js/auditoria.js?v=4"></script>
+    <script src="js/carpetas.js?v=4"></script>
+    <script src="js/materiales.js?v=4"></script>
+    <script src="js/dineros.js?v=4"></script>
+    <script src="js/certificados.js?v=4"></script>
+    <script src="js/diario-pins.js?v=4"></script>
+    <script src="js/documentacion.js?v=4"></script>
+    <script src="js/egresos.js?v=4"></script>
+    <script src="js/mensajes-admin.js?v=4"></script>
+    <script src="js/app-init.js?v=4"></script>
 
 <!-- ══════════════════════════════════════════
      MODAL: ACERCA DE / RESEÑA

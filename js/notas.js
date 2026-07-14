@@ -52,6 +52,14 @@ function notasCrearElemento(n, idx) {
     }).filter(Boolean).join(' &nbsp;');
     const border = n.pinned ? '3px solid #f59e0b' : isNew ? '3px solid #3b82f6' : '';
     const bg = n.pinned ? '#fffde7' : isNew ? '#eff6ff' : '';
+    // Badge "destacado para": resolver IDs → nombres
+    const destIds = (n.destacados || '').split(',').map(s => s.trim()).filter(Boolean);
+    let destHTML = '';
+    if (destIds.length) {
+        const nombres = destIds.map(id => { const s = (typeof cacheSocios !== 'undefined' ? cacheSocios : []).find(x => x.id === id); return s ? (s.nombre || id) : id; });
+        const label = nombres.length <= 3 ? nombres.join(', ') : nombres.slice(0, 3).join(', ') + ' y ' + (nombres.length - 3) + ' más';
+        destHTML = `<div style="display:inline-flex;align-items:center;gap:5px;background:#fef3c7;border:1px solid #fde68a;border-radius:20px;padding:3px 11px;font-size:0.74em;color:#92400e;font-weight:700;margin-bottom:10px;">⭐ Destacado para: ${_htmlEscSoc(label)}</div>`;
+    }
     const div = document.createElement('div');
     div.className = 'nota-card';
     div.dataset.rowIndex = rowIndex;
@@ -70,6 +78,7 @@ function notasCrearElemento(n, idx) {
             </div>
         </div>
         <div style="font-size:0.95em;color:#333;line-height:1.5;white-space:pre-wrap;margin-bottom:10px">${notasFormatearMensaje(n.mensaje||'')}</div>
+        ${destHTML}
         ${n.foto_url ? `<img src="${(n.foto_url+'').replace(/"/g,'%22')}" onclick="verFotoGrande('${(n.foto_url+'').replace(/'/g,'%27')}')" style="max-width:180px;max-height:180px;border-radius:10px;border:1px solid #e2e8f0;object-fit:cover;cursor:zoom-in;margin-bottom:10px;display:block;">` : ''}
         <div style="display:flex;gap:6px;flex-wrap:wrap">${rxBtns}</div>
         ${rxSummary ? `<div style="font-size:0.72em;color:#7f8c8d;margin-top:5px;line-height:1.4">${rxSummary}</div>` : ''}`;
@@ -132,14 +141,16 @@ async function notasPublicar() {
                 if (!up.error) foto_url = dbSoc.storage.from('avatares').getPublicUrl(path).data.publicUrl;
             } catch(eF) { console.warn('[notas] foto:', eF); }
         }
-        await fetch(URL_RECAUDACIONES,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'addNote',autor:'Admin',mensaje:msg,foto_url})});
+        const destacados = [..._notaDestacados].join(',');
+        await fetch(URL_RECAUDACIONES,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'addNote',autor:'Admin',mensaje:msg,foto_url,destacados})});
         document.getElementById('notaInputMsg').value='';
         showToast('Nota publicada','success');
         const cont = document.getElementById('notasListaContainer');
         if (cont.querySelector('div[style*="padding:30px"]')) cont.innerHTML='';
-        const el = notasCrearElemento({fecha:new Date().toISOString(),autor:'Admin',mensaje:msg,foto_url},-1);
+        const el = notasCrearElemento({fecha:new Date().toISOString(),autor:'Admin',mensaje:msg,foto_url,destacados},-1);
         cont.insertBefore(el,cont.firstChild);
         notasFotoQuitar();
+        notaDestacarLimpiar();
         try { localStorage.removeItem(CACHE_KEY_NOTAS); } catch(e) {}
     } catch(e) { showToast('Error al publicar nota','error'); }
     finally { if(btnPub){btnPub.disabled=false;btnPub.textContent='Publicar';} }
@@ -167,6 +178,50 @@ function notasFotoQuitar() {
     if (prev) { prev.style.display='none'; prev.innerHTML=''; }
     const cam = document.getElementById('nota-foto-cam'); if (cam) cam.value='';
     const gal = document.getElementById('nota-foto-gal'); if (gal) gal.value='';
+}
+
+// ── Destacar la nota para socios específicos ──
+let _notaDestacados = new Set();
+function notaDestacarToggle() {
+    const p = document.getElementById('notaDestacarPanel');
+    if (!p) return;
+    const abrir = p.style.display === 'none';
+    p.style.display = abrir ? 'block' : 'none';
+    if (abrir) notaDestacarRender();
+}
+function notaDestacarRender() {
+    const cont = document.getElementById('notaDestacarLista');
+    if (!cont) return;
+    const q = (document.getElementById('notaDestacarBuscar')?.value || '').toLowerCase().trim();
+    const socios = (typeof cacheSocios !== 'undefined' ? cacheSocios : [])
+        .filter(s => !q || ((s.nombre || '') + ' ' + (s.apellido || '')).toLowerCase().includes(q))
+        .sort((a, b) => ((a.nombre || '') + a.apellido).localeCompare((b.nombre || '') + b.apellido));
+    if (!socios.length) { cont.innerHTML = '<p style="font-size:0.8em;color:#94a3b8;text-align:center;padding:10px;">Sin socios.</p>'; return; }
+    cont.innerHTML = socios.map(s => {
+        const sel = _notaDestacados.has(s.id);
+        const nom = _htmlEscSoc ? _htmlEscSoc((s.nombre || '') + ' ' + (s.apellido || '')) : ((s.nombre || '') + ' ' + (s.apellido || ''));
+        return `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;${sel ? 'background:#fef3c7;' : ''}">
+            <input type="checkbox" ${sel ? 'checked' : ''} onchange="notaDestacarSocio('${s.id}')" style="width:16px;height:16px;">
+            <span style="font-size:0.86em;color:#334155;">${nom}</span>
+        </label>`;
+    }).join('');
+}
+function notaDestacarSocio(id) {
+    if (_notaDestacados.has(id)) _notaDestacados.delete(id); else _notaDestacados.add(id);
+    _notaDestacarResumen();
+}
+function _notaDestacarResumen() {
+    const r = document.getElementById('notaDestacarResumen');
+    const btn = document.getElementById('notaDestacarBtn');
+    const n = _notaDestacados.size;
+    if (r) r.textContent = n ? `⭐ ${n} socio${n === 1 ? '' : 's'} destacado${n === 1 ? '' : 's'}` : '';
+    if (btn) btn.style.background = n ? '#fde68a' : '#fffbeb';
+}
+function notaDestacarLimpiar() {
+    _notaDestacados = new Set();
+    _notaDestacarResumen();
+    const p = document.getElementById('notaDestacarPanel'); if (p) p.style.display = 'none';
+    const b = document.getElementById('notaDestacarBuscar'); if (b) b.value = '';
 }
 
 async function notasBorrar(btnEl) {

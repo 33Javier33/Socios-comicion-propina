@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-09 — Notas admin: destacar una nota para socios específicos
+- En **Notas de Administración** se agregó **"⭐ Destacar para socios"**: al crear una nota (visible para todos) puedes **seleccionar uno o más socios** (buscador + checkboxes). La nota queda **destacada para ellos**.
+- Se guarda en `notas_recaudacion.destacados` (Supabase, IDs separados por coma). Cada nota muestra un badge "⭐ Destacado para: …". En **propi.solicitada** (chat Soporte) esa nota le aparece al socio seleccionado con un **anillo dorado + etiqueta "⭐ PARA TI"**.
+- Archivos: `js/notas.js` (selector + envío + badge), `js/supabase-config.js` (getNotes/addNote con `destacados`), `index.html` (UI selector). Migración Supabase (REC): `add_destacados_to_notas_recaudacion`. Cache-bust ?v=4.
+
 #### 2026-07-09 — Correo en tarjetas de Gestión + app admin instalable (PWA) y auto-actualizable
 - **Correo en Gestión de Socios**: además del detalle y el formulario, el correo (✉️) ahora aparece en cada **tarjeta de socio** (junto al RUT; muestra "— pendiente" si falta).
 - **App admin instalable (descargable) + auto-actualizable**: se agregó `manifest.json` + iconos propios (`img/fondo-192/512.png`, moneda dorada sobre navy) + `sw.js` (Service Worker network-first) y el registro en `index.html`, con **banner de "Nueva versión disponible"** (cuenta 10s y recarga; o al tocar Actualizar). Chequea updates cada 45s. Ahora la app se puede "Agregar a pantalla de inicio" y se actualiza sola con cada versión nueva.
