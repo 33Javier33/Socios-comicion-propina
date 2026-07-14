@@ -232,6 +232,9 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-09 — Enlaces entre apps: 📔 Diario y 📱 App Socios en el header
+- En el header de socios-comicion se agregaron accesos directos a **Diario de Recaudación** (`diario-propi.vercel.app`) y a la **App de Socios** (`propi-solicitada.vercel.app`), abren en pestaña nueva. URLs editables en `index.html`.
+
 #### 2026-07-09 — Notas admin: destacar una nota para socios específicos
 - En **Notas de Administración** se agregó **"⭐ Destacar para socios"**: al crear una nota (visible para todos) puedes **seleccionar uno o más socios** (buscador + checkboxes). La nota queda **destacada para ellos**.
 - Se guarda en `notas_recaudacion.destacados` (Supabase, IDs separados por coma). Cada nota muestra un badge "⭐ Destacado para: …". En **propi.solicitada** (chat Soporte) esa nota le aparece al socio seleccionado con un **anillo dorado + etiqueta "⭐ PARA TI"**.
