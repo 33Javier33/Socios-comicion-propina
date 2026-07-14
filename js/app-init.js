@@ -316,13 +316,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (typeof _rutValidar === 'function' && !_rutValidar(_rutRaw)) { showToast('RUT no válido. Ej: 12.345.678-9', 'error'); return; }
                 _rutFmt = (typeof _rutFormat === 'function') ? _rutFormat(_rutRaw) : _rutRaw;
             }
+            // Correo (opcional): validar formato si viene
+            const _correoRaw = (document.getElementById('correoSocio')?.value || '').trim().toLowerCase();
+            if (_correoRaw && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_correoRaw)) { showToast('Correo no válido. Ej: nombre@correo.com', 'error'); return; }
             toggleLoader(true, isEditing ? "Actualizando..." : "Guardando...");
             try {
                 if (isEditing) {
                     await callApiSocios('updateSocio', { socioId: idEdit, updates: d });
                     // Guardar el RUT directo en Supabase (socios.rut)
                     await callApiSocios('guardarRutSocio', { socioId: idEdit, rut: _rutFmt, nombre: (d.Nombre + ' ' + d.Apellido).trim() });
-                    const _sc = (cacheSocios || []).find(s => s.id === idEdit); if (_sc) _sc.rut = _rutFmt;
+                    // Guardar el correo directo en Supabase (socios.correo)
+                    await callApiSocios('guardarCorreoSocio', { socioId: idEdit, correo: _correoRaw, nombre: (d.Nombre + ' ' + d.Apellido).trim() });
+                    const _sc = (cacheSocios || []).find(s => s.id === idEdit); if (_sc) { _sc.rut = _rutFmt; _sc.correo = _correoRaw; }
                     showToast('Socio actualizado', 'success');
                 }
                 else { await callApiSocios('addSocio', { socio: d }); showToast('Socio registrado', 'success'); }

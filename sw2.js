@@ -1,6 +1,6 @@
 // Service Worker de la app de Horarios (index2.html).
 // Alcance acotado a /index2.html para NO afectar la app principal (index.html).
-const CACHE = 'horarios-mesas-v1';
+const CACHE = 'horarios-mesas-v2';
 const ASSETS = ['/index2.html', '/manifest2.json', '/img/horarios-192.png', '/img/horarios-512.png'];
 
 self.addEventListener('install', event => {

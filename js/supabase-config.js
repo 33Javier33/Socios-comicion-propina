@@ -144,7 +144,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         FechaInicioPuntos: s.fecha_inicio_puntos || '',
                         Puntos: Number(s.puntos) || 0,
                         Rut: s.rut || '',
-                        FotoUrl: s.foto_url || ''
+                        FotoUrl: s.foto_url || '',
+                        Correo: s.correo || ''
                     }));
 
                 // Refrescar GAS en segundo plano → mantiene Supabase sincronizado con Sheets
@@ -959,6 +960,23 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     idAfectado: _sid,
                     detalle: _rut ? `RUT guardado desde Gestión: ${_rut}` : 'RUT eliminado desde Gestión',
                     datos: { socio_id: _sid, rut: _rut }
+                });
+                return _mockOk({ status: 'success' });
+            } catch(e) { return _mockOk({ status: 'error', message: e.message }); }
+        }
+
+        // ── guardarCorreoSocio → actualizar el correo del socio ──
+        if (action === 'guardarCorreoSocio') {
+            const _sid = body.socioId || body.id || '';
+            const _correo = (body.correo || '').trim().toLowerCase();
+            if (!_sid) return _mockOk({ status: 'error', message: 'socioId requerido' });
+            try {
+                const { error } = await dbSoc.from('socios').update({ correo: _correo || null }).eq('id', _sid);
+                if (error) throw error;
+                _sbAudit('Registrar Correo', {
+                    idAfectado: _sid,
+                    detalle: _correo ? `Correo guardado desde Gestión: ${_correo}` : 'Correo eliminado desde Gestión',
+                    datos: { socio_id: _sid, correo: _correo }
                 });
                 return _mockOk({ status: 'success' });
             } catch(e) { return _mockOk({ status: 'error', message: e.message }); }

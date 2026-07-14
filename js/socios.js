@@ -121,6 +121,60 @@ async function gest_guardarRut(socioId) {
     }
 }
 
+// ── Correo del socio (detalle): mostrar + editar ──
+function gest_renderCorreo(socio) {
+    const el = document.getElementById('detCorreo');
+    if (!el) return;
+    const id = socio.id;
+    if (socio.correo) {
+        el.innerHTML = `✉️ ${_htmlEscSoc(socio.correo)} `
+            + `<button onclick="gest_editarCorreo('${id}')" title="Editar correo" style="background:none;border:none;color:var(--secondary);cursor:pointer;font-size:0.95em;padding:0 2px;">✏️</button>`;
+    } else {
+        el.innerHTML = `✉️ Correo: <span style="color:#dc2626;font-weight:600;">— pendiente</span> `
+            + `<button onclick="gest_editarCorreo('${id}')" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:6px;padding:2px 8px;font-size:0.82em;font-weight:700;cursor:pointer;margin-left:4px;">➕ Agregar correo</button>`;
+    }
+}
+function gest_editarCorreo(socioId) {
+    const el = document.getElementById('detCorreo');
+    if (!el) return;
+    const socio = (cacheSocios || []).find(s => s.id === socioId);
+    const actual = socio && socio.correo ? socio.correo : '';
+    el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px;">
+            <input id="gest-correo-input" value="${_htmlEscSoc(actual)}" placeholder="nombre@correo.com" inputmode="email" type="email"
+                onkeydown="if(event.key==='Enter')gest_guardarCorreo('${socioId}')"
+                style="padding:5px 9px;border:1.5px solid #cbd5e1;border-radius:7px;font-size:0.9em;width:190px;">
+            <button onclick="gest_guardarCorreo('${socioId}')" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:white;border:none;border-radius:7px;padding:5px 12px;font-size:0.82em;font-weight:800;cursor:pointer;">Guardar</button>
+            <button onclick="gest_cancelarCorreo('${socioId}')" style="background:none;border:1px solid #cbd5e1;color:#64748b;border-radius:7px;padding:5px 9px;font-size:0.82em;cursor:pointer;">✕</button>
+        </div>
+        <div id="gest-correo-error" style="display:none;color:#dc2626;font-size:0.78em;font-weight:600;margin-top:3px;"></div>`;
+    setTimeout(() => document.getElementById('gest-correo-input')?.focus(), 50);
+}
+function gest_cancelarCorreo(socioId) {
+    const socio = (cacheSocios || []).find(s => s.id === socioId);
+    if (socio) gest_renderCorreo(socio);
+}
+async function gest_guardarCorreo(socioId) {
+    const inp = document.getElementById('gest-correo-input');
+    const err = document.getElementById('gest-correo-error');
+    const raw = (inp?.value || '').trim().toLowerCase();
+    if (raw && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) { if (err) { err.textContent = 'Correo no válido. Ej: nombre@correo.com'; err.style.display = 'block'; } return; }
+    const socio = (cacheSocios || []).find(s => s.id === socioId);
+    const nombre = socio ? ((socio.nombre || '') + ' ' + (socio.apellido || '')).trim() : '';
+    toggleLoader(true, 'Guardando correo...');
+    try {
+        const res = await callApiSocios('guardarCorreoSocio', { socioId, correo: raw, nombre });
+        if (res.status !== 'success') throw new Error(res.message || 'Error');
+        if (socio) socio.correo = raw;
+        showToast('Correo guardado ✅', 'success');
+        if (socio) gest_renderCorreo(socio);
+    } catch(e) {
+        if (err) { err.textContent = 'No se pudo guardar: ' + e.message; err.style.display = 'block'; }
+    } finally {
+        toggleLoader(false);
+    }
+}
+
 function _htmlEscSoc(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -253,6 +307,7 @@ function prepararEdicion(id) {
         document.getElementById('area').value = areaVal;
         document.getElementById('contrato').value = socio.contrato;
         const _rutEl = document.getElementById('rutSocio'); if (_rutEl) _rutEl.value = socio.rut || '';
+        const _correoEl = document.getElementById('correoSocio'); if (_correoEl) _correoEl.value = socio.correo || '';
         document.getElementById('modalTitle').innerText = 'Editar Socio';
         document.getElementById('btnSubmit').innerText = 'Actualizar Datos';
         abrirModalRegistro();

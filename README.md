@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-09 — Correo del socio: se ve y se puede agregar/editar desde Gestión
+- El **correo electrónico** del socio (que el socio agrega desde propi.solicitada) ahora aparece en **Gestión de Socios → detalle del socio** (✉️), y se puede **agregar/editar manualmente** desde ahí (botón ✏️ / "Agregar correo") y también desde el **formulario de edición del socio** (campo Correo).
+- Se guarda en Supabase (`socios.correo`, acción `guardarCorreoSocio`) con auditoría. Los mapeos `getSocios` (supabase-config.js) y `procesarSocioDesdeGoogle` (api.js) ahora incluyen `Correo`/`correo`.
+- Archivos: `supabase-config.js` (handler + mapeo), `api.js` (mapeo), `index.html` (campo Correo + `#detCorreo`), `socios.js` (`gest_renderCorreo`/`gest_editarCorreo`/`gest_guardarCorreo`, pre-llenado), `app-init.js` (guardado en edición), `anticipos.js` (render en detalle). SW `horarios-mesas-v2`.
+
 #### 2026-07-09 — Recibo de cierre: impresión copia a copia automática (Admin → Socio)
 - En **imprimir recibo del socio** (al Cerrar Mes desde el detalle del socio), la opción **"por separado"** ahora imprime **primero la copia ADMINISTRADOR y enseguida, sola y automática, la del SOCIO** — ya no hay que volver a elegir ni presionar.
 - La otra opción sigue igual: **"las dos copias en una sola hoja"** (Admin + Socio con corte entre ambas).
