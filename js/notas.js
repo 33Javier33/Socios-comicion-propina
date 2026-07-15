@@ -85,19 +85,35 @@ function notasCrearElemento(n, idx) {
     return div;
 }
 
+let _notasFirmaActual = null;
+function _notasFirma(notas) {
+    return JSON.stringify((notas || []).map(n => [
+        n.originalIndex, n.pinned ? 1 : 0, n.mensaje || '', n.foto_url || '', n.destacados || '', n.reactions || {}
+    ]));
+}
 function notasRenderizar(notas) {
     const cont = document.getElementById('notasListaContainer');
     if (!cont) return;
+    const ordenadas = [...(notas || [])].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+    // Solo re-renderizar si algo cambió → evita el parpadeo del auto-refresco cada 5 s
+    const firma = _notasFirma(ordenadas);
+    if (firma === _notasFirmaActual && cont.children.length) return;
+    const primeraVez = _notasFirmaActual === null;
+    _notasFirmaActual = firma;
     cont.innerHTML = '';
-    if (!notas.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#7f8c8d;">Sin notas guardadas.</div>'; return; }
-    notas = [...notas].sort((a,b) => (b.pinned?1:0)-(a.pinned?1:0));
-    notas.forEach((n, i) => {
+    if (!ordenadas.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#7f8c8d;">Sin notas guardadas.</div>'; return; }
+    ordenadas.forEach((n, i) => {
         const idx = n.originalIndex !== undefined ? n.originalIndex : i;
         const el  = notasCrearElemento(n, idx);
-        el.style.animationDelay = (i * 55) + 'ms';
-        el.style.opacity = '0';
-        cont.appendChild(el);
-        requestAnimationFrame(() => { el.style.opacity = ''; });
+        // Fade-in solo la primera vez que se pinta la lista (no en cada cambio menor)
+        if (primeraVez) {
+            el.style.animationDelay = (i * 55) + 'ms';
+            el.style.opacity = '0';
+            cont.appendChild(el);
+            requestAnimationFrame(() => { el.style.opacity = ''; });
+        } else {
+            cont.appendChild(el);
+        }
     });
 }
 

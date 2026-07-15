@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-09 — Notas: se quitó el parpadeo del auto-refresco
+- Las notas se re-renderizaban completas (borrar innerHTML + fade-in) cada 5 s aunque no hubiera cambios → parpadeo molesto al leer.
+- Fix: `notasRenderizar` ahora calcula una firma de las notas y **solo re-renderiza si algo cambió** (mensaje, foto, pin, reacciones, destacados). El fade-in queda solo en la primera carga. Archivos: `js/notas.js`. Cache-bust ?v=5.
+
 #### 2026-07-09 — Enlaces entre apps: 📔 Diario y 📱 App Socios en el header
 - En el header de socios-comicion se agregaron accesos directos a **Diario de Recaudación** (`diario-propi.vercel.app`) y a la **App de Socios** (`propi-solicitada.vercel.app`), abren en pestaña nueva. URLs editables en `index.html`.
 
