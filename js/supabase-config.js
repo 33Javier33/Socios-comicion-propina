@@ -610,6 +610,46 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             return gasRes;
         }
 
+        // ── archivarAnticiposSocio → al marcar COBRADO: archivar los anticipos del socio
+        //    a anticipos_historial y borrarlos de los activos (aparecen en "Anticipos Anteriores"). ──
+        if (action === 'archivarAnticiposSocio') {
+            const sid = String(body.socioId || body.id || '');
+            if (!sid) return _mockOk({ status: 'error', message: 'socioId requerido' });
+            try {
+                const { data: activos } = await dbSoc.from('anticipos').select('*').eq('socio_id', sid);
+                let n = 0;
+                if (activos && activos.length > 0) {
+                    const hoy = new Date().toISOString().substring(0, 10);
+                    const mesLabel = new Date().toLocaleString('es-CL', { month: 'long', year: 'numeric' }).toUpperCase().replace(' ', '_');
+                    const periodo = body.periodo || ('CIERRE_' + mesLabel);
+                    const histRows = activos.map(a => ({
+                        id: crypto.randomUUID(),
+                        socio_id: a.socio_id,
+                        socio_nombre: body.nombre || null,
+                        fecha: a.fecha,
+                        monto: Number(a.monto),
+                        estado: 'ARCHIVADO',
+                        uuid_ref: a.id,
+                        responsable: a.responsable || null,
+                        periodo: periodo,
+                        fecha_archivo: hoy
+                    }));
+                    const { error: hErr } = await dbSoc.from('anticipos_historial').insert(histRows);
+                    if (hErr) throw hErr;                       // si falla el archivado, NO borrar
+                    n = histRows.length;
+                    await dbSoc.from('anticipos').delete().eq('socio_id', sid);
+                    // Archivar también el desglose del socio (marcar periodo a los que están activos)
+                    await dbSoc.from('retiros_anticipos').update({ periodo: periodo }).is('periodo', null).eq('socio_id', sid).catch(() => {});
+                }
+                _sbAudit('Cobrado — Archivar anticipos del socio', {
+                    idAfectado: sid,
+                    detalle: `${n} anticipo(s) archivado(s) y borrado(s) al marcar cobrado${body.nombre ? ' — ' + body.nombre : ''}`,
+                    datos: { socio_id: sid, cantidad: n }
+                });
+                return _mockOk({ status: 'success', archivados: n });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message }); }
+        }
+
         // ── reiniciarExtras → archivar en GAS y limpiar Supabase ──────
         if (action === 'reiniciarExtras') {
             _invalidarTodosLosDatos();

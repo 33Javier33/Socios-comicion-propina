@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-09 — Estado de Cobros: al marcar COBRADO se archivan los anticipos del socio
+- Antes, los anticipos del socio solo se archivaban al cerrar TODO el mes. Ahora, cuando un socio queda **💵 Cobrado** (toggle en Estado de Cobros, o al cerrar con "está cobrando ahora"), sus **anticipos activos se archivan a `anticipos_historial` y se borran de los activos** → aparecen en **"Anticipos Anteriores"** del socio.
+- Nueva acción backend `archivarAnticiposSocio` (Supabase): archiva por socio con `periodo` tipo `CIERRE_MES_AÑO`, borra sus anticipos activos y marca su desglose. Con confirmación (no se puede deshacer). En el cierre con recibo, se archiva **después** de imprimir para no perder el detalle.
+- Archivos: `js/supabase-config.js` (acción), `js/anticipos.js` (`_cierreArchivarAnticiposSocio` + wiring en `cierresMes_actualizarEstado`, `cierresMes_ejecutarCierreSocio`, `cerrarMesSocio`). Cache-bust ?v=7.
+
 #### 2026-07-09 — Notificaciones al admin: egresos, mensajes de socios y recaudaciones
 - socios-comicion ahora **notifica** (sonido + toast + notificación del sistema si hay permiso) cuando: (1) un socio **solicita un egreso** desde propi, (2) un socio **envía un mensaje** al admin, (3) se **registra una recaudación** (desde cualquier app).
 - Usa Supabase Realtime (tablas `solicitudes_egreso`, `mensajes_admin`, `recaudaciones`, que ya tienen realtime). Las recaudaciones se agrupan con debounce (una "Recaudación del Día" con varias filas = 1 aviso). Pide permiso de notificaciones en la primera interacción.

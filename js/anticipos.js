@@ -1043,6 +1043,8 @@ async function cerrarMesSocio() {
         showToast(`✅ Mes cerrado · ${cobraAhora ? '💵 Cobrado' : '📩 En sobre'} · A Pagar: ${fmtM(aPagar)} · Rem: ${signo}${fmtM(remanente)}`, 'success');
         if (typeof recalcularRemanentes === 'function') recalcularRemanentes();
         await imprimirReciboSocio();
+        // Cobró ahora → archivar y borrar sus anticipos DESPUÉS del recibo (van a "Anticipos Anteriores")
+        if (cobraAhora) await _cierreArchivarAnticiposSocio(id, nombre);
     } catch(e) {
         showToast('Error al cerrar mes', 'error');
     } finally {
@@ -1069,13 +1071,35 @@ function cierresMes_registrar(id, nombre, aPagar, remanente, estadoCobro = 'en_s
     localStorage.setItem(cierresMes_getClave(), JSON.stringify(lista));
 }
 
-function cierresMes_actualizarEstado(id, estadoCobro) {
+async function cierresMes_actualizarEstado(id, estadoCobro) {
     const lista = cierresMes_obtener();
     const idx = lista.findIndex(c => c.id === id);
     if (idx < 0) return;
+    const nombre = lista[idx].nombre || '';
+    // Al pasar a COBRADO: se archivan y borran los anticipos del socio → pedir confirmación.
+    if (estadoCobro === 'cobrado') {
+        if (!confirm(`Marcar como 💵 COBRADO a ${nombre}.\n\nSe archivarán y borrarán sus anticipos de este período (quedarán guardados en "Anticipos Anteriores"). Esto no se puede deshacer.\n\n¿Continuar?`)) return;
+    }
     lista[idx].estadoCobro = estadoCobro;
     localStorage.setItem(cierresMes_getClave(), JSON.stringify(lista));
     cierresMes_render();
+    if (estadoCobro === 'cobrado') await _cierreArchivarAnticiposSocio(id, nombre);
+}
+
+// Archiva y borra los anticipos del socio al quedar cobrado (van a "Anticipos Anteriores").
+async function _cierreArchivarAnticiposSocio(id, nombre) {
+    try {
+        const res = await callApiSocios('archivarAnticiposSocio', { socioId: id, nombre });
+        if (res && res.status === 'success') {
+            const n = res.archivados || 0;
+            showToast(n > 0 ? `✅ ${n} anticipo(s) de ${nombre} archivados en el historial` : `${nombre} no tenía anticipos activos`, 'success');
+            if (typeof aq_fetchAnticipos === 'function') aq_fetchAnticipos(true);
+            if (typeof recalcularAnticipos === 'function') recalcularAnticipos();
+            cierresMes_render();
+        } else {
+            showToast('No se pudieron archivar los anticipos: ' + ((res && res.message) || ''), 'error');
+        }
+    } catch (e) { showToast('Error al archivar anticipos del socio', 'error'); }
 }
 
 function toggleCierreMes() {
@@ -1364,6 +1388,8 @@ async function cierresMes_ejecutarCierreSocio(socioId) {
         showToast(`✅ ${socio.nombre} — ${cobraAhora ? '💵 Cobrado' : '📩 En sobre'} · A Pagar: ${fmtM(aPagar)} · Rem: ${fmtM(remanente)}`, 'success');
         const idActivo = document.getElementById('gestionSocioId').value;
         if (idActivo === socio.id) { document.getElementById('gestionSocioSaldoAnt').value = remanente; cargarHistorialSocio(socio.id); }
+        // Cobró ahora → archivar y borrar sus anticipos (van a "Anticipos Anteriores")
+        if (cobraAhora) await _cierreArchivarAnticiposSocio(socio.id, `${socio.nombre} ${socio.apellido}`);
     } catch(e) {
         showToast(`Error al cerrar mes de ${socio.nombre}`, 'error');
     } finally {
