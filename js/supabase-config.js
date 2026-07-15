@@ -2053,4 +2053,25 @@ window.addEventListener('load', () => {
             }, 500);
         })
         .subscribe();
+
+    // Notificar al admin cuando se registra una recaudación nueva (desde cualquier app).
+    // Debounce: una "Recaudación del Día" puede insertar varias filas → 1 sola notificación.
+    try {
+        let _recNTimer = null, _recNCount = 0, _recNTotal = 0;
+        dbRec.channel('rec-nueva-rt')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'recaudaciones' }, (payload) => {
+                const r = (payload && payload.new) || {};
+                _recNCount++; _recNTotal += Number(r.monto) || 0;
+                clearTimeout(_recNTimer);
+                _recNTimer = setTimeout(() => {
+                    if (typeof notificarAdmin === 'function') {
+                        const tit = _recNCount === 1 ? 'Nueva recaudación' : (_recNCount + ' recaudaciones nuevas');
+                        notificarAdmin(tit, 'Total: ' + _fmtMoneyAdmin(_recNTotal), 'success');
+                    }
+                    _recNCount = 0; _recNTotal = 0;
+                    if (typeof cargarRecaudaciones === 'function') cargarRecaudaciones(true);
+                }, 1200);
+            })
+            .subscribe();
+    } catch (e) { console.warn('[rec] realtime no disponible:', e); }
 });

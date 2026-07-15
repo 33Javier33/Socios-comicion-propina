@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-09 — Notificaciones al admin: egresos, mensajes de socios y recaudaciones
+- socios-comicion ahora **notifica** (sonido + toast + notificación del sistema si hay permiso) cuando: (1) un socio **solicita un egreso** desde propi, (2) un socio **envía un mensaje** al admin, (3) se **registra una recaudación** (desde cualquier app).
+- Usa Supabase Realtime (tablas `solicitudes_egreso`, `mensajes_admin`, `recaudaciones`, que ya tienen realtime). Las recaudaciones se agrupan con debounce (una "Recaudación del Día" con varias filas = 1 aviso). Pide permiso de notificaciones en la primera interacción.
+- Archivos: `js/utils.js` (`notificarAdmin` + beep + permiso), `js/egresos.js`, `js/mensajes-admin.js`, `js/supabase-config.js`. Cache-bust ?v=6.
+
 #### 2026-07-09 — Notas: se quitó el parpadeo del auto-refresco
 - Las notas se re-renderizaban completas (borrar innerHTML + fade-in) cada 5 s aunque no hubiera cambios → parpadeo molesto al leer.
 - Fix: `notasRenderizar` ahora calcula una firma de las notas y **solo re-renderiza si algo cambió** (mensaje, foto, pin, reacciones, destacados). El fade-in queda solo en la primera carga. Archivos: `js/notas.js`. Cache-bust ?v=5.

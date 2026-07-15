@@ -164,3 +164,58 @@ function initScrollTopFab() {
     // Por si initLayout() aún no corrió, volver a intentar
     setTimeout(attachMain, 600);
 }
+
+// ══════════════════════════════════════════════════════════════════
+// NOTIFICACIONES AL ADMIN (egresos, mensajes de socios, recaudaciones)
+// Sonido + toast + notificación del sistema (si hay permiso).
+// ══════════════════════════════════════════════════════════════════
+let _adminAudioCtx = null;
+function _adminAudioInit() {
+    try {
+        if (!_adminAudioCtx) _adminAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (_adminAudioCtx && _adminAudioCtx.state === 'suspended') _adminAudioCtx.resume().catch(() => {});
+    } catch (e) {}
+}
+function _adminBeep() {
+    try {
+        _adminAudioInit();
+        if (!_adminAudioCtx) return;
+        const ctx = _adminAudioCtx, t = ctx.currentTime;
+        [880, 1175].forEach((freq, i) => {
+            const o = ctx.createOscillator(), g = ctx.createGain();
+            o.type = 'sine'; o.frequency.value = freq;
+            const start = t + i * 0.16;
+            g.gain.setValueAtTime(0.0001, start);
+            g.gain.exponentialRampToValueAtTime(0.22, start + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, start + 0.15);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(start); o.stop(start + 0.16);
+        });
+    } catch (e) {}
+}
+function _adminPedirPermisoNotif() {
+    try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {}); } catch (e) {}
+}
+// Desbloquear audio + pedir permiso en la primera interacción del usuario
+document.addEventListener('click', function _once() {
+    _adminAudioInit(); _adminPedirPermisoNotif();
+    document.removeEventListener('click', _once);
+}, { once: true });
+
+function _fmtMoneyAdmin(v) {
+    try { return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(Number(v) || 0); }
+    catch (e) { return '$' + (Number(v) || 0); }
+}
+
+// titulo: encabezado corto · cuerpo: detalle · tipo: 'info'|'success'|'warning'|'error'
+function notificarAdmin(titulo, cuerpo, tipo) {
+    try { if (typeof showToast === 'function') showToast('🔔 ' + titulo + (cuerpo ? ' — ' + cuerpo : ''), tipo || 'info'); } catch (e) {}
+    _adminBeep();
+    try { if (navigator.vibrate) navigator.vibrate([90, 50, 90]); } catch (e) {}
+    try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            const n = new Notification(titulo, { body: cuerpo || '', icon: 'img/fondo-192.png', tag: (tipo || 'admin') + '-' + Date.now(), renotify: true });
+            n.onclick = function () { try { window.focus(); } catch (e) {} n.close(); };
+        }
+    } catch (e) {}
+}

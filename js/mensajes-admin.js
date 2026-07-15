@@ -309,9 +309,13 @@ function msgAdmin_initRealtime() {
     _msgAdminRtListo = true;
     try {
         dbSoc.channel('msg-admin-rt')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'mensajes_admin' }, () => {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'mensajes_admin' }, (payload) => {
                 msgAdmin_cargarResumen();
                 if (msgAdminSocioActual) msgAdmin_cargarHilo();
+                if (payload && payload.eventType === 'INSERT' && payload.new && String(payload.new.remitente || '').toUpperCase() !== 'ADMIN' && typeof notificarAdmin === 'function') {
+                    const m = payload.new;
+                    notificarAdmin('Mensaje de socio', (m.autor || 'Un socio') + ': ' + (m.mensaje || (m.foto_url ? '📷 Foto' : '')), 'info');
+                }
             })
             .subscribe();
     } catch (e) { console.warn('[msgAdmin] realtime no disponible:', e); }

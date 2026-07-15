@@ -188,7 +188,13 @@ function egresos_initRealtime() {
     try {
         dbSoc.channel('sv-egresos-rt')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'solicitudes_egreso' },
-                () => egresos_cargarPendientes())
+                (payload) => {
+                    egresos_cargarPendientes();
+                    if (payload && payload.eventType === 'INSERT' && payload.new && typeof notificarAdmin === 'function') {
+                        const s = payload.new;
+                        notificarAdmin('Nueva solicitud de egreso', (s.socio_nombre || 'Un socio') + ' pidió ' + _fmtMoneyAdmin(s.monto), 'warning');
+                    }
+                })
             .subscribe();
     } catch (e) { console.warn('[egresos] realtime no disponible:', e); }
 }
