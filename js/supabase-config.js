@@ -638,8 +638,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     if (hErr) throw hErr;                       // si falla el archivado, NO borrar
                     n = histRows.length;
                     await dbSoc.from('anticipos').delete().eq('socio_id', sid);
-                    // Archivar también el desglose del socio (marcar periodo a los que están activos)
-                    await dbSoc.from('retiros_anticipos').update({ periodo: periodo }).is('periodo', null).eq('socio_id', sid).catch(() => {});
+                    // Archivar también el desglose del socio (marcar periodo a los que están activos).
+                    // El query de Supabase es "thenable" pero no una Promise completa: no tiene .catch,
+                    // por eso se hace await y se revisa 'error' (no romper el archivado si esto falla).
+                    const { error: rErr } = await dbSoc.from('retiros_anticipos').update({ periodo: periodo }).is('periodo', null).eq('socio_id', sid);
+                    if (rErr) console.warn('[sb] archivar desglose socio:', rErr.message);
                 }
                 _sbAudit('Cobrado — Archivar anticipos del socio', {
                     idAfectado: sid,

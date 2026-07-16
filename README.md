@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Fix: error "catch is not a function" al cerrar mes del socio (Cobrado)
+- **Bug:** al marcar un socio como **Cobrado** en Estado de Cobros aparecía "No se pudieron archivar los anticipos: dbSoc.from(...).update(...).is(...).eq(...).catch is not a function". El query de Supabase es *thenable* pero no una Promise completa, así que `.catch()` encadenado directamente lanzaba error. Los anticipos igual se archivaban/borraban (el error ocurría después), pero el mensaje asustaba y se veía como fallo.
+- **Fix:** en la acción `archivarAnticiposSocio` se reemplazó el `.catch()` por `await` + revisión de `error` (no rompe el archivado si el marcado del desglose falla; solo se registra en consola).
+- Archivos: `js/supabase-config.js`. Cache-bust ?v=12.
+
 #### 2026-07-16 — Período activo: no se adelanta solo al pasar el día 15 (bug: se ocultaban montos y anticipos)
 - **Bug:** al cruzar el día 15 del calendario, el período activo saltaba al mes nuevo aunque todavía no se hubiera cerrado el mes en curso. Resultado: en **Montos Recaudados** el **Informe Montos Diarios** salía vacío y en **Anticipos** ya no aparecían los anticipos del período. Los datos seguían ahí, pero quedaban fuera del rango del "período nuevo".
 - **Fix:** `aq_calcularPeriodoActual()` ahora toma como fecha de referencia la **última recaudación cargada** (no "hoy"). Así el período se mantiene en el mes que se está trabajando —donde hay datos— hasta que entren recaudaciones del período nuevo (o se cierre el mes y empiece otro). Si no hay recaudaciones aún, cae a la fecha de hoy como antes.
