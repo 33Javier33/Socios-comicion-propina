@@ -1071,28 +1071,34 @@ function _cierresMesMigrarLegacy() {
     let base = [];
     try { base = JSON.parse(localStorage.getItem(CIERRES_MES_KEY) || '[]'); } catch { base = []; }
 
+    // Recuperar de CUALQUIER clave antigua de cierres (por período o fallback),
+    // no solo las con formato de fecha, para no perder nada.
     const legacyKeys = [];
     for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && k !== CIERRES_MES_KEY && /^cierresMes_\d{4}-\d{2}-\d{2}_/.test(k)) legacyKeys.push(k);
+        if (k && k !== CIERRES_MES_KEY && /^cierresMes_/.test(k)) legacyKeys.push(k);
     }
     if (legacyKeys.length === 0) return base;
 
     const porId = {};
     const mas = (a, b) => new Date(a || 0) >= new Date(b || 0);
-    base.forEach(c => { if (c && c.id != null) porId[c.id] = c; });
+    base.forEach(c => { if (c && c.id != null) porId[String(c.id)] = c; });
     legacyKeys.forEach(k => {
         let lista = [];
         try { lista = JSON.parse(localStorage.getItem(k) || '[]'); } catch { lista = []; }
         (Array.isArray(lista) ? lista : []).forEach(c => {
             if (!c || c.id == null) return;
-            const prev = porId[c.id];
-            if (!prev || mas(c.fechaCierre, prev.fechaCierre)) porId[c.id] = c;
+            const key = String(c.id);
+            const prev = porId[key];
+            if (!prev || mas(c.fechaCierre, prev.fechaCierre)) porId[key] = c;
         });
     });
     const merged = Object.values(porId);
-    try { localStorage.setItem(CIERRES_MES_KEY, JSON.stringify(merged)); } catch {}
-    legacyKeys.forEach(k => localStorage.removeItem(k));
+    // Solo borrar las claves viejas si la escritura del consolidado tuvo éxito
+    // (evita perder datos si localStorage está lleno / en modo privado).
+    let escrito = false;
+    try { localStorage.setItem(CIERRES_MES_KEY, JSON.stringify(merged)); escrito = true; } catch { escrito = false; }
+    if (escrito) legacyKeys.forEach(k => localStorage.removeItem(k));
     return merged;
 }
 
@@ -1113,15 +1119,15 @@ function cierresMes_limpiarTodo() {
 
 function cierresMes_registrar(id, nombre, aPagar, remanente, estadoCobro = 'en_sobre') {
     const lista = cierresMes_obtener();
-    const idx = lista.findIndex(c => c.id === id);
-    const entry = { id, nombre, aPagar, remanente, fechaCierre: new Date().toISOString(), estadoCobro };
+    const idx = lista.findIndex(c => String(c.id) === String(id));
+    const entry = { id: String(id), nombre, aPagar, remanente, fechaCierre: new Date().toISOString(), estadoCobro };
     if (idx >= 0) lista[idx] = entry; else lista.push(entry);
     localStorage.setItem(cierresMes_getClave(), JSON.stringify(lista));
 }
 
 async function cierresMes_actualizarEstado(id, estadoCobro) {
     const lista = cierresMes_obtener();
-    const idx = lista.findIndex(c => c.id === id);
+    const idx = lista.findIndex(c => String(c.id) === String(id));
     if (idx < 0) return;
     const nombre = lista[idx].nombre || '';
     // Al pasar a COBRADO: se archivan y borran los anticipos del socio → pedir confirmación.
@@ -1172,14 +1178,14 @@ let _cierresMesSaldoListo = false;
 
 function _cierresMesResumenPagoHTML(cerrados, fmtM) {
     const cerradosMap = {};
-    cerrados.forEach(c => { cerradosMap[c.id] = c; });
+    cerrados.forEach(c => { cerradosMap[String(c.id)] = c; });
 
     // enSobre    = cerrados pero aún NO cobrados (plata apartada en el sobre)
     // sinCerrar  = socios sin cerrar (cálculo en vivo)
     // cobrado    = ya retiraron su sobre
     let enSobre = 0, sinCerrar = 0, cobrado = 0, faltanCalcular = 0;
     (cacheSocios || []).forEach(s => {
-        const c = cerradosMap[s.id];
+        const c = cerradosMap[String(s.id)];
         if (c) {
             const ap = Number(c.aPagar) || 0;
             if (c.estadoCobro === 'cobrado') cobrado += ap;
@@ -1288,9 +1294,9 @@ function cierresMes_render(refocusBuscador = false) {
     if (!badge) return;
 
     const cerrados = cierresMes_obtener();
-    const cerradosIds = new Set(cerrados.map(c => c.id));
+    const cerradosIds = new Set(cerrados.map(c => String(c.id)));
     const total = cacheSocios.length;
-    const nCerrados = cacheSocios.filter(s => cerradosIds.has(s.id)).length;
+    const nCerrados = cacheSocios.filter(s => cerradosIds.has(String(s.id))).length;
     const nPendientes = total - nCerrados;
     const nCobrados = cerrados.filter(c => c.estadoCobro === 'cobrado').length;
     const nEnSobre = cerrados.filter(c => c.estadoCobro !== 'cobrado').length;
@@ -1310,7 +1316,7 @@ function cierresMes_render(refocusBuscador = false) {
         : cacheSocios;
 
     sociosFiltrados.forEach(s => {
-        const c = cerrados.find(x => x.id === s.id);
+        const c = cerrados.find(x => String(x.id) === String(s.id));
         if (!c) {
             pendientesHtml += `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid #fef2f2;background:white;">
                 <span style="font-size:1.05em;">⏳</span>
@@ -1343,9 +1349,9 @@ function cierresMes_render(refocusBuscador = false) {
         }
     });
 
-    const nPendientesFiltro = sociosFiltrados.filter(s => !cerradosIds.has(s.id)).length;
-    const nSobreFiltro   = sociosFiltrados.filter(s => { const c = cerrados.find(x=>x.id===s.id); return c && c.estadoCobro !== 'cobrado'; }).length;
-    const nCobradosFiltro = sociosFiltrados.filter(s => { const c = cerrados.find(x=>x.id===s.id); return c && c.estadoCobro === 'cobrado'; }).length;
+    const nPendientesFiltro = sociosFiltrados.filter(s => !cerradosIds.has(String(s.id))).length;
+    const nSobreFiltro   = sociosFiltrados.filter(s => { const c = cerrados.find(x=>String(x.id)===String(s.id)); return c && c.estadoCobro !== 'cobrado'; }).length;
+    const nCobradosFiltro = sociosFiltrados.filter(s => { const c = cerrados.find(x=>String(x.id)===String(s.id)); return c && c.estadoCobro === 'cobrado'; }).length;
 
     body.innerHTML = `
         <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">

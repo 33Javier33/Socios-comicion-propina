@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Estado de Cobros: robustez de ids y migración (cierres que no aparecían)
+- Refuerzo del fix anterior: la comparación socio↔cierre ahora normaliza el id con `String()` en todos lados (registrar, actualizar estado, render y resumen de pago), evitando que un cierre no "matchee" a su socio por diferencia de tipo (número vs texto).
+- La migración de claves viejas ahora recupera **cualquier** clave `cierresMes_*` (no solo las con fecha) y **solo borra las viejas si el consolidado se guardó bien** (no se pierde nada si localStorage está lleno / modo privado).
+- Archivos: `js/anticipos.js`. Cache-bust ?v=14.
+
 #### 2026-07-16 — Estado de Cobros: los socios ya cerrados se mantienen visibles (clave estable)
 - **Problema:** los socios a los que ya se les había cerrado el mes desaparecían del Estado de Cobros, con riesgo de volver a cerrarlos. Causa: el seguimiento se guardaba con una clave que dependía del período (`cierresMes_FECHA_FECHA`); al cambiar el período activo (regla del día 15 / última recaudación) los cierres quedaban "huérfanos" bajo otra clave.
 - **Fix:** el seguimiento ahora usa una **clave única y estable** (`cierresMes_seguimiento`). Se **migra automáticamente** cualquier cierre guardado con la clave antigua (conservando por socio el cierre más reciente) para no perder nada. Así los cerrados (📩 En Sobre / 💵 Cobrado) siguen apareciendo hasta que se archiva el mes o se reinicia el seguimiento.
