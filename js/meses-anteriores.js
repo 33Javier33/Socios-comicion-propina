@@ -160,6 +160,7 @@ function _mesesAnt_card(r, i) {
     if (r.alcance != null && r.saldoAnterior != null) saldoReal = Number(r.alcance) + Number(r.saldoAnterior) - Number(r.anticiposTotal || 0);
     else if (r.aPagar != null && r.remanente != null) saldoReal = Number(r.aPagar) + Number(r.remanente);
     const tieneFoto = r.alcance != null || saldoReal != null;
+    const recon = !!r.reconstruido;
 
     const filaDato = (label, val, color, fuerte) => (val == null) ? '' :
         `<div style="display:flex;justify-content:space-between;padding:${fuerte ? '7px 0' : '5px 0'};font-size:${fuerte ? '0.9em' : '0.82em'};${fuerte ? 'border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;margin:2px 0;' : ''}">
@@ -170,7 +171,7 @@ function _mesesAnt_card(r, i) {
         <button onclick="_mesesAnt_toggle('${cid}')" style="width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
             <div style="min-width:0;">
                 <div style="font-weight:800;font-size:0.92em;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_maEsc(r.nombre)}</div>
-                <div style="font-size:0.72em;color:#64748b;font-weight:600;margin-top:2px;">${r.area ? _maEsc(r.area) + ' · ' : ''}${(r.anticipos || []).length} anticipo${(r.anticipos || []).length !== 1 ? 's' : ''}${estado ? ' · ' : ''}<span style="color:${estadoColor};">${estado}</span></div>
+                <div style="font-size:0.72em;color:#64748b;font-weight:600;margin-top:2px;">${r.area ? _maEsc(r.area) + ' · ' : ''}${(r.anticipos || []).length} anticipo${(r.anticipos || []).length !== 1 ? 's' : ''}${estado ? ' · ' : ''}<span style="color:${estadoColor};">${estado}</span>${recon ? ' · <span style="color:#b45309;">🔧 reconstruido</span>' : ''}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
                 ${saldoReal != null
@@ -187,6 +188,7 @@ function _mesesAnt_card(r, i) {
                 ${filaDato('A pagar', r.aPagar, '#15803d')}
                 ${filaDato('Remanente', r.remanente, '#7c3aed')}
                 ${!tieneFoto ? `<div style="font-size:0.72em;color:#b45309;padding-top:4px;">${(r.anticipos || []).length > 0 ? 'Solo anticipos guardados para este mes.' : 'Sin datos guardados para este socio este mes.'}</div>` : ''}
+                ${recon ? '<div style="font-size:0.7em;color:#b45309;padding-top:6px;">🔧 Alcance reconstruido desde la recaudación archivada (teórico: no descuenta ausencias ni saldo anterior).</div>' : ''}
             </div>
             <div style="border:1px solid #f1f5f9;border-radius:8px;overflow:hidden;">
                 <div style="padding:6px 10px;background:#f8fafc;font-size:0.72em;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:0.04em;">Anticipos del mes</div>

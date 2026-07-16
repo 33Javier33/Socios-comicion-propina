@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Meses Anteriores: reconstruir el alcance teórico desde la recaudación archivada
+- Se reconstruyó el **alcance teórico** de los meses ya cerrados usando el `totalPtos` (valor punto total) guardado en el archivo de Carpetas (`periodos_archivados`): **alcance = puntos del socio × totalPtos del período**. Con eso se calcula también saldo real, a pagar y remanente.
+- Aplicado a **Mayo, Junio y Julio 2026** (los períodos que tienen recaudación archivada) para **todos los socios de Planta** (los Part-Time dependen de días trabajados y no se reconstruyen). Abril y "Sin período" no tienen archivo de recaudación, quedan solo con anticipos.
+- Las filas reconstruidas se marcan con **🔧 reconstruido** y una nota: es teórico (no descuenta ausencias ni saldo anterior; usa los puntos actuales del socio).
+- Nueva columna `reconstruido` en `cierres_mes_historial`; backend `getMesAnteriorDetalle` la devuelve.
+- Archivos: `js/supabase-config.js`, `js/meses-anteriores.js` + reconstrucción SQL en Supabase. Cache-bust ?v=23, SW `fondo-admin-v6`.
+
 #### 2026-07-16 — Meses Anteriores: mostrar TODOS los socios (con o sin anticipos)
 - **Antes** solo aparecían los socios que tuvieron anticipos ese mes (porque el detalle salía únicamente de la foto/backfill). **Ahora** `getMesAnteriorDetalle` une con la nómina completa de `socios`: se listan **todos**, con o sin anticipos. Los que no tuvieron aparecen con $0 y su tarjeta indica "Sin datos guardados para este socio este mes".
 - También se incluyen socios que estaban en el histórico pero ya no están en la nómina actual.

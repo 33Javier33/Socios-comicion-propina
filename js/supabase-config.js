@@ -808,6 +808,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     estadoCobro: (h && h.estado_cobro) || '',
                     anticipos: (h && Array.isArray(h.anticipos)) ? h.anticipos : [],
                     fechaCierre: (h && h.fecha_cierre) || null,
+                    reconstruido: !!(h && h.reconstruido),
                     conDatos: !!h
                 });
 
