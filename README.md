@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Fix: los anticipos archivados (cobrados) reaparecían desde Google Sheets
+- **Bug:** al marcar un socio como Cobrado, sus anticipos se archivaban/borraban de Supabase, pero **seguían en Google Sheets**. Cuando la tabla de Supabase quedaba vacía, la app hacía fallback a GAS y **re-migraba** los anticipos viejos → reaparecían en "Anticipos y Ausencias".
+- **Fix:** marcador global `anticipos_modo_supabase` en `config_sistema`. Una vez que los anticipos se gestionan en Supabase, un Supabase vacío significa **"archivado"**, no "re-migrar desde Sheets". Así los cobrados no vuelven. La migración desde GAS solo corre la **primera vez** (pre-migración); después nunca resucita datos archivados. Vale para **todos los dispositivos** (marcador global, no por dispositivo).
+- Afecta `getAllDataDesdeSheets` y `getDatosSocio` (respetan el marcador). El marcador ya quedó activo en la base.
+- Archivos: `js/supabase-config.js`. Cache-bust ?v=26, SW `fondo-admin-v9`.
+
 #### 2026-07-16 — Meses Anteriores: anclar el último mes al saldo real del socio
 - **Incongruencia:** el remanente reconstruido de junio-julio no coincidía con el saldo que el socio tiene realmente hoy (p. ej. Alexandra: reconstruido $980 vs real $969). El remanente del último mes cerrado debe ser igual al saldo actual (`saldos_socio`).
 - **Fix:** para el último período cerrado (CIERRE_JULIO_DE 2026 = junio-julio) se usan los datos **reales** del cierre (`cierres_mes`) y el remanente se ancla al **saldo real actual** del socio (`saldos_socio`); el saldo anterior se deriva para que cuadre con el alcance teórico. Verificado: los 64 socios ahora tienen remanente = su saldo real.

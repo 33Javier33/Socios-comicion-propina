@@ -264,6 +264,21 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             }
         }).catch(() => {});
 
+    // ── Marcador GLOBAL (Supabase): una vez que los anticipos se gestionan en
+    //    Supabase, un Supabase vacío significa "archivado", NO "re-migrar desde
+    //    Sheets". Evita que los anticipos archivados (al marcar cobrado) reaparezcan
+    //    desde GAS. Es global (config_sistema) para que valga en todos los dispositivos.
+    let _antModoSupabase = localStorage.getItem('_ant_modo_sb') === '1';
+    dbSoc.from('config_sistema').select('valor').eq('clave', 'anticipos_modo_supabase').maybeSingle()
+        .then(({ data }) => { if (data && data.valor === '1') { _antModoSupabase = true; try { localStorage.setItem('_ant_modo_sb', '1'); } catch(e) {} } })
+        .catch(() => {});
+    function _marcarModoSupabase() {
+        if (_antModoSupabase) return;
+        _antModoSupabase = true;
+        try { localStorage.setItem('_ant_modo_sb', '1'); } catch(e) {}
+        dbSoc.from('config_sistema').upsert({ clave: 'anticipos_modo_supabase', valor: '1', updated_at: new Date().toISOString() }, { onConflict: 'clave' }).then(() => {}, () => {});
+    }
+
     // ── Migración automática Sheets → Supabase (se ejecuta una vez cuando Supabase está vacío) ──
     let _migrEnProceso = false;
     async function _migrarGasASupabase(gasJson) {
@@ -390,8 +405,10 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 
                 console.log('[SB-DATOS] Socio', socioId, '→', anticipos.length, 'anticipos,', extras.length, 'extras, saldo:', saldoAnterior);
 
-                // Sin datos en Supabase y sin caché → fallback a GAS (pre-migración)
-                if (anticipos.length === 0 && extras.length === 0 && !_sbHasAnticipos) {
+                // Sin datos en Supabase y sin caché → fallback a GAS SOLO si aún no
+                // se gestiona en Supabase (pre-migración). Si ya está en modo Supabase,
+                // vacío = archivado (no resucitar los anticipos cobrados desde Sheets).
+                if (anticipos.length === 0 && extras.length === 0 && !_sbHasAnticipos && !_antModoSupabase) {
                     console.log('[SB-DATOS] Sin anticipos en Supabase para', socioId, '→ GAS fallback');
                     try {
                         const gasResp = await _origFetch(url, options);
@@ -1024,9 +1041,23 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     });
                 });
                 console.log('[SB] getAllDataDesdeSheets → anticipos:', Object.keys(anticipos).length, 'socios | extras:', Object.keys(extras).length, 'socios');
-                // Si Supabase está vacío → consultar GAS y migrar automáticamente
+                // Si Supabase está vacío → puede ser (a) archivado [modo Supabase ya
+                // activo → NO re-migrar, así los cobrados no reaparecen] o (b) primera
+                // vez / pre-migración → traer de GAS y migrar una sola vez.
                 if (Object.keys(anticipos).length === 0 && Object.keys(extras).length === 0) {
-                    console.log('[SB] Supabase vacío → GAS + auto-migración');
+                    let modoSb = _antModoSupabase;
+                    if (!modoSb) {
+                        try {
+                            const { data: mk } = await dbSoc.from('config_sistema').select('valor').eq('clave', 'anticipos_modo_supabase').maybeSingle();
+                            if (mk && mk.valor === '1') { modoSb = true; _antModoSupabase = true; try { localStorage.setItem('_ant_modo_sb', '1'); } catch(e) {} }
+                        } catch(e) {}
+                    }
+                    if (modoSb) {
+                        // Vacío real (archivado): no resucitar desde Sheets.
+                        _allDataCache = { anticipos: {}, extras: {}, ts: Date.now() };
+                        return _mockOk({ status: 'success', anticipos: {}, extras: {} });
+                    }
+                    console.log('[SB] Supabase vacío (sin inicializar) → GAS + auto-migración');
                     let gasJson = null;
                     try {
                         const gasResp = await _origFetch(url, options);
@@ -1036,12 +1067,14 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         // Guardar GAS data en caché para que getDatosSocio sea instantáneo
                         _allDataCache = { anticipos: gasJson.anticipos || {}, extras: gasJson.extras || {}, ts: Date.now() };
                         _migrarGasASupabase(gasJson); // no-await: segundo plano
+                        _marcarModoSupabase();         // ya se gestiona en Supabase
                     }
                     return _mockOk(gasJson || { status: 'error', message: 'Sin datos' });
                 }
-                // Supabase tiene datos → poblar caché rápida y marcar flag
+                // Supabase tiene datos → poblar caché rápida y marcar flags
                 _allDataCache = { anticipos, extras, ts: Date.now() };
                 if (!_sbHasAnticipos) { _sbHasAnticipos = true; localStorage.setItem('_sb_ants_ok', '1'); }
+                _marcarModoSupabase();
                 // Formato idéntico al que devuelve GAS: { status, anticipos, extras }
                 return _mockOk({ status: 'success', anticipos, extras });
             } catch(e) {
