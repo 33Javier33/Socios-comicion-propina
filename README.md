@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Desglose Anticipos: orden visual nuevo→viejo con #1 = más antiguo
+- La lista ahora se ordena explícitamente del **más nuevo arriba** al **más antiguo abajo**. Como el número se asigna por orden de creación (`#1` = más antiguo), la tarjeta de arriba muestra el número más alto (ej. `#81`) y la de más abajo el `#1`.
+- Corrige que la tarjeta superior (más reciente) mostrara `#1`; ahora refleja correctamente su posición cronológica.
+- Archivos: `js/desglose-anticipos.js` (orden de `_dsgFiltrados` por `_dsgClaveOrden` desc). Cache-bust ?v=10.
+
 #### 2026-07-16 — Desglose Anticipos: la numeración sigue el orden de creación
 - El número de cada tarjeta ahora representa el **orden de creación real**: `#1` es el anticipo **más antiguo** (primero creado), sin importar el orden de despliegue ni los filtros aplicados.
 - Se ordena por `created_at` (con respaldo a la fecha registrada). Al eliminar una entrada, la numeración se recalcula manteniendo `#1` como el más antiguo de los que quedan.

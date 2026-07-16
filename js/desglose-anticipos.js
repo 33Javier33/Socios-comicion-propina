@@ -205,6 +205,11 @@ function dsg_filtrar() {
         return true;
     });
 
+    // Mostrar del más NUEVO arriba al más ANTIGUO abajo. Como el número (#N) se
+    // asigna por orden de creación (#1 = más antiguo), arriba queda el número más
+    // alto (#81) y abajo el #1.
+    _dsgFiltrados.sort((a, b) => _dsgClaveOrden(b) - _dsgClaveOrden(a));
+
     dsg_renderHistorial();
 }
 
