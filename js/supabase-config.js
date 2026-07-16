@@ -1841,9 +1841,15 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     ops.push(dbRec.from('notas_recaudacion').insert(
                         notas.map(n => ({
                             id: crypto.randomUUID(),
-                            created_at: n.fecha || new Date().toISOString(),
+                            created_at: n.fecha || n.created_at || new Date().toISOString(),
                             autor: n.autor || 'Admin',
-                            mensaje: n.mensaje || ''
+                            mensaje: n.mensaje || '',
+                            // Preservar foto, destacados, fijado y reacciones al re-insertar
+                            // (antes se perdían al "Vaciar Nube y Archivar", borrando las imágenes).
+                            foto_url: n.foto_url || null,
+                            destacados: n.destacados || null,
+                            pinned: n.pinned || false,
+                            reactions: n.reactions || {}
                         }))
                     ));
                 }

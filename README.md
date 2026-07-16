@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Fix: las imágenes de las notas admin desaparecían al "Vaciar Nube y Archivar"
+- **Bug:** al usar "Vaciar Nube y Archivar Todo" (Carpetas), la acción `importAll` borraba y **reinsertaba las notas solo con `id, created_at, autor, mensaje`**, perdiendo `foto_url`, `destacados`, `pinned` y `reactions`. Por eso las imágenes (y lo destacado) de las notas desaparecían, aunque las fotos seguían en el bucket de Storage.
+- **Fix:** `importAll` ahora preserva `foto_url`, `destacados`, `pinned` y `reactions` al reinsertar las notas.
+- **Recuperación de datos:** se restauró el `foto_url` de 3 notas cuyas fotos seguían en Storage (matcheando por fecha/hora). Otras 2 fotos (del 09-jul) no se pudieron recuperar porque sus notas ya habían sido eliminadas.
+- Archivos: `js/supabase-config.js`. Cache-bust ?v=19.
+
 #### 2026-07-16 — Fix: layout de escritorio (espacio gigante en Notas/Configuración/Auditoría)
 - **Bug:** en computador, las pestañas **Notas Admin, Configuración y Auditoría** aparecían muy abajo con un espacio vacío enorme arriba. Causa: el `</div>` que cierra `.container` estaba mal ubicado (cerraba justo después de la pestaña Arqueo), dejando esas 3 pestañas **fuera** del contenedor. `initLayout()` solo mueve al panel las pestañas que están dentro de `.container`, así que esas 3 quedaban sueltas al final del `body`.
 - **Fix:** se movió el cierre de `.container` a después de la última pestaña, para que las 15 pestañas queden dentro del layout con sidebar.
