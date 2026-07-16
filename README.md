@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Desglose Anticipos: numeración por tarjeta y botón eliminar
+- Cada tarjeta del **Desglose Anticipos** ahora muestra un **número correlativo** (`#1`, `#2`, …) en una insignia junto al nombre del socio, para referenciar entradas fácilmente.
+- Se agregó un **botón 🗑️ Eliminar** por entrada. Al eliminar, se pide confirmación y el **PIN personal** del responsable en sesión (misma protección que Editar); luego se borra de `retiros_anticipos` y de la vista.
+- Nueva acción backend `eliminarRetiroAnticipo` (Supabase): borra por `firma` y deja auditoría (`Eliminar Desglose Anticipo`).
+- Archivos: `js/desglose-anticipos.js` (numeración en `_dsgRenderCard`, `dsg_eliminar`), `js/supabase-config.js` (acción). Cache-bust ?v=8.
+
 #### 2026-07-09 — Estado de Cobros: al marcar COBRADO se archivan los anticipos del socio
 - Antes, los anticipos del socio solo se archivaban al cerrar TODO el mes. Ahora, cuando un socio queda **💵 Cobrado** (toggle en Estado de Cobros, o al cerrar con "está cobrando ahora"), sus **anticipos activos se archivan a `anticipos_historial` y se borran de los activos** → aparecen en **"Anticipos Anteriores"** del socio.
 - Nueva acción backend `archivarAnticiposSocio` (Supabase): archiva por socio con `periodo` tipo `CIERRE_MES_AÑO`, borra sus anticipos activos y marca su desglose. Con confirmación (no se puede deshacer). En el cierre con recibo, se archiva **después** de imprimir para no perder el detalle.

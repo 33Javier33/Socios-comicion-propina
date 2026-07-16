@@ -224,10 +224,10 @@ function dsg_renderHistorial() {
         resumen.textContent = `${_dsgFiltrados.length} registro${_dsgFiltrados.length !== 1 ? 's' : ''} · Total: ${fmt(totalMonto)}${labelPeriodo}`;
     }
 
-    lista.innerHTML = _dsgFiltrados.map(r => _dsgRenderCard(r)).join('');
+    lista.innerHTML = _dsgFiltrados.map((r, i) => _dsgRenderCard(r, i + 1)).join('');
 }
 
-function _dsgRenderCard(r) {
+function _dsgRenderCard(r, numero) {
     const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
 
     const fechaVis = _dsgFechaVis(r);
@@ -254,10 +254,13 @@ function _dsgRenderCard(r) {
 
     return `<div style="background:white;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
         <div style="padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;border-bottom:1px solid #f1f5f9;">
-            <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:flex-start;gap:9px;flex:1;min-width:0;">
+              <span style="flex-shrink:0;background:#1e3a5f;color:#fff;font-size:0.78em;font-weight:800;min-width:24px;height:24px;line-height:24px;text-align:center;border-radius:7px;padding:0 5px;">#${numero}</span>
+              <div style="flex:1;min-width:0;">
                 <div style="font-weight:800;font-size:0.95em;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_htmlEsc(r.socio_nombre || '—')}</div>
                 <div style="font-size:0.75em;color:#374151;font-weight:600;margin-top:2px;">${fechaVis}${horaVis ? ' · ' + horaVis : ''}${r.responsable ? ' · ' + _htmlEsc(r.responsable) : ''}</div>
                 <div style="font-size:0.72em;color:#4b5563;font-family:monospace;margin-top:2px;">${_htmlEsc(r.firma || '')}</div>
+              </div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
                 <div style="font-size:1.1em;font-weight:900;color:#1e3a5f;">${fmt(Number(r.monto || 0))}</div>
@@ -272,6 +275,7 @@ function _dsgRenderCard(r) {
             <div style="display:flex;gap:6px;margin-top:6px;">
                 <button onclick="dsg_reimprimir('${_htmlEsc(r.firma || '')}')" style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:7px;padding:6px 10px;font-size:0.76em;font-weight:700;cursor:pointer;">🖨 Reimprimir</button>
                 <button onclick="dsg_abrirEditar('${_htmlEsc(r.firma || '')}')" style="flex:1;background:#fef9c3;border:1px solid #fde047;color:#854d0e;border-radius:7px;padding:6px 10px;font-size:0.76em;font-weight:700;cursor:pointer;">✏️ Editar</button>
+                <button onclick="dsg_eliminar('${_htmlEsc(r.firma || '')}')" style="flex:1;background:#fee2e2;border:1px solid #fecaca;color:#b91c1c;border-radius:7px;padding:6px 10px;font-size:0.76em;font-weight:700;cursor:pointer;">🗑️ Eliminar</button>
             </div>
         </div>
     </div>`;
@@ -418,6 +422,56 @@ async function dsg_guardarEdicion() {
         dsg_filtrar();
     } catch(e) {
         mostrarError('Error al guardar: ' + e.message);
+    } finally {
+        toggleLoader(false);
+    }
+}
+
+// ── Eliminar un desglose (requiere PIN personal del responsable) ──
+async function dsg_eliminar(firma) {
+    const r = _dsgRegistros.find(x => x.firma === firma);
+    if (!r) { showToast('Registro no encontrado', 'error'); return; }
+
+    const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
+    const ok = confirm(`¿Eliminar este desglose?\n\n${r.socio_nombre || '—'} · ${fmt(Number(r.monto || 0))}\n\nEsta acción no se puede deshacer.`);
+    if (!ok) return;
+
+    // Validación de credencial: SOLO el PIN personal del responsable en sesión.
+    const sesion = typeof getSesionResponsableObj === 'function' ? getSesionResponsableObj() : {};
+    const key = sesion.ini && sesion.area ? `${sesion.ini}|${sesion.area}` : '';
+    const pinPersonal = key ? (credencialesCache[key] || '') : '';
+
+    if (!pinPersonal) {
+        showToast('No tienes un PIN personal configurado. Solo quien tenga su clave personal puede eliminar registros.', 'error');
+        return;
+    }
+
+    const pin = (prompt('Ingresa tu PIN personal para confirmar la eliminación:') || '').trim();
+    if (!pin) return;
+    if (pin !== pinPersonal) { showToast('PIN incorrecto. Debes usar tu clave personal.', 'error'); return; }
+
+    const eliminadoPor = sesion.ini ? `${sesion.ini}${sesion.area ? ' ' + sesion.area : ''}` : '';
+
+    toggleLoader(true, 'Eliminando desglose...');
+    try {
+        const res = await fetch(AQ_URL_POST, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'eliminarRetiroAnticipo',
+                firma: r.firma,
+                nombre: r.socio_nombre || '',
+                monto: Number(r.monto || 0),
+                eliminadoPor
+            })
+        });
+        const json = await res.json();
+        if (json.status !== 'success') throw new Error(json.message || 'Error al eliminar');
+
+        _dsgRegistros = _dsgRegistros.filter(x => x.firma !== firma);
+        showToast('Desglose eliminado ✅', 'success');
+        dsg_filtrar();
+    } catch(e) {
+        showToast('Error al eliminar: ' + e.message, 'error');
     } finally {
         toggleLoader(false);
     }

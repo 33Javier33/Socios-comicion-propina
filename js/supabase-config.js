@@ -1556,6 +1556,19 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 return _mockOk({ status: 'success' });
             }
 
+            // POST eliminarRetiroAnticipo → borrar un desglose (por firma)
+            if (aqAction === 'eliminarRetiroAnticipo') {
+                if (!aqBody.firma) return _mockOk({ status: 'error', message: 'firma requerida' });
+                const { error } = await dbSoc.from('retiros_anticipos').delete().eq('firma', aqBody.firma);
+                if (error) { console.error('[AQ-SB] eliminarRetiro error:', error.message); return _mockOk({ status: 'error', message: error.message }); }
+                _sbAudit('Eliminar Desglose Anticipo', {
+                    idAfectado: aqBody.firma,
+                    detalle: `Eliminado por: ${aqBody.eliminadoPor || '—'} | Socio: ${aqBody.nombre || ''} | Monto: $${Number(aqBody.monto || 0).toLocaleString('es-CL')}`,
+                    datos: { firma: aqBody.firma, nombre: aqBody.nombre || '', eliminadoPor: aqBody.eliminadoPor || '' }
+                });
+                return _mockOk({ status: 'success' });
+            }
+
             // POST archive → guardar en arqueo_cierres y borrar estado actual
             if (aqAction === 'archive') {
                 const { error: insErr } = await dbSoc.from('arqueo_cierres').insert({
