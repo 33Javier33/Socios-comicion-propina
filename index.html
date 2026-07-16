@@ -98,6 +98,7 @@
             <button class="nav-btn active" data-tab="registro" onclick="switchTab('registro')">Gestión de Socios</button>
             <button class="nav-btn" data-tab="gestion" onclick="switchTab('gestion')">Anticipos y Ausencias</button>
             <button class="nav-btn" data-tab="desglose" onclick="switchTab('desglose')">💸 Desglose Anticipos</button>
+            <button class="nav-btn" data-tab="mesesant" onclick="switchTab('mesesant')">🗓️ Meses Anteriores</button>
             <button class="nav-btn" data-tab="recaudacion" onclick="switchTab('recaudacion')">Montos Recaudados</button>
             <button class="nav-btn" data-tab="arqueo" onclick="switchTab('arqueo')">💰 Arqueo de Caja</button>
             <button class="nav-btn" data-tab="notas" onclick="switchTab('notas')">📝 Notas Admin</button>
@@ -1082,6 +1083,22 @@
             </div>
         </div>
 
+        <!-- PESTAÑA: MESES ANTERIORES (foto completa del mes cerrado por socio) -->
+        <div id="tab-mesesant" class="tab-content">
+            <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:16px;padding:16px 18px;color:#fff;margin-bottom:14px;">
+                <h3 style="margin:0;font-size:1.05em;">🗓️ Meses Anteriores</h3>
+                <p style="margin:4px 0 0;font-size:0.8em;opacity:0.85;">Detalle de cada socio en los meses cerrados: anticipos, alcance, saldo anterior, remanente y lo pagado.</p>
+            </div>
+            <div id="mesesant-periodos" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
+            <div id="mesesant-resumen" style="display:none;margin-bottom:12px;"></div>
+            <div id="mesesant-buscador" style="display:none;position:relative;margin-bottom:12px;">
+                <input id="mesesant-filtro" type="text" placeholder="🔍 Buscar socio..." oninput="mesesAnt_filtrar(this.value)"
+                    style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.9em;outline:none;">
+            </div>
+            <div id="mesesant-lista" style="display:flex;flex-direction:column;gap:10px;"></div>
+            <div id="mesesant-vacio" style="display:none;text-align:center;color:#94a3b8;padding:36px;font-size:0.9em;">Sin datos para este período.</div>
+        </div>
+
         <!-- PESTAÑA 3: RECAUDACIONES -->
         <div id="tab-recaudacion" class="tab-content">
             <!-- Acciones + Filtros Recaudación -->
@@ -1964,34 +1981,35 @@
     </div><!-- /.container -->
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/constants.js?v=19"></script>
-    <script src="js/utils.js?v=19"></script>
-    <script src="js/cache.js?v=19"></script>
-    <script src="js/auth.js?v=19"></script>
-    <script src="js/config.js?v=19"></script>
-    <script src="js/supabase-config.js?v=19"></script>
-    <script src="js/api.js?v=19"></script>
-    <script src="js/socios.js?v=19"></script>
-    <script src="js/puntos.js?v=19"></script>
-    <script src="js/anticipos.js?v=19"></script>
-    <script src="js/desglose-anticipos.js?v=19"></script>
-    <script src="js/batch-dias-pt.js?v=19"></script>
-    <script src="js/recaudacion.js?v=19"></script>
-    <script src="js/arqueo.js?v=19"></script>
-    <script src="js/canje.js?v=19"></script>
-    <script src="js/notas.js?v=19"></script>
-    <script src="js/reports.js?v=19"></script>
-    <script src="js/help.js?v=19"></script>
-    <script src="js/auditoria.js?v=19"></script>
-    <script src="js/carpetas.js?v=19"></script>
-    <script src="js/materiales.js?v=19"></script>
-    <script src="js/dineros.js?v=19"></script>
-    <script src="js/certificados.js?v=19"></script>
-    <script src="js/diario-pins.js?v=19"></script>
-    <script src="js/documentacion.js?v=19"></script>
-    <script src="js/egresos.js?v=19"></script>
-    <script src="js/mensajes-admin.js?v=19"></script>
-    <script src="js/app-init.js?v=19"></script>
+    <script src="js/constants.js?v=20"></script>
+    <script src="js/utils.js?v=20"></script>
+    <script src="js/cache.js?v=20"></script>
+    <script src="js/auth.js?v=20"></script>
+    <script src="js/config.js?v=20"></script>
+    <script src="js/supabase-config.js?v=20"></script>
+    <script src="js/api.js?v=20"></script>
+    <script src="js/socios.js?v=20"></script>
+    <script src="js/puntos.js?v=20"></script>
+    <script src="js/anticipos.js?v=20"></script>
+    <script src="js/desglose-anticipos.js?v=20"></script>
+    <script src="js/meses-anteriores.js?v=20"></script>
+    <script src="js/batch-dias-pt.js?v=20"></script>
+    <script src="js/recaudacion.js?v=20"></script>
+    <script src="js/arqueo.js?v=20"></script>
+    <script src="js/canje.js?v=20"></script>
+    <script src="js/notas.js?v=20"></script>
+    <script src="js/reports.js?v=20"></script>
+    <script src="js/help.js?v=20"></script>
+    <script src="js/auditoria.js?v=20"></script>
+    <script src="js/carpetas.js?v=20"></script>
+    <script src="js/materiales.js?v=20"></script>
+    <script src="js/dineros.js?v=20"></script>
+    <script src="js/certificados.js?v=20"></script>
+    <script src="js/diario-pins.js?v=20"></script>
+    <script src="js/documentacion.js?v=20"></script>
+    <script src="js/egresos.js?v=20"></script>
+    <script src="js/mensajes-admin.js?v=20"></script>
+    <script src="js/app-init.js?v=20"></script>
 
 <!-- ══════════════════════════════════════════
      MODAL: ACERCA DE / RESEÑA

@@ -1132,7 +1132,11 @@ async function cierresMes_sincronizar(silent = true) {
             aPagar: Number(r.a_pagar) || 0,
             remanente: Number(r.remanente) || 0,
             estadoCobro: r.estado_cobro || 'en_sobre',
-            fechaCierre: r.fecha_cierre || new Date().toISOString()
+            fechaCierre: r.fecha_cierre || new Date().toISOString(),
+            alcance: r.alcance != null ? Number(r.alcance) : undefined,
+            saldoAnterior: r.saldo_anterior != null ? Number(r.saldo_anterior) : undefined,
+            anticiposTotal: r.anticipos_total != null ? Number(r.anticipos_total) : undefined,
+            anticipos: Array.isArray(r.anticipos) ? r.anticipos : undefined
         }));
         const remotoIds = new Set(remoto.map(c => c.id));
 
@@ -1171,17 +1175,27 @@ function cierresMes_initRealtime() {
     } catch (e) { console.warn('[cierres] realtime no disponible:', e); }
 }
 
-function cierresMes_registrar(id, nombre, aPagar, remanente, estadoCobro = 'en_sobre') {
+function cierresMes_registrar(id, nombre, aPagar, remanente, estadoCobro = 'en_sobre', extra = {}) {
     const lista = cierresMes_obtener();
     const idx = lista.findIndex(c => String(c.id) === String(id));
-    const entry = { id: String(id), nombre, aPagar, remanente, fechaCierre: new Date().toISOString(), estadoCobro };
+    const entry = {
+        id: String(id), nombre, aPagar, remanente, fechaCierre: new Date().toISOString(), estadoCobro,
+        // Foto del mes (para Meses Anteriores). Se conserva la anterior si no llega nueva.
+        alcance: extra.alcance != null ? extra.alcance : (idx >= 0 ? lista[idx].alcance : undefined),
+        saldoAnterior: extra.saldoAnterior != null ? extra.saldoAnterior : (idx >= 0 ? lista[idx].saldoAnterior : undefined),
+        anticiposTotal: extra.anticiposTotal != null ? extra.anticiposTotal : (idx >= 0 ? lista[idx].anticiposTotal : undefined),
+        anticipos: extra.anticipos != null ? extra.anticipos : (idx >= 0 ? lista[idx].anticipos : undefined)
+    };
     if (idx >= 0) lista[idx] = entry; else lista.push(entry);
     localStorage.setItem(cierresMes_getClave(), JSON.stringify(lista));
     // Guardar también en Supabase para que se sincronice entre dispositivos.
     if (typeof callApiSocios === 'function') {
-        callApiSocios('guardarCierreMes', {
-            socioId: entry.id, nombre, aPagar, remanente, estadoCobro, fechaCierre: entry.fechaCierre
-        }).catch(() => {});
+        const payload = { socioId: entry.id, nombre, aPagar, remanente, estadoCobro, fechaCierre: entry.fechaCierre };
+        if (entry.alcance != null) payload.alcance = entry.alcance;
+        if (entry.saldoAnterior != null) payload.saldoAnterior = entry.saldoAnterior;
+        if (entry.anticiposTotal != null) payload.anticiposTotal = entry.anticiposTotal;
+        if (entry.anticipos != null) payload.anticipos = entry.anticipos;
+        callApiSocios('guardarCierreMes', payload).catch(() => {});
     }
 }
 
@@ -1475,12 +1489,17 @@ async function cierresMes_ejecutarCierreSocio(socioId) {
         const response = await fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${socio.id}`);
         const res = await response.json();
         let remanente = 0, aPagar = 0;
+        let saldoAnterior = 0, sumaPedido = 0, alcance = 0, anticiposList = [];
 
         if (res.status === 'success') {
             const data = res.data || {};
-            const saldoAnterior = Number(data.saldoAnterior || 0);
-            let sumaPedido = 0;
-            if (data.anticipos) data.anticipos.forEach(a => { sumaPedido += Number(a.cantidad || a.monto || 0); });
+            saldoAnterior = Number(data.saldoAnterior || 0);
+            if (data.anticipos) data.anticipos.forEach(a => {
+                const m = Number(a.cantidad || a.monto || 0);
+                sumaPedido += m;
+                let f = a.fecha || ''; if (typeof f === 'string' && f.includes('T')) f = f.split('T')[0];
+                anticiposList.push({ fecha: f, monto: m, responsable: a.responsable || a.encargado || '' });
+            });
 
             const fechasAusencia = new Set();
             if (data.extras) data.extras.forEach(e => {
@@ -1489,7 +1508,6 @@ async function cierresMes_ejecutarCierreSocio(socioId) {
                 }
             });
 
-            let alcance = 0;
             if (socio.contrato === 'Part-Time') {
                 (globalDiasPT[socio.id] || []).forEach(d => { if (!fechasAusencia.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
                 alcance *= socio.puntos;
@@ -1504,7 +1522,9 @@ async function cierresMes_ejecutarCierreSocio(socioId) {
 
         await callApiSocios('registrarSaldoAnterior', { id: socio.id, nombre: `${socio.nombre} ${socio.apellido}`, monto: remanente });
         const cobraAhora = confirm(`¿${socio.nombre} está cobrando ahora?\n\n✅ Aceptar → 💵 Cobrado\n❌ Cancelar → 📩 Queda en sobre`);
-        cierresMes_registrar(socio.id, `${socio.nombre} ${socio.apellido}`, aPagar, remanente, cobraAhora ? 'cobrado' : 'en_sobre');
+        cierresMes_registrar(socio.id, `${socio.nombre} ${socio.apellido}`, aPagar, remanente, cobraAhora ? 'cobrado' : 'en_sobre', {
+            alcance: Math.round(alcance), saldoAnterior, anticiposTotal: sumaPedido, anticipos: anticiposList
+        });
         cierresMes_render();
         showToast(`✅ ${socio.nombre} — ${cobraAhora ? '💵 Cobrado' : '📩 En sobre'} · A Pagar: ${fmtM(aPagar)} · Rem: ${fmtM(remanente)}`, 'success');
         const idActivo = document.getElementById('gestionSocioId').value;
@@ -1525,6 +1545,9 @@ async function cierresMes_finalizarPeriodo() {
     if (!confirm(`¿Archivar TODOS los anticipos del período?\n\nSe moverán a la pestaña "${tabNombre}" y se borrarán de la hoja activa y de Supabase.\n\n⚠️ Esta acción no se puede deshacer.\n\n✅ Hazlo cuando ya hayas cobrado a todos o quieras limpiar y empezar el mes nuevo.`)) return;
     toggleLoader(true, 'Archivando anticipos...');
     try {
+        // Guardar la FOTO completa del mes por socio (Meses Anteriores) ANTES de limpiar.
+        const periodoFoto = tabNombre.replace('Anticipos_', '').replace(/_/g, ' ');
+        try { await callApiSocios('archivarCierresMes', { periodo: periodoFoto }); } catch (eF) { console.warn('[cierres] foto mes:', eF); }
         await callApiSocios('reiniciarAnticipos', { tabNombre });
         showToast('✅ Anticipos archivados en ' + tabNombre, 'success');
         logAccion('Finalizar Período', `Archivado en ${tabNombre}`);

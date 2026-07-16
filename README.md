@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Nueva sección "Meses Anteriores": detalle completo del mes cerrado por socio
+- Nueva pestaña **🗓️ Meses Anteriores**: por cada mes cerrado muestra a **todos los socios** con su detalle: **anticipos** (lista + total), **alcance**, **saldo anterior**, **remanente** y **lo pagado (a pagar)**, más el estado (Cobrado / En sobre). Tarjetas expandibles por socio, chips para elegir el período, resumen con totales y buscador por nombre.
+- **Cómo se guarda la "foto":** al cerrar cada socio se capturan ahora alcance, saldo anterior, total de anticipos y el detalle de anticipos (en `cierres_mes`). Al **Archivar y empezar nuevo mes** se copia todo a la tabla `cierres_mes_historial` (acción `archivarCierresMes`).
+- **Backfill:** los meses ya cerrados se rellenaron desde `anticipos_historial`, así que muestran los anticipos por socio de inmediato (el alcance/saldo/remanente aparece a partir de los cierres nuevos).
+- Nuevas acciones backend: `archivarCierresMes`, `getMesesAnteriores`, `getMesAnteriorDetalle`; `guardarCierreMes` ampliado. Nueva tabla Supabase `cierres_mes_historial` (+ columnas nuevas en `cierres_mes`).
+- Archivos: `js/meses-anteriores.js` (nuevo), `index.html` (pestaña + nav), `js/app-init.js` (switchTab), `js/anticipos.js` (captura + snapshot), `js/supabase-config.js` (acciones). Cache-bust ?v=20, SW `fondo-admin-v3`.
+- Verificado renderizando la pestaña en escritorio.
+
 #### 2026-07-16 — Fix: las imágenes de las notas admin desaparecían al "Vaciar Nube y Archivar"
 - **Bug:** al usar "Vaciar Nube y Archivar Todo" (Carpetas), la acción `importAll` borraba y **reinsertaba las notas solo con `id, created_at, autor, mensaje`**, perdiendo `foto_url`, `destacados`, `pinned` y `reactions`. Por eso las imágenes (y lo destacado) de las notas desaparecían, aunque las fotos seguían en el bucket de Storage.
 - **Fix:** `importAll` ahora preserva `foto_url`, `destacados`, `pinned` y `reactions` al reinsertar las notas.

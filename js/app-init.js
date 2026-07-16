@@ -118,6 +118,7 @@ function switchTab(tabName) {
     else if(tabName === 'documentacion') { fabRec.style.display = 'none'; aq_detenerSync(); doc_init(); }
     else if(tabName === 'mensajes') { fabRec.style.display = 'none'; aq_detenerSync(); msgAdmin_init(); }
     else if(tabName === 'desglose') { fabRec.style.display = 'none'; aq_detenerSync(); if(typeof dsg_cargarHistorial === 'function' && _dsgRegistros.length === 0) dsg_cargarHistorial(); }
+    else if(tabName === 'mesesant') { fabRec.style.display = 'none'; aq_detenerSync(); if(typeof mesesAnt_init === 'function') mesesAnt_init(); }
 }
 
 // ── Sidebar + drag-to-reorder ────────────────────────────────

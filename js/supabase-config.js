@@ -691,6 +691,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     fecha_cierre: body.fechaCierre || new Date().toISOString(),
                     actualizado_en: new Date().toISOString()
                 };
+                // Campos de la "foto" del mes (para Meses Anteriores). Opcionales.
+                if (body.alcance !== undefined) row.alcance = Number(body.alcance || 0);
+                if (body.saldoAnterior !== undefined) row.saldo_anterior = Number(body.saldoAnterior || 0);
+                if (body.anticiposTotal !== undefined) row.anticipos_total = Number(body.anticiposTotal || 0);
+                if (body.anticipos !== undefined) row.anticipos = Array.isArray(body.anticipos) ? body.anticipos : [];
                 const { error } = await dbSoc.from('cierres_mes').upsert(row, { onConflict: 'socio_id' });
                 if (error) throw error;
                 return _mockOk({ status: 'success' });
@@ -711,6 +716,78 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 if (error) throw error;
                 return _mockOk({ status: 'success' });
             } catch (e) { return _mockOk({ status: 'error', message: e.message }); }
+        }
+
+        // ── Meses Anteriores: foto completa del mes cerrado por socio ──
+        // Al finalizar el período se copia cierres_mes → cierres_mes_historial.
+        if (action === 'archivarCierresMes') {
+            const periodo = String(body.periodo || '').trim();
+            if (!periodo) return _mockOk({ status: 'error', message: 'periodo requerido' });
+            try {
+                const { data: cm, error: e1 } = await dbSoc.from('cierres_mes').select('*');
+                if (e1) throw e1;
+                const rows = (cm || []).map(c => ({
+                    socio_id: String(c.socio_id),
+                    periodo,
+                    socio_nombre: c.nombre || null,
+                    anticipos_total: Number(c.anticipos_total || 0),
+                    alcance: c.alcance != null ? Number(c.alcance) : null,
+                    saldo_anterior: c.saldo_anterior != null ? Number(c.saldo_anterior) : null,
+                    remanente: Number(c.remanente || 0),
+                    a_pagar: Number(c.a_pagar || 0),
+                    estado_cobro: c.estado_cobro || null,
+                    anticipos: Array.isArray(c.anticipos) ? c.anticipos : [],
+                    fecha_cierre: c.fecha_cierre || new Date().toISOString()
+                }));
+                if (rows.length > 0) {
+                    const { error: e2 } = await dbSoc.from('cierres_mes_historial').upsert(rows, { onConflict: 'socio_id,periodo' });
+                    if (e2) throw e2;
+                }
+                _sbAudit('Archivar Meses Anteriores', { detalle: `Período ${periodo} · ${rows.length} socios`, datos: { periodo, socios: rows.length } });
+                return _mockOk({ status: 'success', socios: rows.length });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message }); }
+        }
+        // Lista de períodos disponibles (con totales)
+        if (action === 'getMesesAnteriores') {
+            try {
+                const { data, error } = await dbSoc.from('cierres_mes_historial')
+                    .select('periodo, socio_id, anticipos_total, a_pagar, remanente, alcance, saldo_anterior, fecha_cierre');
+                if (error) throw error;
+                const byP = {};
+                (data || []).forEach(r => {
+                    const p = r.periodo || 'Sin período';
+                    if (!byP[p]) byP[p] = { periodo: p, socios: 0, totalAnticipos: 0, totalAPagar: 0, ultimoCierre: null };
+                    byP[p].socios++;
+                    byP[p].totalAnticipos += Number(r.anticipos_total || 0);
+                    byP[p].totalAPagar += Number(r.a_pagar || 0);
+                    if (r.fecha_cierre && (!byP[p].ultimoCierre || r.fecha_cierre > byP[p].ultimoCierre)) byP[p].ultimoCierre = r.fecha_cierre;
+                });
+                return _mockOk({ status: 'success', data: Object.values(byP) });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message, data: [] }); }
+        }
+        // Detalle de todos los socios de un período
+        if (action === 'getMesAnteriorDetalle') {
+            const periodo = String(body.periodo || '').trim();
+            if (!periodo) return _mockOk({ status: 'error', message: 'periodo requerido', data: [] });
+            try {
+                const { data, error } = await dbSoc.from('cierres_mes_historial')
+                    .select('*').eq('periodo', periodo);
+                if (error) throw error;
+                const rows = (data || []).map(r => ({
+                    socioId: r.socio_id,
+                    nombre: r.socio_nombre || r.socio_id,
+                    area: r.area || '',
+                    anticiposTotal: Number(r.anticipos_total || 0),
+                    alcance: r.alcance != null ? Number(r.alcance) : null,
+                    saldoAnterior: r.saldo_anterior != null ? Number(r.saldo_anterior) : null,
+                    remanente: r.remanente != null ? Number(r.remanente) : null,
+                    aPagar: r.a_pagar != null ? Number(r.a_pagar) : null,
+                    estadoCobro: r.estado_cobro || '',
+                    anticipos: Array.isArray(r.anticipos) ? r.anticipos : [],
+                    fechaCierre: r.fecha_cierre || null
+                })).sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)));
+                return _mockOk({ status: 'success', data: rows });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message, data: [] }); }
         }
 
         // ── reiniciarExtras → archivar en GAS y limpiar Supabase ──────
