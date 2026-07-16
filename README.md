@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Fix: "NaN undefined NaN" en el período del Desglose de Anticipos
+- **Bug:** el selector/resumen del Desglose mostraba "NaN undefined NaN – NaN undefined NaN". Causa: al marcar un socio como Cobrado, `archivarAnticiposSocio` guardaba el `periodo` del desglose como texto (`CIERRE_JULIO_DE 2026`), pero `_dsgFormatPeriodo` esperaba una fecha `YYYY-MM-DD` y al parsear daba NaN.
+- **Fix (3 partes):**
+  1. `_dsgFormatPeriodo` ahora es robusto: si la clave no es fecha, la muestra legible (ej. "Julio De 2026") en vez de NaN.
+  2. `archivarAnticiposSocio` ahora marca el desglose con la clave de período por **fecha** (`YYYY-MM-DD` del inicio 15→14), consistente con `reiniciarAnticipos` y con lo que espera el selector.
+  3. Migración de datos: los 69 desgloses ya archivados con `CIERRE_JULIO_DE 2026` se reasignaron a `2026-06-15` (período 15 jun – 14 jul).
+- Archivos: `js/desglose-anticipos.js`, `js/supabase-config.js` + migración en tabla `retiros_anticipos`. Cache-bust ?v=17.
+
 #### 2026-07-16 — Fix: "Error al archivar anticipos" al empezar nuevo mes (.catch en queries Supabase)
 - **Bug:** al presionar "Archivar y empezar nuevo mes" salía "Error al archivar anticipos". Causa: varias consultas de Supabase usaban `.catch()` encadenado directamente sobre el query (que es *thenable* pero no Promise completa), lanzando "catch is not a function" y abortando el archivado.
 - **Fix:** se corrigieron **8** casos en `js/supabase-config.js` (acciones `reiniciarAnticipos`, cierre mensual, archivar desglose, sync de `dias_pt` y `materiales`): ahora se hace `await` + revisión de `error`, o `.then(({error})=>…)`, en vez de `.catch()` sobre el query.

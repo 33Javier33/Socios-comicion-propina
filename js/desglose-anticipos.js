@@ -20,14 +20,27 @@ function _dsgCalcPeriodoInicio() {
 // "2026-06-15" → "15 Jun – 14 Jul 2026"
 function _dsgFormatPeriodo(key) {
     if (!key) return 'Período Actual';
-    const [y, m, d] = key.split('-').map(Number);
-    const inicio = new Date(y, m - 1, d);
-    const fin = new Date(y, m - 1, d);
-    fin.setMonth(fin.getMonth() + 1);
-    fin.setDate(fin.getDate() - 1);
-    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-    const fmt = dt => `${dt.getDate()} ${meses[dt.getMonth()]} ${dt.getFullYear()}`;
-    return `${fmt(inicio)} – ${fmt(fin)}`;
+    // Clave por fecha (YYYY-MM-DD): mostrar el rango del período 15→14.
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(key));
+    if (m) {
+        const y = +m[1], mo = +m[2], d = +m[3];
+        const inicio = new Date(y, mo - 1, d);
+        const fin = new Date(y, mo - 1, d);
+        fin.setMonth(fin.getMonth() + 1);
+        fin.setDate(fin.getDate() - 1);
+        const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        const fmt = dt => `${dt.getDate()} ${meses[dt.getMonth()]} ${dt.getFullYear()}`;
+        return `${fmt(inicio)} – ${fmt(fin)}`;
+    }
+    // Clave de texto (ej. "CIERRE_JULIO_DE 2026"): limpiar y mostrar legible,
+    // nunca "NaN". Se quita el prefijo CIERRE_ y se capitaliza.
+    const txt = String(key)
+        .replace(/^CIERRE[_\s]*/i, '')
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/\b\w/g, c => c.toUpperCase())
+        .trim();
+    return txt || 'Período archivado';
 }
 
 // ── Fecha/hora en zona horaria de Chile ─────────────────────

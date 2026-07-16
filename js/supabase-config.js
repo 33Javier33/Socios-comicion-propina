@@ -638,11 +638,26 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     if (hErr) throw hErr;                       // si falla el archivado, NO borrar
                     n = histRows.length;
                     await dbSoc.from('anticipos').delete().eq('socio_id', sid);
-                    // Archivar también el desglose del socio (marcar periodo a los que están activos).
-                    // El query de Supabase es "thenable" pero no una Promise completa: no tiene .catch,
-                    // por eso se hace await y se revisa 'error' (no romper el archivado si esto falla).
-                    const { error: rErr } = await dbSoc.from('retiros_anticipos').update({ periodo: periodo }).is('periodo', null).eq('socio_id', sid);
-                    if (rErr) console.warn('[sb] archivar desglose socio:', rErr.message);
+                    // Archivar el desglose del socio: marcar cada retiro activo con la
+                    // clave de su período (YYYY-MM-DD del inicio 15→14), consistente con
+                    // reiniciarAnticipos y con lo que espera el selector del desglose.
+                    // (El query de Supabase no tiene .catch, por eso await + revisión de error.)
+                    const { data: dsgSoc } = await dbSoc.from('retiros_anticipos')
+                        .select('id,fecha').is('periodo', null).eq('socio_id', sid);
+                    if (dsgSoc && dsgSoc.length > 0) {
+                        const byP = {};
+                        dsgSoc.forEach(r => {
+                            const fd = new Date((r.fecha || '') + 'T12:00:00');
+                            if (isNaN(fd.getTime())) return;
+                            const fy = fd.getFullYear(), fm = fd.getMonth(), fdia = fd.getDate();
+                            const k = (fdia >= 15 ? new Date(fy, fm, 15) : new Date(fy, fm - 1, 15)).toISOString().split('T')[0];
+                            (byP[k] = byP[k] || []).push(r.id);
+                        });
+                        for (const [k, ids] of Object.entries(byP)) {
+                            const { error: rErr } = await dbSoc.from('retiros_anticipos').update({ periodo: k }).in('id', ids);
+                            if (rErr) console.warn('[sb] archivar desglose socio:', rErr.message);
+                        }
+                    }
                 }
                 _sbAudit('Cobrado — Archivar anticipos del socio', {
                     idAfectado: sid,
