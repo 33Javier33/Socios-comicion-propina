@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Meses Anteriores: agregar "Saldo real" y "Alcance teórico" por socio
+- En el detalle de cada socio ahora se muestra explícitamente: **Alcance teórico**, **Saldo anterior**, **Total anticipos**, **Saldo real** (resaltado = alcance + saldo anterior − anticipos, equivale a a pagar + remanente), **A pagar** y **Remanente**, más el detalle de anticipos del mes. El encabezado de la tarjeta muestra el saldo real (o el total de anticipos si el mes no tiene la foto completa).
+- `archivarCierresMes` ahora completa los anticipos del socio desde la tabla `anticipos` activa si el cierre no capturó el detalle (para cierres viejos), así el mes que se archiva conserva los anticipos.
+- Nota: alcance teórico y saldo anterior existen para los cierres nuevos (se capturan al cerrar). Los meses ya cerrados muestran anticipos (+ saldo real / a pagar / remanente si estaban guardados).
+- Archivos: `js/meses-anteriores.js`, `js/supabase-config.js`. Cache-bust ?v=21, SW `fondo-admin-v4`.
+
 #### 2026-07-16 — Nueva sección "Meses Anteriores": detalle completo del mes cerrado por socio
 - Nueva pestaña **🗓️ Meses Anteriores**: por cada mes cerrado muestra a **todos los socios** con su detalle: **anticipos** (lista + total), **alcance**, **saldo anterior**, **remanente** y **lo pagado (a pagar)**, más el estado (Cobrado / En sobre). Tarjetas expandibles por socio, chips para elegir el período, resumen con totales y buscador por nombre.
 - **Cómo se guarda la "foto":** al cerrar cada socio se capturan ahora alcance, saldo anterior, total de anticipos y el detalle de anticipos (en `cierres_mes`). Al **Archivar y empezar nuevo mes** se copia todo a la tabla `cierres_mes_historial` (acción `archivarCierresMes`).

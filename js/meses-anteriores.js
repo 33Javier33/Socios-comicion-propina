@@ -153,9 +153,16 @@ function _mesesAnt_card(r, i) {
             </div>`).join('')
         : '<div style="padding:8px 10px;color:#94a3b8;font-size:0.8em;">Sin anticipos registrados.</div>';
 
-    const filaDato = (label, val, color) => (val == null) ? '' :
-        `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:0.82em;">
-            <span style="color:#475569;">${label}</span><span style="font-weight:800;color:${color};">${_maFmt(val)}</span>
+    // Saldo real = alcance teórico + saldo anterior − anticipos (antes de redondear
+    // a "a pagar"). Equivale a: a pagar + remanente.
+    let saldoReal = null;
+    if (r.alcance != null && r.saldoAnterior != null) saldoReal = Number(r.alcance) + Number(r.saldoAnterior) - Number(r.anticiposTotal || 0);
+    else if (r.aPagar != null && r.remanente != null) saldoReal = Number(r.aPagar) + Number(r.remanente);
+    const tieneFoto = r.alcance != null || saldoReal != null;
+
+    const filaDato = (label, val, color, fuerte) => (val == null) ? '' :
+        `<div style="display:flex;justify-content:space-between;padding:${fuerte ? '7px 0' : '5px 0'};font-size:${fuerte ? '0.9em' : '0.82em'};${fuerte ? 'border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;margin:2px 0;' : ''}">
+            <span style="color:#475569;font-weight:${fuerte ? '800' : '400'};">${label}</span><span style="font-weight:${fuerte ? '900' : '800'};color:${color};">${_maFmt(val)}</span>
         </div>`;
 
     return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
@@ -165,17 +172,20 @@ function _mesesAnt_card(r, i) {
                 <div style="font-size:0.72em;color:#64748b;font-weight:600;margin-top:2px;">${r.area ? _maEsc(r.area) + ' · ' : ''}${(r.anticipos || []).length} anticipo${(r.anticipos || []).length !== 1 ? 's' : ''}${estado ? ' · ' : ''}<span style="color:${estadoColor};">${estado}</span></div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
-                <div style="font-size:0.95em;font-weight:900;color:#b91c1c;">${_maFmt(r.anticiposTotal)}</div>
-                <div style="font-size:0.66em;color:#94a3b8;">anticipos ▾</div>
+                ${saldoReal != null
+                    ? `<div style="font-size:0.95em;font-weight:900;color:#1e40af;">${_maFmt(saldoReal)}</div><div style="font-size:0.66em;color:#94a3b8;">saldo real ▾</div>`
+                    : `<div style="font-size:0.95em;font-weight:900;color:#b91c1c;">${_maFmt(r.anticiposTotal)}</div><div style="font-size:0.66em;color:#94a3b8;">anticipos ▾</div>`}
             </div>
         </button>
         <div id="${cid}" style="display:none;padding:0 14px 12px;">
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;margin-bottom:8px;">
-                ${filaDato('Alcance', r.alcance, '#0f766e')}
+                ${filaDato('Alcance teórico', r.alcance, '#0f766e')}
                 ${filaDato('Saldo anterior', r.saldoAnterior, '#334155')}
                 ${filaDato('Total anticipos', r.anticiposTotal, '#b91c1c')}
+                ${filaDato('Saldo real', saldoReal, '#1e40af', true)}
                 ${filaDato('A pagar', r.aPagar, '#15803d')}
                 ${filaDato('Remanente', r.remanente, '#7c3aed')}
+                ${!tieneFoto ? '<div style="font-size:0.72em;color:#b45309;padding-top:4px;">Solo anticipos guardados para este mes.</div>' : ''}
             </div>
             <div style="border:1px solid #f1f5f9;border-radius:8px;overflow:hidden;">
                 <div style="padding:6px 10px;background:#f8fafc;font-size:0.72em;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:0.04em;">Anticipos del mes</div>

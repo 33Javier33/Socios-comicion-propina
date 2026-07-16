@@ -726,19 +726,35 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             try {
                 const { data: cm, error: e1 } = await dbSoc.from('cierres_mes').select('*');
                 if (e1) throw e1;
-                const rows = (cm || []).map(c => ({
-                    socio_id: String(c.socio_id),
-                    periodo,
-                    socio_nombre: c.nombre || null,
-                    anticipos_total: Number(c.anticipos_total || 0),
-                    alcance: c.alcance != null ? Number(c.alcance) : null,
-                    saldo_anterior: c.saldo_anterior != null ? Number(c.saldo_anterior) : null,
-                    remanente: Number(c.remanente || 0),
-                    a_pagar: Number(c.a_pagar || 0),
-                    estado_cobro: c.estado_cobro || null,
-                    anticipos: Array.isArray(c.anticipos) ? c.anticipos : [],
-                    fecha_cierre: c.fecha_cierre || new Date().toISOString()
-                }));
+                // Anticipos activos por socio (aún no archivados): completan la foto
+                // del socio si el cierre no capturó su detalle (cierres viejos).
+                const { data: ants } = await dbSoc.from('anticipos').select('socio_id, fecha, monto, responsable');
+                const antBySocio = {};
+                (ants || []).forEach(a => {
+                    const k = String(a.socio_id);
+                    if (!antBySocio[k]) antBySocio[k] = { total: 0, list: [] };
+                    antBySocio[k].total += Number(a.monto || 0);
+                    antBySocio[k].list.push({ fecha: a.fecha, monto: Number(a.monto || 0), responsable: a.responsable || '' });
+                });
+                const rows = (cm || []).map(c => {
+                    const k = String(c.socio_id);
+                    const ant = antBySocio[k];
+                    const anticipos = (Array.isArray(c.anticipos) && c.anticipos.length) ? c.anticipos : (ant ? ant.list : []);
+                    const anticiposTotal = c.anticipos_total != null ? Number(c.anticipos_total) : (ant ? ant.total : 0);
+                    return {
+                        socio_id: k,
+                        periodo,
+                        socio_nombre: c.nombre || null,
+                        anticipos_total: anticiposTotal,
+                        alcance: c.alcance != null ? Number(c.alcance) : null,
+                        saldo_anterior: c.saldo_anterior != null ? Number(c.saldo_anterior) : null,
+                        remanente: Number(c.remanente || 0),
+                        a_pagar: Number(c.a_pagar || 0),
+                        estado_cobro: c.estado_cobro || null,
+                        anticipos: anticipos,
+                        fecha_cierre: c.fecha_cierre || new Date().toISOString()
+                    };
+                });
                 if (rows.length > 0) {
                     const { error: e2 } = await dbSoc.from('cierres_mes_historial').upsert(rows, { onConflict: 'socio_id,periodo' });
                     if (e2) throw e2;
