@@ -1054,13 +1054,61 @@ async function cerrarMesSocio() {
 
 // ── Estado de Cobros del Período ─────────────────────────────
 let _cierreMesFiltro = '';
-function cierresMes_getClave() {
-    try { const { inicio, fin } = aq_calcularPeriodoActual(); return `cierresMes_${inicio}_${fin}`; }
-    catch { return 'cierresMes_fallback'; }
+// Clave ÚNICA y estable para el seguimiento de cierres del mes en curso.
+// Antes la clave dependía del período (cierresMes_FECHA_FECHA); al cambiar el
+// período (regla del día 15 / última recaudación) los socios ya cerrados
+// quedaban "huérfanos" bajo otra clave y desaparecían del Estado de Cobros.
+// Con una clave estable, los cerrados se mantienen visibles hasta que se
+// archiva el mes (finalizar período) o se reinicia el seguimiento.
+const CIERRES_MES_KEY = 'cierresMes_seguimiento';
+
+function cierresMes_getClave() { return CIERRES_MES_KEY; }
+
+// Migra cualquier clave antigua (cierresMes_YYYY-MM-DD_YYYY-MM-DD) al
+// seguimiento único, conservando por socio el cierre más reciente, y borra las
+// claves viejas ya migradas. Es idempotente: tras migrar no queda nada que hacer.
+function _cierresMesMigrarLegacy() {
+    let base = [];
+    try { base = JSON.parse(localStorage.getItem(CIERRES_MES_KEY) || '[]'); } catch { base = []; }
+
+    const legacyKeys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k !== CIERRES_MES_KEY && /^cierresMes_\d{4}-\d{2}-\d{2}_/.test(k)) legacyKeys.push(k);
+    }
+    if (legacyKeys.length === 0) return base;
+
+    const porId = {};
+    const mas = (a, b) => new Date(a || 0) >= new Date(b || 0);
+    base.forEach(c => { if (c && c.id != null) porId[c.id] = c; });
+    legacyKeys.forEach(k => {
+        let lista = [];
+        try { lista = JSON.parse(localStorage.getItem(k) || '[]'); } catch { lista = []; }
+        (Array.isArray(lista) ? lista : []).forEach(c => {
+            if (!c || c.id == null) return;
+            const prev = porId[c.id];
+            if (!prev || mas(c.fechaCierre, prev.fechaCierre)) porId[c.id] = c;
+        });
+    });
+    const merged = Object.values(porId);
+    try { localStorage.setItem(CIERRES_MES_KEY, JSON.stringify(merged)); } catch {}
+    legacyKeys.forEach(k => localStorage.removeItem(k));
+    return merged;
 }
 
 function cierresMes_obtener() {
-    try { return JSON.parse(localStorage.getItem(cierresMes_getClave()) || '[]'); } catch { return []; }
+    try { return _cierresMesMigrarLegacy(); }
+    catch { try { return JSON.parse(localStorage.getItem(CIERRES_MES_KEY) || '[]'); } catch { return []; } }
+}
+
+// Borra el seguimiento único y cualquier clave de período antigua.
+function cierresMes_limpiarTodo() {
+    const aBorrar = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && /^cierresMes_/.test(k)) aBorrar.push(k);
+    }
+    aBorrar.forEach(k => localStorage.removeItem(k));
 }
 
 function cierresMes_registrar(id, nombre, aPagar, remanente, estadoCobro = 'en_sobre') {
@@ -1331,7 +1379,7 @@ function cierresMes_render(refocusBuscador = false) {
         ${sobreHtml ? `<div style="font-weight:700;font-size:0.77em;color:#92400e;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">📩 En Sobre (${nSobreFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #fde68a;margin-bottom:12px;">${sobreHtml}</div>` : ''}
         ${cobradosHtml ? `<div style="font-weight:700;font-size:0.77em;color:#15803d;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">💵 Cobrados (${nCobradosFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #bbf7d0;margin-bottom:12px;">${cobradosHtml}</div>` : ''}
         <div style="margin-top:10px;text-align:right;">
-            <button onclick="if(confirm('¿Reiniciar el seguimiento local? Los datos en Google Sheets no se borran.')){localStorage.removeItem(cierresMes_getClave());cierresMes_render();}" style="background:none;border:1px solid #cbd5e1;border-radius:6px;padding:3px 10px;font-size:0.73em;color:#64748b;cursor:pointer;">↺ Reiniciar seguimiento</button>
+            <button onclick="if(confirm('¿Reiniciar el seguimiento local? Los datos en Google Sheets no se borran.')){cierresMes_limpiarTodo();cierresMes_render();}" style="background:none;border:1px solid #cbd5e1;border-radius:6px;padding:3px 10px;font-size:0.73em;color:#64748b;cursor:pointer;">↺ Reiniciar seguimiento</button>
         </div>`;
 
     if (refocusBuscador) {
@@ -1407,7 +1455,7 @@ async function cierresMes_finalizarPeriodo() {
         await callApiSocios('reiniciarAnticipos', { tabNombre });
         showToast('✅ Anticipos archivados en ' + tabNombre, 'success');
         logAccion('Finalizar Período', `Archivado en ${tabNombre}`);
-        localStorage.removeItem(cierresMes_getClave());
+        cierresMes_limpiarTodo();
         _cierresMesSaldoLive = {}; _cierresMesSaldoListo = false;
         cierresMes_render();
         const idActivo = document.getElementById('gestionSocioId').value;

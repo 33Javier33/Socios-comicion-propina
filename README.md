@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Estado de Cobros: los socios ya cerrados se mantienen visibles (clave estable)
+- **Problema:** los socios a los que ya se les había cerrado el mes desaparecían del Estado de Cobros, con riesgo de volver a cerrarlos. Causa: el seguimiento se guardaba con una clave que dependía del período (`cierresMes_FECHA_FECHA`); al cambiar el período activo (regla del día 15 / última recaudación) los cierres quedaban "huérfanos" bajo otra clave.
+- **Fix:** el seguimiento ahora usa una **clave única y estable** (`cierresMes_seguimiento`). Se **migra automáticamente** cualquier cierre guardado con la clave antigua (conservando por socio el cierre más reciente) para no perder nada. Así los cerrados (📩 En Sobre / 💵 Cobrado) siguen apareciendo hasta que se archiva el mes o se reinicia el seguimiento.
+- Al **archivar anticipos y empezar nuevo mes** (o "Reiniciar seguimiento") se limpian todas las claves de cierres (nueva y antiguas).
+- Archivos: `js/anticipos.js` (`CIERRES_MES_KEY`, `_cierresMesMigrarLegacy`, `cierresMes_limpiarTodo`). Cache-bust ?v=13.
+
 #### 2026-07-16 — Fix: error "catch is not a function" al cerrar mes del socio (Cobrado)
 - **Bug:** al marcar un socio como **Cobrado** en Estado de Cobros aparecía "No se pudieron archivar los anticipos: dbSoc.from(...).update(...).is(...).eq(...).catch is not a function". El query de Supabase es *thenable* pero no una Promise completa, así que `.catch()` encadenado directamente lanzaba error. Los anticipos igual se archivaban/borraban (el error ocurría después), pero el mensaje asustaba y se veía como fallo.
 - **Fix:** en la acción `archivarAnticiposSocio` se reemplazó el `.catch()` por `await` + revisión de `error` (no rompe el archivado si el marcado del desglose falla; solo se registra en consola).
