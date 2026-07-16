@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Meses Anteriores: anclar el último mes al saldo real del socio
+- **Incongruencia:** el remanente reconstruido de junio-julio no coincidía con el saldo que el socio tiene realmente hoy (p. ej. Alexandra: reconstruido $980 vs real $969). El remanente del último mes cerrado debe ser igual al saldo actual (`saldos_socio`).
+- **Fix:** para el último período cerrado (CIERRE_JULIO_DE 2026 = junio-julio) se usan los datos **reales** del cierre (`cierres_mes`) y el remanente se ancla al **saldo real actual** del socio (`saldos_socio`); el saldo anterior se deriva para que cuadre con el alcance teórico. Verificado: los 64 socios ahora tienen remanente = su saldo real.
+- Mayo y Junio quedan reconstruidos (teórico encadenado desde Mayo=$0), ya que no hay un saldo real histórico por mes; solo el último mes cerrado tiene el ancla real.
+- Cambio de datos (SQL en `cierres_mes_historial`) + nota del UI. Cache-bust ?v=25, SW `fondo-admin-v8`.
+
 #### 2026-07-16 — Meses Anteriores: encadenar el saldo anterior (remanentes correctos)
 - **Problema:** en la reconstrucción el saldo anterior quedaba en $0 para todos los meses, así que los remanentes salían mal.
 - **Fix:** el saldo anterior ahora se **encadena** — el saldo anterior de un mes = el **remanente del mes anterior** (Mayo→Junio→Julio). Mayo parte de $0 porque Abril no tiene recaudación archivada. Así el remanente que sobra (o la deuda, si es negativo) se arrastra correctamente al mes siguiente.
