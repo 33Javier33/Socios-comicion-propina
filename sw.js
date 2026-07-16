@@ -1,5 +1,5 @@
 // Service Worker — Sistema Integral (Fondo Solidario, app admin)
-const CACHE = 'fondo-admin-v6';
+const CACHE = 'fondo-admin-v7';
 const CORE = ['/', 'index.html', 'styles.css', 'manifest.json', 'img/fondo-192.png', 'img/fondo-512.png'];
 
 self.addEventListener('install', event => {

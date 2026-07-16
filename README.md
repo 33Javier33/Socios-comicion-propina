@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Meses Anteriores: encadenar el saldo anterior (remanentes correctos)
+- **Problema:** en la reconstrucción el saldo anterior quedaba en $0 para todos los meses, así que los remanentes salían mal.
+- **Fix:** el saldo anterior ahora se **encadena** — el saldo anterior de un mes = el **remanente del mes anterior** (Mayo→Junio→Julio). Mayo parte de $0 porque Abril no tiene recaudación archivada. Así el remanente que sobra (o la deuda, si es negativo) se arrastra correctamente al mes siguiente.
+- Ejemplo verificado (Alexandra Miranda): remanente Mayo $820 → saldo anterior Junio $820 → remanente Junio $560 → saldo anterior Julio $560 → remanente Julio $980.
+- Reconstrucción SQL en `cierres_mes_historial`; nota del UI actualizada. Cache-bust ?v=24, SW `fondo-admin-v7`.
+
 #### 2026-07-16 — Meses Anteriores: reconstruir el alcance teórico desde la recaudación archivada
 - Se reconstruyó el **alcance teórico** de los meses ya cerrados usando el `totalPtos` (valor punto total) guardado en el archivo de Carpetas (`periodos_archivados`): **alcance = puntos del socio × totalPtos del período**. Con eso se calcula también saldo real, a pagar y remanente.
 - Aplicado a **Mayo, Junio y Julio 2026** (los períodos que tienen recaudación archivada) para **todos los socios de Planta** (los Part-Time dependen de días trabajados y no se reconstruyen). Abril y "Sin período" no tienen archivo de recaudación, quedan solo con anticipos.

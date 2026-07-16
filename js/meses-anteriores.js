@@ -188,7 +188,7 @@ function _mesesAnt_card(r, i) {
                 ${filaDato('A pagar', r.aPagar, '#15803d')}
                 ${filaDato('Remanente', r.remanente, '#7c3aed')}
                 ${!tieneFoto ? `<div style="font-size:0.72em;color:#b45309;padding-top:4px;">${(r.anticipos || []).length > 0 ? 'Solo anticipos guardados para este mes.' : 'Sin datos guardados para este socio este mes.'}</div>` : ''}
-                ${recon ? '<div style="font-size:0.7em;color:#b45309;padding-top:6px;">🔧 Alcance reconstruido desde la recaudación archivada (teórico: no descuenta ausencias ni saldo anterior).</div>' : ''}
+                ${recon ? '<div style="font-size:0.7em;color:#b45309;padding-top:6px;">🔧 Reconstruido desde la recaudación archivada. Alcance teórico (puntos × valor punto, sin descontar ausencias); el saldo anterior se encadena del remanente del mes previo (mayo parte de $0).</div>' : ''}
             </div>
             <div style="border:1px solid #f1f5f9;border-radius:8px;overflow:hidden;">
                 <div style="padding:6px 10px;background:#f8fafc;font-size:0.72em;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:0.04em;">Anticipos del mes</div>
