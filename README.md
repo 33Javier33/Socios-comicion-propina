@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Desglose Anticipos: la numeración sigue el orden de creación
+- El número de cada tarjeta ahora representa el **orden de creación real**: `#1` es el anticipo **más antiguo** (primero creado), sin importar el orden de despliegue ni los filtros aplicados.
+- Se ordena por `created_at` (con respaldo a la fecha registrada). Al eliminar una entrada, la numeración se recalcula manteniendo `#1` como el más antiguo de los que quedan.
+- Archivos: `js/desglose-anticipos.js` (`_dsgClaveOrden`, `_dsgAsignarOrdenCreacion`, `_numCreacion` en el render). Cache-bust ?v=9.
+
 #### 2026-07-16 — Desglose Anticipos: numeración por tarjeta y botón eliminar
 - Cada tarjeta del **Desglose Anticipos** ahora muestra un **número correlativo** (`#1`, `#2`, …) en una insignia junto al nombre del socio, para referenciar entradas fácilmente.
 - Se agregó un **botón 🗑️ Eliminar** por entrada. Al eliminar, se pide confirmación y el **PIN personal** del responsable en sesión (misma protección que Editar); luego se borra de `retiros_anticipos` y de la vista.

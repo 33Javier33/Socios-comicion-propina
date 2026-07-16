@@ -67,6 +67,25 @@ function _dsgHoraChile(r) {
     } catch(e) { return ''; }
 }
 
+// Clave cronológica de creación (menor = más antiguo). Usa created_at real;
+// si falta, cae a la fecha registrada. Sirve para numerar por orden de creación.
+function _dsgClaveOrden(r) {
+    if (r && r.created_at) {
+        const t = Date.parse(r.created_at);
+        if (!isNaN(t)) return t;
+    }
+    const iso = _dsgFechaISO(r);
+    const t2 = iso ? Date.parse(iso + 'T00:00:00') : NaN;
+    return isNaN(t2) ? Number.MAX_SAFE_INTEGER : t2;
+}
+
+// Asigna a cada registro su número por orden de CREACIÓN: #1 = el más antiguo.
+// El número es estable e independiente del orden de despliegue y de los filtros.
+function _dsgAsignarOrdenCreacion() {
+    const ordenados = [..._dsgRegistros].sort((a, b) => _dsgClaveOrden(a) - _dsgClaveOrden(b));
+    ordenados.forEach((r, i) => { r._numCreacion = i + 1; });
+}
+
 // Cambia el período y recarga
 function dsg_seleccionarPeriodo(periodo) {
     _dsgPeriodoSeleccionado = periodo || null;
@@ -149,6 +168,7 @@ async function dsg_cargarHistorial(forzar = false) {
         });
         const json = await res.json();
         _dsgRegistros = (json.status === 'success' && Array.isArray(json.data)) ? json.data : [];
+        _dsgAsignarOrdenCreacion();
 
         // Mostrar aviso si hay registros de períodos anteriores sin archivar
         const notice = document.getElementById('dsg-archivo-notice');
@@ -224,7 +244,7 @@ function dsg_renderHistorial() {
         resumen.textContent = `${_dsgFiltrados.length} registro${_dsgFiltrados.length !== 1 ? 's' : ''} · Total: ${fmt(totalMonto)}${labelPeriodo}`;
     }
 
-    lista.innerHTML = _dsgFiltrados.map((r, i) => _dsgRenderCard(r, i + 1)).join('');
+    lista.innerHTML = _dsgFiltrados.map(r => _dsgRenderCard(r, r._numCreacion || 0)).join('');
 }
 
 function _dsgRenderCard(r, numero) {
@@ -468,6 +488,7 @@ async function dsg_eliminar(firma) {
         if (json.status !== 'success') throw new Error(json.message || 'Error al eliminar');
 
         _dsgRegistros = _dsgRegistros.filter(x => x.firma !== firma);
+        _dsgAsignarOrdenCreacion();
         showToast('Desglose eliminado ✅', 'success');
         dsg_filtrar();
     } catch(e) {
