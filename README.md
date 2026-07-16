@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Fix: layout de escritorio (espacio gigante en Notas/Configuración/Auditoría)
+- **Bug:** en computador, las pestañas **Notas Admin, Configuración y Auditoría** aparecían muy abajo con un espacio vacío enorme arriba. Causa: el `</div>` que cierra `.container` estaba mal ubicado (cerraba justo después de la pestaña Arqueo), dejando esas 3 pestañas **fuera** del contenedor. `initLayout()` solo mueve al panel las pestañas que están dentro de `.container`, así que esas 3 quedaban sueltas al final del `body`.
+- **Fix:** se movió el cierre de `.container` a después de la última pestaña, para que las 15 pestañas queden dentro del layout con sidebar.
+- **Extra:** en escritorio el contenedor ahora usa mejor el ancho del monitor (`max-width: min(1600px, 95vw)` en vez de 1100px fijo), reduciendo los márgenes vacíos.
+- Verificado renderizando la página en escritorio (1920px) con navegador headless.
+- Archivos: `index.html` (cierre de `.container`), `styles.css` (ancho desktop). Cache-bust ?v=18.
+
 #### 2026-07-16 — Fix: "NaN undefined NaN" en el período del Desglose de Anticipos
 - **Bug:** el selector/resumen del Desglose mostraba "NaN undefined NaN – NaN undefined NaN". Causa: al marcar un socio como Cobrado, `archivarAnticiposSocio` guardaba el `periodo` del desglose como texto (`CIERRE_JULIO_DE 2026`), pero `_dsgFormatPeriodo` esperaba una fecha `YYYY-MM-DD` y al parsear daba NaN.
 - **Fix (3 partes):**

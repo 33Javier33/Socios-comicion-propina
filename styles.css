@@ -743,6 +743,9 @@
         .btn-recover:hover { background: var(--primary); color: white; }
         /* ── Desktop sidebar layout ─────────────────────────────── */
         @media (min-width: 900px) {
+            /* Aprovechar el ancho del monitor: el contenedor deja de quedar en
+               una columna angosta de 1100px con enormes márgenes vacíos. */
+            .container { max-width: min(1600px, 95vw); }
             .app-layout {
                 display: flex;
                 gap: 20px;
