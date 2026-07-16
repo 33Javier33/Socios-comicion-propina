@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Período activo: no se adelanta solo al pasar el día 15 (bug: se ocultaban montos y anticipos)
+- **Bug:** al cruzar el día 15 del calendario, el período activo saltaba al mes nuevo aunque todavía no se hubiera cerrado el mes en curso. Resultado: en **Montos Recaudados** el **Informe Montos Diarios** salía vacío y en **Anticipos** ya no aparecían los anticipos del período. Los datos seguían ahí, pero quedaban fuera del rango del "período nuevo".
+- **Fix:** `aq_calcularPeriodoActual()` ahora toma como fecha de referencia la **última recaudación cargada** (no "hoy"). Así el período se mantiene en el mes que se está trabajando —donde hay datos— hasta que entren recaudaciones del período nuevo (o se cierre el mes y empiece otro). Si no hay recaudaciones aún, cae a la fecha de hoy como antes.
+- Esto mantiene visibles el informe de montos diarios y los anticipos del período hasta que efectivamente se cierra el mes, y deja consistentes también arqueo, remanente en vivo y días part-time (todos usan el mismo período activo). Certificados no se ve afectado (usa su propia lógica).
+- Archivos: `js/arqueo.js` (`aq_fechaReferenciaPeriodo` + `aq_calcularPeriodoActual`). Cache-bust ?v=11, SW `fondo-admin-v2`.
+
 #### 2026-07-16 — Desglose Anticipos: orden visual nuevo→viejo con #1 = más antiguo
 - La lista ahora se ordena explícitamente del **más nuevo arriba** al **más antiguo abajo**. Como el número se asigna por orden de creación (`#1` = más antiguo), la tarjeta de arriba muestra el número más alto (ej. `#81`) y la de más abajo el `#1`.
 - Corrige que la tarjeta superior (más reciente) mostrara `#1`; ahora refleja correctamente su posición cronológica.

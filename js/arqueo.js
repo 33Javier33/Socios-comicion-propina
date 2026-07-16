@@ -355,8 +355,25 @@ async function aq_fetchPuntosHistorial() {
     } catch(e) {}
 }
 
+// Fecha de referencia para determinar el período activo (regla del día 15).
+// Usa la ÚLTIMA recaudación cargada en vez de "hoy": así el período NO se
+// adelanta solo porque el calendario pasó el día 15. Se mantiene en el mes que
+// se está trabajando (donde hay datos) hasta que entren recaudaciones del
+// período nuevo — es decir, hasta que efectivamente se cierra el mes y empieza
+// otro. Si no hay recaudaciones cargadas aún, cae a la fecha de hoy.
+function aq_fechaReferenciaPeriodo() {
+    try {
+        const dias = Object.keys(globalMapaPuntosDia || {}).filter(Boolean).sort();
+        if (dias.length) {
+            const d = new Date(dias[dias.length - 1] + 'T12:00:00');
+            if (!isNaN(d.getTime())) return d;
+        }
+    } catch (e) {}
+    return new Date();
+}
+
 function aq_calcularPeriodoActual() {
-    const hoy = new Date();
+    const hoy = aq_fechaReferenciaPeriodo();
     const anio = hoy.getFullYear();
     const mes  = hoy.getMonth();
 
