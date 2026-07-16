@@ -561,8 +561,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     periodo: periodo,
                     fecha_archivo: hoy
                 }));
-                await dbSoc.from('anticipos_historial').insert(histRows)
-                    .catch(e => console.error('[sb] error archivando anticipos_historial:', e));
+                const { error: _histErr } = await dbSoc.from('anticipos_historial').insert(histRows);
+                if (_histErr) console.error('[sb] error archivando anticipos_historial:', _histErr.message);
             }
             // 3. Guardar snapshot de saldos_socio en saldos_cierre_mes antes de limpiar
             dbSoc.from('saldos_socio').select('monto').then(({ data: snap }) => {
@@ -570,7 +570,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 dbSoc.from('saldos_cierre_mes').upsert(
                     { id: crypto.randomUUID(), periodo, datos: { total: totalSnap, count: (snap || []).length } },
                     { onConflict: 'periodo' }
-                ).catch(e => console.error('[sb] error guardando saldos_cierre_mes:', e));
+                ).then(({ error }) => { if (error) console.error('[sb] error guardando saldos_cierre_mes:', error.message); });
             });
             _sbAudit('Reiniciar Anticipos', {
                 detalle: `Período archivado: ${periodo} | ${activos?.length || 0} anticipos`,
@@ -596,8 +596,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     byP[key].push(r.id);
                 });
                 for (const [key, ids] of Object.entries(byP)) {
-                    await dbSoc.from('retiros_anticipos').update({ periodo: key }).in('id', ids)
-                        .catch(e => console.warn('[sb] desglose archive error:', e.message));
+                    const { error: _dsgErr } = await dbSoc.from('retiros_anticipos').update({ periodo: key }).in('id', ids);
+                    if (_dsgErr) console.warn('[sb] desglose archive error:', _dsgErr.message);
                 }
             }
             // 5. Llamar al GAS (archiva a Sheets y limpia la hoja)
@@ -776,8 +776,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     periodo: `CIERRE_${mesLabel}`,
                     fecha_archivo: hoy
                 }));
-                await dbSoc.from('anticipos_historial').insert(histRows)
-                    .catch(e => console.error('[sb] error archivando anticipos en cierre:', e));
+                const { error: _hErr } = await dbSoc.from('anticipos_historial').insert(histRows);
+                if (_hErr) console.error('[sb] error archivando anticipos en cierre:', _hErr.message);
             }
 
             const saldos = body.nuevosSaldosAnteriores || [];
@@ -790,7 +790,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 
             // Limpiar anticipos activos de Supabase
             dbSoc.from('anticipos').delete().neq('id', '__never__')
-                .catch(e => console.error('[sb] error limpiando anticipos tras cierre:', e));
+                .then(({ error }) => { if (error) console.error('[sb] error limpiando anticipos tras cierre:', error.message); });
 
             // Sincronizar nuevos saldos anteriores a Supabase
             if (saldos.length > 0) {
@@ -1275,7 +1275,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                             if (faltantes.length > 0) {
                                 const periodo = _periodoActualDiasPt();
                                 const rows = faltantes.map(([sid, dias]) => ({ socio_id: sid, dias: [...new Set(dias)].sort(), periodo }));
-                                dbSoc.from('dias_pt').upsert(rows, { onConflict: 'socio_id' }).catch(() => {});
+                                dbSoc.from('dias_pt').upsert(rows, { onConflict: 'socio_id' }).then(() => {}, () => {});
                                 // Refrescar socios para que el admin vea los días PT correctos
                                 if (typeof actualizarSociosSilencioso === 'function') actualizarSociosSilencioso();
                             }
@@ -1428,7 +1428,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                                 monto: Number(g.monto || 0), nota: g.nota || null,
                                 responsable: g.responsable || null, periodo: g.periodo || null, estado: 'activo'
                             }));
-                            dbSoc.from('materiales').upsert(rows, { onConflict: 'uuid' }).catch(() => {});
+                            dbSoc.from('materiales').upsert(rows, { onConflict: 'uuid' }).then(() => {}, () => {});
                         }
                         return _mockOk({ status: 'success', data: gasItems.map(_matMapGas) });
                     } catch(e) {
@@ -1556,8 +1556,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     byPeriodo[key].push(r.id);
                 });
                 for (const [key, ids] of Object.entries(byPeriodo)) {
-                    await dbSoc.from('retiros_anticipos').update({ periodo: key }).in('id', ids)
-                        .catch(e => console.warn('[AQ-SB] archive desglose error:', e.message));
+                    const { error: _aqDsgErr } = await dbSoc.from('retiros_anticipos').update({ periodo: key }).in('id', ids);
+                    if (_aqDsgErr) console.warn('[AQ-SB] archive desglose error:', _aqDsgErr.message);
                 }
                 _sbAudit('Archivar Desglose Anticipos', {
                     detalle: `Períodos archivados: ${Object.keys(byPeriodo).join(', ')} | ${toArc.length} registros`,

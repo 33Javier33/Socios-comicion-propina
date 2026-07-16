@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Fix: "Error al archivar anticipos" al empezar nuevo mes (.catch en queries Supabase)
+- **Bug:** al presionar "Archivar y empezar nuevo mes" salía "Error al archivar anticipos". Causa: varias consultas de Supabase usaban `.catch()` encadenado directamente sobre el query (que es *thenable* pero no Promise completa), lanzando "catch is not a function" y abortando el archivado.
+- **Fix:** se corrigieron **8** casos en `js/supabase-config.js` (acciones `reiniciarAnticipos`, cierre mensual, archivar desglose, sync de `dias_pt` y `materiales`): ahora se hace `await` + revisión de `error`, o `.then(({error})=>…)`, en vez de `.catch()` sobre el query.
+- Archivos: `js/supabase-config.js`. Cache-bust ?v=16.
+
 #### 2026-07-16 — Estado de Cobros: sincronizado entre dispositivos (Supabase + realtime)
 - **Problema:** los cierres/cobrados se guardaban solo en `localStorage`, así que aparecían únicamente en el dispositivo donde se cerraban. En otros teléfonos/PC no se veían.
 - **Fix:** ahora el Estado de Cobros se guarda en Supabase (tabla nueva `cierres_mes`, una fila por socio) y se **sincroniza entre todos los dispositivos**:
