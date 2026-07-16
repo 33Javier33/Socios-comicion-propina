@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Estado de Cobros: sincronizado entre dispositivos (Supabase + realtime)
+- **Problema:** los cierres/cobrados se guardaban solo en `localStorage`, así que aparecían únicamente en el dispositivo donde se cerraban. En otros teléfonos/PC no se veían.
+- **Fix:** ahora el Estado de Cobros se guarda en Supabase (tabla nueva `cierres_mes`, una fila por socio) y se **sincroniza entre todos los dispositivos**:
+  - Al cerrar/cobrar un socio se sube a Supabase (`guardarCierreMes`).
+  - Al abrir Estado de Cobros y al iniciar la app se descarga (`getCierresMes`).
+  - **Realtime:** si otro dispositivo cierra/cobra, la vista se actualiza sola.
+  - Al **archivar el mes** se limpia la tabla en todos los dispositivos (`limpiarCierresMes`).
+  - **Migración única** por dispositivo: sube a la nube los cierres que estaban solo en local (para no perder los ya hechos), con un flag que evita "resucitar" cierres ya limpiados en otro dispositivo.
+- `localStorage` se mantiene como caché para respuesta instantánea; Supabase es la fuente compartida.
+- Archivos: `js/anticipos.js` (sync/realtime/push), `js/supabase-config.js` (acciones `getCierresMes`/`guardarCierreMes`/`eliminarCierreMes`/`limpiarCierresMes`), `js/app-init.js` (init). Tabla Supabase `cierres_mes`. Cache-bust ?v=15.
+
 #### 2026-07-16 — Estado de Cobros: robustez de ids y migración (cierres que no aparecían)
 - Refuerzo del fix anterior: la comparación socio↔cierre ahora normaliza el id con `String()` en todos lados (registrar, actualizar estado, render y resumen de pago), evitando que un cierre no "matchee" a su socio por diferencia de tipo (número vs texto).
 - La migración de claves viejas ahora recupera **cualquier** clave `cierresMes_*` (no solo las con fecha) y **solo borra las viejas si el consolidado se guardó bien** (no se pierde nada si localStorage está lleno / modo privado).

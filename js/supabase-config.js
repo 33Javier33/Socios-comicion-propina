@@ -653,6 +653,51 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             } catch (e) { return _mockOk({ status: 'error', message: e.message }); }
         }
 
+        // ── Estado de Cobros (cierres del mes) — sincronizado entre dispositivos ──
+        // Se guarda una fila por socio en la tabla 'cierres_mes'. Al archivar el
+        // mes (finalizar período) se limpia toda la tabla.
+        if (action === 'getCierresMes') {
+            try {
+                const { data, error } = await dbSoc.from('cierres_mes').select('*');
+                if (error) throw error;
+                return _mockOk({ status: 'success', data: data || [] });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message, data: [] }); }
+        }
+        if (action === 'guardarCierreMes') {
+            const sid = String(body.socioId || body.id || '');
+            if (!sid) return _mockOk({ status: 'error', message: 'socioId requerido' });
+            try {
+                const row = {
+                    socio_id: sid,
+                    nombre: body.nombre || null,
+                    a_pagar: Number(body.aPagar || 0),
+                    remanente: Number(body.remanente || 0),
+                    estado_cobro: body.estadoCobro || 'en_sobre',
+                    fecha_cierre: body.fechaCierre || new Date().toISOString(),
+                    actualizado_en: new Date().toISOString()
+                };
+                const { error } = await dbSoc.from('cierres_mes').upsert(row, { onConflict: 'socio_id' });
+                if (error) throw error;
+                return _mockOk({ status: 'success' });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message }); }
+        }
+        if (action === 'eliminarCierreMes') {
+            const sid = String(body.socioId || body.id || '');
+            if (!sid) return _mockOk({ status: 'error', message: 'socioId requerido' });
+            try {
+                const { error } = await dbSoc.from('cierres_mes').delete().eq('socio_id', sid);
+                if (error) throw error;
+                return _mockOk({ status: 'success' });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message }); }
+        }
+        if (action === 'limpiarCierresMes') {
+            try {
+                const { error } = await dbSoc.from('cierres_mes').delete().neq('socio_id', '__never__');
+                if (error) throw error;
+                return _mockOk({ status: 'success' });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message }); }
+        }
+
         // ── reiniciarExtras → archivar en GAS y limpiar Supabase ──────
         if (action === 'reiniciarExtras') {
             _invalidarTodosLosDatos();

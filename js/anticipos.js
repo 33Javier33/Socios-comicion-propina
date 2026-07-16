@@ -1076,7 +1076,7 @@ function _cierresMesMigrarLegacy() {
     const legacyKeys = [];
     for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && k !== CIERRES_MES_KEY && /^cierresMes_/.test(k)) legacyKeys.push(k);
+        if (k && k !== CIERRES_MES_KEY && k !== 'cierresMes_migrado_cloud' && /^cierresMes_/.test(k)) legacyKeys.push(k);
     }
     if (legacyKeys.length === 0) return base;
 
@@ -1107,14 +1107,68 @@ function cierresMes_obtener() {
     catch { try { return JSON.parse(localStorage.getItem(CIERRES_MES_KEY) || '[]'); } catch { return []; } }
 }
 
-// Borra el seguimiento único y cualquier clave de período antigua.
+// Borra el seguimiento único y cualquier clave de período antigua (local + Supabase).
 function cierresMes_limpiarTodo() {
     const aBorrar = [];
     for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && /^cierresMes_/.test(k)) aBorrar.push(k);
+        if (k && /^cierresMes_/.test(k) && k !== 'cierresMes_migrado_cloud') aBorrar.push(k);
     }
     aBorrar.forEach(k => localStorage.removeItem(k));
+    // Limpiar también en Supabase (empezar nuevo mes en todos los dispositivos).
+    if (typeof callApiSocios === 'function') callApiSocios('limpiarCierresMes', {}).catch(() => {});
+}
+
+// Trae los cierres desde Supabase (fuente compartida entre dispositivos),
+// los cachea en localStorage y re-renderiza. Silencioso si falla la red.
+async function cierresMes_sincronizar(silent = true) {
+    if (typeof callApiSocios !== 'function') return;
+    try {
+        const res = await callApiSocios('getCierresMes', {});
+        if (!res || res.status !== 'success' || !Array.isArray(res.data)) return;
+        const remoto = res.data.map(r => ({
+            id: String(r.socio_id),
+            nombre: r.nombre || '',
+            aPagar: Number(r.a_pagar) || 0,
+            remanente: Number(r.remanente) || 0,
+            estadoCobro: r.estado_cobro || 'en_sobre',
+            fechaCierre: r.fecha_cierre || new Date().toISOString()
+        }));
+        const remotoIds = new Set(remoto.map(c => c.id));
+
+        // Migración única por dispositivo: subir a la nube los cierres que
+        // estaban SOLO en este dispositivo (de antes de la sincronización).
+        // El flag evita "resucitar" cierres ya limpiados en otro dispositivo.
+        if (!localStorage.getItem('cierresMes_migrado_cloud')) {
+            cierresMes_obtener().forEach(c => {
+                if (c && c.id != null && !remotoIds.has(String(c.id))) {
+                    callApiSocios('guardarCierreMes', {
+                        socioId: String(c.id), nombre: c.nombre, aPagar: c.aPagar,
+                        remanente: c.remanente, estadoCobro: c.estadoCobro, fechaCierre: c.fechaCierre
+                    }).catch(() => {});
+                    remoto.push(c);
+                    remotoIds.add(String(c.id));
+                }
+            });
+            localStorage.setItem('cierresMes_migrado_cloud', '1');
+        }
+
+        try { localStorage.setItem(CIERRES_MES_KEY, JSON.stringify(remoto)); } catch {}
+        cierresMes_render();
+    } catch (e) { if (!silent) console.warn('[cierres] sync:', e); }
+}
+
+// Realtime: cuando otro dispositivo cierra/cobra un socio, refrescar aquí.
+let _cierresRtListo = false;
+function cierresMes_initRealtime() {
+    if (_cierresRtListo || typeof dbSoc === 'undefined') return;
+    _cierresRtListo = true;
+    try {
+        dbSoc.channel('cierres-mes-rt')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'cierres_mes' },
+                () => { cierresMes_sincronizar(true); })
+            .subscribe();
+    } catch (e) { console.warn('[cierres] realtime no disponible:', e); }
 }
 
 function cierresMes_registrar(id, nombre, aPagar, remanente, estadoCobro = 'en_sobre') {
@@ -1123,6 +1177,12 @@ function cierresMes_registrar(id, nombre, aPagar, remanente, estadoCobro = 'en_s
     const entry = { id: String(id), nombre, aPagar, remanente, fechaCierre: new Date().toISOString(), estadoCobro };
     if (idx >= 0) lista[idx] = entry; else lista.push(entry);
     localStorage.setItem(cierresMes_getClave(), JSON.stringify(lista));
+    // Guardar también en Supabase para que se sincronice entre dispositivos.
+    if (typeof callApiSocios === 'function') {
+        callApiSocios('guardarCierreMes', {
+            socioId: entry.id, nombre, aPagar, remanente, estadoCobro, fechaCierre: entry.fechaCierre
+        }).catch(() => {});
+    }
 }
 
 async function cierresMes_actualizarEstado(id, estadoCobro) {
@@ -1136,6 +1196,13 @@ async function cierresMes_actualizarEstado(id, estadoCobro) {
     }
     lista[idx].estadoCobro = estadoCobro;
     localStorage.setItem(cierresMes_getClave(), JSON.stringify(lista));
+    // Reflejar el cambio de estado en Supabase (sincroniza entre dispositivos).
+    if (typeof callApiSocios === 'function') {
+        callApiSocios('guardarCierreMes', {
+            socioId: String(id), nombre: lista[idx].nombre, aPagar: lista[idx].aPagar,
+            remanente: lista[idx].remanente, estadoCobro, fechaCierre: lista[idx].fechaCierre
+        }).catch(() => {});
+    }
     cierresMes_render();
     if (estadoCobro === 'cobrado') await _cierreArchivarAnticiposSocio(id, nombre);
 }
@@ -1164,7 +1231,7 @@ function toggleCierreMes() {
     body.style.display = open ? 'none' : 'block';
     if (icon) icon.textContent = open ? '▼' : '▲';
     if (open) _cierreMesFiltro = ''; // limpiar filtro al cerrar
-    if (!open) { cierresMes_render(); cierresMes_cargarSaldosLive(); }
+    if (!open) { cierresMes_render(); cierresMes_sincronizar(); cierresMes_cargarSaldosLive(); }
 }
 
 // ── Saldo real a pagar dentro de "Estado de Cobros" ──────────────────────

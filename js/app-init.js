@@ -40,6 +40,9 @@ function iniciarApp() {
     initScrollTopFab();
     // Mensajes privados admin↔socio: aviso en el nav aunque no se abra la pestaña
     if (typeof msgAdmin_initRealtime === 'function') { msgAdmin_initRealtime(); setTimeout(msgAdmin_cargarResumen, 1500); }
+    // Estado de Cobros sincronizado entre dispositivos (realtime + carga inicial)
+    if (typeof cierresMes_initRealtime === 'function') cierresMes_initRealtime();
+    if (typeof cierresMes_sincronizar === 'function') setTimeout(() => cierresMes_sincronizar(true), 1200);
     if(!URL_SOCIOS || URL_SOCIOS.includes('PEGA_AQUI')) {
         alert('Falta configurar URL_SOCIOS');
     } else {
