@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Meses Anteriores: mostrar TODOS los socios (con o sin anticipos)
+- **Antes** solo aparecían los socios que tuvieron anticipos ese mes (porque el detalle salía únicamente de la foto/backfill). **Ahora** `getMesAnteriorDetalle` une con la nómina completa de `socios`: se listan **todos**, con o sin anticipos. Los que no tuvieron aparecen con $0 y su tarjeta indica "Sin datos guardados para este socio este mes".
+- También se incluyen socios que estaban en el histórico pero ya no están en la nómina actual.
+- El resumen muestra el total de socios y cuántos tuvieron anticipos ("Socios · N c/ant").
+- Archivos: `js/supabase-config.js` (`getMesAnteriorDetalle`), `js/meses-anteriores.js`. Cache-bust ?v=22, SW `fondo-admin-v5`.
+
 #### 2026-07-16 — Meses Anteriores: agregar "Saldo real" y "Alcance teórico" por socio
 - En el detalle de cada socio ahora se muestra explícitamente: **Alcance teórico**, **Saldo anterior**, **Total anticipos**, **Saldo real** (resaltado = alcance + saldo anterior − anticipos, equivale a a pagar + remanente), **A pagar** y **Remanente**, más el detalle de anticipos del mes. El encabezado de la tarjeta muestra el saldo real (o el total de anticipos si el mes no tiene la foto completa).
 - `archivarCierresMes` ahora completa los anticipos del socio desde la tabla `anticipos` activa si el cierre no capturó el detalle (para cierres viejos), así el mes que se archiva conserva los anticipos.

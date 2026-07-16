@@ -104,13 +104,14 @@ function _mesesAnt_renderResumen() {
     const totalPagar = d.reduce((s, x) => s + (Number(x.aPagar) || 0), 0);
     const totalRem = d.reduce((s, x) => s + (Number(x.remanente) || 0), 0);
     const conDatos = d.some(x => x.alcance != null || x.aPagar != null);
+    const conAnticipos = d.filter(x => (x.anticipos || []).length > 0 || Number(x.anticiposTotal) > 0).length;
     el.style.display = 'block';
     busc.style.display = d.length > 0 ? 'block' : 'none';
     el.innerHTML = `
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <div style="flex:1;min-width:90px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:9px 12px;text-align:center;">
                 <div style="font-size:1.15em;font-weight:900;color:#1e40af;">${d.length}</div>
-                <div style="font-size:0.66em;text-transform:uppercase;font-weight:700;color:#1e40af;letter-spacing:0.04em;">Socios</div>
+                <div style="font-size:0.66em;text-transform:uppercase;font-weight:700;color:#1e40af;letter-spacing:0.04em;">Socios${conAnticipos ? ' · ' + conAnticipos + ' c/ant' : ''}</div>
             </div>
             <div style="flex:1;min-width:90px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:9px 12px;text-align:center;">
                 <div style="font-size:1.15em;font-weight:900;color:#b91c1c;">${_maFmt(totalAnt)}</div>
@@ -185,7 +186,7 @@ function _mesesAnt_card(r, i) {
                 ${filaDato('Saldo real', saldoReal, '#1e40af', true)}
                 ${filaDato('A pagar', r.aPagar, '#15803d')}
                 ${filaDato('Remanente', r.remanente, '#7c3aed')}
-                ${!tieneFoto ? '<div style="font-size:0.72em;color:#b45309;padding-top:4px;">Solo anticipos guardados para este mes.</div>' : ''}
+                ${!tieneFoto ? `<div style="font-size:0.72em;color:#b45309;padding-top:4px;">${(r.anticipos || []).length > 0 ? 'Solo anticipos guardados para este mes.' : 'Sin datos guardados para este socio este mes.'}</div>` : ''}
             </div>
             <div style="border:1px solid #f1f5f9;border-radius:8px;overflow:hidden;">
                 <div style="padding:6px 10px;background:#f8fafc;font-size:0.72em;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:0.04em;">Anticipos del mes</div>

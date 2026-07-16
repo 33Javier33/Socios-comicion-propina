@@ -786,22 +786,44 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             const periodo = String(body.periodo || '').trim();
             if (!periodo) return _mockOk({ status: 'error', message: 'periodo requerido', data: [] });
             try {
-                const { data, error } = await dbSoc.from('cierres_mes_historial')
-                    .select('*').eq('periodo', periodo);
-                if (error) throw error;
-                const rows = (data || []).map(r => ({
-                    socioId: r.socio_id,
-                    nombre: r.socio_nombre || r.socio_id,
-                    area: r.area || '',
-                    anticiposTotal: Number(r.anticipos_total || 0),
-                    alcance: r.alcance != null ? Number(r.alcance) : null,
-                    saldoAnterior: r.saldo_anterior != null ? Number(r.saldo_anterior) : null,
-                    remanente: r.remanente != null ? Number(r.remanente) : null,
-                    aPagar: r.a_pagar != null ? Number(r.a_pagar) : null,
-                    estadoCobro: r.estado_cobro || '',
-                    anticipos: Array.isArray(r.anticipos) ? r.anticipos : [],
-                    fechaCierre: r.fecha_cierre || null
-                })).sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)));
+                // Foto del período + nómina COMPLETA de socios: se muestran todos,
+                // tengan o no anticipos ese mes.
+                const [histRes, sociosRes] = await Promise.all([
+                    dbSoc.from('cierres_mes_historial').select('*').eq('periodo', periodo),
+                    dbSoc.from('socios').select('id, nombre, apellido, area')
+                ]);
+                if (histRes.error) throw histRes.error;
+                const histMap = {};
+                (histRes.data || []).forEach(h => { histMap[String(h.socio_id)] = h; });
+
+                const mapRow = (sid, h, nombre, area) => ({
+                    socioId: sid,
+                    nombre: nombre || (h && h.socio_nombre) || sid,
+                    area: area || (h && h.area) || '',
+                    anticiposTotal: h ? Number(h.anticipos_total || 0) : 0,
+                    alcance: h && h.alcance != null ? Number(h.alcance) : null,
+                    saldoAnterior: h && h.saldo_anterior != null ? Number(h.saldo_anterior) : null,
+                    remanente: h && h.remanente != null ? Number(h.remanente) : null,
+                    aPagar: h && h.a_pagar != null ? Number(h.a_pagar) : null,
+                    estadoCobro: (h && h.estado_cobro) || '',
+                    anticipos: (h && Array.isArray(h.anticipos)) ? h.anticipos : [],
+                    fechaCierre: (h && h.fecha_cierre) || null,
+                    conDatos: !!h
+                });
+
+                const rows = [];
+                const usados = new Set();
+                (sociosRes.data || []).forEach(s => {
+                    const sid = String(s.id);
+                    usados.add(sid);
+                    rows.push(mapRow(sid, histMap[sid], (s.nombre + ' ' + (s.apellido || '')).trim(), s.area));
+                });
+                // Socios que estaban en el histórico pero ya no en la nómina actual
+                (histRes.data || []).forEach(h => {
+                    const sid = String(h.socio_id);
+                    if (!usados.has(sid)) rows.push(mapRow(sid, h, h.socio_nombre || sid, h.area || ''));
+                });
+                rows.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)));
                 return _mockOk({ status: 'success', data: rows });
             } catch (e) { return _mockOk({ status: 'error', message: e.message, data: [] }); }
         }
