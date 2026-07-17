@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Logo de marca "CarlosPN Interactive" en el modal Acerca de
+- Se agregó el logo oficial (`img/carlospn-logo.png`) arriba de la marca en el modal **Acerca de**, reemplazando el ícono 💻 placeholder. Debajo queda el subtítulo "Sistema Profesional de Gestión · 2026".
+- Archivos: `index.html`, `img/carlospn-logo.png` (nuevo). Cache-bust ?v=31, SW `fondo-admin-v14`.
+
 #### 2026-07-16 — Fix: "Remanente guardado" no cuadraba con Meses Anteriores (saldo huérfano)
 - **Incongruencia:** en Anticipos y Ausencias el "Remanente guardado (último cierre)" mostraba **$47.741**, pero en Meses Anteriores el remanente de junio-julio era **$46.742** (diferencia $999).
 - **Causa:** una fila en `saldos_socio` de un socio **ya borrado** (Ivan Monje, $999) seguía sumando al total del "Remanente guardado", pero no aparecía en Meses Anteriores (solo socios actuales).
