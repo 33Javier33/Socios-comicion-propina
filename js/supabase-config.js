@@ -842,7 +842,32 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     if (!usados.has(sid)) rows.push(mapRow(sid, h, h.socio_nombre || sid, h.area || ''));
                 });
                 rows.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)));
-                return _mockOk({ status: 'success', data: rows });
+
+                // Total recaudado del período (de Carpetas / periodos_archivados).
+                let totalRecaudado = null, totalPuntos = null, rangoPeriodo = null;
+                try {
+                    // Mes canónico (YYYY-MM) del período pedido, según el nombre.
+                    const _mesesL = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+                    const sName = String(periodo || '').toLowerCase();
+                    const y = (sName.match(/\b(20\d{2})\b/) || [])[1];
+                    let mo = null;
+                    const num = sName.match(/20\d{2}[-\/](\d{1,2})/);
+                    if (num) mo = parseInt(num[1], 10);
+                    else for (let i = 0; i < 12; i++) if (sName.includes(_mesesL[i])) { mo = i + 1; break; }
+                    const canon = (y && mo) ? (y + '-' + String(mo).padStart(2, '0')) : null;
+                    if (canon) {
+                        const { data: parc } = await dbSoc.from('periodos_archivados').select('fecha_inicio, fecha_fin, datos');
+                        const match = (parc || []).find(p => String(p.fecha_fin || '').slice(0, 7) === canon);
+                        if (match && match.datos) {
+                            const parseNum = v => { const n = Number(String(v == null ? '' : v).replace(/[^0-9]/g, '')); return isFinite(n) && n > 0 ? n : null; };
+                            totalRecaudado = parseNum(match.datos.totalRec);
+                            totalPuntos = parseNum(match.datos.totalPtos);
+                            rangoPeriodo = { inicio: match.fecha_inicio, fin: match.fecha_fin };
+                        }
+                    }
+                } catch (e) {}
+
+                return _mockOk({ status: 'success', data: rows, totalRecaudado, totalPuntos, rangoPeriodo });
             } catch (e) { return _mockOk({ status: 'error', message: e.message, data: [] }); }
         }
 

@@ -9,6 +9,8 @@
 let _mesesAntPeriodos = [];      // [{periodo, socios, totalAnticipos, totalAPagar, ...}]
 let _mesesAntPeriodoSel = null;  // período seleccionado (label crudo)
 let _mesesAntDetalle = [];       // detalle de socios del período seleccionado
+let _mesesAntTotalRec = null;    // total recaudado del período (de Carpetas)
+let _mesesAntTotalPtos = null;   // valor punto total del período
 let _mesesAntCargando = false;
 
 const _MA_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -86,6 +88,8 @@ async function mesesAnt_seleccionar(periodo) {
     try {
         const res = await callApiSocios('getMesAnteriorDetalle', { periodo });
         _mesesAntDetalle = (res && res.status === 'success' && Array.isArray(res.data)) ? res.data : [];
+        _mesesAntTotalRec = res && res.totalRecaudado != null ? Number(res.totalRecaudado) : null;
+        _mesesAntTotalPtos = res && res.totalPuntos != null ? Number(res.totalPuntos) : null;
         const f = document.getElementById('mesesant-filtro');
         if (f) f.value = '';
         _mesesAnt_renderResumen();
@@ -107,7 +111,18 @@ function _mesesAnt_renderResumen() {
     const conAnticipos = d.filter(x => (x.anticipos || []).length > 0 || Number(x.anticiposTotal) > 0).length;
     el.style.display = 'block';
     busc.style.display = d.length > 0 ? 'block' : 'none';
-    el.innerHTML = `
+    const recHtml = _mesesAntTotalRec != null ? `
+        <div style="background:linear-gradient(135deg,#065f46,#059669);border-radius:12px;padding:11px 14px;margin-bottom:10px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div>
+                <div style="font-size:0.68em;text-transform:uppercase;font-weight:700;letter-spacing:0.05em;opacity:0.85;">💵 Total recaudado del período</div>
+                <div style="font-size:1.3em;font-weight:900;">${_maFmt(_mesesAntTotalRec)}</div>
+            </div>
+            ${_mesesAntTotalPtos != null ? `<div style="text-align:right;">
+                <div style="font-size:0.68em;text-transform:uppercase;font-weight:700;letter-spacing:0.05em;opacity:0.85;">Valor punto</div>
+                <div style="font-size:1.05em;font-weight:800;">${_maFmt(_mesesAntTotalPtos)}</div>
+            </div>` : ''}
+        </div>` : '';
+    el.innerHTML = recHtml + `
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <div style="flex:1;min-width:90px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:9px 12px;text-align:center;">
                 <div style="font-size:1.15em;font-weight:900;color:#1e40af;">${d.length}</div>

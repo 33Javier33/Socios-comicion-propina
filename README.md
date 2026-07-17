@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Meses Anteriores: mostrar el total recaudado del período (desde Carpetas)
+- Se agregó un banner con el **total recaudado del período** y el **valor punto**, tomados del archivo de Carpetas (`periodos_archivados.datos.totalRec` / `totalPtos`), matcheando el período por mes.
+- **Verificación de cuadre:** la suma de los alcances de los socios de Planta (ej. Julio $26.643.242) + los Part-Time ≈ el total recaudado ($26.948.680). La reconstrucción es consistente con lo recaudado.
+- Backend `getMesAnteriorDetalle` ahora devuelve `totalRecaudado`, `totalPuntos` y `rangoPeriodo`.
+- Archivos: `js/supabase-config.js`, `js/meses-anteriores.js`. Cache-bust ?v=28, SW `fondo-admin-v11`.
+
 #### 2026-07-16 — Meses Anteriores: socios Part-Time salían en $0 → ahora con datos reales
 - **Problema:** algunos socios (ej. Florencia Vargas, Giorgiana Kortmann) aparecían en $0 en junio-julio. Causa: son **Part-Time** y se excluyeron de la reconstrucción (su alcance depende de los días trabajados, no de puntos × valor punto), así que no tenían fila en el histórico.
 - **Fix:** para el último mes cerrado (junio-julio) se les creó la fila con sus **datos reales** del cierre (`cierres_mes`): a pagar, remanente (= saldo real actual) y anticipos. El alcance teórico queda vacío (no reconstruible para Part-Time) con una nota que lo explica.
