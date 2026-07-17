@@ -11,7 +11,16 @@ let _mesesAntPeriodoSel = null;  // período seleccionado (label crudo)
 let _mesesAntDetalle = [];       // detalle de socios del período seleccionado
 let _mesesAntTotalRec = null;    // total recaudado del período (de Carpetas)
 let _mesesAntTotalPtos = null;   // valor punto total del período
+let _mesesAntAreaFiltro = 'Todas'; // filtro de área activo
 let _mesesAntCargando = false;
+
+// Clave/etiqueta de área (normaliza mayúsculas/acentos: "mesas"/"Mesas" → una sola)
+function _maAreaKey(area) { return String(area || '').trim().toLowerCase() || 'sin área'; }
+function _maAreaLabel(area) {
+    const s = String(area || '').trim();
+    if (!s) return 'Sin área';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 const _MA_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const _MA_MESES_L = _MA_MESES.map(m => m.toLowerCase());
@@ -92,11 +101,43 @@ async function mesesAnt_seleccionar(periodo) {
         _mesesAntTotalPtos = res && res.totalPuntos != null ? Number(res.totalPuntos) : null;
         const f = document.getElementById('mesesant-filtro');
         if (f) f.value = '';
+        _mesesAntAreaFiltro = 'Todas';
         _mesesAnt_renderResumen();
-        _mesesAnt_renderLista(_mesesAntDetalle);
+        _mesesAnt_renderAreas();
+        _mesesAnt_aplicarFiltros();
     } catch (e) {
         lista.innerHTML = '<div style="color:#dc2626;font-size:0.85em;padding:20px;text-align:center;">Error al cargar el detalle.</div>';
     }
+}
+
+// Chips de áreas (Todas + cada área presente, con el conteo de socios)
+function _mesesAnt_renderAreas() {
+    const cont = document.getElementById('mesesant-areas');
+    if (!cont) return;
+    const conteo = {};
+    _mesesAntDetalle.forEach(r => { const k = _maAreaKey(r.area); conteo[k] = (conteo[k] || 0) + 1; });
+    const areas = Object.keys(conteo).sort((a, b) => a.localeCompare(b));
+    if (_mesesAntDetalle.length === 0) { cont.innerHTML = ''; return; }
+    const chip = (key, label, n, activo) => `<button onclick="mesesAnt_filtrarArea('${_maEsc(key).replace(/'/g, "\\'")}')"
+        style="background:${activo ? '#1e3a5f' : '#fff'};color:${activo ? '#fff' : '#334155'};border:1px solid ${activo ? '#1e3a5f' : '#cbd5e1'};border-radius:18px;padding:6px 12px;font-size:0.78em;font-weight:700;cursor:pointer;white-space:nowrap;">
+        ${_maEsc(label)}${n != null ? ` <span style="opacity:0.7;font-weight:600;">${n}</span>` : ''}</button>`;
+    cont.innerHTML = chip('Todas', 'Todas', _mesesAntDetalle.length, _mesesAntAreaFiltro === 'Todas')
+        + areas.map(k => chip(k, _maAreaLabel(k), conteo[k], _mesesAntAreaFiltro === k)).join('');
+}
+
+function mesesAnt_filtrarArea(area) {
+    _mesesAntAreaFiltro = area || 'Todas';
+    _mesesAnt_renderAreas();
+    _mesesAnt_aplicarFiltros();
+}
+
+// Aplica filtro de nombre + área y renderiza (agrupado por área si 'Todas').
+function _mesesAnt_aplicarFiltros() {
+    const t = ((document.getElementById('mesesant-filtro') || {}).value || '').toLowerCase().trim();
+    let rows = _mesesAntDetalle;
+    if (t) rows = rows.filter(r => String(r.nombre || '').toLowerCase().includes(t));
+    if (_mesesAntAreaFiltro !== 'Todas') rows = rows.filter(r => _maAreaKey(r.area) === _mesesAntAreaFiltro);
+    _mesesAnt_renderLista(rows, _mesesAntAreaFiltro === 'Todas');
 }
 
 function _mesesAnt_renderResumen() {
@@ -144,7 +185,7 @@ function _mesesAnt_renderResumen() {
         ${!conDatos ? '<div style="margin-top:8px;font-size:0.74em;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:7px 10px;">ℹ️ De este mes solo se guardaron los anticipos. El detalle de alcance, saldo anterior y remanente se registra desde los cierres nuevos.</div>' : ''}`;
 }
 
-function _mesesAnt_renderLista(rows) {
+function _mesesAnt_renderLista(rows, agrupar) {
     const lista = document.getElementById('mesesant-lista');
     const vacio = document.getElementById('mesesant-vacio');
     if (!lista) return;
@@ -155,7 +196,28 @@ function _mesesAnt_renderLista(rows) {
         return;
     }
     vacio.style.display = 'none';
-    lista.innerHTML = rows.map((r, i) => _mesesAnt_card(r, i)).join('');
+
+    if (!agrupar) {
+        lista.innerHTML = rows.map((r, i) => _mesesAnt_card(r, i)).join('');
+        return;
+    }
+    // Agrupar por área con encabezado y subtotal de anticipos
+    const grupos = {};
+    rows.forEach(r => { const k = _maAreaKey(r.area); (grupos[k] = grupos[k] || []).push(r); });
+    const keys = Object.keys(grupos).sort((a, b) => a.localeCompare(b));
+    let idx = 0;
+    lista.innerHTML = keys.map(k => {
+        const g = grupos[k];
+        const subAnt = g.reduce((s, x) => s + (Number(x.anticiposTotal) || 0), 0);
+        const cards = g.map(r => _mesesAnt_card(r, idx++)).join('');
+        return `<div style="margin-top:2px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#eef2f7;border-radius:8px;margin-bottom:8px;">
+                <span style="font-size:0.8em;font-weight:800;color:#1e3a5f;text-transform:uppercase;letter-spacing:0.04em;">${_maEsc(_maAreaLabel(k))} <span style="color:#64748b;font-weight:600;">· ${g.length}</span></span>
+                <span style="font-size:0.76em;font-weight:700;color:#b91c1c;">${_maFmt(subAnt)}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">${cards}</div>
+        </div>`;
+    }).join('');
 }
 
 function _mesesAnt_card(r, i) {
@@ -219,9 +281,7 @@ function _mesesAnt_toggle(id) {
     if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
-function mesesAnt_filtrar(texto) {
-    const t = (texto || '').toLowerCase().trim();
-    const filtrados = !t ? _mesesAntDetalle
-        : _mesesAntDetalle.filter(r => String(r.nombre || '').toLowerCase().includes(t));
-    _mesesAnt_renderLista(filtrados);
+function mesesAnt_filtrar() {
+    // El nombre + el área se combinan en _mesesAnt_aplicarFiltros.
+    _mesesAnt_aplicarFiltros();
 }

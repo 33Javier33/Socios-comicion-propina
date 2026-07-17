@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Meses Anteriores: agrupar y filtrar por área
+- Se agregaron **chips de área** (Todas + cada área presente, con conteo de socios) para filtrar rápido.
+- Con "Todas" la lista se **agrupa por área** (encabezado + subtotal de anticipos por área); al elegir un área se muestra solo esa. El buscador por nombre se combina con el filtro de área.
+- Facilita encontrar a alguien o revisar por sección (Mesas, Máquinas, Bóveda, etc.).
+- Archivos: `index.html` (contenedor de chips), `js/meses-anteriores.js`. Cache-bust ?v=29, SW `fondo-admin-v12`.
+
 #### 2026-07-16 — Meses Anteriores: mostrar el total recaudado del período (desde Carpetas)
 - Se agregó un banner con el **total recaudado del período** y el **valor punto**, tomados del archivo de Carpetas (`periodos_archivados.datos.totalRec` / `totalPtos`), matcheando el período por mes.
 - **Verificación de cuadre:** la suma de los alcances de los socios de Planta (ej. Julio $26.643.242) + los Part-Time ≈ el total recaudado ($26.948.680). La reconstrucción es consistente con lo recaudado.
