@@ -1495,12 +1495,17 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 }
                 if (action === 'getTotalRemanentes') {
                     try {
-                        const [saldosRes, histRes] = await Promise.all([
-                            dbSoc.from('saldos_socio').select('monto, updated_at'),
+                        const [saldosRes, sociosRes, histRes] = await Promise.all([
+                            dbSoc.from('saldos_socio').select('id, monto, updated_at'),
+                            dbSoc.from('socios').select('id'),
                             dbSoc.from('saldos_cierre_mes').select('periodo, datos, created_at')
                                 .order('created_at', { ascending: false }).limit(1)
                         ]);
-                        const data = saldosRes.data || [];
+                        // Solo contar saldos de socios que EXISTEN (evita que un socio
+                        // borrado deje un saldo huérfano inflando el total; así cuadra
+                        // con "Meses Anteriores").
+                        const idsVivos = new Set((sociosRes.data || []).map(s => String(s.id)));
+                        const data = (saldosRes.data || []).filter(r => idsVivos.has(String(r.id)));
                         const total = data.reduce((sum, r) => sum + Number(r.monto || 0), 0);
                         const fechas = data.map(r => r.updated_at).filter(Boolean).sort();
                         const ultimaFecha = fechas.length ? fechas[fechas.length - 1] : null;

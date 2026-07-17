@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Fix: "Remanente guardado" no cuadraba con Meses Anteriores (saldo huérfano)
+- **Incongruencia:** en Anticipos y Ausencias el "Remanente guardado (último cierre)" mostraba **$47.741**, pero en Meses Anteriores el remanente de junio-julio era **$46.742** (diferencia $999).
+- **Causa:** una fila en `saldos_socio` de un socio **ya borrado** (Ivan Monje, $999) seguía sumando al total del "Remanente guardado", pero no aparecía en Meses Anteriores (solo socios actuales).
+- **Fix:** se borró el saldo huérfano (ahora ambos totales = **$46.742**) y `getTotalRemanentes` ahora **solo suma saldos de socios que existen**, para que un socio borrado no vuelva a descuadrar el total.
+- Archivos: `js/supabase-config.js` (`getTotalRemanentes`) + limpieza SQL. Cache-bust ?v=30, SW `fondo-admin-v13`.
+
 #### 2026-07-16 — Meses Anteriores: agrupar y filtrar por área
 - Se agregaron **chips de área** (Todas + cada área presente, con conteo de socios) para filtrar rápido.
 - Con "Todas" la lista se **agrupa por área** (encabezado + subtotal de anticipos por área); al elegir un área se muestra solo esa. El buscador por nombre se combina con el filtro de área.
