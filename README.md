@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Meses Anteriores: socios Part-Time salían en $0 → ahora con datos reales
+- **Problema:** algunos socios (ej. Florencia Vargas, Giorgiana Kortmann) aparecían en $0 en junio-julio. Causa: son **Part-Time** y se excluyeron de la reconstrucción (su alcance depende de los días trabajados, no de puntos × valor punto), así que no tenían fila en el histórico.
+- **Fix:** para el último mes cerrado (junio-julio) se les creó la fila con sus **datos reales** del cierre (`cierres_mes`): a pagar, remanente (= saldo real actual) y anticipos. El alcance teórico queda vacío (no reconstruible para Part-Time) con una nota que lo explica.
+- Archivos: `js/meses-anteriores.js` (nota) + inserción SQL en `cierres_mes_historial`. Cache-bust ?v=27, SW `fondo-admin-v10`.
+
 #### 2026-07-16 — Fix: los anticipos archivados (cobrados) reaparecían desde Google Sheets
 - **Bug:** al marcar un socio como Cobrado, sus anticipos se archivaban/borraban de Supabase, pero **seguían en Google Sheets**. Cuando la tabla de Supabase quedaba vacía, la app hacía fallback a GAS y **re-migraba** los anticipos viejos → reaparecían en "Anticipos y Ausencias".
 - **Fix:** marcador global `anticipos_modo_supabase` en `config_sistema`. Una vez que los anticipos se gestionan en Supabase, un Supabase vacío significa **"archivado"**, no "re-migrar desde Sheets". Así los cobrados no vuelven. La migración desde GAS solo corre la **primera vez** (pre-migración); después nunca resucita datos archivados. Vale para **todos los dispositivos** (marcador global, no por dispositivo).

@@ -188,6 +188,7 @@ function _mesesAnt_card(r, i) {
                 ${filaDato('A pagar', r.aPagar, '#15803d')}
                 ${filaDato('Remanente', r.remanente, '#7c3aed')}
                 ${!tieneFoto ? `<div style="font-size:0.72em;color:#b45309;padding-top:4px;">${(r.anticipos || []).length > 0 ? 'Solo anticipos guardados para este mes.' : 'Sin datos guardados para este socio este mes.'}</div>` : ''}
+                ${tieneFoto && r.alcance == null ? '<div style="font-size:0.7em;color:#b45309;padding-top:4px;">Alcance teórico no disponible (Part-Time: depende de los días trabajados). Se muestran a pagar, remanente y anticipos reales del cierre.</div>' : ''}
                 ${recon ? '<div style="font-size:0.7em;color:#b45309;padding-top:6px;">🔧 Reconstruido desde la recaudación archivada. Alcance teórico (puntos × valor punto, sin descontar ausencias); el saldo anterior se encadena mes a mes (mayo parte de $0). El remanente del último mes cerrado usa el saldo real actual del socio.</div>' : ''}
             </div>
             <div style="border:1px solid #f1f5f9;border-radius:8px;overflow:hidden;">
