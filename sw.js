@@ -1,5 +1,33 @@
 // Service Worker — Sistema Integral (Fondo Solidario, app admin)
-const CACHE = 'fondo-admin-v14';
+const CACHE = 'fondo-admin-v15';
+
+// ── Push (notificaciones aunque la app esté cerrada) ──
+self.addEventListener('push', event => {
+    let data = {};
+    try { data = event.data ? event.data.json() : {}; } catch (e) { data = { title: 'Administración', body: (event.data && event.data.text()) || '' }; }
+    const title = data.title || 'Administración';
+    const options = {
+        body: data.body || '',
+        icon: 'img/fondo-192.png',
+        badge: 'img/fondo-192.png',
+        tag: 'admin-push',
+        renotify: true,
+        vibrate: [90, 50, 90],
+        data: { url: data.url || '/' }
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    const url = (event.notification.data && event.notification.data.url) || '/';
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+            for (const c of list) { if ('focus' in c) return c.focus(); }
+            if (self.clients.openWindow) return self.clients.openWindow(url);
+        })
+    );
+});
 const CORE = ['/', 'index.html', 'styles.css', 'manifest.json', 'img/fondo-192.png', 'img/fondo-512.png'];
 
 self.addEventListener('install', event => {

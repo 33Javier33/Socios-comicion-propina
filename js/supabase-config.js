@@ -735,6 +735,27 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             } catch (e) { return _mockOk({ status: 'error', message: e.message }); }
         }
 
+        // ── Push del ADMIN: guardar/borrar suscripción (socio_id = 'ADMIN') ──
+        if (action === 'savePushSub') {
+            try {
+                const sub = body.sub || {};
+                if (!sub.endpoint) return _mockOk({ status: 'error', message: 'sin endpoint' });
+                const { error } = await dbSoc.from('push_subscriptions').upsert({
+                    id: crypto.randomUUID(),
+                    socio_id: String(body.socioId || 'ADMIN'),
+                    endpoint: sub.endpoint,
+                    p256dh: (sub.keys && sub.keys.p256dh) || '',
+                    auth: (sub.keys && sub.keys.auth) || '',
+                    user_agent: body.ua || ''
+                }, { onConflict: 'endpoint' });
+                return _mockOk({ status: error ? 'error' : 'success', message: error && error.message });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message }); }
+        }
+        if (action === 'deletePushSub') {
+            try { if (body.endpoint) await dbSoc.from('push_subscriptions').delete().eq('endpoint', body.endpoint); } catch (e) {}
+            return _mockOk({ status: 'success' });
+        }
+
         // ── Meses Anteriores: foto completa del mes cerrado por socio ──
         // Al finalizar el período se copia cierres_mes → cierres_mes_historial.
         if (action === 'archivarCierresMes') {

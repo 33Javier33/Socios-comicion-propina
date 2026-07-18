@@ -193,14 +193,43 @@ function _adminBeep() {
         });
     } catch (e) {}
 }
-function _adminPedirPermisoNotif() {
-    try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {}); } catch (e) {}
+// ── Push del ADMIN (notificaciones aunque la app esté cerrada) ──
+const _ADMIN_VAPID = 'BFzJrgZgoGMHxdHbqCyiftayb-JINxQNy3ek3h1YRH9yoZQIBp7zfFgr8IG72rLkzRpBsLPY2XVvy5k4G_gA6RI';
+function _adminUrlB64(base64) {
+    const pad = '='.repeat((4 - base64.length % 4) % 4);
+    const b = (base64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(b); const arr = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+    return arr;
 }
-// Desbloquear audio + pedir permiso en la primera interacción del usuario
+async function _adminSuscribirPush() {
+    try {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
+        if (Notification.permission !== 'granted') return;
+        const reg = await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _adminUrlB64(_ADMIN_VAPID) });
+        if (sub && typeof callApiSocios === 'function') {
+            callApiSocios('savePushSub', { socioId: 'ADMIN', sub: sub.toJSON ? sub.toJSON() : sub, ua: navigator.userAgent }).catch(() => {});
+        }
+    } catch (e) { /* silencioso */ }
+}
+function _adminPedirPermisoNotif() {
+    try {
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'granted') { _adminSuscribirPush(); return; }
+        if (Notification.permission === 'default') {
+            Notification.requestPermission().then(p => { if (p === 'granted') _adminSuscribirPush(); }).catch(() => {});
+        }
+    } catch (e) {}
+}
+// Desbloquear audio + pedir permiso/suscribir en la primera interacción del usuario
 document.addEventListener('click', function _once() {
     _adminAudioInit(); _adminPedirPermisoNotif();
     document.removeEventListener('click', _once);
 }, { once: true });
+// Al cargar: si ya hay permiso, refrescar la suscripción push del admin.
+try { if ('Notification' in window && Notification.permission === 'granted') setTimeout(_adminSuscribirPush, 2500); } catch (e) {}
 
 function _fmtMoneyAdmin(v) {
     try { return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(Number(v) || 0); }

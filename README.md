@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-16 — Notificaciones PUSH al admin (llegan aunque la app esté cerrada)
+- **Antes** las notificaciones (egreso, mensaje de socio, recaudación) solo llegaban con la app **abierta** (realtime). **Ahora** llegan como **push real**, aunque la app esté cerrada.
+- **Cómo:** el dispositivo del admin se suscribe a Web Push con `socio_id='ADMIN'` (al dar permiso de notificaciones). **Triggers de base de datos** (pg_net) en `solicitudes_egreso`, `mensajes_admin` (SOC) y `recaudaciones` (REC) llaman a la Edge Function **`push-notify`**, que envía la notificación a las suscripciones del ADMIN.
+- **Notificaciones que llegan:** 🔔 Nueva solicitud de egreso · 💬 Mensaje de socio · 💵 Nueva recaudación. (La Edge Function también sigue notificando al socio cuando el admin le escribe.)
+- Nuevas acciones `savePushSub`/`deletePushSub` (guardan la suscripción del admin). SW `fondo-admin-v15` con handler `push` + `notificationclick`.
+- Archivos: `sw.js` (push handler), `js/utils.js` (suscripción admin), `js/supabase-config.js` (savePushSub) + Edge Function `push-notify` v2 + triggers SQL. Cache-bust ?v=32.
+- Nota: requiere que el admin **abra la app una vez y dé permiso** de notificaciones para suscribir el dispositivo.
+
 #### 2026-07-16 — Logo de marca "CarlosPN Interactive" en el modal Acerca de
 - Se agregó el logo oficial (`img/carlospn-logo.png`) arriba de la marca en el modal **Acerca de**, reemplazando el ícono 💻 placeholder. Debajo queda el subtítulo "Sistema Profesional de Gestión · 2026".
 - Archivos: `index.html`, `img/carlospn-logo.png` (nuevo). Cache-bust ?v=31, SW `fondo-admin-v14`.
