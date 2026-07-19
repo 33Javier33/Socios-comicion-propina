@@ -783,9 +783,9 @@
                 border-bottom: none !important;
                 border-radius: 10px !important;
                 box-sizing: border-box;
-                cursor: grab;
+                cursor: pointer;
             }
-            .app-sidebar .nav-btn:active { cursor: grabbing; }
+            .app-sidebar .nav-btn.dragging { cursor: grabbing; }
             .app-sidebar .nav-btn.active {
                 background: rgba(52,152,219,0.12);
                 color: var(--secondary);

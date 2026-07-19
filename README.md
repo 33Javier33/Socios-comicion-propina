@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-19 — Menú lateral (escritorio): cursor de mano → cursor de clic (SW v18)
+- En el menú lateral de escritorio los botones mostraban `cursor: grab` (mano) por la función de reordenar arrastrando, lo que confundía. Ahora muestran `cursor: pointer` (clic); el cursor de "agarre" solo aparece mientras se arrastra de verdad (`.nav-btn.dragging`). El reordenar sigue funcionando igual.
+- Archivos: `styles.css` (`.app-sidebar .nav-btn`). SW `fondo-admin-v18`.
+
 #### 2026-07-19 — Días PT por confirmar: botón "Ver ficha del socio" (cache-bust v34, SW v17)
 - En el aviso "🕒 Días Part-Time por confirmar" cada socio ahora es **clickeable** (nombre subrayado) y tiene un botón **"👤 Ver"** que abre su ficha en el panel de detalle y hace scroll hacia ella — para revisarlo antes de confirmar, igual que el aviso de egresos.
 - Archivos: `js/pt-dias.js` (`ptdias_irASocio` → `seleccionarSocio` + scroll a `#panelDetalle`). Cache-bust ?v=34. SW `fondo-admin-v17`.
