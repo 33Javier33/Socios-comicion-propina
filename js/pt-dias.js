@@ -83,11 +83,14 @@ function ptdias_render() {
         return `
             <div style="background:white;border:1px solid #fde68a;border-radius:10px;padding:10px 11px;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                    <div style="width:30px;height:30px;border-radius:8px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;">🕒</div>
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-weight:800;font-size:0.85em;color:#78350f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_escPtd(g.nombre)}</div>
-                        <div style="font-size:0.7em;color:#b45309;">${g.dias.length} día(s) · ~ ${_fmtPtdMoney(totalEst)}${g.area ? ' · ' + _escPtd(g.area) : ''}</div>
+                    <div onclick="ptdias_irASocio('${socioId}')" title="Ver ficha del socio" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer;">
+                        <div style="width:30px;height:30px;border-radius:8px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;">🕒</div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:800;font-size:0.85em;color:#78350f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:underline;text-decoration-color:#fde68a;">${_escPtd(g.nombre)}</div>
+                            <div style="font-size:0.7em;color:#b45309;">${g.dias.length} día(s) · ~ ${_fmtPtdMoney(totalEst)}${g.area ? ' · ' + _escPtd(g.area) : ''}</div>
+                        </div>
                     </div>
+                    <button onclick="ptdias_irASocio('${socioId}')" title="Abrir socio" style="border:1px solid #fcd34d;border-radius:7px;background:white;color:#b45309;font-size:0.72em;font-weight:800;padding:6px 8px;cursor:pointer;white-space:nowrap;">👤 Ver</button>
                     <button onclick="ptdias_confirmarSocio('${socioId}')" style="border:none;border-radius:7px;background:#15803d;color:white;font-size:0.72em;font-weight:800;padding:6px 9px;cursor:pointer;white-space:nowrap;">✓ Todos</button>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;">${chips}</div>
@@ -105,6 +108,15 @@ function ptdias_render() {
             <div style="display:flex;flex-direction:column;gap:8px;">${bloques}</div>
         </div>`;
     box.style.display = 'block';
+}
+
+// Abrir la ficha del socio (panel de detalle) para revisarlo antes de confirmar.
+function ptdias_irASocio(socioId) {
+    if (typeof seleccionarSocio === 'function') seleccionarSocio(String(socioId));
+    setTimeout(() => {
+        const panel = document.getElementById('panelDetalle');
+        if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 250);
 }
 
 // Agrega una lista de fechas a la planilla real (dias_pt) del socio, sin duplicar.

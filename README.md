@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-19 — Días PT por confirmar: botón "Ver ficha del socio" (cache-bust v34, SW v17)
+- En el aviso "🕒 Días Part-Time por confirmar" cada socio ahora es **clickeable** (nombre subrayado) y tiene un botón **"👤 Ver"** que abre su ficha en el panel de detalle y hace scroll hacia ella — para revisarlo antes de confirmar, igual que el aviso de egresos.
+- Archivos: `js/pt-dias.js` (`ptdias_irASocio` → `seleccionarSocio` + scroll a `#panelDetalle`). Cache-bust ?v=34. SW `fondo-admin-v17`.
+
 #### 2026-07-19 — Días Part-Time por confirmar (autogestión desde propi.solicitada)
 - Los socios **Part-Time** marcan sus días trabajados desde su app. Aquí llegan como **aviso "🕒 Días Part-Time por confirmar"** en la sección *Anticipos y Ausencias* (bajo el aviso de egresos), agrupados por socio con el día y su **valor estimado**.
 - El encargado **valida** cada día (✓) o todos los del socio (✓ Todos): el día se agrega a la **planilla real** (`dias_pt`, merge sin duplicar) y se recalcula el total PT. También puede **rechazar** (✖) indicando un motivo. En ambos casos se **notifica al socio** por mensaje privado, y en su app el día pasa de ámbar a verde (o muestra el rechazo).
