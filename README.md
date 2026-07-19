@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-19 — Días Part-Time por confirmar (autogestión desde propi.solicitada)
+- Los socios **Part-Time** marcan sus días trabajados desde su app. Aquí llegan como **aviso "🕒 Días Part-Time por confirmar"** en la sección *Anticipos y Ausencias* (bajo el aviso de egresos), agrupados por socio con el día y su **valor estimado**.
+- El encargado **valida** cada día (✓) o todos los del socio (✓ Todos): el día se agrega a la **planilla real** (`dias_pt`, merge sin duplicar) y se recalcula el total PT. También puede **rechazar** (✖) indicando un motivo. En ambos casos se **notifica al socio** por mensaje privado, y en su app el día pasa de ámbar a verde (o muestra el rechazo).
+- **Push:** cuando un socio marca un día, el admin recibe una notificación **"Día Part-Time por confirmar"** aunque tenga la app cerrada (trigger en `dias_pt_solicitados` → Edge Function `push-notify` v4).
+- Realtime: el aviso se refresca solo al llegar/cambiar solicitudes (`dias_pt_solicitados`).
+- Archivos: `js/pt-dias.js` (nuevo módulo), `index.html` (caja `#ptDiasPendientesBox` + script), `js/app-init.js` (init al entrar a *gestion*). Backend: tabla `dias_pt_solicitados` (proyecto socios) + trigger push + realtime. SW `fondo-admin-v16`. Cache-bust ?v=33.
+
 #### 2026-07-16 — Notificaciones PUSH al admin (llegan aunque la app esté cerrada)
 - **Antes** las notificaciones (egreso, mensaje de socio, recaudación) solo llegaban con la app **abierta** (realtime). **Ahora** llegan como **push real**, aunque la app esté cerrada.
 - **Cómo:** el dispositivo del admin se suscribe a Web Push con `socio_id='ADMIN'` (al dar permiso de notificaciones). **Triggers de base de datos** (pg_net) en `solicitudes_egreso`, `mensajes_admin` (SOC) y `recaudaciones` (REC) llaman a la Edge Function **`push-notify`**, que envía la notificación a las suscripciones del ADMIN.

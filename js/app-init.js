@@ -104,6 +104,8 @@ function switchTab(tabName) {
         cierresMes_render();
         if (typeof egresos_initRealtime === 'function') egresos_initRealtime();
         if (typeof egresos_cargarPendientes === 'function') egresos_cargarPendientes();
+        if (typeof ptdias_initRealtime === 'function') ptdias_initRealtime();
+        if (typeof ptdias_cargarPendientes === 'function') ptdias_cargarPendientes();
     }
     else if(tabName === 'recaudacion') { fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones(); }
     else if(tabName === 'config') { fabRec.style.display = 'none'; aq_detenerSync(); cfg_limpiarCampos(); }
