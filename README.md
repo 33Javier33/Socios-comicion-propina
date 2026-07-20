@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-19 — Puntos: Bóveda comienza en 2 (no 4) + Cambistas es sub-área de Mesas (SW v21)
+- **Bóveda** ahora comienza en **2 puntos** base (antes 4), +2 por año, tope 10. Nuevo helper `calcularPuntosBase(area)` usado en `socios.js` (fórmula y "Próximos a subir") y `api.js`. Los socios de Bóveda actuales tienen ≥4 años de antigüedad, así que ya estaban en el tope de 10 y **no cambian**; el ajuste aplica a socios de Bóveda nuevos/jóvenes.
+- **Cambistas**: ya se muestra como **"Mesas (Cambistas)"** y se agrupa junto a Mesas (Planta/Part-Time) — es una sub-área de Mesas. Se dejó explícito en la ayuda.
+- Texto de ayuda actualizado (fórmula `base + años×2`, base 4 / Bóveda 2).
+- Archivos: `js/socios.js`, `js/api.js`, `js/help.js`. Cache-bust ?v=36. SW `fondo-admin-v21`.
+
 #### 2026-07-19 — Campana suma recaudaciones + recargas agrupadas (fluidez) (SW v20)
 - La campana ahora también lista **📊 recaudaciones nuevas** (cada entrada con su tipo, monto, **divisor** y quién la registró). Se marcan "vistas" al abrir la campana y en la primera carga se da por visto el histórico, así no se atocha. Al tocar una lleva a la pestaña Montos Recaudados.
 - **Fluidez bajo uso masivo:** las recargas de egresos y días PT por realtime ahora van **agrupadas (debounce ~450ms)** — si llegan muchos eventos juntos se hace una sola recarga en vez de una por evento; las notificaciones siguen siendo por evento (no se pierde ninguna).

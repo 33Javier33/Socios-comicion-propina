@@ -370,10 +370,16 @@ function calcularPuntosMaximos(area) {
     return 10;
 }
 
+// Puntos base (año 0) por área: Bóveda comienza en 2; el resto en 4.
+// Todos aumentan +2 por año hasta el tope de su área.
+function calcularPuntosBase(area) {
+    return ((area || '').toLowerCase().includes('boveda')) ? 2 : 4;
+}
+
 function calcularPuntosPorAnios(anios, area) {
     const max = calcularPuntosMaximos(area);
     if ((area || '').toLowerCase().includes('gastos')) return 1;
-    const calculado = 4 + (anios * 2);
+    const calculado = calcularPuntosBase(area) + (anios * 2);
     return Math.min(calculado, max);
 }
 
@@ -606,7 +612,7 @@ function notificarEscalamientosMes() {
         const p = s.fechaIngreso.split('-');
         if (p.length < 3) return false;
         const mSoc = parseInt(p[1]) - 1, aSoc = parseInt(p[0]);
-        const nuevoPts = 4 + (anio - aSoc) * 2;
+        const nuevoPts = calcularPuntosBase(s.area) + (anio - aSoc) * 2;
         return mSoc === mes && nuevoPts <= calcularPuntosMaximos(s.area) && nuevoPts > (s.puntos || 0);
     });
     if (escMes.length > 0) {

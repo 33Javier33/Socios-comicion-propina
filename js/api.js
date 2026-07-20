@@ -133,7 +133,8 @@ function procesarSocioDesdeGoogle(s) {
     else if (areaNorm === 'tecnicos') puntosMaximos = 12;
     else if (areaNorm === 'boveda') puntosMaximos = 10;
     else if (areaNorm.includes('cambista')) puntosMaximos = 8;
-    const puntosBase = 4;
+    // Bóveda comienza en 2 puntos; el resto en 4 (+2 por año hasta el tope).
+    const puntosBase = (areaNorm === 'boveda') ? 2 : 4;
     // puntosMaxPosible: lo que corresponde por fórmula (para detectar escalamientos en verificarEscalamientos)
     const puntosMaxPosible = puntosActivos ? Math.min(puntosBase + (anios * 2), puntosMaximos) : 0;
     // puntosFinales: usa el valor guardado en Supabase si es positivo; 0 y null se tratan como "sin dato" → usa fórmula

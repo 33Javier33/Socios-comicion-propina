@@ -39,18 +39,18 @@ const BASE_CONOCIMIENTO = [
       nota:'Los socios con fecha de inicio de puntos en el futuro aparecen en la lista pero NO suman al total de puntos.' },
 
     { id:'s2', cat:'socios', titulo:'¿Cómo suben de puntaje los socios (aumento de puntos)?', tags:['escalamiento','aumento','subir','puntaje','puntos','años','tope','antigüedad'],
-      resp:'Cada año de antigüedad en el casino suma <strong>+2 puntos</strong> al socio, comenzando desde 4 puntos base. Cada área tiene un tope que no se puede superar.',
+      resp:'Cada año de antigüedad en el casino suma <strong>+2 puntos</strong> al socio. La mayoría comienza en <strong>4 puntos base</strong>; <strong>Bóveda comienza en 2</strong>. Cada área tiene un tope que no se puede superar.',
       vista:`<div class="ayuda-vista">
         <div class="ayuda-vista-titulo">⭐ Topes por área</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
           <div class="ayuda-mini-card"><strong>🎰 Mesas</strong><div style="color:#2563eb;font-weight:900;">Máx 20 pts</div></div>
           <div class="ayuda-mini-card"><strong>🎮 Máquinas</strong><div style="color:#7c3aed;font-weight:900;">Máx 12 pts</div></div>
           <div class="ayuda-mini-card"><strong>🔧 Técnicos</strong><div style="color:#7f8c8d;font-weight:900;">Máx 12 pts</div></div>
-          <div class="ayuda-mini-card"><strong>🏦 Bóveda</strong><div style="color:#27ae60;font-weight:900;">Máx 10 pts</div></div>
+          <div class="ayuda-mini-card"><strong>🏦 Bóveda</strong><div style="color:#27ae60;font-weight:900;">2 → Máx 10 pts</div></div>
           <div class="ayuda-mini-card"><strong>💱 Cambistas</strong><div style="color:#9b59b6;font-weight:900;">Máx 8 pts</div></div>
           <div class="ayuda-mini-card"><strong>📋 G. Comisión</strong><div style="color:#607d8b;font-weight:900;">Máx 1 pt</div></div>
         </div>
-        <div class="ayuda-formula" style="margin-top:8px;">Puntos = 4 + (años × 2) → hasta el tope del área</div>
+        <div class="ayuda-formula" style="margin-top:8px;">Puntos = base + (años × 2) → hasta el tope del área &nbsp;·&nbsp; base 4 (Bóveda: 2)</div>
       </div>`,
       pasos:['El sistema calcula los puntos automáticamente según la fecha de ingreso','Cuando un socio cumple años en el trabajo, aparece en el panel 🏆 Próximos a subir','Si ya llegó al tope de su área, el recibo muestra "TOPE MÁXIMO"','La fecha de inicio de puntos puede ser diferente a la de ingreso (ej: si tuvo un período sin puntos)'],
       nota:'El 🏆 en el panel muestra quiénes suben de puntaje este mes, el mes pasado y el próximo.' },
