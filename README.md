@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-20 — Gastos Comisión no genera remanente (retira todo) (SW v26)
+- Los socios de **Gastos Comisión** ahora tienen **remanente 0** en todos los cálculos: al abrir su estado financiero, en el modal de desglose y en la tabla "Saldos Reales de todos". Su "A Pagar" pasa a ser el **saldo completo** (retiran todo, sin remanente). Antes se les calculaba un remanente que se sumaba en los totales.
+- Complementa el cambio anterior (el total guardado ya los excluía): ahora tampoco aparecen con remanente en ningún cálculo en vivo ni en el cierre.
+- Nuevo helper `_esGastoComision(area)`. Archivos: `js/anticipos.js` (estado financiero, `_calcSaldoRealSocio`, modal resumen). Cache-bust ?v=41. SW `fondo-admin-v26`.
+
 #### 2026-07-20 — Total Remanentes excluye a Gastos Comisión (SW v25)
 - El **total de remanentes** guardado (`getTotalRemanentes`, que suma `saldos_socio`) ahora **excluye a los socios de Gastos Comisión** (Carlos, Patricia, Nicol, Materiales) — su remanente no se suma, igual que ya lo hacía el remanente "en vivo". Antes el total sí los podía incluir.
 - Archivos: `js/supabase-config.js` (`getTotalRemanentes`: filtra por área con "gasto"/"comisión"). Cache-bust ?v=40. SW `fondo-admin-v25`.

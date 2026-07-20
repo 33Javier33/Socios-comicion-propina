@@ -165,8 +165,9 @@ async function verEstadoFinanciero(id) {
             }
 
             const saldoReal = (alcance + saldoAnt) - sumaPedidos;
-            const aPagarModal = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
-            const remanenteModal = saldoReal > 0 ? Math.round(saldoReal - aPagarModal) : Math.round(saldoReal);
+            const _comisModal = _esGastoComision(socio.area);
+            const aPagarModal = _comisModal ? (saldoReal > 0 ? Math.round(saldoReal) : 0) : (saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0);
+            const remanenteModal = _comisModal ? 0 : (saldoReal > 0 ? Math.round(saldoReal - aPagarModal) : Math.round(saldoReal));
 
             document.getElementById('resumenSaldoAnt').innerText = formatearMoneda(saldoAnt);
             document.getElementById('resumenAlcance').innerText = formatearMoneda(alcance);
@@ -589,7 +590,11 @@ async function cargarHistorialSocio(id) {
 
             let aPagar = 0;
             let remanente = 0;
-            if (saldoReal > 0) {
+            if (_esGastoComision(socio.area)) {
+                // Gastos Comisión retira todo: a pagar = saldo completo, remanente 0.
+                aPagar = saldoReal > 0 ? Math.round(saldoReal) : 0;
+                remanente = 0;
+            } else if (saldoReal > 0) {
                 aPagar = Math.floor(saldoReal / 1000) * 1000;
                 remanente = Math.round(saldoReal - aPagar);
             } else {
@@ -1745,6 +1750,13 @@ async function gestion_cargarTotalRemanentes() {
 }
 
 // Normaliza el área para el remanente: une Mesas + Mesas-Cambistas, excluye GastosComision.
+// Gastos Comisión (Carlos, Patricia, Nicol, Materiales): retira todo su saldo,
+// NO genera remanente (no se carga al próximo mes ni se suma en ningún total).
+function _esGastoComision(areaRaw) {
+    const a = (areaRaw || '').trim().toLowerCase();
+    return a.includes('gasto') || a.includes('comision') || a.includes('comisión');
+}
+
 function _remAreaNorm(areaRaw) {
     const a = (areaRaw || '').trim().toLowerCase();
     if (a.includes('gasto') || a.includes('comision') || a.includes('comisión')) return { excl: true };
@@ -2174,6 +2186,10 @@ function _calcSaldoRealSocio(socio, data) {
         alcance *= socio.puntos;
     }
     const saldoReal = alcance + saldoAnterior - sumaPedido;
+    // Gastos Comisión: retira todo → a pagar es el saldo completo y remanente 0.
+    if (_esGastoComision(socio.area)) {
+        return { alcance, saldoAnterior, sumaPedido, saldoReal, aPagar: saldoReal > 0 ? Math.round(saldoReal) : 0, remanente: 0 };
+    }
     const aPagar = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
     const remanente = saldoReal > 0 ? Math.round(saldoReal - aPagar) : Math.round(saldoReal);
     return { alcance, saldoAnterior, sumaPedido, saldoReal, aPagar, remanente };
