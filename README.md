@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-20 — Cambistas se agrupa dentro de Mesas (Planta), sub-área "Cambistas" (SW v22)
+- Los socios **Cambistas** ya no aparecen como bloque aparte: se agrupan **dentro de "Mesas (Planta)"** (o Part-Time según contrato) con la etiqueta de sub-área **"· 💱 Cambistas"** en su tarjeta. Pertenecen a Mesas; Cambistas es su sub-área. (Los Part-Time se mantienen igual.)
+- Nota: el **tope de puntos** de Cambistas sigue igual (8) por ahora — cambiarlo afecta el reparto y queda pendiente de confirmación.
+- Archivos: `js/socios.js` (agrupación + etiqueta sub-área). Cache-bust ?v=37. SW `fondo-admin-v22`.
+
 #### 2026-07-19 — Puntos: Bóveda comienza en 2 (no 4) + Cambistas es sub-área de Mesas (SW v21)
 - **Bóveda** ahora comienza en **2 puntos** base (antes 4), +2 por año, tope 10. Nuevo helper `calcularPuntosBase(area)` usado en `socios.js` (fórmula y "Próximos a subir") y `api.js`. Los socios de Bóveda actuales tienen ≥4 años de antigüedad, así que ya estaban en el tope de 10 y **no cambian**; el ajuste aplica a socios de Bóveda nuevos/jóvenes.
 - **Cambistas**: ya se muestra como **"Mesas (Cambistas)"** y se agrupa junto a Mesas (Planta/Part-Time) — es una sub-área de Mesas. Se dejó explícito en la ayuda.

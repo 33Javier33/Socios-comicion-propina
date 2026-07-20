@@ -204,13 +204,15 @@ function renderizarCards() {
             <div class='sk sk-line' style='width:80%;margin-bottom:6px'></div><div class='sk sk-line' style='width:50%'></div>
         </div>`).join(''); return; }
 
-    const grupos = { 'mesas': [], 'mesasPartTime': [], 'cambistas': [], 'maquinas': [], 'tecnicos': [], 'boveda': [], 'GastosComision': [] };
-    const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasPartTime': 'Mesas (Part-Time)', 'cambistas': 'Mesas (Cambistas)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'GastosComision': 'Gastos Comisión' };
+    const grupos = { 'mesas': [], 'mesasPartTime': [], 'maquinas': [], 'tecnicos': [], 'boveda': [], 'GastosComision': [] };
+    const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasPartTime': 'Mesas (Part-Time)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'GastosComision': 'Gastos Comisión' };
 
     // Solo renderizar socios visibles en las tarjetas de área
     sociosVisibles.forEach(socio => {
         let key = socio.area.toLowerCase().replace(/\s/g, '');
-        if (key.includes('cambista')) key = 'cambistas'; else if (key.includes('gastos')) key = 'GastosComision';
+        // Cambistas pertenece a Mesas (su sub-área es "Cambistas"); se agrupa con Mesas
+        // según su contrato (Planta → Mesas Planta; Part-Time → Mesas Part-Time).
+        if (key.includes('cambista')) key = 'mesas'; else if (key.includes('gastos')) key = 'GastosComision';
         if (key === 'mesas') { if (socio.contrato === 'Part-Time') key = 'mesasPartTime'; else key = 'mesas'; }
         if (grupos[key]) grupos[key].push(socio); else { if(!grupos['otros']) grupos['otros'] = []; grupos['otros'].push(socio); nombresArea['otros'] = 'Otros / Sin Clasificar'; }
     });
@@ -248,8 +250,10 @@ function renderizarCards() {
                 }
             }
             const _foto = avatarHTML(socio.fotoUrl, socio.nombre, 40);
+            const _esCambista = (socio.area || '').toLowerCase().includes('cambista');
+            const _subArea = _esCambista ? ' · 💱 Cambistas' : '';
             card.innerHTML = `
-                <div class="area-tag bg-${key}">${nombresArea[key] || socio.area}</div>
+                <div class="area-tag bg-${key}">${nombresArea[key] || socio.area}${_subArea}</div>
                 <div class="card-header" style="display:flex;align-items:center;gap:10px;">${_foto}<div style="flex:1;min-width:0;"><h3 style="margin:0;">${socio.nombre} ${socio.apellido}</h3><span class="card-contract">${socio.contrato}</span></div></div>
                 <div class="card-body"><div><p style="margin:0; font-size:0.9em;">Antigüedad: ${socio.anios} años</p><small style="color:#7f8c8d;">${fechaVis}</small>${fipVis}${socio.rut ? `<small style="display:block;margin-top:3px;color:#334155;">🪪 RUT: ${_htmlEscSoc(socio.rut)}</small>` : `<small style="display:block;margin-top:3px;color:#dc2626;font-weight:600;">🪪 RUT: — pendiente</small>`}${socio.correo ? `<small style="display:block;margin-top:3px;color:#334155;word-break:break-all;">✉️ ${_htmlEscSoc(socio.correo)}</small>` : `<small style="display:block;margin-top:3px;color:#94a3b8;">✉️ Correo: — pendiente</small>`}</div><div class="points-badge"><span class="points-number">${socio.puntos}</span></div></div>
                 <div class="card-actions">
