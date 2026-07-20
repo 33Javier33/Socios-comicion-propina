@@ -252,10 +252,12 @@ function renderizarCards() {
             const _foto = avatarHTML(socio.fotoUrl, socio.nombre, 40);
             const _esCambista = (socio.area || '').toLowerCase().includes('cambista');
             const _areaLabel = nombresArea[key] || socio.area;
-            // Cambistas: etiqueta en dos líneas (angosta, alineada a la derecha) para
-            // que la sub-área no se extienda sobre el nombre del socio.
-            const _tagInner = _esCambista ? `${_areaLabel}<br><span style="font-size:0.9em;">💱 Cambistas</span>` : _areaLabel;
-            const _tagStyle = _esCambista ? ' style="text-align:right;line-height:1.2;"' : '';
+            // Etiqueta en dos líneas: el paréntesis (Planta / Part-Time) baja a la
+            // línea de abajo → la etiqueta queda angosta y no tapa nombres largos.
+            const _pi = _areaLabel.indexOf(' (');
+            let _tagInner = _pi > 0 ? (_areaLabel.slice(0, _pi) + '<br>' + _areaLabel.slice(_pi + 1)) : _areaLabel;
+            if (_esCambista) _tagInner += '<br><span style="font-size:0.9em;">💱 Cambistas</span>';
+            const _tagStyle = ' style="text-align:right;line-height:1.2;"';
             card.innerHTML = `
                 <div class="area-tag bg-${key}"${_tagStyle}>${_tagInner}</div>
                 <div class="card-header" style="display:flex;align-items:center;gap:10px;">${_foto}<div style="flex:1;min-width:0;"><h3 style="margin:0;">${socio.nombre} ${socio.apellido}</h3><span class="card-contract">${socio.contrato}</span></div></div>

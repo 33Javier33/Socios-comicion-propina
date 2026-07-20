@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-20 — Etiqueta de área en dos líneas para todas las tarjetas (SW v24)
+- Todas las tarjetas de socio ahora muestran la etiqueta de área en **dos líneas**: el paréntesis baja a la segunda línea (ej. "Mesas" / "(Planta)", "Mesas" / "(Part-Time)"). Así la etiqueta queda angosta y no tapa nombres largos (ej. "Nicol Alejandra"). Cambistas mantiene su tercera línea "💱 Cambistas". Áreas de una palabra (Máquinas, Bóveda, Técnicos) quedan en una línea.
+- Archivos: `js/socios.js`. Cache-bust ?v=39. SW `fondo-admin-v24`.
+
 #### 2026-07-20 — Etiqueta de Cambistas en dos líneas (no tapa el nombre) (SW v23)
 - La etiqueta "Mesas (Planta) · 💱 Cambistas" en una sola línea era muy ancha y tapaba el nombre del socio. Ahora se muestra en **dos líneas** (alineada a la derecha, angosta): "Mesas (Planta)" arriba y "💱 Cambistas" abajo.
 - Archivos: `js/socios.js`. Cache-bust ?v=38. SW `fondo-admin-v23`.
