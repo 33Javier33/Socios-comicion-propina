@@ -251,9 +251,13 @@ function renderizarCards() {
             }
             const _foto = avatarHTML(socio.fotoUrl, socio.nombre, 40);
             const _esCambista = (socio.area || '').toLowerCase().includes('cambista');
-            const _subArea = _esCambista ? ' · 💱 Cambistas' : '';
+            const _areaLabel = nombresArea[key] || socio.area;
+            // Cambistas: etiqueta en dos líneas (angosta, alineada a la derecha) para
+            // que la sub-área no se extienda sobre el nombre del socio.
+            const _tagInner = _esCambista ? `${_areaLabel}<br><span style="font-size:0.9em;">💱 Cambistas</span>` : _areaLabel;
+            const _tagStyle = _esCambista ? ' style="text-align:right;line-height:1.2;"' : '';
             card.innerHTML = `
-                <div class="area-tag bg-${key}">${nombresArea[key] || socio.area}${_subArea}</div>
+                <div class="area-tag bg-${key}"${_tagStyle}>${_tagInner}</div>
                 <div class="card-header" style="display:flex;align-items:center;gap:10px;">${_foto}<div style="flex:1;min-width:0;"><h3 style="margin:0;">${socio.nombre} ${socio.apellido}</h3><span class="card-contract">${socio.contrato}</span></div></div>
                 <div class="card-body"><div><p style="margin:0; font-size:0.9em;">Antigüedad: ${socio.anios} años</p><small style="color:#7f8c8d;">${fechaVis}</small>${fipVis}${socio.rut ? `<small style="display:block;margin-top:3px;color:#334155;">🪪 RUT: ${_htmlEscSoc(socio.rut)}</small>` : `<small style="display:block;margin-top:3px;color:#dc2626;font-weight:600;">🪪 RUT: — pendiente</small>`}${socio.correo ? `<small style="display:block;margin-top:3px;color:#334155;word-break:break-all;">✉️ ${_htmlEscSoc(socio.correo)}</small>` : `<small style="display:block;margin-top:3px;color:#94a3b8;">✉️ Correo: — pendiente</small>`}</div><div class="points-badge"><span class="points-number">${socio.puntos}</span></div></div>
                 <div class="card-actions">

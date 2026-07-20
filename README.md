@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-20 — Etiqueta de Cambistas en dos líneas (no tapa el nombre) (SW v23)
+- La etiqueta "Mesas (Planta) · 💱 Cambistas" en una sola línea era muy ancha y tapaba el nombre del socio. Ahora se muestra en **dos líneas** (alineada a la derecha, angosta): "Mesas (Planta)" arriba y "💱 Cambistas" abajo.
+- Archivos: `js/socios.js`. Cache-bust ?v=38. SW `fondo-admin-v23`.
+
 #### 2026-07-20 — Cambistas se agrupa dentro de Mesas (Planta), sub-área "Cambistas" (SW v22)
 - Los socios **Cambistas** ya no aparecen como bloque aparte: se agrupan **dentro de "Mesas (Planta)"** (o Part-Time según contrato) con la etiqueta de sub-área **"· 💱 Cambistas"** en su tarjeta. Pertenecen a Mesas; Cambistas es su sub-área. (Los Part-Time se mantienen igual.)
 - Nota: el **tope de puntos** de Cambistas sigue igual (8) por ahora — cambiarlo afecta el reparto y queda pendiente de confirmación.
