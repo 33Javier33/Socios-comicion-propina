@@ -182,6 +182,14 @@ async function egresos_alRegistrarAnticipo(socioId, responsable) {
     egresos_cargarPendientes();
 }
 
+// Recarga agrupada (debounce): si llegan muchos eventos juntos (uso masivo),
+// se hace UNA sola recarga en vez de una por evento → la UI no se atocha.
+let _egresosReloadT = null;
+function _egresosReloadDebounced() {
+    clearTimeout(_egresosReloadT);
+    _egresosReloadT = setTimeout(egresos_cargarPendientes, 450);
+}
+
 // Realtime: refrescar el aviso cuando llega/cambia una solicitud
 function egresos_initRealtime() {
     if (_egresosRtListo) return;
@@ -190,8 +198,10 @@ function egresos_initRealtime() {
         dbSoc.channel('sv-egresos-rt')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'solicitudes_egreso' },
                 (payload) => {
-                    egresos_cargarPendientes();
-                    if (payload && payload.eventType === 'INSERT' && payload.new && typeof notificarAdmin === 'function') {
+                    _egresosReloadDebounced();
+                    // La notificación sí es por evento (una por cada solicitud nueva),
+                    // así ninguna se pierde aunque lleguen varias juntas.
+                    if (payload && payload.eventType === 'INSERT' && payload.new && payload.new.estado === 'PENDIENTE' && typeof notificarAdmin === 'function') {
                         const s = payload.new;
                         notificarAdmin('Nueva solicitud de egreso', (s.socio_nombre || 'Un socio') + ' pidió ' + _fmtMoneyAdmin(s.monto), 'warning');
                     }

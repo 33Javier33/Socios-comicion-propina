@@ -224,6 +224,14 @@ async function ptdias_rechazar(solicitudId) {
     ptdias_cargarPendientes();
 }
 
+// Recarga agrupada (debounce) para uso masivo: una sola recarga aunque lleguen
+// muchos eventos juntos → la UI no se atocha.
+let _ptDiasReloadT = null;
+function _ptdiasReloadDebounced() {
+    clearTimeout(_ptDiasReloadT);
+    _ptDiasReloadT = setTimeout(ptdias_cargarPendientes, 450);
+}
+
 // Realtime: refrescar el aviso cuando llega/cambia una solicitud de día PT
 function ptdias_initRealtime() {
     if (_ptDiasRtListo) return;
@@ -232,7 +240,7 @@ function ptdias_initRealtime() {
         dbSoc.channel('sv-dias-pt-rt')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'dias_pt_solicitados' },
                 (payload) => {
-                    ptdias_cargarPendientes();
+                    _ptdiasReloadDebounced();
                     if (payload && payload.eventType === 'INSERT' && payload.new && payload.new.estado === 'PENDIENTE' && typeof notificarAdmin === 'function') {
                         const n = payload.new;
                         notificarAdmin('Día Part-Time por confirmar',

@@ -31,6 +31,9 @@ async function cargarRecaudaciones(silent = false) {
 
 function procesarDatosRecaudacion(datos, silent) {
     recDatosRaw = datos;
+    // Primera vez: dar por "vistas" las recaudaciones ya existentes, así la campana
+    // solo avisa de las que entren de aquí en adelante (no atocha con el histórico).
+    if (localStorage.getItem('_rec_bell_seen') === null && typeof _recBellMarcarVisto === 'function') _recBellMarcarVisto();
     const grupos = {};
     let granTotal = 0;
 
@@ -61,6 +64,7 @@ function procesarDatosRecaudacion(datos, silent) {
     });
 
     globalRecGrupos = grupos;
+    if (typeof msgAdminBell_render === 'function') msgAdminBell_render();
     const fechasOrdenadas = Object.keys(grupos).sort((a,b) => new Date(b) - new Date(a));
 
     let sumaPuntosGlobal = 0;

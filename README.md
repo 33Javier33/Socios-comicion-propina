@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-19 — Campana suma recaudaciones + recargas agrupadas (fluidez) (SW v20)
+- La campana ahora también lista **📊 recaudaciones nuevas** (cada entrada con su tipo, monto, **divisor** y quién la registró). Se marcan "vistas" al abrir la campana y en la primera carga se da por visto el histórico, así no se atocha. Al tocar una lleva a la pestaña Montos Recaudados.
+- **Fluidez bajo uso masivo:** las recargas de egresos y días PT por realtime ahora van **agrupadas (debounce ~450ms)** — si llegan muchos eventos juntos se hace una sola recarga en vez de una por evento; las notificaciones siguen siendo por evento (no se pierde ninguna).
+- Archivos: `js/mensajes-admin.js` (sección recaudaciones + seen), `js/recaudacion.js` (baseline visto + refresco campana), `js/supabase-config.js` (`created_at` en `get`), `js/egresos.js` y `js/pt-dias.js` (debounce). Cache-bust ?v=36. SW `fondo-admin-v20`.
+
 #### 2026-07-19 — Campana: ahora es un centro de notificaciones real (SW v19)
 - La campana (🔔) solo mostraba **mensajes de socios sin leer** y su dato se cargaba recién al abrir la pestaña Mensajes → parecía "no funcionar". Ahora **agrega tres tipos**: 💬 mensajes sin leer, 💸 egresos pendientes y 🕒 días Part-Time por confirmar. El contador (badge) suma todo, y cada ítem lleva a donde se resuelve (mensaje → hilo del socio; egreso/día PT → pestaña "Anticipos y Ausencias" y abre la ficha del socio).
 - Egresos y días PT ahora se **cargan y escuchan en tiempo real desde el arranque** (antes solo al entrar a Gestión), así la campana y sus avisos funcionan desde cualquier pestaña.

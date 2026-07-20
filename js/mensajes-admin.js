@@ -76,6 +76,14 @@ function _bellFecha(f) {
     try { return new Date(String(f).slice(0, 10) + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' }); }
     catch (e) { return String(f || ''); }
 }
+// Recaudaciones "vistas": marca de tiempo del último visto (las nuevas aparecen en la campana)
+function _recBellSeen() { return parseInt(localStorage.getItem('_rec_bell_seen')) || 0; }
+function _recBellMarcarVisto() {
+    const raw = (typeof recDatosRaw !== 'undefined' ? recDatosRaw : []);
+    let maxTs = _recBellSeen();
+    raw.forEach(r => { const ts = r.created_at ? new Date(r.created_at).getTime() : 0; if (ts > maxTs) maxTs = ts; });
+    localStorage.setItem('_rec_bell_seen', String(maxTs || Date.now()));
+}
 function msgAdminBell_items() {
     const socios = (typeof cacheSocios !== 'undefined' ? cacheSocios : []);
     const out = [];
@@ -120,6 +128,26 @@ function msgAdminBell_items() {
         });
     });
 
+    // 4) Recaudaciones nuevas (cada entrada con su divisor). Se marcan vistas al
+    //    abrir la campana, para que no se acumulen. Tope de 30 para no atochar.
+    const seen = _recBellSeen();
+    (typeof recDatosRaw !== 'undefined' ? recDatosRaw : [])
+        .filter(r => r && r.created_at && new Date(r.created_at).getTime() > seen)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 30)
+        .forEach(r => {
+            const div = (r.divisor !== null && r.divisor !== undefined) ? r.divisor : '—';
+            const quien = r.registrado_por_nombre ? ' · ' + r.registrado_por_nombre : '';
+            out.push({
+                tipo: 'rec', id: String(r.originalIndex || ''), socioId: '',
+                icono: '📊',
+                nombre: 'Recaudación ' + _bellFecha(r.fecha),
+                fotoUrl: '',
+                texto: (r.tipo || 'Sin tipo') + ': ' + _bellMoney(r.monto) + ' · Divisor: ' + div + quien,
+                ts: new Date(r.created_at).getTime()
+            });
+        });
+
     return out.sort((a, b) => b.ts - a.ts);
 }
 
@@ -142,8 +170,8 @@ function msgAdminBell_pintarMenu(items) {
         return;
     }
     const _hora = ts => { try { return new Date(ts).toLocaleString('es-CL', { timeZone: 'America/Santiago', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { return ''; } };
-    const _etiqueta = { msg: 'MENSAJE', egreso: 'EGRESO', pt: 'DÍA PT' };
-    const _colorEt = { msg: '#0284c7', egreso: '#0ea5e9', pt: '#d97706' };
+    const _etiqueta = { msg: 'MENSAJE', egreso: 'EGRESO', pt: 'DÍA PT', rec: 'RECAUDACIÓN' };
+    const _colorEt = { msg: '#0284c7', egreso: '#0ea5e9', pt: '#d97706', rec: '#059669' };
     menu.innerHTML = '<div style="padding:8px 10px 6px;font-weight:800;font-size:0.82em;color:var(--text-color,#1e293b);border-bottom:1px solid var(--border,#eef2f6);margin-bottom:4px;">🔔 Notificaciones (' + items.length + ')</div>'
         + items.map(it => {
             const avatar = it.tipo === 'msg'
@@ -167,6 +195,9 @@ function msgAdminBell_toggle() {
     if (menu.style.display === 'none' || !menu.style.display) {
         msgAdminBell_pintarMenu(msgAdminBell_items());
         menu.style.display = 'block';
+        // Al abrir, las recaudaciones quedan "vistas" (son informativas, no requieren acción)
+        // — mensajes, egresos y días PT siguen hasta resolverse.
+        setTimeout(() => { _recBellMarcarVisto(); msgAdminBell_render(); }, 2500);
     } else {
         menu.style.display = 'none';
     }
@@ -184,6 +215,10 @@ function msgAdminBell_ir(tipo, id, socioId) {
     if (tipo === 'msg') {
         if (typeof switchTab === 'function') switchTab('mensajes');
         setTimeout(() => msgAdmin_abrir(id), 80);
+        return;
+    }
+    if (tipo === 'rec') {
+        if (typeof switchTab === 'function') switchTab('recaudacion');
         return;
     }
     // Egresos y días PT se resuelven en la pestaña "Anticipos y Ausencias"

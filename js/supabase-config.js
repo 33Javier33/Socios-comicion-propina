@@ -1901,6 +1901,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     tipo: r.tipo,
                     monto: Number(r.monto),
                     divisor: divMap[r.fecha] || null,
+                    created_at: r.created_at || null,
                     registrado_por_nombre: r.registrado_por_nombre || null,
                     arqueado: r.arqueado === true,
                     arqueado_at: r.arqueado_at || null,
