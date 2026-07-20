@@ -40,6 +40,12 @@ function iniciarApp() {
     initScrollTopFab();
     // Mensajes privados admin↔socio: aviso en el nav aunque no se abra la pestaña
     if (typeof msgAdmin_initRealtime === 'function') { msgAdmin_initRealtime(); setTimeout(msgAdmin_cargarResumen, 1500); }
+    // Centro de notificaciones (campana): egresos y días PT también se cargan al
+    // arrancar para que la campana funcione desde cualquier pestaña (no solo en Gestión).
+    if (typeof egresos_initRealtime === 'function') egresos_initRealtime();
+    if (typeof egresos_cargarPendientes === 'function') setTimeout(egresos_cargarPendientes, 1600);
+    if (typeof ptdias_initRealtime === 'function') ptdias_initRealtime();
+    if (typeof ptdias_cargarPendientes === 'function') setTimeout(ptdias_cargarPendientes, 1700);
     // Estado de Cobros sincronizado entre dispositivos (realtime + carga inicial)
     if (typeof cierresMes_initRealtime === 'function') cierresMes_initRealtime();
     if (typeof cierresMes_sincronizar === 'function') setTimeout(() => cierresMes_sincronizar(true), 1200);

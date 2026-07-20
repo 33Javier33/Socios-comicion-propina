@@ -51,6 +51,7 @@ async function ptdias_cargarPendientes() {
         if (error) { console.warn('[pt-dias] error:', error.message); return; }
         ptDiasPendientes = data || [];
         ptdias_render();
+        if (typeof msgAdminBell_render === 'function') msgAdminBell_render();
     } catch (e) { console.warn('[pt-dias]', e); }
 }
 

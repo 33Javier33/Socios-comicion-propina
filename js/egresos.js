@@ -32,6 +32,7 @@ async function egresos_cargarPendientes() {
             egresosPorSocio[k] = (egresosPorSocio[k] || 0) + (Number(e.monto) || 0);
         });
         egresos_render();
+        if (typeof msgAdminBell_render === 'function') msgAdminBell_render();
     } catch (e) { console.warn('[egresos]', e); }
 }
 

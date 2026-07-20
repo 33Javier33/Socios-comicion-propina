@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-19 — Campana: ahora es un centro de notificaciones real (SW v19)
+- La campana (🔔) solo mostraba **mensajes de socios sin leer** y su dato se cargaba recién al abrir la pestaña Mensajes → parecía "no funcionar". Ahora **agrega tres tipos**: 💬 mensajes sin leer, 💸 egresos pendientes y 🕒 días Part-Time por confirmar. El contador (badge) suma todo, y cada ítem lleva a donde se resuelve (mensaje → hilo del socio; egreso/día PT → pestaña "Anticipos y Ausencias" y abre la ficha del socio).
+- Egresos y días PT ahora se **cargan y escuchan en tiempo real desde el arranque** (antes solo al entrar a Gestión), así la campana y sus avisos funcionan desde cualquier pestaña.
+- Archivos: `js/mensajes-admin.js` (agregación + navegación por tipo), `js/egresos.js` y `js/pt-dias.js` (refrescan la campana), `js/app-init.js` (carga al arrancar), `index.html` (tooltip). Cache-bust ?v=35. SW `fondo-admin-v19`.
+
 #### 2026-07-19 — Menú lateral (escritorio): cursor de mano → cursor de clic (SW v18)
 - En el menú lateral de escritorio los botones mostraban `cursor: grab` (mano) por la función de reordenar arrastrando, lo que confundía. Ahora muestran `cursor: pointer` (clic); el cursor de "agarre" solo aparece mientras se arrastra de verdad (`.nav-btn.dragging`). El reordenar sigue funcionando igual.
 - Archivos: `styles.css` (`.app-sidebar .nav-btn`). SW `fondo-admin-v18`.

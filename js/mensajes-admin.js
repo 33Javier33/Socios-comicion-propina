@@ -65,23 +65,62 @@ function msgAdmin_actualizarNavDot() {
     msgAdminBell_render();
 }
 
-// ── CAMPANA DE NOTIFICACIONES (mensajes de socios sin leer) ───────────────
+// ── CENTRO DE NOTIFICACIONES (campana) ────────────────────────────────────
+// Agrega: mensajes de socios sin leer + egresos pendientes + días Part-Time
+// por confirmar. Cada ítem lleva al lugar donde se resuelve.
+function _bellMoney(v) {
+    if (typeof _fmtMoneyAdmin === 'function') return _fmtMoneyAdmin(v);
+    return '$' + (Number(v) || 0).toLocaleString('es-CL');
+}
+function _bellFecha(f) {
+    try { return new Date(String(f).slice(0, 10) + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' }); }
+    catch (e) { return String(f || ''); }
+}
 function msgAdminBell_items() {
     const socios = (typeof cacheSocios !== 'undefined' ? cacheSocios : []);
-    return Object.keys(msgAdminPorSocio)
+    const out = [];
+
+    // 1) Mensajes de socios sin leer
+    Object.keys(msgAdminPorSocio)
         .filter(id => msgAdmin_hayNoLeidos(id))
-        .map(id => {
+        .forEach(id => {
             const s = socios.find(x => String(x.id) === String(id));
             const r = msgAdminPorSocio[String(id)];
-            return {
-                id,
+            out.push({
+                tipo: 'msg', id, socioId: id,
+                icono: '💬',
                 nombre: s ? `${s.nombre} ${s.apellido}` : ('Socio ' + id),
                 fotoUrl: s ? s.fotoUrl : '',
-                texto: (r && r.ultimoTexto) || '',
+                texto: (r && r.ultimoTexto) || 'Nuevo mensaje',
                 ts: (r && r.ultimaSocioTs) || 0
-            };
-        })
-        .sort((a, b) => b.ts - a.ts);
+            });
+        });
+
+    // 2) Egresos pendientes (solicitudes desde propi.solicitada)
+    (typeof egresosPendientes !== 'undefined' ? egresosPendientes : []).forEach(e => {
+        out.push({
+            tipo: 'egreso', id: String(e.id), socioId: String(e.socio_id),
+            icono: '💸',
+            nombre: e.socio_nombre || 'Socio',
+            fotoUrl: '',
+            texto: 'Solicita ' + _bellMoney(e.monto) + (e.nota ? ' · ' + e.nota : ''),
+            ts: (e.created_at ? new Date(e.created_at).getTime() : 0) || 0
+        });
+    });
+
+    // 3) Días Part-Time por confirmar
+    (typeof ptDiasPendientes !== 'undefined' ? ptDiasPendientes : []).forEach(d => {
+        out.push({
+            tipo: 'pt', id: String(d.id), socioId: String(d.socio_id),
+            icono: '🕒',
+            nombre: d.socio_nombre || 'Socio Part-Time',
+            fotoUrl: '',
+            texto: 'Día ' + _bellFecha(d.fecha) + ' por confirmar · ~ ' + _bellMoney(d.valor_estimado),
+            ts: (d.created_at ? new Date(d.created_at).getTime() : 0) || 0
+        });
+    });
+
+    return out.sort((a, b) => b.ts - a.ts);
 }
 
 function msgAdminBell_render() {
@@ -99,20 +138,27 @@ function msgAdminBell_pintarMenu(items) {
     const menu = document.getElementById('msgAdminBellMenu');
     if (!menu) return;
     if (!items.length) {
-        menu.innerHTML = '<div style="padding:18px 12px;text-align:center;color:#94a3b8;font-size:0.85em;">Sin mensajes nuevos 🎉</div>';
+        menu.innerHTML = '<div style="padding:18px 12px;text-align:center;color:#94a3b8;font-size:0.85em;">Sin novedades 🎉</div>';
         return;
     }
     const _hora = ts => { try { return new Date(ts).toLocaleString('es-CL', { timeZone: 'America/Santiago', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { return ''; } };
-    menu.innerHTML = '<div style="padding:8px 10px 6px;font-weight:800;font-size:0.82em;color:var(--text-color,#1e293b);border-bottom:1px solid var(--border,#eef2f6);margin-bottom:4px;">🔔 Mensajes sin leer (' + items.length + ')</div>'
-        + items.map(it => `<div onclick="msgAdminBell_ir('${_msgEsc(it.id)}')" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;cursor:pointer;margin-bottom:2px;" onmouseover="this.style.background='rgba(2,132,199,0.08)'" onmouseout="this.style.background='transparent'">
-            ${avatarHTML(it.fotoUrl, it.nombre, 34)}
+    const _etiqueta = { msg: 'MENSAJE', egreso: 'EGRESO', pt: 'DÍA PT' };
+    const _colorEt = { msg: '#0284c7', egreso: '#0ea5e9', pt: '#d97706' };
+    menu.innerHTML = '<div style="padding:8px 10px 6px;font-weight:800;font-size:0.82em;color:var(--text-color,#1e293b);border-bottom:1px solid var(--border,#eef2f6);margin-bottom:4px;">🔔 Notificaciones (' + items.length + ')</div>'
+        + items.map(it => {
+            const avatar = it.tipo === 'msg'
+                ? avatarHTML(it.fotoUrl, it.nombre, 34)
+                : `<div style="width:34px;height:34px;border-radius:9px;background:rgba(2,132,199,0.10);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">${it.icono}</div>`;
+            return `<div onclick="msgAdminBell_ir('${it.tipo}','${_msgEsc(it.id)}','${_msgEsc(it.socioId)}')" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;cursor:pointer;margin-bottom:2px;" onmouseover="this.style.background='rgba(2,132,199,0.08)'" onmouseout="this.style.background='transparent'">
+            ${avatar}
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:700;font-size:0.84em;color:var(--text-color,#1e293b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_msgEsc(it.nombre)}</div>
-                <div style="font-size:0.75em;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_msgEsc(it.texto) || '<span style=\'color:#94a3b8\'>Nuevo mensaje</span>'}</div>
+                <div style="font-size:0.75em;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_msgEsc(it.texto)}</div>
                 <div style="font-size:0.66em;color:#94a3b8;">${_hora(it.ts)}</div>
             </div>
-            <span style="background:#dc2626;color:#fff;font-size:0.6em;font-weight:800;padding:2px 6px;border-radius:8px;flex-shrink:0;">NUEVO</span>
-        </div>`).join('');
+            <span style="background:${_colorEt[it.tipo] || '#dc2626'};color:#fff;font-size:0.58em;font-weight:800;padding:2px 6px;border-radius:8px;flex-shrink:0;">${_etiqueta[it.tipo] || 'NUEVO'}</span>
+        </div>`;
+        }).join('');
 }
 
 function msgAdminBell_toggle() {
@@ -131,10 +177,24 @@ function msgAdminBell_cerrar() {
     if (menu) menu.style.display = 'none';
 }
 
-function msgAdminBell_ir(socioId) {
+function msgAdminBell_ir(tipo, id, socioId) {
+    // Compatibilidad: si llega un solo argumento, es un mensaje (firma antigua)
+    if (arguments.length === 1) { socioId = tipo; tipo = 'msg'; id = socioId; }
     msgAdminBell_cerrar();
-    if (typeof switchTab === 'function') switchTab('mensajes');
-    setTimeout(() => msgAdmin_abrir(socioId), 60);
+    if (tipo === 'msg') {
+        if (typeof switchTab === 'function') switchTab('mensajes');
+        setTimeout(() => msgAdmin_abrir(id), 80);
+        return;
+    }
+    // Egresos y días PT se resuelven en la pestaña "Anticipos y Ausencias"
+    if (typeof switchTab === 'function') switchTab('gestion');
+    setTimeout(() => {
+        if (tipo === 'pt' && typeof ptdias_irASocio === 'function' && socioId) { ptdias_irASocio(socioId); return; }
+        if (tipo === 'egreso' && typeof egresos_irASocio === 'function' && id) { egresos_irASocio(id); return; }
+        const boxId = tipo === 'pt' ? 'ptDiasPendientesBox' : 'egresosPendientesBox';
+        const b = document.getElementById(boxId);
+        if (b) b.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 140);
 }
 
 // Cerrar el menú al tocar fuera de la campana
