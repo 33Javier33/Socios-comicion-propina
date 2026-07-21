@@ -391,6 +391,9 @@
                     <button onclick="informeAnticipos()" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.5); border-radius:8px; padding:9px 18px; font-weight:800; font-size:0.85em; cursor:pointer; white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
                         📋 Detalle Anticipos
                     </button>
+                    <button onclick="verSaldosPorPeriodo()" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.5); border-radius:8px; padding:9px 18px; font-weight:800; font-size:0.85em; cursor:pointer; white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                        📜 Saldos por período
+                    </button>
                 </div>
             </div>
 
@@ -855,6 +858,22 @@
                     <p style="color:#7f8c8d;font-size:0.82em;margin-bottom:12px;">Cada cierre queda guardado con su fecha. No se borra, así puedes revisar meses anteriores ante cualquier error.</p>
                     <div id="saldosHistContenido"><div style="text-align:center;color:#94a3b8;padding:20px;">Cargando...</div></div>
                     <div style="margin-top:16px;"><button onclick="document.getElementById('modalSaldosHist').style.display='none'" class="btn-submit" style="width:100%;background:#64748b;">Cerrar</button></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: saldos anteriores por período (todos los socios agrupados por cierre) -->
+        <div id="modalSaldosPeriodos" class="modal">
+            <div class="modal-content" style="max-width:560px;">
+                <div class="modal-header">
+                    <h2>📜 Saldos anteriores por período</h2>
+                    <span class="close-modal" onclick="document.getElementById('modalSaldosPeriodos').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p style="color:#7f8c8d;font-size:0.82em;margin-bottom:10px;">Cada cierre guardado, agrupado por período. Toca un período para ver el saldo de cada socio.</p>
+                    <input type="text" id="saldosPerBuscar" placeholder="🔍 Buscar socio o período..." oninput="_saldosPerFiltrar(this.value)" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid #ddd;border-radius:8px;margin-bottom:12px;">
+                    <div id="saldosPeriodosContenido"><div style="text-align:center;color:#94a3b8;padding:20px;">Cargando...</div></div>
+                    <div style="margin-top:16px;"><button onclick="document.getElementById('modalSaldosPeriodos').style.display='none'" class="btn-submit" style="width:100%;background:#64748b;">Cerrar</button></div>
                 </div>
             </div>
         </div>
@@ -2006,11 +2025,11 @@
     <script src="js/cache.js?v=32"></script>
     <script src="js/auth.js?v=32"></script>
     <script src="js/config.js?v=32"></script>
-    <script src="js/supabase-config.js?v=42"></script>
+    <script src="js/supabase-config.js?v=43"></script>
     <script src="js/api.js?v=36"></script>
     <script src="js/socios.js?v=39"></script>
     <script src="js/puntos.js?v=32"></script>
-    <script src="js/anticipos.js?v=42"></script>
+    <script src="js/anticipos.js?v=43"></script>
     <script src="js/desglose-anticipos.js?v=32"></script>
     <script src="js/meses-anteriores.js?v=32"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>

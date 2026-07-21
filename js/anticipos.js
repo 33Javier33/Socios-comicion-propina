@@ -280,6 +280,79 @@ async function verSaldosAnterioresSocio() {
     }
 }
 
+// ── Saldos anteriores POR PERÍODO (todos los socios agrupados por cierre) ──
+let _saldosPerGrupos = [];
+function _limpiarPeriodoSaldo(p) {
+    return String(p || '').replace(/^CIERRE[_ ]*/i, '').replace(/_/g, ' ').replace(/\s+DE\s+/i, ' ').trim() || 'Período';
+}
+function _fechaCortaSaldo(ts) { try { return new Date(ts).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return ''; } }
+
+async function verSaldosPorPeriodo() {
+    const modal = document.getElementById('modalSaldosPeriodos');
+    const cont = document.getElementById('saldosPeriodosContenido');
+    const buscar = document.getElementById('saldosPerBuscar'); if (buscar) buscar.value = '';
+    if (cont) cont.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">Cargando...</div>';
+    if (modal) modal.style.display = 'block';
+    const MES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    try {
+        const res = await callApiSocios('getSaldosAnterioresTodos', {});
+        const lista = (res && res.data) || [];
+        const map = {};
+        lista.forEach(r => {
+            let key, label;
+            if (r.periodo) { key = 'P:' + r.periodo; label = _limpiarPeriodoSaldo(r.periodo); }
+            else {
+                const d = new Date(r.guardado_en);
+                if (isNaN(d.getTime())) { key = 'sin'; label = 'Sin período'; }
+                else { key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); label = MES[d.getMonth()] + ' ' + d.getFullYear(); }
+            }
+            if (!map[key]) map[key] = { key, label, ts: 0, items: [] };
+            map[key].items.push(r);
+            const t = new Date(r.guardado_en).getTime() || 0; if (t > map[key].ts) map[key].ts = t;
+        });
+        _saldosPerGrupos = Object.values(map).sort((a, b) => b.ts - a.ts);
+        _saldosPerRender('');
+    } catch (e) {
+        if (cont) cont.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;">Error al cargar.</div>';
+    }
+}
+function _saldosPerRender(filtro) {
+    const cont = document.getElementById('saldosPeriodosContenido'); if (!cont) return;
+    const f = (filtro || '').toLowerCase().trim();
+    const fmtM = v => formatearMoneda(Math.round(Number(v) || 0));
+    if (!_saldosPerGrupos.length) { cont.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;font-size:0.9em;">Aún no hay saldos guardados.<br><small>Se acumulan desde este cierre en adelante.</small></div>'; return; }
+    let html = '', algo = false;
+    _saldosPerGrupos.forEach((g, gi) => {
+        let items = g.items;
+        if (f) items = items.filter(r => (String(r.socio_nombre || '').toLowerCase().includes(f)) || g.label.toLowerCase().includes(f));
+        if (!items.length) return;
+        algo = true;
+        const total = items.reduce((s, r) => s + (Number(r.monto) || 0), 0);
+        const filas = items.slice().sort((a, b) => String(a.socio_nombre || '').localeCompare(String(b.socio_nombre || ''))).map(r => `
+            <div style="display:flex;justify-content:space-between;gap:8px;padding:7px 10px;border-bottom:1px solid #f1f5f9;">
+                <div style="min-width:0;"><div style="font-weight:600;color:#0f172a;font-size:0.86em;">${_htmlEscSoc(r.socio_nombre || 'Socio')}</div><div style="font-size:0.68em;color:#94a3b8;">${_fechaCortaSaldo(r.guardado_en)}</div></div>
+                <div style="font-weight:800;color:#8e44ad;white-space:nowrap;">${fmtM(r.monto)}</div>
+            </div>`).join('');
+        const abierto = !!f;
+        html += `<div style="border:1px solid #e5e7eb;border-radius:10px;margin-bottom:8px;overflow:hidden;">
+            <div onclick="_saldosPerToggle(${gi})" style="cursor:pointer;background:#f8fafc;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;user-select:none;">
+                <div style="font-weight:800;color:#4338ca;">📅 ${g.label}</div>
+                <div style="display:flex;gap:8px;align-items:center;"><span style="font-size:0.72em;color:#64748b;">${items.length} soc · ${fmtM(total)}</span><span id="saldosPerArrow-${gi}" style="color:#94a3b8;">${abierto ? '▾' : '▸'}</span></div>
+            </div>
+            <div id="saldosPerBody-${gi}" style="display:${abierto ? 'block' : 'none'};max-height:40vh;overflow-y:auto;">${filas}</div>
+        </div>`;
+    });
+    cont.innerHTML = algo ? html : '<div style="text-align:center;color:#94a3b8;padding:24px;">Sin resultados.</div>';
+}
+function _saldosPerToggle(gi) {
+    const b = document.getElementById('saldosPerBody-' + gi), ar = document.getElementById('saldosPerArrow-' + gi);
+    if (!b) return;
+    const open = b.style.display !== 'none';
+    b.style.display = open ? 'none' : 'block';
+    if (ar) ar.textContent = open ? '▸' : '▾';
+}
+function _saldosPerFiltrar(v) { _saldosPerRender(v); }
+
 // ── Historial de anticipos de meses anteriores ───────────────
 let _antAntAbierto = false;
 let _antAntCargado = false;

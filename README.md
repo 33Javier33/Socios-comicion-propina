@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-20 — Saldos anteriores por período (todos los socios) (SW v28)
+- Nueva sección **"📜 Saldos por período"** (botón en Anticipos y Ausencias, junto a "Saldo real a pagar" / "Detalle Anticipos"). Muestra todos los saldos guardados **agrupados por período de cierre**, cada período con su total y el saldo de cada socio; se despliega al tocarlo y tiene buscador por socio/período.
+- Backend: acción `getSaldosAnterioresTodos`. Archivos: `js/supabase-config.js`, `js/anticipos.js` (`verSaldosPorPeriodo`, `_saldosPerRender`), `index.html` (botón + `#modalSaldosPeriodos`). Cache-bust ?v=43. SW `fondo-admin-v28`.
+
 #### 2026-07-20 — Historial de saldos anteriores por socio (no se borran) (SW v27)
 - Ahora **cada vez que se guarda el saldo anterior** de un socio (manual o en cierre) se registra en una tabla **append-only** `saldos_anteriores_hist` con la **fecha de guardado**, el monto, el valor anterior y el origen. **No se borra** — así, ante cualquier error de meses anteriores, quedan los datos. (Empieza a acumular desde ahora; el histórico previo que ya se sobrescribió no se puede recuperar.)
 - Nueva vista: en el modal **"Saldo Mes Anterior"** hay un botón **"📜 Ver historial de saldos guardados"** que abre la lista de todos los saldos del socio con fecha, monto, cambio (antes → ahora) y origen (manual / cierre socio / cierre mensual).

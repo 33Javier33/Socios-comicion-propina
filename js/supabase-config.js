@@ -926,6 +926,14 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             return _mockOk({ status: 'success', message: 'Anticipo actualizado en Supabase' });
         }
 
+        // ── getSaldosAnterioresTodos → todo el historial (para agrupar por período) ──
+        if (action === 'getSaldosAnterioresTodos') {
+            const { data, error } = await dbSoc.from('saldos_anteriores_hist')
+                .select('*').order('guardado_en', { ascending: false }).limit(3000);
+            if (error) return _mockOk({ status: 'success', data: [] });
+            return _mockOk({ status: 'success', data: data || [] });
+        }
+
         // ── getSaldosAnterioresHist → historial de saldos anteriores de un socio ──
         if (action === 'getSaldosAnterioresHist') {
             const sid = String(body.socioId || body.id || '');
