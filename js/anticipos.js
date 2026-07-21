@@ -240,6 +240,46 @@ async function guardarSaldoAnterior() {
     } catch(e) { showToast('Error al guardar saldo', 'error'); } finally { toggleLoader(false); }
 }
 
+// Historial de saldos anteriores del socio (append-only, cada guardado con su fecha)
+async function verSaldosAnterioresSocio() {
+    const idSocio = document.getElementById('gestionSocioId').value;
+    const nombreSocio = document.getElementById('gestionSocioNombre').value || 'Socio';
+    if (!idSocio) { showToast('Selecciona un socio primero', 'warning'); return; }
+    const modal = document.getElementById('modalSaldosHist');
+    const cont = document.getElementById('saldosHistContenido');
+    const nom = document.getElementById('saldosHistNombre');
+    if (nom) nom.textContent = nombreSocio;
+    if (cont) cont.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">Cargando...</div>';
+    if (modal) modal.style.display = 'block';
+    try {
+        const res = await callApiSocios('getSaldosAnterioresHist', { socioId: idSocio });
+        const lista = (res && res.data) || [];
+        if (!lista.length) {
+            cont.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;font-size:0.9em;">Aún no hay saldos guardados.<br><small>Se irán registrando desde este cierre en adelante.</small></div>';
+            return;
+        }
+        const fmtM = v => formatearMoneda(Math.round(Number(v) || 0));
+        const _fecha = ts => { try { return new Date(ts).toLocaleString('es-CL', { timeZone: 'America/Santiago', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { return ''; } };
+        const _origen = o => ({ manual: '✍️ Manual', cierre_socio: '🔒 Cierre socio', cierre_masivo: '🔒 Cierre mensual', cierre: '🔒 Cierre' }[o] || (o || ''));
+        const filas = lista.map(r => {
+            const cambio = (r.monto_anterior != null && Number(r.monto_anterior) !== Number(r.monto))
+                ? `<div style="font-size:0.72em;color:#94a3b8;">antes: ${fmtM(r.monto_anterior)}</div>` : '';
+            return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:6px;background:#fff;">
+                <div style="min-width:0;">
+                    <div style="font-weight:800;color:#0f172a;font-size:0.95em;">${fmtM(r.monto)}</div>
+                    <div style="font-size:0.72em;color:#64748b;">${_fecha(r.guardado_en)}${r.periodo ? ' · ' + _htmlEscSoc(r.periodo) : ''}</div>
+                    ${cambio}
+                </div>
+                <span style="flex-shrink:0;font-size:0.68em;font-weight:700;color:#4338ca;background:#eef2ff;border-radius:10px;padding:3px 8px;">${_origen(r.origen)}</span>
+            </div>`;
+        }).join('');
+        cont.innerHTML = `<div style="max-height:52vh;overflow-y:auto;">${filas}</div>
+            <div style="margin-top:8px;font-size:0.74em;color:#94a3b8;text-align:center;">${lista.length} registro(s)</div>`;
+    } catch (e) {
+        cont.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;">Error al cargar el historial.</div>';
+    }
+}
+
 // ── Historial de anticipos de meses anteriores ───────────────
 let _antAntAbierto = false;
 let _antAntCargado = false;

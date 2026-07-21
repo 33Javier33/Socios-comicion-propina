@@ -926,11 +926,24 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             return _mockOk({ status: 'success', message: 'Anticipo actualizado en Supabase' });
         }
 
+        // ── getSaldosAnterioresHist → historial de saldos anteriores de un socio ──
+        if (action === 'getSaldosAnterioresHist') {
+            const sid = String(body.socioId || body.id || '');
+            if (!sid) return _mockOk({ status: 'success', data: [] });
+            const { data, error } = await dbSoc.from('saldos_anteriores_hist')
+                .select('*').eq('socio_id', sid)
+                .order('guardado_en', { ascending: false }).limit(300);
+            if (error) return _mockOk({ status: 'success', data: [] });
+            return _mockOk({ status: 'success', data: data || [] });
+        }
+
         // ── registrarSaldoAnterior → actualizar saldos_socio en Supabase (primario) ──
         if (action === 'registrarSaldoAnterior') {
             const id = String(body.id || '');
             const monto = Number(body.monto || 0);
             const nombre = body.nombre || '';
+            // Valor anterior (para el historial): de la caché si está disponible
+            const _prevSaldo = (_saldosCache && _saldosCache[id] != null) ? Number(_saldosCache[id]) : null;
             _invalidarDatosSocio(id);
             if (_saldosCache) _saldosCache[id] = monto; // actualizar caché en memoria
             if (id) {
@@ -939,6 +952,13 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     { onConflict: 'id' }
                 );
                 if (!sbErr) {
+                    // Historial append-only: nunca se borra, queda con fecha de guardado
+                    dbSoc.from('saldos_anteriores_hist').insert({
+                        id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('SAH-' + Date.now()),
+                        socio_id: id, socio_nombre: nombre, monto,
+                        monto_anterior: _prevSaldo, origen: 'manual',
+                        responsable: body.responsable || null
+                    }).then(() => {}, () => {});
                     _sbAudit('Registrar Saldo Anterior', {
                         detalle: `Socio: ${nombre} | Monto: $${monto.toLocaleString('es-CL')}`,
                         idAfectado: id,
@@ -988,6 +1008,9 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 
             // Sincronizar nuevos saldos anteriores a Supabase
             if (saldos.length > 0) {
+                // Leer los saldos previos ANTES de sobreescribir, para el historial
+                const { data: _prevSaldos } = await dbSoc.from('saldos_socio').select('id, monto');
+                const _prevMap = {}; (_prevSaldos || []).forEach(s => { _prevMap[String(s.id)] = Number(s.monto); });
                 const rows = saldos.map(s => ({
                     id: String(s.id),
                     nombre: s.nombre || '',
@@ -997,6 +1020,14 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 dbSoc.from('saldos_socio').upsert(rows, { onConflict: 'id' })
                     .then(() => console.log('[sb] saldos sincronizados al cierre mensual'))
                     .catch(e => console.error('[sb] error sinc. saldos cierre:', e));
+                // Historial append-only del saldo anterior de cada socio (con fecha)
+                const histRows = saldos.map(s => ({
+                    id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('SAH-' + Date.now() + '-' + String(s.id)),
+                    socio_id: String(s.id), socio_nombre: s.nombre || '',
+                    monto: Number(s.monto || 0), monto_anterior: (_prevMap[String(s.id)] != null ? _prevMap[String(s.id)] : null),
+                    periodo: `CIERRE_${mesLabel}`, origen: 'cierre_masivo'
+                }));
+                if (histRows.length) dbSoc.from('saldos_anteriores_hist').insert(histRows).then(() => {}, () => {});
             }
 
             return gasRes;

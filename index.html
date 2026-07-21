@@ -839,6 +839,22 @@
                     <p style="color:#7f8c8d; font-size:0.9em; margin-bottom:15px;">Ingresa el monto sobrante o pendiente del mes pasado.</p>
                     <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="numeric" id="inputSaldoAnterior" placeholder="0" oninput="formatearInputMonto(this)"></div>
                     <div style="margin-top:20px;"><button class="btn-submit" onclick="guardarSaldoAnterior()" style="width:100%; background-color: var(--warning);">Guardar Saldo</button></div>
+                    <div style="margin-top:10px;"><button onclick="verSaldosAnterioresSocio()" style="width:100%;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:8px;padding:10px;font-weight:700;font-size:0.86em;cursor:pointer;">📜 Ver historial de saldos guardados</button></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: historial de saldos anteriores del socio (append-only, con fecha) -->
+        <div id="modalSaldosHist" class="modal">
+            <div class="modal-content" style="max-width:460px;">
+                <div class="modal-header">
+                    <h2>📜 Saldos anteriores — <span id="saldosHistNombre"></span></h2>
+                    <span class="close-modal" onclick="document.getElementById('modalSaldosHist').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p style="color:#7f8c8d;font-size:0.82em;margin-bottom:12px;">Cada cierre queda guardado con su fecha. No se borra, así puedes revisar meses anteriores ante cualquier error.</p>
+                    <div id="saldosHistContenido"><div style="text-align:center;color:#94a3b8;padding:20px;">Cargando...</div></div>
+                    <div style="margin-top:16px;"><button onclick="document.getElementById('modalSaldosHist').style.display='none'" class="btn-submit" style="width:100%;background:#64748b;">Cerrar</button></div>
                 </div>
             </div>
         </div>
@@ -1990,11 +2006,11 @@
     <script src="js/cache.js?v=32"></script>
     <script src="js/auth.js?v=32"></script>
     <script src="js/config.js?v=32"></script>
-    <script src="js/supabase-config.js?v=40"></script>
+    <script src="js/supabase-config.js?v=42"></script>
     <script src="js/api.js?v=36"></script>
     <script src="js/socios.js?v=39"></script>
     <script src="js/puntos.js?v=32"></script>
-    <script src="js/anticipos.js?v=41"></script>
+    <script src="js/anticipos.js?v=42"></script>
     <script src="js/desglose-anticipos.js?v=32"></script>
     <script src="js/meses-anteriores.js?v=32"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>

@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-20 — Historial de saldos anteriores por socio (no se borran) (SW v27)
+- Ahora **cada vez que se guarda el saldo anterior** de un socio (manual o en cierre) se registra en una tabla **append-only** `saldos_anteriores_hist` con la **fecha de guardado**, el monto, el valor anterior y el origen. **No se borra** — así, ante cualquier error de meses anteriores, quedan los datos. (Empieza a acumular desde ahora; el histórico previo que ya se sobrescribió no se puede recuperar.)
+- Nueva vista: en el modal **"Saldo Mes Anterior"** hay un botón **"📜 Ver historial de saldos guardados"** que abre la lista de todos los saldos del socio con fecha, monto, cambio (antes → ahora) y origen (manual / cierre socio / cierre mensual).
+- Backend: tabla `saldos_anteriores_hist`, se inserta en `registrarSaldoAnterior` y `procesarCierreMensual`, nueva acción `getSaldosAnterioresHist`. Archivos: `js/supabase-config.js`, `js/anticipos.js` (`verSaldosAnterioresSocio`), `index.html` (botón + `#modalSaldosHist`). Cache-bust ?v=42. SW `fondo-admin-v27`.
+
 #### 2026-07-20 — Gastos Comisión no genera remanente (retira todo) (SW v26)
 - Los socios de **Gastos Comisión** ahora tienen **remanente 0** en todos los cálculos: al abrir su estado financiero, en el modal de desglose y en la tabla "Saldos Reales de todos". Su "A Pagar" pasa a ser el **saldo completo** (retiran todo, sin remanente). Antes se les calculaba un remanente que se sumaba en los totales.
 - Complementa el cambio anterior (el total guardado ya los excluía): ahora tampoco aparecen con remanente en ningún cálculo en vivo ni en el cierre.
