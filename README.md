@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-20 — Montos Recaudados: remanente guardado con mes correcto + remanente en vivo (SW v30)
+- El **"Remanente guardado"** mostraba el período **actual** ("15 jul – 14 ago") cuando el dato es del **mes pasado** (el período que se cerró). Ahora muestra el **mes en palabras del mes pasado** (ej. "Junio 2026"), consistente con las carpetas.
+- Nueva tarjeta **"Remanente en vivo"**: el remanente del **mes actual** que se va formando con las recaudaciones del período (usa `calcularRemanenteVivo`, excluye Gastos Comisión), etiquetado con el mes actual.
+- Archivos: `js/recaudacion.js` (`recalcularRemanentes`, `_recRemanenteVivo`), `index.html` (tarjeta nueva). Cache-bust ?v=45. SW `fondo-admin-v30`.
+
 #### 2026-07-20 — Carpetas archivadas: mostrar el mes en palabras (SW v29)
 - Cada carpeta archivada ahora muestra el **nombre del mes** del período (regla del 15): ej. 15/06 al 14/07 → **"Junio"**, 15/07 al 14/08 → **"Julio"**. Se calcula desde la `fecha_inicio` del período (o la fecha más antigua de sus recaudaciones). El rango de fechas queda como subtítulo. También se muestra en el título del modal de detalle.
 - Archivos: `js/carpetas.js` (`_mesNombreArchivo`, `select` incluye `fecha_inicio/fecha_fin`). Cache-bust ?v=44. SW `fondo-admin-v29`.

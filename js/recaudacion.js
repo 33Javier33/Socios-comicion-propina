@@ -223,26 +223,52 @@ async function recalcularAnticipos() {
     } catch(e) { if (el) el.textContent = 'N/D'; }
 }
 
+const _MESES_REC = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
 async function recalcularRemanentes() {
     const el = document.getElementById('recTotalRemanentes');
     const elInfo = document.getElementById('recRemanentesInfo');
-    if (!el) return;
+    if (el) {
+        try {
+            const res = await callApiSocios('getTotalRemanentes');
+            const total = res.total !== undefined ? Number(res.total) : null;
+            if (total === null) { el.textContent = 'N/D'; }
+            else {
+                el.textContent = formatearMoneda(total);
+                el.style.color = total < 0 ? '#dc2626' : '#7c3aed';
+                if (elInfo && res.ultimaFecha) {
+                    // El remanente GUARDADO es el del período que se cerró = el MES PASADO.
+                    // (Antes se mostraba el período actual, por eso salía "15 jul – 14 ago".)
+                    const d = new Date(res.ultimaFecha);
+                    let mes = (d.getDate() >= 15) ? d.getMonth() : d.getMonth() - 1;
+                    let anio = d.getFullYear();
+                    if (mes < 0) { mes = 11; anio--; }
+                    // período anterior (mes pasado)
+                    let pMes = mes - 1, pAnio = anio;
+                    if (pMes < 0) { pMes = 11; pAnio--; }
+                    elInfo.textContent = _MESES_REC[pMes] + ' ' + pAnio;
+                } else if (elInfo) { elInfo.textContent = 'Mes anterior'; }
+            }
+        } catch (e) { if (el) el.textContent = 'N/D'; }
+    }
+    // Remanente EN VIVO del mes actual (se va formando con las recaudaciones de este período)
+    _recRemanenteVivo();
+}
+
+async function _recRemanenteVivo() {
+    const elV = document.getElementById('recRemanenteVivo');
+    const elVInfo = document.getElementById('recRemanenteVivoInfo');
+    if (!elV) return;
     try {
-        const res = await callApiSocios('getTotalRemanentes');
-        const total = res.total !== undefined ? Number(res.total) : null;
-        if (total === null) { el.textContent = 'N/D'; return; }
-        el.textContent = formatearMoneda(total);
-        el.style.color = total < 0 ? '#dc2626' : '#7c3aed';
-        if (elInfo && res.ultimaFecha) {
-            const d = new Date(res.ultimaFecha);
-            const anio = d.getFullYear(), mes = d.getMonth();
-            let inicio, fin;
-            if (d.getDate() >= 15) { inicio = new Date(anio, mes, 15); fin = new Date(anio, mes + 1, 14); }
-            else { inicio = new Date(anio, mes - 1, 15); fin = new Date(anio, mes, 14); }
-            const fmt = dt => dt.toLocaleString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '');
-            elInfo.textContent = `Período: ${fmt(inicio)} – ${fmt(fin)} ${fin.getFullYear()}`;
+        if (typeof calcularRemanenteVivo !== 'function') { elV.textContent = 'N/D'; return; }
+        const { total, inicio } = await calcularRemanenteVivo();
+        elV.textContent = formatearMoneda(total);
+        elV.style.color = total < 0 ? '#dc2626' : '#16a34a';
+        if (elVInfo && inicio) {
+            const d = new Date(String(inicio).substring(0, 10) + 'T12:00:00');
+            if (!isNaN(d.getTime())) elVInfo.textContent = _MESES_REC[d.getMonth()] + ' ' + d.getFullYear() + ' · en vivo';
         }
-    } catch(e) { if (el) el.textContent = 'N/D'; }
+    } catch (e) { elV.textContent = 'N/D'; }
 }
 
 function rec_postRec(data) {
