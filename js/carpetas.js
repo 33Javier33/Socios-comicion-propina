@@ -36,7 +36,7 @@ function _carpetas_normBilletes(billetes) {
 async function carpetas_cargarDesdeSupabase() {
     try {
         const { data, error } = await dbSoc.from('periodos_archivados')
-            .select('id, nombre, total_rec, datos, created_at')
+            .select('id, nombre, total_rec, datos, created_at, fecha_inicio, fecha_fin')
             .order('created_at', { ascending: false });
         if (error) throw error;
         return (data || []).map(row => ({
@@ -47,6 +47,8 @@ async function carpetas_cargarDesdeSupabase() {
             data: row.datos?.data || [],
             divisores: row.datos?.divisores || {},
             retiros: row.datos?.retiros || [],
+            fechaInicio: row.fecha_inicio || null,
+            fechaFin: row.fecha_fin || null,
             fechaArchivo: row.datos?.fechaArchivo || row.created_at
         }));
     } catch(e) {
@@ -86,6 +88,24 @@ async function carpetas_guardarEnSupabase(arc) {
 }
 
 // ── Render del archivero (fusiona Supabase + localStorage) ────
+// Nombre del mes del período archivado según la regla del 15 (15 del mes → 14 del
+// siguiente). Ej: 15/06 al 14/07 → "Junio". Se usa la fecha de inicio del período.
+const _MESES_ARCH = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+function _mesNombreArchivo(arc) {
+    let ini = arc.fechaInicio;
+    if (!ini && Array.isArray(arc.data) && arc.data.length) {
+        const fs = arc.data.map(r => r.fecha).filter(Boolean).sort();
+        ini = fs[0];
+    }
+    if (!ini) return '';
+    const d = new Date(String(ini).substring(0, 10) + 'T12:00:00');
+    if (isNaN(d.getTime())) return '';
+    let m = d.getMonth(), y = d.getFullYear();
+    // Si la fecha de inicio es antes del día 15, el período empezó el mes anterior.
+    if (d.getDate() < 15) { m -= 1; if (m < 0) { m = 11; y -= 1; } }
+    return _MESES_ARCH[m] + ' ' + y;
+}
+
 async function carpetas_renderArchivero() {
     const container = document.getElementById('carpetasContainer');
     if (!container) return;
@@ -125,10 +145,12 @@ async function carpetas_renderArchivero() {
         const sbBadge = arc._enSupabase
             ? `<span style="background:#dcfce7;color:#15803d;font-size:0.68em;font-weight:700;padding:2px 7px;border-radius:8px;">☁️ Supabase</span>`
             : `<span style="background:#fef9c3;color:#92400e;font-size:0.68em;font-weight:700;padding:2px 7px;border-radius:8px;">💾 Solo local</span>`;
+        const _mesLbl = _mesNombreArchivo(arc);
         return `
         <div style="background:white;border-radius:12px;padding:16px;margin-bottom:10px;border:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
             <div>
-                <div style="font-weight:800;font-size:0.9em;color:#1e293b;">📁 ${arc.rango}</div>
+                <div style="font-weight:800;font-size:0.95em;color:#1e293b;">📁 ${_mesLbl || arc.rango}</div>
+                ${_mesLbl ? `<div style="font-size:0.72em;color:#64748b;font-weight:600;margin-top:2px;">${arc.rango}</div>` : ''}
                 <div style="font-size:0.72em;color:#374151;font-weight:600;margin-top:4px;">
                     Rec: <strong>${arc.totalRec}</strong> &nbsp;·&nbsp; Puntos: <strong>${arc.totalPtos}</strong>
                 </div>
@@ -154,7 +176,8 @@ function carpetas_verArchivo(idx) {
     const arc = todos[idx];
     if (!arc) return;
 
-    document.getElementById('carpetaModalTitulo').textContent = arc.rango;
+    const _mesLbl = _mesNombreArchivo(arc);
+    document.getElementById('carpetaModalTitulo').textContent = _mesLbl ? (_mesLbl + ' · ' + arc.rango) : arc.rango;
     const cont = document.getElementById('carpetaModalContenido');
 
     cont.innerHTML = `

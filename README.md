@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-20 — Carpetas archivadas: mostrar el mes en palabras (SW v29)
+- Cada carpeta archivada ahora muestra el **nombre del mes** del período (regla del 15): ej. 15/06 al 14/07 → **"Junio"**, 15/07 al 14/08 → **"Julio"**. Se calcula desde la `fecha_inicio` del período (o la fecha más antigua de sus recaudaciones). El rango de fechas queda como subtítulo. También se muestra en el título del modal de detalle.
+- Archivos: `js/carpetas.js` (`_mesNombreArchivo`, `select` incluye `fecha_inicio/fecha_fin`). Cache-bust ?v=44. SW `fondo-admin-v29`.
+
 #### 2026-07-20 — Saldos anteriores por período (todos los socios) (SW v28)
 - Nueva sección **"📜 Saldos por período"** (botón en Anticipos y Ausencias, junto a "Saldo real a pagar" / "Detalle Anticipos"). Muestra todos los saldos guardados **agrupados por período de cierre**, cada período con su total y el saldo de cada socio; se despliega al tocarlo y tiene buscador por socio/período.
 - Backend: acción `getSaldosAnterioresTodos`. Archivos: `js/supabase-config.js`, `js/anticipos.js` (`verSaldosPorPeriodo`, `_saldosPerRender`), `index.html` (botón + `#modalSaldosPeriodos`). Cache-bust ?v=43. SW `fondo-admin-v28`.
