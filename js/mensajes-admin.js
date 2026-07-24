@@ -153,13 +153,14 @@ function msgAdminBell_items() {
 
 function msgAdminBell_render() {
     const badge = document.getElementById('msgAdminBellBadge');
-    const menu  = document.getElementById('msgAdminBellMenu');
     const items = msgAdminBell_items();
     if (badge) {
         if (items.length) { badge.textContent = items.length > 99 ? '99+' : String(items.length); badge.style.display = 'block'; }
         else badge.style.display = 'none';
     }
-    if (menu && menu.style.display !== 'none') msgAdminBell_pintarMenu(items);
+    // Importante: si la campana está ABIERTA, NO se re-pinta el menú. El encargado
+    // lo está mirando y las notificaciones no deben desaparecer solas. La lista se
+    // congela hasta que cierre la campana (o toque afuera) y se refresca al reabrir.
 }
 
 function msgAdminBell_pintarMenu(items) {
@@ -193,19 +194,24 @@ function msgAdminBell_toggle() {
     const menu = document.getElementById('msgAdminBellMenu');
     if (!menu) return;
     if (menu.style.display === 'none' || !menu.style.display) {
+        // Abrir: pintar la lista y dejarla FIJA (no se marca nada ni se re-pinta).
         msgAdminBell_pintarMenu(msgAdminBell_items());
         menu.style.display = 'block';
-        // Al abrir, las recaudaciones quedan "vistas" (son informativas, no requieren acción)
-        // — mensajes, egresos y días PT siguen hasta resolverse.
-        setTimeout(() => { _recBellMarcarVisto(); msgAdminBell_render(); }, 2500);
     } else {
-        menu.style.display = 'none';
+        msgAdminBell_cerrar();
     }
 }
 
+// Cerrar la campana (por botón, al tocar afuera o al ir a una notificación):
+// recién aquí las recaudaciones informativas quedan "vistas" y se refresca el badge.
 function msgAdminBell_cerrar() {
     const menu = document.getElementById('msgAdminBellMenu');
+    const estabaAbierta = menu && menu.style.display && menu.style.display !== 'none';
     if (menu) menu.style.display = 'none';
+    if (estabaAbierta) {
+        try { _recBellMarcarVisto(); } catch (e) {}
+        msgAdminBell_render();
+    }
 }
 
 function msgAdminBell_ir(tipo, id, socioId) {
@@ -239,7 +245,7 @@ document.addEventListener('click', function (e) {
     if (!menu || menu.style.display === 'none') return;
     if (bell && bell.contains(e.target)) return;
     if (menu.contains(e.target)) return;
-    menu.style.display = 'none';
+    msgAdminBell_cerrar();
 });
 
 function msgAdmin_renderLista() {
