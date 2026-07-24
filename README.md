@@ -909,3 +909,15 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 - Auditoría de todas las acciones con snapshot antes/después
 - Sanitización de HTML en notas para prevenir XSS
 - Folio único (GUID) en canjes y auditoría para trazabilidad
+
+---
+
+## Historial de Cambios
+
+#### 2026-07-24 — Seguridad Fase 1a: gestión de PIN de diario.propi sin exponer valores
+- La sección "PIN Diario" ya **no muestra ni lee los PIN** de los socios.
+- Se eliminó el botón "👁 Ver PIN" (los valores nunca vuelven al navegador).
+- Crear/cambiar/quitar PIN pasa por la Edge Function `pin-auth`
+  (`diarioAdminList` → solo indica si el socio tiene PIN; `diarioAdminSet`/`diarioAdminDelete`).
+- La tabla `diario_pins` quedó cerrada al rol anon (RLS sin políticas permisivas).
+- SW `fondo-admin-v32`; `diario-pins.js` → `?v=33`.
