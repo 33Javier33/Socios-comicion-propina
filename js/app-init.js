@@ -342,7 +342,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     const _sc = (cacheSocios || []).find(s => s.id === idEdit); if (_sc) { _sc.rut = _rutFmt; _sc.correo = _correoRaw; }
                     showToast('Socio actualizado', 'success');
                 }
-                else { await callApiSocios('addSocio', { socio: d }); showToast('Socio registrado', 'success'); }
+                else {
+                    const _resAdd = await callApiSocios('addSocio', { socio: d });
+                    // El socio se escribió en Sheets (GAS). Pero la lista se lee de
+                    // Supabase PRIMERO, y ahí el socio recién existe tras el "seed" en
+                    // segundo plano → por eso a veces no aparecía al instante.
+                    // Fix: escribirlo de inmediato en Supabase (misma fuente que lee
+                    // la lista) para que se vea al toque, sin esperar el seed.
+                    const _nuevo = _resAdd && _resAdd.data;
+                    if (_nuevo && _nuevo.ID && typeof dbSoc !== 'undefined') {
+                        try {
+                            const _row = {
+                                id: String(_nuevo.ID),
+                                nombre: _nuevo.Nombre || '',
+                                apellido: _nuevo.Apellido || '',
+                                area: _nuevo.Area || '',
+                                contrato: _nuevo.TipoContrato || '',
+                                fecha_ingreso: _nuevo.FechaIngreso || null,
+                                fecha_inicio_puntos: _nuevo.FechaInicioPuntos || d.FechaInicioPuntos || null
+                            };
+                            if (_rutFmt)     _row.rut = _rutFmt;       // RUT del formulario (antes se perdía en alta)
+                            if (_correoRaw)  _row.correo = _correoRaw; // Correo del formulario (antes se perdía en alta)
+                            await dbSoc.from('socios').upsert(_row, { onConflict: 'id' });
+                        } catch(_e) { console.warn('[addSocio] upsert Supabase falló, quedará por el seed:', _e && _e.message); }
+                    }
+                    showToast('Socio registrado', 'success');
+                }
                 cerrarModalRegistro(); fetchSociosDeGoogle();
             } catch (e) { showToast('Error al guardar', 'error'); } finally { toggleLoader(false); }
         });

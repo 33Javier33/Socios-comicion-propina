@@ -914,6 +914,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-07-26 — Fix: un socio recién agregado no aparecía en la lista (SW v33)
+- **Síntoma:** al agregar un socio, se guardaba pero no se veía en la lista al instante.
+- **Causa:** `addSocio` escribe en Google Sheets (GAS). La lista, en cambio, se lee de **Supabase primero**, y el socio recién llega a Supabase con el "seed" en segundo plano — que corre **después** de servir la lista. Resultado: la primera lectura tras agregar no incluía al socio nuevo (aparecía recién al recargar).
+- **Fix:** tras `addSocio`, el socio se **escribe de inmediato en Supabase** (upsert por `id`, usando el ID que devuelve el GAS), que es la misma fuente que lee la lista → aparece al toque sin esperar el seed. De paso, ahora el **RUT y correo** ingresados en el alta también se guardan (antes solo se guardaban al editar).
+- Archivos: `js/app-init.js`. `app-init.js?v=36`, SW `fondo-admin-v33`.
+
 #### 2026-07-24 — Seguridad Fase 1a: gestión de PIN de diario.propi sin exponer valores
 - La sección "PIN Diario" ya **no muestra ni lee los PIN** de los socios.
 - Se eliminó el botón "👁 Ver PIN" (los valores nunca vuelven al navegador).
