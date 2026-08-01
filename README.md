@@ -914,6 +914,9 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-01 — Fix presencia: track solo con el canal suscrito (SW v37)
+- Mismo fix que en propi/diario: la marca de presencia se perdía si se enviaba antes de que el canal `rec-presencia` confirmara la suscripción. Ahora se (re)marca al llegar `SUBSCRIBED` y en cada reconexión. `supabase-config.js?v=45`, SW `fondo-admin-v37`.
+
 #### 2026-08-01 — Presencia en recaudación en tiempo real entre apps (SW v36)
 - **Qué se hizo:** socios-comicion ahora muestra en tiempo real **🟢 [Nombre] está en recaudaciones · [tipo] (app)** cuando un socio abre el módulo de recaudación en propi.solicitada o diario.propi, y un toast **📊 [Nombre] agregó a recaudaciones** cuando alguien agrega un dato (incluye cuando la propia comisión registra una recaudación, que se avisa a las otras apps).
 - **Cómo:** módulo de **Supabase Realtime Presence** en el canal compartido `rec-presencia` (proyecto REC). `recPresIniciar()` al arrancar (receptor); `recPresAgrego` al registrar recaudación (acción `add`).
