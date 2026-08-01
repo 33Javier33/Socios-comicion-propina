@@ -42,13 +42,24 @@ function egresos_render() {
     if (!egresosPendientes.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
 
     const fmt = v => '$' + (Number(v) || 0).toLocaleString('es-CL');
+    // Formateo ROBUSTO de la fecha/hora de la solicitud. Antes usaba
+    // toLocaleString con timeZone, que en algunos dispositivos lanza error y
+    // dejaba la fecha en blanco. Ahora: parsea con tolerancia (formato con
+    // espacio de Safari) y tiene respaldo manual si Intl falla.
     const _hora = ts => {
-        try {
-            return new Date(ts).toLocaleString('es-CL', {
-                timeZone: 'America/Santiago', day: '2-digit', month: '2-digit',
-                hour: '2-digit', minute: '2-digit', hour12: false
-            });
-        } catch (e) { return ''; }
+        if (!ts) return '';
+        let d = new Date(ts);
+        if (isNaN(d.getTime())) d = new Date(String(ts).replace(' ', 'T'));
+        if (isNaN(d.getTime())) return '';
+        const opt = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false };
+        try { return d.toLocaleString('es-CL', Object.assign({ timeZone: 'America/Santiago' }, opt)); }
+        catch (e) {
+            try { return d.toLocaleString('es-CL', opt); }
+            catch (e2) {
+                const p = n => String(n).padStart(2, '0');
+                return p(d.getDate()) + '-' + p(d.getMonth() + 1) + '-' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+            }
+        }
     };
 
     const filas = egresosPendientes.map(e => `
@@ -58,8 +69,8 @@ function egresos_render() {
                 <div style="flex:1;min-width:0;">
                     <div style="font-weight:800;font-size:0.85em;color:#075985;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_escEgr(e.socio_nombre || 'Socio')}</div>
                     <div style="font-size:0.72em;color:#0369a1;">Solicita ${fmt(e.monto)}${e.nota ? ' · ' + _escEgr(e.nota) : ''}</div>
+                    <div style="font-size:0.7em;color:#0284c7;margin-top:2px;">📅 ${_hora(e.created_at) || 'Sin fecha'}</div>
                 </div>
-                <div style="font-size:0.62em;color:#0ea5e9;flex-shrink:0;">${_hora(e.created_at)}</div>
             </div>
             <div style="display:flex;gap:6px;margin-top:8px;">
                 <button onclick="egresos_irASocio('${e.id}')" style="flex:1;padding:7px;border:none;border-radius:7px;background:#0284c7;color:white;font-size:0.76em;font-weight:800;cursor:pointer;">✅ Procesar</button>

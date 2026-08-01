@@ -170,7 +170,18 @@ function msgAdminBell_pintarMenu(items) {
         menu.innerHTML = '<div style="padding:18px 12px;text-align:center;color:#94a3b8;font-size:0.85em;">Sin novedades 🎉</div>';
         return;
     }
-    const _hora = ts => { try { return new Date(ts).toLocaleString('es-CL', { timeZone: 'America/Santiago', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { return ''; } };
+    const _hora = ts => {
+        if (!ts) return '';
+        let d = new Date(ts);
+        if (isNaN(d.getTime())) d = new Date(String(ts).replace(' ', 'T'));
+        if (isNaN(d.getTime())) return '';
+        const opt = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false };
+        try { return d.toLocaleString('es-CL', Object.assign({ timeZone: 'America/Santiago' }, opt)); }
+        catch (e) {
+            try { return d.toLocaleString('es-CL', opt); }
+            catch (e2) { const p = n => String(n).padStart(2, '0'); return p(d.getDate()) + '-' + p(d.getMonth() + 1) + '-' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+        }
+    };
     const _etiqueta = { msg: 'MENSAJE', egreso: 'EGRESO', pt: 'DÍA PT', rec: 'RECAUDACIÓN' };
     const _colorEt = { msg: '#0284c7', egreso: '#0ea5e9', pt: '#d97706', rec: '#059669' };
     menu.innerHTML = '<div style="padding:8px 10px 6px;font-weight:800;font-size:0.82em;color:var(--text-color,#1e293b);border-bottom:1px solid var(--border,#eef2f6);margin-bottom:4px;">🔔 Notificaciones (' + items.length + ')</div>'

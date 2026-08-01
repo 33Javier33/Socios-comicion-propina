@@ -914,6 +914,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-01 — Fix: la fecha del egreso no aparecía en la tarjeta "Egresos pendientes" (SW v34)
+- **Causa:** el formateo de fecha usaba `toLocaleString` con `timeZone: 'America/Santiago'`, que en algunos dispositivos lanza error → la fecha quedaba **en blanco**. Además se mostraba en una esquina diminuta.
+- **Fix:** formateo **robusto** (parseo tolerante + respaldo manual si Intl/timeZone falla) y ahora la fecha se muestra **clara y con etiqueta** (📅 con día-mes-año y hora) en cada solicitud de egreso. Mismo arreglo aplicado al `_hora` de la campana 🔔.
+- Archivos: `js/egresos.js`, `js/mensajes-admin.js`. `egresos.js?v=37`, `mensajes-admin.js?v=47`, SW `fondo-admin-v34`.
+
 #### 2026-07-26 — Fix: un socio recién agregado no aparecía en la lista (SW v33)
 - **Síntoma:** al agregar un socio, se guardaba pero no se veía en la lista al instante.
 - **Causa:** `addSocio` escribe en Google Sheets (GAS). La lista, en cambio, se lee de **Supabase primero**, y el socio recién llega a Supabase con el "seed" en segundo plano — que corre **después** de servir la lista. Resultado: la primera lectura tras agregar no incluía al socio nuevo (aparecía recién al recargar).
