@@ -914,6 +914,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-01 — Presencia en recaudación en tiempo real entre apps (SW v36)
+- **Qué se hizo:** socios-comicion ahora muestra en tiempo real **🟢 [Nombre] está en recaudaciones · [tipo] (app)** cuando un socio abre el módulo de recaudación en propi.solicitada o diario.propi, y un toast **📊 [Nombre] agregó a recaudaciones** cuando alguien agrega un dato (incluye cuando la propia comisión registra una recaudación, que se avisa a las otras apps).
+- **Cómo:** módulo de **Supabase Realtime Presence** en el canal compartido `rec-presencia` (proyecto REC). `recPresIniciar()` al arrancar (receptor); `recPresAgrego` al registrar recaudación (acción `add`).
+- Archivos: `js/supabase-config.js` (módulo + aviso al agregar), `js/app-init.js` (iniciar). `supabase-config.js?v=44`, `app-init.js?v=37`, SW `fondo-admin-v36`.
+
 #### 2026-08-01 — Fix: banner de actualización pegado → actualización silenciosa (SW v35)
 - **Síntoma:** el banner "Nueva versión disponible" quedaba "actualizando la página" y no desaparecía tras la primera actualización (ciclo `controllerchange`→reload + worker "waiting" reapareciendo).
 - **Fix:** se elimina el banner y su lógica; actualización **silenciosa**: el SW nuevo hace `skipWaiting()` en install y toma el control solo (`clients.claim`); la versión nueva se aplica al reabrir la app. Sin banner, nada se queda pegado. (Mismo arreglo que en propi.solicitada.)

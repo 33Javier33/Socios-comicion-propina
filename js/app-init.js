@@ -44,6 +44,8 @@ function iniciarApp() {
     // arrancar para que la campana funcione desde cualquier pestaña (no solo en Gestión).
     if (typeof egresos_initRealtime === 'function') egresos_initRealtime();
     if (typeof egresos_cargarPendientes === 'function') setTimeout(egresos_cargarPendientes, 1600);
+    // Presencia en recaudación: escuchar quién está ingresando en las otras apps
+    if (typeof window.recPresIniciar === 'function') window.recPresIniciar();
     if (typeof ptdias_initRealtime === 'function') ptdias_initRealtime();
     if (typeof ptdias_cargarPendientes === 'function') setTimeout(ptdias_cargarPendientes, 1700);
     // Estado de Cobros sincronizado entre dispositivos (realtime + carga inicial)
