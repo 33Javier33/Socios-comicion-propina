@@ -914,6 +914,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-01 — Fix: banner de actualización pegado → actualización silenciosa (SW v35)
+- **Síntoma:** el banner "Nueva versión disponible" quedaba "actualizando la página" y no desaparecía tras la primera actualización (ciclo `controllerchange`→reload + worker "waiting" reapareciendo).
+- **Fix:** se elimina el banner y su lógica; actualización **silenciosa**: el SW nuevo hace `skipWaiting()` en install y toma el control solo (`clients.claim`); la versión nueva se aplica al reabrir la app. Sin banner, nada se queda pegado. (Mismo arreglo que en propi.solicitada.)
+- Archivos: `index.html` (registro SW minimal), `sw.js` (`skipWaiting()` en install). SW `fondo-admin-v35`.
+
 #### 2026-08-01 — Fix: la fecha del egreso no aparecía en la tarjeta "Egresos pendientes" (SW v34)
 - **Causa:** el formateo de fecha usaba `toLocaleString` con `timeZone: 'America/Santiago'`, que en algunos dispositivos lanza error → la fecha quedaba **en blanco**. Además se mostraba en una esquina diminuta.
 - **Fix:** formateo **robusto** (parseo tolerante + respaldo manual si Intl/timeZone falla) y ahora la fecha se muestra **clara y con etiqueta** (📅 con día-mes-año y hora) en cada solicitud de egreso. Mismo arreglo aplicado al `_hora` de la campana 🔔.
