@@ -914,6 +914,9 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-01 — Presencia: refuerzos anti-pérdida (SW v38)
+- Listeners `join`/`leave` además de `sync`, repintado de respaldo cada 4s, render al confirmar suscripción. `supabase-config.js?v=46`, SW `fondo-admin-v38`.
+
 #### 2026-08-01 — Fix presencia: track solo con el canal suscrito (SW v37)
 - Mismo fix que en propi/diario: la marca de presencia se perdía si se enviaba antes de que el canal `rec-presencia` confirmara la suscripción. Ahora se (re)marca al llegar `SUBSCRIBED` y en cada reconexión. `supabase-config.js?v=45`, SW `fondo-admin-v37`.
 
