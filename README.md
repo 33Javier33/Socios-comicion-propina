@@ -914,6 +914,9 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-01 — Versión visible (esquina inferior derecha) (SW v40)
+- Etiqueta fija "v40" (= versión del SW) en la esquina inferior derecha para verificar de un vistazo si el dispositivo tomó la última versión.
+
 #### 2026-08-01 — Presencia garantizada: respaldo por tabla `rec_presencia` (SW v39)
 - Además del canal en vivo, la presencia se escribe/lee en la tabla `rec_presencia` (latido 20s, lectura cada 5s) → el nombre aparece siempre. `supabase-config.js?v=47`, SW `fondo-admin-v39`.
 
