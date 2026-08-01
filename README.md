@@ -914,6 +914,9 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-01 — Presencia garantizada: respaldo por tabla `rec_presencia` (SW v39)
+- Además del canal en vivo, la presencia se escribe/lee en la tabla `rec_presencia` (latido 20s, lectura cada 5s) → el nombre aparece siempre. `supabase-config.js?v=47`, SW `fondo-admin-v39`.
+
 #### 2026-08-01 — Presencia: refuerzos anti-pérdida (SW v38)
 - Listeners `join`/`leave` además de `sync`, repintado de respaldo cada 4s, render al confirmar suscripción. `supabase-config.js?v=46`, SW `fondo-admin-v38`.
 
