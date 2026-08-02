@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Tarjeta sutil de presencia arriba (reemplaza el aviso flotante) (SW v45)
+- **Qué se hizo:** cuando un socio está conectado en recaudaciones, socios-comicion muestra una **tarjeta discreta arriba a la izquierda** (no un toast) con el encabezado "EN RECAUDACIONES (n)" y una línea por persona: **nombre** + *en \<app\> · \<tipo\>*.
+- **Ubicación:** arriba-izquierda para no tapar la campana ni el encabezado; ancho acotado, borde suave y barra verde lateral. Permanece mientras haya gente y desaparece sola cuando no queda nadie.
+- Archivos: `js/supabase-config.js`. `supabase-config.js?v=52`, SW `fondo-admin-v45`, versión visible **v45**.
+
 #### 2026-08-02 — Fix: el filtro ocultaba presencias de otras apps (SW v44)
 - Se oculta solo la propia línea de esta app, no cualquier presencia con el mismo id. `supabase-config.js?v=51`, SW `fondo-admin-v44`, versión visible **v44**.
 
