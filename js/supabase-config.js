@@ -58,9 +58,10 @@ const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
     }
     // Combina lo que llega por el canal en vivo + lo leído de la tabla (respaldo)
     // Descarta mi sesión Y cualquier presencia del MISMO usuario en otra app
+    // Oculta SOLO mi propia línea de ESTA app (mi sesión). Si el mismo socio
+    // está en OTRA app (p. ej. Diario), SÍ se muestra: es justo lo que interesa ver.
     const _esMio = m => !m || m.key === KEY
-        || (miSocioId && String(m.socioId || '') === String(miSocioId))
-        // Red de seguridad para filas antiguas (sin socio_id): mismo nombre en ESTA misma app = soy yo
+        || (m.app === APP && miSocioId && String(m.socioId || '') === String(miSocioId))
         || (mio && m.app === APP && String(m.nombre || '') === String(mio.nombre || ''));
     function _otrosActuales() {
         const out = [], vistos = {};

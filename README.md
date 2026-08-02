@@ -232,6 +232,9 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Fix: el filtro ocultaba presencias de otras apps (SW v44)
+- Se oculta solo la propia línea de esta app, no cualquier presencia con el mismo id. `supabase-config.js?v=51`, SW `fondo-admin-v44`, versión visible **v44**.
+
 #### 2026-08-02 — Presencia: una sola fila por usuario (sin duplicados) (SW v43)
 - Id de fila fijo por usuario + app: al recargar se sobreescribe la misma fila, evitando presencias duplicadas de sesiones anteriores. `supabase-config.js?v=50`, SW `fondo-admin-v43`, versión visible **v43**.
 
