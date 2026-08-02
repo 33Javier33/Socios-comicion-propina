@@ -232,6 +232,9 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Presencia: una sola fila por usuario (sin duplicados) (SW v43)
+- Id de fila fijo por usuario + app: al recargar se sobreescribe la misma fila, evitando presencias duplicadas de sesiones anteriores. `supabase-config.js?v=50`, SW `fondo-admin-v43`, versión visible **v43**.
+
 #### 2026-08-01 — Presencia con `socio_id` (no verse a sí mismo) (SW v42)
 - La presencia viaja con `socio_id` y se filtra la propia. `supabase-config.js?v=49`, SW `fondo-admin-v42`, versión visible **v42**.
 
