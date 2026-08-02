@@ -115,7 +115,14 @@ function switchTab(tabName) {
         if (typeof ptdias_initRealtime === 'function') ptdias_initRealtime();
         if (typeof ptdias_cargarPendientes === 'function') ptdias_cargarPendientes();
     }
-    else if(tabName === 'recaudacion') { fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones(); }
+    else if(tabName === 'recaudacion') {
+        fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones();
+        // Presencia: la comisión también se anuncia mientras está en Recaudación
+        if (typeof window.recPresEntrar === 'function') {
+            const _r = (typeof getSesionResponsableObj === 'function') ? getSesionResponsableObj() : {};
+            window.recPresEntrar((_r && _r.ini) ? (_r.ini + (_r.area ? ' ' + _r.area : '')) : 'Comisión', '');
+        }
+    }
     else if(tabName === 'config') { fabRec.style.display = 'none'; aq_detenerSync(); cfg_limpiarCampos(); }
     else if(tabName === 'arqueo') { fabRec.style.display = 'none'; aq_initSiNoIniciado(); aq_arrancarSync(); }
     else if(tabName === 'notas') { fabRec.style.display = 'none'; aq_detenerSync(); localStorage.setItem('_rec_last_seen', Date.now()); notasCargar(); }

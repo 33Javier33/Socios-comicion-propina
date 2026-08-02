@@ -80,7 +80,7 @@ const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
     }
     async function _dbPoll() {
         try {
-            const desde = new Date(Date.now() - 45000).toISOString();
+            const desde = new Date(Date.now() - 180000).toISOString(); // 3 min: cubre pantalla apagada / cambio de app
             const { data } = await DB.from('rec_presencia').select('id, nombre, app, tipo').gt('updated_at', desde).neq('id', KEY);
             otrosDb = (data || []).map(r => ({ key: r.id, nombre: r.nombre, app: r.app, tipo: r.tipo, enModal: true }));
             // Limpieza oportunista de filas muertas (muy antigua = cliente que no alcanzó a borrar)
@@ -88,7 +88,13 @@ const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
         } catch (e) {}
         _render();
     }
-    window.addEventListener('pagehide', () => { if (mio) _dbDel(); });
+    // Al volver la app al frente: re-marcar la presencia propia y re-leer la tabla
+    // al instante. OJO: ya NO se borra la fila al pasar a segundo plano — eso
+    // borraba la presencia justo cuando el usuario cambiaba de app o se le apagaba
+    // la pantalla, que es la dinámica normal de la operación.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') { _dbUp(); _dbPoll(); }
+    });
     function iniciar() {
         if (ch || typeof DB === 'undefined' || !DB) return;
         ch = DB.channel('rec-presencia', { config: { presence: { key: KEY } } });
