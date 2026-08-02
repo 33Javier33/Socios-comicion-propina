@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Tarjeta de presencia dentro del contenido (ya no tapa el encabezado) (SW v46)
+- **Problema:** la tarjeta flotante arriba-izquierda **obstruía el encabezado** (título, fecha, badge de responsable y campana).
+- **Fix:** ahora es una tarjeta **en el flujo del contenido** (`#recPresenciaCard`), ubicada **después de la barra de secciones y antes de las pestañas** → se ve en **TODAS las secciones**, empuja el contenido hacia abajo en vez de taparlo, y desaparece sola cuando no hay nadie. Se elimina automáticamente la tarjeta flotante de versiones anteriores.
+- Muestra "🟢 EN RECAUDACIONES (n)" + una línea por persona: **nombre** + *en \<app\> · \<tipo\>*.
+- Archivos: `index.html` (contenedor), `js/supabase-config.js`. `supabase-config.js?v=53`, SW `fondo-admin-v46`, versión visible **v46**.
+
 #### 2026-08-02 — Tarjeta sutil de presencia arriba (reemplaza el aviso flotante) (SW v45)
 - **Qué se hizo:** cuando un socio está conectado en recaudaciones, socios-comicion muestra una **tarjeta discreta arriba a la izquierda** (no un toast) con el encabezado "EN RECAUDACIONES (n)" y una línea por persona: **nombre** + *en \<app\> · \<tipo\>*.
 - **Ubicación:** arriba-izquierda para no tapar la campana ni el encabezado; ancho acotado, borde suave y barra verde lateral. Permanece mientras haya gente y desaparece sola cuando no queda nadie.

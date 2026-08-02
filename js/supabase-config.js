@@ -31,33 +31,29 @@ const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
     // Tarjeta SUTIL arriba (izquierda, para no tapar la campana): muestra quién
     // está conectado y DÓNDE. No es un toast: permanece mientras haya gente y
     // desaparece sola cuando no queda nadie.
+    // Tarjeta de presencia EN EL FLUJO del contenido (#recPresenciaCard, ubicada
+    // antes de las pestañas): se ve en TODAS las secciones y NO tapa el
+    // encabezado ni las tarjetas. Si el contenedor no existe, no se muestra nada.
     function _banner(otros) {
-        let el = document.getElementById('recPresenciaBanner');
-        if (!el) {
-            el = document.createElement('div');
-            el.id = 'recPresenciaBanner';
-            el.style.cssText = 'position:fixed;top:10px;left:12px;z-index:9990;'
-                + 'max-width:min(330px,calc(100vw - 150px));'
-                + 'background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);'
-                + 'border-left:3px solid #10b981;border-radius:12px;'
-                + 'padding:8px 12px;box-shadow:0 6px 20px rgba(0,0,0,0.10);'
-                + 'display:none;opacity:0.97;';
-            document.body.appendChild(el);
-        }
+        const el = document.getElementById('recPresenciaCard');
+        if (!el) return;
         if (!otros.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
         const filas = otros.map(o => {
             const donde = o.app ? _esc(o.app) : '';
             const t = o.tipo ? (' · ' + _esc(TIPO_LABEL[o.tipo] || o.tipo)) : '';
-            return '<div style="display:flex;align-items:center;gap:7px;margin-top:4px;">'
-                + '<span style="width:7px;height:7px;border-radius:50%;background:#10b981;flex-shrink:0;"></span>'
-                + '<span style="min-width:0;font-size:0.78em;color:var(--text-color,#1e293b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+            return '<div style="display:flex;align-items:center;gap:8px;min-width:0;">'
+                + '<span style="width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0;"></span>'
+                + '<span style="min-width:0;font-size:0.82em;color:var(--text-color,#1e293b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
                 +   '<b>' + _esc(o.nombre || 'Alguien') + '</b>'
                 +   '<span style="color:#64748b;"> en ' + donde + t + '</span>'
                 + '</span></div>';
         }).join('');
-        el.innerHTML = '<div style="font-size:0.64em;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#10b981;">'
-            + 'En recaudaciones (' + otros.length + ')</div>' + filas;
-        el.style.display = 'block';
+        el.style.cssText = 'background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);'
+            + 'border-left:4px solid #10b981;border-radius:12px;padding:10px 14px;margin-bottom:16px;'
+            + 'box-shadow:0 2px 8px rgba(0,0,0,0.05);display:block;';
+        el.innerHTML = '<div style="font-size:0.68em;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#10b981;margin-bottom:6px;">'
+            + '🟢 En recaudaciones (' + otros.length + ')</div>'
+            + '<div style="display:flex;flex-direction:column;gap:5px;">' + filas + '</div>';
     }
     function _toast(msg) {
         let el = document.getElementById('recPresenciaToast');
@@ -88,7 +84,12 @@ const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
         otrosDb.forEach(m => { if (!vistos[m.key] && !_esMio(m)) { vistos[m.key] = 1; out.push(m); } });
         return out;
     }
-    function _render() { _banner(_otrosActuales()); }
+    function _render() {
+        // Limpieza: eliminar la tarjeta flotante de versiones anteriores
+        const viejo = document.getElementById('recPresenciaBanner');
+        if (viejo) viejo.remove();
+        _banner(_otrosActuales());
+    }
 
     // ── Respaldo por BASE DE DATOS: aunque el canal realtime falle en algún
     // dispositivo, la presencia se escribe en la tabla rec_presencia (latido
