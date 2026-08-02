@@ -232,6 +232,9 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-01 — Presencia con `socio_id` (no verse a sí mismo) (SW v42)
+- La presencia viaja con `socio_id` y se filtra la propia. `supabase-config.js?v=49`, SW `fondo-admin-v42`, versión visible **v42**.
+
 #### 2026-08-01 — Presencia: no se pierde en segundo plano + se anuncia en Recaudación (SW v41)
 - `pagehide` ya no borra la presencia al apagar pantalla/cambiar de app; al volver al frente se re-marca y re-lee. Vigencia ampliada a 3 minutos.
 - La comisión ahora **se anuncia** al entrar a la pestaña **Recaudación** (antes solo recibía).

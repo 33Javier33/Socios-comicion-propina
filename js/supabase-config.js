@@ -25,6 +25,7 @@ const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
     const TIPO_LABEL = { TarjetaMDA: 'Tarjeta MDA', EfectivoMDA: 'Efectivo MDA', SalaDeJuegos: 'Sala de Juegos', Boveda: 'Bóveda' };
     const KEY = 'rp_' + Math.random().toString(36).slice(2) + Date.now();
     let ch = null, mio = null, toastT = null, listo = false, hbT = null, otrosDb = [];
+    let miSocioId = '';   // para no verse a sí mismo si el mismo usuario tiene otra app abierta
     const _esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
 
     function _banner(otros) {
@@ -56,13 +57,15 @@ const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
         toastT = setTimeout(() => { el.style.display = 'none'; }, 5000);
     }
     // Combina lo que llega por el canal en vivo + lo leído de la tabla (respaldo)
+    // Descarta mi sesión Y cualquier presencia del MISMO usuario en otra app
+    const _esMio = m => !m || m.key === KEY || (miSocioId && String(m.socioId || '') === String(miSocioId));
     function _otrosActuales() {
         const out = [], vistos = {};
         if (ch) {
             const st = ch.presenceState();
-            Object.keys(st).forEach(k => (st[k] || []).forEach(m => { if (m && m.key !== KEY && m.enModal && !vistos[m.key]) { vistos[m.key] = 1; out.push(m); } }));
+            Object.keys(st).forEach(k => (st[k] || []).forEach(m => { if (m && !_esMio(m) && m.enModal && !vistos[m.key]) { vistos[m.key] = 1; out.push(m); } }));
         }
-        otrosDb.forEach(m => { if (!vistos[m.key]) { vistos[m.key] = 1; out.push(m); } });
+        otrosDb.forEach(m => { if (!vistos[m.key] && !_esMio(m)) { vistos[m.key] = 1; out.push(m); } });
         return out;
     }
     function _render() { _banner(_otrosActuales()); }
@@ -73,7 +76,7 @@ const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
     // SIEMPRE aparezca, sin depender del websocket. ──
     function _dbUp() {
         if (!mio) return;
-        try { DB.from('rec_presencia').upsert({ id: KEY, nombre: mio.nombre, app: APP, tipo: mio.tipo || '', updated_at: new Date().toISOString() }).then(() => {}, () => {}); } catch (e) {}
+        try { DB.from('rec_presencia').upsert({ id: KEY, nombre: mio.nombre, app: APP, tipo: mio.tipo || '', socio_id: miSocioId || '', updated_at: new Date().toISOString() }).then(() => {}, () => {}); } catch (e) {}
     }
     function _dbDel() {
         try { DB.from('rec_presencia').delete().eq('id', KEY).then(() => {}, () => {}); } catch (e) {}
@@ -81,8 +84,8 @@ const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
     async function _dbPoll() {
         try {
             const desde = new Date(Date.now() - 180000).toISOString(); // 3 min: cubre pantalla apagada / cambio de app
-            const { data } = await DB.from('rec_presencia').select('id, nombre, app, tipo').gt('updated_at', desde).neq('id', KEY);
-            otrosDb = (data || []).map(r => ({ key: r.id, nombre: r.nombre, app: r.app, tipo: r.tipo, enModal: true }));
+            const { data } = await DB.from('rec_presencia').select('id, nombre, app, tipo, socio_id').gt('updated_at', desde).neq('id', KEY);
+            otrosDb = (data || []).map(r => ({ key: r.id, nombre: r.nombre, app: r.app, tipo: r.tipo, socioId: r.socio_id || '', enModal: true }));
             // Limpieza oportunista de filas muertas (muy antigua = cliente que no alcanzó a borrar)
             if (Math.random() < 0.02) { try { DB.from('rec_presencia').delete().lt('updated_at', new Date(Date.now() - 3600000).toISOString()).then(() => {}, () => {}); } catch (e2) {} }
         } catch (e) {}
@@ -123,9 +126,10 @@ const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
     }
     window.recPresIniciar = iniciar;
     window.recPresRender = _render;
-    window.recPresEntrar = function (nombre, tipo) {
+    window.recPresEntrar = function (nombre, tipo, socioId) {
         iniciar();
-        mio = { key: KEY, nombre: nombre || 'Alguien', app: APP, tipo: tipo || '', enModal: true };
+        if (socioId) miSocioId = String(socioId);
+        mio = { key: KEY, nombre: nombre || 'Alguien', app: APP, tipo: tipo || '', socioId: miSocioId, enModal: true };
         if (ch && listo) { try { ch.track(mio); } catch (e) {} } // si no está listo, se envía al suscribir
         _dbUp();                                    // respaldo por tabla (siempre)
         clearInterval(hbT); hbT = setInterval(_dbUp, 20000); // latido: mantiene viva la fila
