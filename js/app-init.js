@@ -166,6 +166,8 @@ function initLayout() {
         // fuera del layout cae al final de la página y se ve mal en escritorio).
         const presCard = document.getElementById('recPresenciaCard');
         if (presCard) main.appendChild(presCard);
+        const actCard = document.getElementById('actividadCard');
+        if (actCard) main.appendChild(actCard);
         tabContents.forEach(tc => main.appendChild(tc));
         layout.appendChild(sidebar);
         layout.appendChild(main);
@@ -184,6 +186,8 @@ function initLayout() {
         // La tarjeta de presencia queda justo debajo de la barra de secciones
         const presCardM = document.getElementById('recPresenciaCard');
         if (presCardM) mobileBar.insertAdjacentElement('afterend', presCardM);
+        const actCardM = document.getElementById('actividadCard');
+        if (actCardM && presCardM) presCardM.insertAdjacentElement('afterend', actCardM);
 
         // Drawer overlay
         const drawer = document.createElement('div');

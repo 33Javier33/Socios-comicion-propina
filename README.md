@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Tarjeta fija de "Actividad reciente" (visible en todas las secciones) (SW v50)
+- **Qué se hizo:** además del aviso en la campana, ahora hay una **tarjeta permanente** con la actividad de los socios (últimos 6 eventos), junto a la tarjeta de presencia: se ve **en todo momento y en todas las secciones**, en escritorio y en móvil.
+- Cada línea muestra **quién**, **qué hizo** (🟢 se conectó · 📊 entró a Recaudación del Día · ⚪ cerró sesión) y la **fecha y hora**.
+- Se actualiza al instante (realtime) y desaparece si no hay actividad reciente.
+- Archivos: `js/conexiones-log.js` (render), `index.html` (`#actividadCard`), `js/app-init.js` (la mueve dentro del layout). `conexiones-log.js?v=2`, `app-init.js?v=41`, SW `fondo-admin-v50`, versión visible **v50**.
+
 #### 2026-08-02 — Actividad de socios en la campana: conexión y entrada a Recaudación (SW v49)
 - **Qué se hizo:** cuando un socio **se conecta a propi.solicitada** o **entra a "Recaudación del Día"**, queda registrado con **fecha y hora** y aparece en el **centro de notificaciones (campana)** con la etiqueta **ACTIVIDAD** — estilo Telegram, dentro de socios-comicion.
 - **Detalles:** módulo nuevo `js/conexiones-log.js` (tabla `conexiones_log`): carga las últimas 24 h (tope 40), realtime para avisos al instante (toast + sonido) y marca de "visto" al cerrar la campana. Al tocar el ítem se abre la ficha del socio. Limpieza automática de eventos de más de 7 días.
