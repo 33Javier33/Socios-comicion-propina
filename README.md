@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Fix: el mismo socio aparecía dos veces en la tarjeta (SW v48)
+- **Causa:** la misma persona llegaba por el **canal en vivo** (clave aleatoria de sesión) y por la **tabla** (clave `app:socio`); al no coincidir las claves, el filtro de duplicados no la detectaba.
+- **Fix:** dedupe por **identidad estable** (`app + socio_id`, o nombre si no hay id) → una sola línea por persona. `supabase-config.js?v=55`, SW `fondo-admin-v48`, versión visible **v48**.
+
 #### 2026-08-02 — Fix: en escritorio la tarjeta de presencia caía al final de la página (SW v47)
 - **Causa:** en pantallas ≥900px, `initLayout()` mueve la barra de secciones y los `.tab-content` a un layout nuevo (sidebar + columna principal). La tarjeta `#recPresenciaCard` no era un `.tab-content`, así que **se quedaba fuera del layout y caía al final** de la página.
 - **Fix:** `initLayout()` ahora inserta la tarjeta **al inicio de la columna principal** en escritorio, y **justo debajo de la barra de secciones** en móvil. Queda arriba, bien ubicada y sin tapar nada en ambos formatos.
