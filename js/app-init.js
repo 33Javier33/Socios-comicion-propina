@@ -46,6 +46,10 @@ function iniciarApp() {
     if (typeof egresos_cargarPendientes === 'function') setTimeout(egresos_cargarPendientes, 1600);
     // Presencia en recaudación: escuchar quién está ingresando en las otras apps
     if (typeof window.recPresIniciar === 'function') window.recPresIniciar();
+    // Registro de actividad de socios (conexión / entrada a recaudación)
+    if (typeof conexionesLog_initRealtime === 'function') conexionesLog_initRealtime();
+    if (typeof conexionesLog_cargar === 'function') setTimeout(conexionesLog_cargar, 1800);
+    if (typeof conexionesLog_limpiarViejos === 'function') setTimeout(conexionesLog_limpiarViejos, 9000);
     if (typeof ptdias_initRealtime === 'function') ptdias_initRealtime();
     if (typeof ptdias_cargarPendientes === 'function') setTimeout(ptdias_cargarPendientes, 1700);
     // Estado de Cobros sincronizado entre dispositivos (realtime + carga inicial)

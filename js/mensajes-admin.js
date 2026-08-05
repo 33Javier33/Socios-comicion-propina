@@ -148,6 +148,23 @@ function msgAdminBell_items() {
             });
         });
 
+    // 5) Actividad de socios (conexión a la app / entrada a Recaudación del Día)
+    const _cvisto = (typeof _conexSeen === 'function') ? _conexSeen() : 0;
+    (typeof conexionesLog !== 'undefined' ? conexionesLog : [])
+        .filter(c => c && c.created_at && new Date(c.created_at).getTime() > _cvisto)
+        .slice(0, 20)
+        .forEach(c => {
+            const s2 = socios.find(x => String(x.id) === String(c.socio_id));
+            out.push({
+                tipo: 'conexion', id: String(c.id || ''), socioId: String(c.socio_id || ''),
+                icono: c.evento === 'recaudacion' ? '📊' : '🟢',
+                nombre: c.nombre || (s2 ? (s2.nombre + ' ' + s2.apellido) : 'Socio'),
+                fotoUrl: s2 ? s2.fotoUrl : '',
+                texto: (typeof _conexTexto === 'function') ? _conexTexto(c) : 'Actividad',
+                ts: new Date(c.created_at).getTime()
+            });
+        });
+
     return out.sort((a, b) => b.ts - a.ts);
 }
 
@@ -182,8 +199,8 @@ function msgAdminBell_pintarMenu(items) {
             catch (e2) { const p = n => String(n).padStart(2, '0'); return p(d.getDate()) + '-' + p(d.getMonth() + 1) + '-' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
         }
     };
-    const _etiqueta = { msg: 'MENSAJE', egreso: 'EGRESO', pt: 'DÍA PT', rec: 'RECAUDACIÓN' };
-    const _colorEt = { msg: '#0284c7', egreso: '#0ea5e9', pt: '#d97706', rec: '#059669' };
+    const _etiqueta = { msg: 'MENSAJE', egreso: 'EGRESO', pt: 'DÍA PT', rec: 'RECAUDACIÓN', conexion: 'ACTIVIDAD' };
+    const _colorEt = { msg: '#0284c7', egreso: '#0ea5e9', pt: '#d97706', rec: '#059669', conexion: '#10b981' };
     menu.innerHTML = '<div style="padding:8px 10px 6px;font-weight:800;font-size:0.82em;color:var(--text-color,#1e293b);border-bottom:1px solid var(--border,#eef2f6);margin-bottom:4px;">🔔 Notificaciones (' + items.length + ')</div>'
         + items.map(it => {
             const avatar = it.tipo === 'msg'
@@ -221,6 +238,7 @@ function msgAdminBell_cerrar() {
     if (menu) menu.style.display = 'none';
     if (estabaAbierta) {
         try { _recBellMarcarVisto(); } catch (e) {}
+        try { if (typeof conexionesLog_marcarVisto === 'function') conexionesLog_marcarVisto(); } catch (e) {}
         msgAdminBell_render();
     }
 }
@@ -236,6 +254,12 @@ function msgAdminBell_ir(tipo, id, socioId) {
     }
     if (tipo === 'rec') {
         if (typeof switchTab === 'function') switchTab('recaudacion');
+        return;
+    }
+    // Actividad de socios: abrir la ficha del socio (si se puede identificar)
+    if (tipo === 'conexion') {
+        if (typeof switchTab === 'function') switchTab('registro');
+        if (socioId && typeof seleccionarSocio === 'function') setTimeout(() => seleccionarSocio(socioId), 120);
         return;
     }
     // Egresos y días PT se resuelven en la pestaña "Anticipos y Ausencias"
