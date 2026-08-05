@@ -158,6 +158,10 @@ function initLayout() {
         sidebar.appendChild(navTabs);
         const main = document.createElement('div');
         main.className = 'app-main';
+        // La tarjeta de presencia va ARRIBA de la columna principal (si se queda
+        // fuera del layout cae al final de la página y se ve mal en escritorio).
+        const presCard = document.getElementById('recPresenciaCard');
+        if (presCard) main.appendChild(presCard);
         tabContents.forEach(tc => main.appendChild(tc));
         layout.appendChild(sidebar);
         layout.appendChild(main);
@@ -173,6 +177,9 @@ function initLayout() {
             <span id="mobileActiveLabel">Gestión de Socios</span>
             <button id="mobileMenuBtn" onclick="mobileNav_open()">☰ Secciones</button>`;
         headerSection.insertAdjacentElement('afterend', mobileBar);
+        // La tarjeta de presencia queda justo debajo de la barra de secciones
+        const presCardM = document.getElementById('recPresenciaCard');
+        if (presCardM) mobileBar.insertAdjacentElement('afterend', presCardM);
 
         // Drawer overlay
         const drawer = document.createElement('div');

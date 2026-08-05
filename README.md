@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Fix: en escritorio la tarjeta de presencia caía al final de la página (SW v47)
+- **Causa:** en pantallas ≥900px, `initLayout()` mueve la barra de secciones y los `.tab-content` a un layout nuevo (sidebar + columna principal). La tarjeta `#recPresenciaCard` no era un `.tab-content`, así que **se quedaba fuera del layout y caía al final** de la página.
+- **Fix:** `initLayout()` ahora inserta la tarjeta **al inicio de la columna principal** en escritorio, y **justo debajo de la barra de secciones** en móvil. Queda arriba, bien ubicada y sin tapar nada en ambos formatos.
+- Archivos: `js/app-init.js`. `app-init.js?v=39`, `supabase-config.js?v=54`, SW `fondo-admin-v47`, versión visible **v47**.
+
 #### 2026-08-02 — Tarjeta de presencia dentro del contenido (ya no tapa el encabezado) (SW v46)
 - **Problema:** la tarjeta flotante arriba-izquierda **obstruía el encabezado** (título, fecha, badge de responsable y campana).
 - **Fix:** ahora es una tarjeta **en el flujo del contenido** (`#recPresenciaCard`), ubicada **después de la barra de secciones y antes de las pestañas** → se ve en **TODAS las secciones**, empuja el contenido hacia abajo en vez de taparlo, y desaparece sola cuando no hay nadie. Se elimina automáticamente la tarjeta flotante de versiones anteriores.
