@@ -347,30 +347,117 @@ async function carpetas_eliminarCarpeta(idx) {
     showToast('Carpeta eliminada', 'error');
 }
 
+// ── RESPALDO COMPLETO ───────────────────────────────────────────
+// Antes solo copiaba recaudaciones/notas/divisores (proyecto REC), pese a
+// decir "copia completa". Ahora respalda TODAS las tablas de los DOS
+// proyectos: socios, anticipos, extras, saldos, cierres de mes, arqueo,
+// certificados, materiales, auditoría, horarios, mensajes, etc.
+
+// Tablas del proyecto SOCIOS (dbSoc)
+const BK_TABLAS_SOC = [
+    'socios', 'socios_puntos', 'anticipos', 'anticipos_historial', 'extras',
+    'saldos_socio', 'saldos_cierre_mes', 'saldos_anteriores_hist',
+    'cierres_mes', 'cierres_mes_historial',
+    'dias_pt', 'dias_pt_solicitados', 'retiros_anticipos',
+    'arqueo_estado', 'arqueo_cierres', 'arqueo_backups',
+    'certificados', 'materiales', 'dineros_sobrantes', 'periodos_archivados',
+    'canjes', 'auditoria', 'config_sistema', 'responsable_creds', 'credenciales',
+    'mensajes_admin', 'chat_mensajes', 'notas_admin', 'documentos',
+    'historial_conexiones', 'conexiones_log', 'solicitudes_egreso',
+    'push_subscriptions', 'diario_pins',
+    'horarios_grupos', 'horarios_turnos', 'horarios_socio_grupo',
+    'horarios_excepciones', 'horarios_vacaciones', 'horarios_pins'
+];
+// Tablas del proyecto RECAUDACIONES (dbRec)
+const BK_TABLAS_REC = ['recaudaciones', 'divisores', 'notas_recaudacion'];
+
+// Lee una tabla COMPLETA paginando de 1000 en 1000 (Supabase corta en 1000).
+async function _bkLeerTabla(cliente, tabla) {
+    const filas = [];
+    const paso = 1000;
+    for (let desde = 0; ; desde += paso) {
+        const { data, error } = await cliente.from(tabla).select('*').range(desde, desde + paso - 1);
+        if (error) return { filas, error: error.message };
+        const lote = data || [];
+        filas.push(...lote);
+        if (lote.length < paso) break;
+        if (desde > 200000) break; // tope de seguridad
+    }
+    return { filas, error: null };
+}
+
 async function carpetas_exportarJson() {
-    toggleLoader(true, 'Preparando copia de seguridad...');
+    toggleLoader(true, 'Preparando copia de seguridad completa...');
+    const backup = {
+        _meta: {
+            generado: new Date().toISOString(),
+            version: 2,
+            nota: 'Respaldo COMPLETO: incluye ambos proyectos (socios y recaudaciones). Contiene datos sensibles (PIN, RUT): guárdalo en un lugar seguro.'
+        },
+        soc: {}, rec: {}, errores: []
+    };
     try {
-        const [resData, resNotes] = await Promise.all([
-            fetch(`${URL_RECAUDACIONES}?action=get&t=${Date.now()}`).then(r => r.json()),
-            fetch(`${URL_RECAUDACIONES}?action=getNotes&t=${Date.now()}`).then(r => r.json())
-        ]);
-        const datos = resData.data || [];
-        const notes = resNotes.data || [];
-        const divisores = carpetas_extractDivisores(datos);
-        const backup = { datos, notes, divisores, archivero: recArchivero };
+        // 1) Recaudaciones vía GAS (compatibilidad con el importador actual)
+        try {
+            const [resData, resNotes] = await Promise.all([
+                fetch(`${URL_RECAUDACIONES}?action=get&t=${Date.now()}`).then(r => r.json()),
+                fetch(`${URL_RECAUDACIONES}?action=getNotes&t=${Date.now()}`).then(r => r.json())
+            ]);
+            backup.datos = resData.data || [];
+            backup.notes = resNotes.data || [];
+            backup.divisores = carpetas_extractDivisores(backup.datos);
+        } catch (e) {
+            backup.datos = []; backup.notes = []; backup.divisores = {};
+            backup.errores.push('recaudaciones(GAS): ' + (e.message || e));
+        }
+        backup.archivero = (typeof recArchivero !== 'undefined') ? recArchivero : [];
+
+        // 2) TODAS las tablas del proyecto de socios
+        let hechas = 0;
+        for (const t of BK_TABLAS_SOC) {
+            toggleLoader(true, `Respaldando ${t} (${++hechas}/${BK_TABLAS_SOC.length})...`);
+            const r = await _bkLeerTabla(dbSoc, t);
+            backup.soc[t] = r.filas;
+            if (r.error) backup.errores.push('soc.' + t + ': ' + r.error);
+        }
+        // 3) Tablas del proyecto de recaudaciones (copia directa)
+        for (const t of BK_TABLAS_REC) {
+            toggleLoader(true, `Respaldando ${t}...`);
+            const r = await _bkLeerTabla(dbRec, t);
+            backup.rec[t] = r.filas;
+            if (r.error) backup.errores.push('rec.' + t + ': ' + r.error);
+        }
+
+        // 4) Resumen de conteos, para verificar de un vistazo que no falte nada
+        const resumen = {};
+        Object.keys(backup.soc).forEach(t => { resumen['soc.' + t] = backup.soc[t].length; });
+        Object.keys(backup.rec).forEach(t => { resumen['rec.' + t] = backup.rec[t].length; });
+        resumen['recaudaciones(GAS)'] = (backup.datos || []).length;
+        backup._meta.conteos = resumen;
+
         const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `BACKUP_RECAUDACION_${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `BACKUP_COMPLETO_${new Date().toISOString().slice(0, 10)}.json`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-        showToast('Copia de seguridad descargada correctamente', 'success');
+
+        const totalFilas = Object.values(resumen).reduce((x, y) => x + y, 0);
+        if (backup.errores.length) {
+            showToast(`Copia descargada con ${backup.errores.length} aviso(s). Revisa "errores" en el archivo.`, 'warning');
+            console.warn('[BACKUP] avisos:', backup.errores);
+        } else {
+            showToast(`Copia COMPLETA descargada: ${totalFilas.toLocaleString('es-CL')} registros`, 'success');
+        }
+        console.log('[BACKUP] conteos por tabla:', resumen);
     } catch(e) {
-        showToast('Error al exportar', 'error');
+        console.error('[BACKUP]', e);
+        showToast('Error al exportar: ' + (e.message || e), 'error');
     } finally {
         toggleLoader(false);
     }
 }
+
 
 function carpetas_abrirImportar() {
     document.getElementById('carpetasJsonInput').click();

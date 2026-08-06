@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — CRÍTICO: el "respaldo completo" solo copiaba recaudaciones (SW v51)
+- **Hallazgo:** el botón ⚙️ Mantenimiento → "Exportar JSON" decía *"copia completa de la nube"*, pero **solo respaldaba** recaudaciones, notas y divisores (proyecto REC). **No incluía nada del proyecto de socios**: socios, anticipos, extras, saldos, cierres de mes, arqueo, certificados, materiales, auditoría, horarios, mensajes, documentos, etc. Un restore habría perdido casi todo.
+- **Fix:** `carpetas_exportarJson()` ahora respalda **las 40 tablas del proyecto de socios + las 3 de recaudaciones**, con **paginación de 1000 en 1000** (Supabase corta las consultas en 1000 filas, así que tablas grandes como `historial_conexiones` —6.500+ filas— se truncaban).
+- El archivo incluye `_meta.conteos` (filas por tabla) para verificar de un vistazo que no falte nada, y `errores[]` si alguna tabla falla. Se mantiene la compatibilidad con el importador (`datos`/`notes`/`divisores`/`archivero`).
+- Nombre del archivo: `BACKUP_COMPLETO_<fecha>.json`. **Contiene datos sensibles (PIN, RUT): guardar en lugar seguro.**
+- Archivos: `js/carpetas.js`, `index.html`. `carpetas.js?v=45`, SW `fondo-admin-v51`, versión visible **v51**.
+
 #### 2026-08-02 — Tarjeta fija de "Actividad reciente" (visible en todas las secciones) (SW v50)
 - **Qué se hizo:** además del aviso en la campana, ahora hay una **tarjeta permanente** con la actividad de los socios (últimos 6 eventos), junto a la tarjeta de presencia: se ve **en todo momento y en todas las secciones**, en escritorio y en móvil.
 - Cada línea muestra **quién**, **qué hizo** (🟢 se conectó · 📊 entró a Recaudación del Día · ⚪ cerró sesión) y la **fecha y hora**.
