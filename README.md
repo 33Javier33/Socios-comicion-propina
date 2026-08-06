@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — "Importar JSON" ahora restaura TODO (antes solo recaudaciones) (SW v52)
+- **Hallazgo:** tras arreglar el exportador, el respaldo era completo pero **la restauración no**: "Importar JSON" solo devolvía recaudaciones vía GAS. Socios, anticipos, extras, saldos, cierres de mes, arqueo, certificados, auditoría, horarios, etc. **no se restauraban** — había copia, pero no camino de vuelta.
+- **Fix:** la importación ahora restaura **todas las tablas** del archivo (`soc.*` y `rec.*`), haciendo **upsert por la llave primaria real de cada tabla** (verificadas contra la base: `arqueo_estado`→`periodo`, `cierres_mes`→`socio_id`, `cierres_mes_historial`→`socio_id,periodo`, `responsable_creds`→`ini,area`, `horarios_pins`→`usuario`, etc.).
+- **Verificación previa sin escribir:** antes de restaurar muestra una comparación **archivo vs. base** tabla por tabla (⬆ / = / ⬇) y pide confirmación. Se puede cancelar sin haber tocado nada.
+- Restaura en lotes de 200 filas, con orden de dependencias (`socios` primero) y **sin borrar** lo que no venga en el archivo. Informa errores por tabla en vez de fallar en silencio. Compatible con respaldos antiguos.
+- Archivos: `js/carpetas.js`, `index.html`. `carpetas.js?v=46`, SW `fondo-admin-v52`, versión visible **v52**.
+
 #### 2026-08-02 — CRÍTICO: el "respaldo completo" solo copiaba recaudaciones (SW v51)
 - **Hallazgo:** el botón ⚙️ Mantenimiento → "Exportar JSON" decía *"copia completa de la nube"*, pero **solo respaldaba** recaudaciones, notas y divisores (proyecto REC). **No incluía nada del proyecto de socios**: socios, anticipos, extras, saldos, cierres de mes, arqueo, certificados, materiales, auditoría, horarios, mensajes, documentos, etc. Un restore habría perdido casi todo.
 - **Fix:** `carpetas_exportarJson()` ahora respalda **las 40 tablas del proyecto de socios + las 3 de recaudaciones**, con **paginación de 1000 en 1000** (Supabase corta las consultas en 1000 filas, así que tablas grandes como `historial_conexiones` —6.500+ filas— se truncaban).

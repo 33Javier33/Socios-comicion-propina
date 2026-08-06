@@ -463,6 +463,74 @@ function carpetas_abrirImportar() {
     document.getElementById('carpetasJsonInput').click();
 }
 
+// ── RESTAURACIÓN COMPLETA ───────────────────────────────────────
+// Antes "Importar JSON" solo devolvía recaudaciones: los datos de socios,
+// anticipos, saldos, cierres, arqueo, etc. NO se restauraban. Ahora restaura
+// TODO lo que trae el archivo del exportador.
+//
+// Estrategia: upsert por la llave primaria real de cada tabla (no borra nada
+// que no venga en el archivo), en el orden correcto para respetar dependencias.
+
+// Llave primaria real de cada tabla (verificada contra la base).
+const BK_PK = {
+    socios: 'id', socios_puntos: 'socio_id', anticipos: 'id', anticipos_historial: 'id',
+    extras: 'id', saldos_socio: 'id', saldos_cierre_mes: 'id', saldos_anteriores_hist: 'id',
+    cierres_mes: 'socio_id', cierres_mes_historial: 'socio_id,periodo',
+    dias_pt: 'id', dias_pt_solicitados: 'id', retiros_anticipos: 'id',
+    arqueo_estado: 'periodo', arqueo_cierres: 'id', arqueo_backups: 'id',
+    certificados: 'id', materiales: 'id', dineros_sobrantes: 'id', periodos_archivados: 'id',
+    canjes: 'id', auditoria: 'id', config_sistema: 'clave', responsable_creds: 'ini,area',
+    credenciales: 'id', mensajes_admin: 'id', chat_mensajes: 'id', notas_admin: 'id',
+    documentos: 'id', historial_conexiones: 'id', conexiones_log: 'id',
+    solicitudes_egreso: 'id', push_subscriptions: 'id', diario_pins: 'socio_id',
+    horarios_grupos: 'id', horarios_turnos: 'id', horarios_socio_grupo: 'socio_id',
+    horarios_excepciones: 'id', horarios_vacaciones: 'id', horarios_pins: 'usuario',
+    recaudaciones: 'id', divisores: 'fecha', notas_recaudacion: 'id'
+};
+// Orden de restauración: primero las tablas "padre" (socios), luego las que dependen.
+const BK_ORDEN = ['socios', 'socios_puntos', 'config_sistema', 'responsable_creds', 'credenciales'];
+
+function _bkOrdenar(tablas) {
+    const primero = BK_ORDEN.filter(t => tablas.indexOf(t) >= 0);
+    const resto = tablas.filter(t => primero.indexOf(t) < 0);
+    return primero.concat(resto);
+}
+
+// Escribe una tabla en lotes de 200 filas. Devuelve {ok, error}.
+async function _bkRestaurarTabla(cliente, tabla, filas) {
+    if (!Array.isArray(filas) || !filas.length) return { ok: 0, error: null };
+    const pk = BK_PK[tabla];
+    let ok = 0;
+    for (let i = 0; i < filas.length; i += 200) {
+        const lote = filas.slice(i, i + 200);
+        const opciones = pk ? { onConflict: pk } : undefined;
+        const { error } = await cliente.from(tabla).upsert(lote, opciones);
+        if (error) return { ok, error: error.message };
+        ok += lote.length;
+    }
+    return { ok, error: null };
+}
+
+// Compara el archivo contra la base SIN escribir nada (modo verificación).
+async function carpetas_verificarJson(content) {
+    const lineas = [];
+    const revisar = async (cliente, grupo, etiqueta) => {
+        for (const t of Object.keys(grupo || {})) {
+            const enArchivo = (grupo[t] || []).length;
+            let enBase = 0;
+            try {
+                const { count } = await cliente.from(t).select('*', { count: 'exact', head: true });
+                enBase = count || 0;
+            } catch (e) { enBase = -1; }
+            const marca = enArchivo > enBase ? '⬆' : (enArchivo === enBase ? '=' : '⬇');
+            lineas.push(`${marca} ${etiqueta}.${t}: archivo ${enArchivo} · base ${enBase < 0 ? '?' : enBase}`);
+        }
+    };
+    await revisar(dbSoc, content.soc, 'soc');
+    await revisar(dbRec, content.rec, 'rec');
+    return lineas;
+}
+
 async function carpetas_importarJson(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -470,13 +538,59 @@ async function carpetas_importarJson(e) {
     reader.onload = async (ev) => {
         try {
             const content = JSON.parse(ev.target.result);
-            if (!confirm('¿Restaurar esta copia de seguridad?\n\nSobrescribirá los datos actuales en la nube. Esta acción no se puede deshacer.')) { e.target.value = ''; return; }
-            toggleLoader(true, 'Restaurando copia de seguridad...');
-            await fetch(URL_RECAUDACIONES, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'importAll', data: content })
-            });
+            const esCompleto = !!(content.soc || content.rec);
+
+            // 1) VERIFICAR primero (no escribe nada)
+            if (esCompleto) {
+                toggleLoader(true, 'Verificando el archivo contra la nube...');
+                const lineas = await carpetas_verificarJson(content);
+                toggleLoader(false);
+                const resumen = lineas.join('\n');
+                console.log('[RESTORE] verificación:\n' + resumen);
+                const seguir = confirm(
+                    'VERIFICACIÓN DEL RESPALDO\n(⬆ el archivo tiene más · = igual · ⬇ el archivo tiene menos)\n\n'
+                    + resumen
+                    + '\n\n¿Restaurar TODO esto a la nube?\nSe sobrescriben los registros con el mismo identificador. No se borra lo que no venga en el archivo.');
+                if (!seguir) { e.target.value = ''; showToast('Restauración cancelada', 'info'); return; }
+            } else {
+                if (!confirm('Este archivo es un respaldo ANTIGUO (solo recaudaciones).\n\n¿Restaurarlo igual?')) { e.target.value = ''; return; }
+            }
+
+            const errores = [];
+            let totalOk = 0;
+
+            // 2) Recaudaciones por GAS (compatibilidad con respaldos antiguos)
+            toggleLoader(true, 'Restaurando recaudaciones...');
+            try {
+                await fetch(URL_RECAUDACIONES, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'importAll', data: content })
+                });
+            } catch (err) { errores.push('recaudaciones(GAS): ' + (err.message || err)); }
+
+            // 3) TODAS las tablas del proyecto de socios
+            if (content.soc) {
+                const tablas = _bkOrdenar(Object.keys(content.soc));
+                let n = 0;
+                for (const t of tablas) {
+                    toggleLoader(true, `Restaurando ${t} (${++n}/${tablas.length})...`);
+                    const r = await _bkRestaurarTabla(dbSoc, t, content.soc[t]);
+                    totalOk += r.ok;
+                    if (r.error) errores.push('soc.' + t + ': ' + r.error);
+                }
+            }
+            // 4) Tablas del proyecto de recaudaciones
+            if (content.rec) {
+                for (const t of Object.keys(content.rec)) {
+                    toggleLoader(true, `Restaurando ${t}...`);
+                    const r = await _bkRestaurarTabla(dbRec, t, content.rec[t]);
+                    totalOk += r.ok;
+                    if (r.error) errores.push('rec.' + t + ': ' + r.error);
+                }
+            }
+
+            // 5) Archivero local
             if (content.archivero) {
                 recArchivero = content.archivero;
                 localStorage.setItem(CARPETAS_SK, JSON.stringify(recArchivero));
@@ -484,8 +598,17 @@ async function carpetas_importarJson(e) {
             try { localStorage.removeItem(CACHE_KEY_REC); } catch(err) {}
             await cargarRecaudaciones();
             carpetas_renderArchivero();
-            showToast('Sistema restaurado correctamente', 'success');
+
+            if (errores.length) {
+                console.warn('[RESTORE] errores:', errores);
+                alert('Restauración terminada con avisos (' + errores.length + '):\n\n' + errores.slice(0, 12).join('\n')
+                    + '\n\nRevisa la consola para el detalle completo.');
+                showToast('Restaurado con avisos: ' + totalOk.toLocaleString('es-CL') + ' registros', 'warning');
+            } else {
+                showToast('Restauración completa: ' + totalOk.toLocaleString('es-CL') + ' registros', 'success');
+            }
         } catch(err) {
+            console.error('[RESTORE]', err);
             showToast('Error: JSON inválido o corrupto', 'error');
         } finally {
             toggleLoader(false);
@@ -494,6 +617,7 @@ async function carpetas_importarJson(e) {
     };
     reader.readAsText(file);
 }
+
 
 // ── Subir una carpeta específica a Supabase ───────────────────
 async function carpetas_subirUna(idx) {
