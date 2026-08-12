@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Aviso de "falta por recaudar" en Recaudaciones (SW v53)
+- **Qué se hizo:** igual que en propi.solicitada, la sección **Recaudaciones** ahora muestra un aviso ámbar **"📅 Falta por recaudar"** con los días **sin recaudación registrada**, cada uno como una etiqueta (día de semana + fecha).
+- **Criterio:** revisa desde el día más antiguo con datos hasta **ayer** (el día en curso no se marca como faltante). Rango acotado a los últimos 45 días. Si no falta ninguno, el aviso no se muestra.
+- Se ubica arriba de la lista de fechas y se recalcula en cada carga/refresco de recaudaciones.
+- Archivos: `js/recaudacion.js` (`_recDiasFaltantes`, `_recPintarFaltantes`), `index.html` (`#recFaltantesAviso`). `recaudacion.js?v=46`, SW `fondo-admin-v53`, versión visible **v53**.
+
 #### 2026-08-02 — "Importar JSON" ahora restaura TODO (antes solo recaudaciones) (SW v52)
 - **Hallazgo:** tras arreglar el exportador, el respaldo era completo pero **la restauración no**: "Importar JSON" solo devolvía recaudaciones vía GAS. Socios, anticipos, extras, saldos, cierres de mes, arqueo, certificados, auditoría, horarios, etc. **no se restauraban** — había copia, pero no camino de vuelta.
 - **Fix:** la importación ahora restaura **todas las tablas** del archivo (`soc.*` y `rec.*`), haciendo **upsert por la llave primaria real de cada tabla** (verificadas contra la base: `arqueo_estado`→`periodo`, `cierres_mes`→`socio_id`, `cierres_mes_historial`→`socio_id,periodo`, `responsable_creds`→`ini,area`, `horarios_pins`→`usuario`, etc.).

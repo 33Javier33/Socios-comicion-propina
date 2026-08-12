@@ -1243,6 +1243,8 @@
                 </div>
             </div>
 
+            <!-- Aviso de días sin recaudación (se llena desde procesarDatosRecaudacion) -->
+            <div id="recFaltantesAviso" style="display:none;"></div>
             <div id="contenedorFechas">
                 <div id="skRecaudaciones">
                     <div class="sk-card"><div class="sk sk-line" style="width:40%;margin-bottom:10px;height:16px"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div></div></div><div class="sk-card"><div class="sk sk-line" style="width:40%;margin-bottom:10px;height:16px"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div></div></div><div class="sk-card"><div class="sk sk-line" style="width:40%;margin-bottom:10px;height:16px"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div><div class="sk sk-line" style="height:11px"></div></div></div>
@@ -2046,7 +2048,7 @@
     <script src="js/desglose-anticipos.js?v=32"></script>
     <script src="js/meses-anteriores.js?v=32"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
-    <script src="js/recaudacion.js?v=45"></script>
+    <script src="js/recaudacion.js?v=46"></script>
     <script src="js/arqueo.js?v=32"></script>
     <script src="js/canje.js?v=32"></script>
     <script src="js/notas.js?v=32"></script>
@@ -2411,6 +2413,6 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v52</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v53</div>
 </body>
 </html>

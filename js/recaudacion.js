@@ -2,6 +2,52 @@
 // RECAUDACIÓN: CARGA, PROCESADO Y FILTROS
 // ============================================================
 
+// ── DÍAS SIN RECAUDAR (mismo criterio que propi.solicitada) ──────────────
+// Detecta los días SIN recaudación entre el más antiguo con datos y AYER,
+// para que la comisión vea de inmediato qué falta por ingresar.
+function _recDiasFaltantes(fechasConDatos) {
+    const set = new Set(fechasConDatos);
+    const keys = [...set].sort();
+    if (!keys.length) return [];
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
+    let cur = new Date(keys[0] + 'T00:00:00');
+    // No escanear rangos gigantes: como mucho, los últimos 45 días.
+    const tope = new Date(ayer); tope.setDate(tope.getDate() - 45);
+    if (cur < tope) cur = tope;
+    const faltan = [];
+    for (let d = new Date(cur); d <= ayer; d.setDate(d.getDate() + 1)) {
+        const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        if (!set.has(k)) faltan.push(k);
+    }
+    return faltan;
+}
+
+function _recPintarFaltantes(fechasConDatos) {
+    const el = document.getElementById('recFaltantesAviso');
+    if (!el) return;
+    const faltan = _recDiasFaltantes(fechasConDatos);
+    if (!faltan.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    const chips = faltan.map(k => {
+        const d = new Date(k + 'T12:00:00');
+        let txt = k;
+        try {
+            txt = d.toLocaleDateString('es-CL', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace(/\./g, '');
+            txt = txt.charAt(0).toUpperCase() + txt.slice(1);
+        } catch (e) {}
+        return '<span style="display:inline-block;background:#fde68a;color:#7c2d12;font-size:0.72em;font-weight:800;'
+            + 'padding:3px 10px;border-radius:20px;margin:4px 4px 0 0;white-space:nowrap;">' + txt + '</span>';
+    }).join('');
+    const n = faltan.length;
+    el.style.cssText = 'background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;'
+        + 'padding:12px 14px;margin-bottom:16px;box-shadow:0 1px 6px rgba(120,80,0,0.14);display:block;';
+    el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;">'
+        + '<span style="font-size:1.05em;">📅</span>'
+        + '<span style="font-weight:800;font-size:0.9em;color:#7c2d12;">Falta por recaudar</span></div>'
+        + '<p style="font-size:0.78em;color:#7c2d12;opacity:0.9;margin:6px 0 0;">Hay ' + n + ' día' + (n !== 1 ? 's' : '')
+        + ' sin recaudación registrada:</p><div style="margin-top:2px;">' + chips + '</div>';
+}
+
 async function cargarRecaudaciones(silent = false) {
     if(!URL_RECAUDACIONES || URL_RECAUDACIONES.includes("PEGA_AQUI")) return;
 
@@ -97,6 +143,7 @@ function procesarDatosRecaudacion(datos, silent) {
         (document.getElementById('recDivisorActual')||{}).innerText = ultDia.divisor !== null ? ultDia.divisor : 'Sin divisor';
     }
 
+    _recPintarFaltantes(Object.keys(grupos));
     const container = document.getElementById('contenedorFechas'); container.innerHTML = '';
     if (fechasOrdenadas.length === 0) { container.innerHTML = '<div style="text-align:center; color:#7f8c8d; padding:20px;">No hay registros.</div>'; } else {
         fechasOrdenadas.forEach(fecha => {
