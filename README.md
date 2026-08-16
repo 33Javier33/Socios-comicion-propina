@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — El motivo del cierre masivo ahora se escribe en varias líneas (SW v55)
+- **Problema:** el motivo se pedía con `prompt()`, que es de **una sola línea**: al escribir un texto largo no se alcanzaba a leer ni revisar si había errores.
+- **Fix:** cuadro propio con **área de texto de varias líneas** (5 filas, redimensionable), con **contador de caracteres**, aviso de mínimo requerido y el botón *Continuar* **deshabilitado** hasta cumplirlo. Incluye ejemplos de motivos. Se cierra con *Cancelar* o tocando fuera; si por algún motivo faltara el modal, cae al `prompt` como respaldo.
+- Archivos: `index.html` (`#modalMotivoMasivo`), `js/anticipos.js` (`cierresMes_pedirMotivo`). `anticipos.js?v=45`, SW `fondo-admin-v55`, versión visible **v55**.
+
 #### 2026-08-02 — Botón "Cerrar mes a TODOS" con motivo obligatorio y archivado incluido (SW v54)
 - **Qué se hizo:** en *Estado de Cobros del Período* se agregó **🔒 Cerrar mes a TODOS (N pendientes)**, que hace por cada socio **exactamente lo mismo que el botón "Cerrar" individual**: calcula alcance (valor punto × puntos, sin ausencias) + saldo anterior − anticipos, determina *A Pagar* (al millar) y el remanente, y **guarda el remanente como saldo del próximo mes**. Guarda además el mismo detalle (alcance, saldo anterior, anticipos).
 - **Sin duplicar lógica:** el cálculo se extrajo a `cierresMes_calcularSocio()`, que ahora usan **tanto el cierre individual como el masivo** — así no pueden dar resultados distintos.

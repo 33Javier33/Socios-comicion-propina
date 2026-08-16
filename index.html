@@ -2044,7 +2044,7 @@
     <script src="js/api.js?v=36"></script>
     <script src="js/socios.js?v=39"></script>
     <script src="js/puntos.js?v=32"></script>
-    <script src="js/anticipos.js?v=44"></script>
+    <script src="js/anticipos.js?v=45"></script>
     <script src="js/desglose-anticipos.js?v=32"></script>
     <script src="js/meses-anteriores.js?v=32"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
@@ -2413,6 +2413,31 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v54</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v55</div>
+<!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
+<div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
+    <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;padding:14px 18px;">
+            <div style="font-weight:800;font-size:1em;">🔒 Motivo del cierre masivo</div>
+            <div style="font-size:0.78em;opacity:0.9;margin-top:2px;">Queda guardado en la auditoría como constancia.</div>
+        </div>
+        <div style="padding:16px 18px;">
+            <p style="font-size:0.82em;color:var(--text-color,#334155);margin:0 0 10px;line-height:1.55;">
+                Explica <b>por qué</b> se cierra a todos los socios de una vez.<br>
+                <span style="color:#64748b;">Ej.: "Cierre de fin de mes, período 15/07 al 14/08." · "El encargado no estará disponible esta semana." · "Se cerró masivamente para cuadrar el período."</span>
+            </p>
+            <textarea id="motivoMasivoTexto" rows="5" placeholder="Escribe aquí el motivo…"
+                style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid var(--border,#e2e8f0);border-radius:10px;font-size:0.9em;font-family:inherit;line-height:1.5;resize:vertical;min-height:110px;background:var(--bg-main,#fff);color:var(--text-color,#1e293b);"></textarea>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+                <span id="motivoMasivoAviso" style="font-size:0.74em;color:#dc2626;font-weight:700;">Mínimo 5 caracteres</span>
+                <span id="motivoMasivoContador" style="font-size:0.74em;color:#94a3b8;font-weight:700;">0</span>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+                <button id="motivoMasivoCancelar" style="flex:1;background:#f1f5f9;color:#475569;border:none;border-radius:10px;padding:11px;font-weight:800;font-size:0.86em;cursor:pointer;">Cancelar</button>
+                <button id="motivoMasivoConfirmar" disabled style="flex:1;background:#cbd5e1;color:#fff;border:none;border-radius:10px;padding:11px;font-weight:800;font-size:0.86em;cursor:not-allowed;">Continuar</button>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>

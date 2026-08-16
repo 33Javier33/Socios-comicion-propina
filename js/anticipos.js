@@ -1678,6 +1678,47 @@ async function cierresMes_ejecutarCierreSocio(socioId) {
 //   · Exige una NOTA obligatoria explicando por qué se cerró a todos de una vez;
 //     esa nota queda en la auditoría.
 //   · Opcionalmente ejecuta después el archivado e inicio de nuevo mes.
+// Pide el motivo del cierre masivo en un cuadro con VARIAS LÍNEAS (no prompt),
+// para poder releer y corregir lo escrito. Devuelve el texto o null si cancela.
+function cierresMes_pedirMotivo() {
+    return new Promise(resolve => {
+        const modal = document.getElementById('modalMotivoMasivo');
+        const txt = document.getElementById('motivoMasivoTexto');
+        const btnOk = document.getElementById('motivoMasivoConfirmar');
+        const btnNo = document.getElementById('motivoMasivoCancelar');
+        const cont = document.getElementById('motivoMasivoContador');
+        const aviso = document.getElementById('motivoMasivoAviso');
+        if (!modal || !txt) { // respaldo por si falta el modal
+            const r = prompt('Motivo del cierre masivo (obligatorio):', '');
+            resolve(r === null ? null : r.trim());
+            return;
+        }
+        txt.value = '';
+        cont.textContent = '0';
+        const validar = () => {
+            const n = txt.value.trim().length;
+            cont.textContent = String(n);
+            const ok = n >= 5;
+            btnOk.disabled = !ok;
+            btnOk.style.background = ok ? 'linear-gradient(135deg,#dc2626,#991b1b)' : '#cbd5e1';
+            btnOk.style.cursor = ok ? 'pointer' : 'not-allowed';
+            aviso.style.display = ok ? 'none' : 'inline';
+        };
+        validar();
+        const cerrar = (valor) => {
+            modal.style.display = 'none';
+            txt.oninput = null; btnOk.onclick = null; btnNo.onclick = null; modal.onclick = null;
+            resolve(valor);
+        };
+        txt.oninput = validar;
+        btnOk.onclick = () => { const v = txt.value.trim(); if (v.length >= 5) cerrar(v); };
+        btnNo.onclick = () => cerrar(null);
+        modal.onclick = (e) => { if (e.target === modal) cerrar(null); };
+        modal.style.display = 'flex';
+        setTimeout(() => txt.focus(), 120);
+    });
+}
+
 async function cierresMes_cerrarTodos() {
     const yaCerrados = new Set(cierresMes_obtener().map(c => c.id));
     const pendientes = (cacheSocios || []).filter(s => !yaCerrados.has(s.id));
@@ -1695,14 +1736,8 @@ async function cierresMes_cerrarTodos() {
         + 'Todos quedan 📩 EN SOBRE. Luego marcas "Cobrado" a quien retire.\n\n'
         + '¿Continuar?')) return;
 
-    let motivo = prompt('¿POR QUÉ se cierra a todos de una vez?\n\n'
-        + 'Esta nota queda en la auditoría como constancia.\n'
-        + 'Ej.: "cierre de fin de mes", "el encargado no estará disponible",\n'
-        + '"se cerró masivamente para cuadrar el período".\n\n'
-        + 'Motivo (obligatorio):', '');
-    if (motivo === null) { showToast('Cierre masivo cancelado', 'info'); return; }
-    motivo = motivo.trim();
-    if (motivo.length < 5) { showToast('Debes escribir un motivo (mínimo 5 caracteres)', 'warning'); return; }
+    const motivo = await cierresMes_pedirMotivo();
+    if (!motivo) { showToast('Cierre masivo cancelado', 'info'); return; }
 
     const tambienArchivar = confirm('¿Además ARCHIVAR los anticipos y empezar nuevo mes?\n\n'
         + '✅ Aceptar → cierra a todos Y archiva (deja el período limpio)\n'
