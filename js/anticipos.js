@@ -1578,6 +1578,12 @@ function cierresMes_render(refocusBuscador = false) {
                 style="width:100%;box-sizing:border-box;padding:8px 32px 8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.87em;outline:none;">
             ${_cierreMesFiltro ? `<button onclick="_cierreMesFiltro='';cierresMes_render(true);" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1em;line-height:1;">✕</button>` : ''}
         </div>
+        ${!filtro && nPendientes > 0 ? `<button onclick="cierresMes_cerrarTodos()" style="width:100%;background:linear-gradient(135deg,#dc2626,#991b1b);color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:8px;">🔒 Cerrar mes a TODOS (${nPendientes} pendiente${nPendientes!==1?'s':''})</button>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:9px 11px;margin-bottom:12px;font-size:0.72em;color:#7f1d1d;line-height:1.55;">
+            <b>¿Qué hace este botón?</b> Cierra el mes de todos los socios pendientes de una sola vez. Por cada uno calcula su monto y <b>guarda su remanente</b> como saldo del próximo mes — exactamente igual que el botón "Cerrar" individual. Todos quedan <b>📩 en sobre</b>; después marcas "Cobrado" a quien retire.<br>
+            <b>Pide un motivo obligatorio</b> (queda en la auditoría) y permite además <b>archivar los anticipos y empezar el nuevo mes</b> en el mismo paso.<br>
+            <b>Úsalo cuando</b> haya que cuadrar el período completo de una vez: fin de mes, o cuando no se alcanzará a cerrar socio por socio.
+        </div>` : ''}
         ${!filtro ? `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:${allClosed?'linear-gradient(135deg,#8e44ad,#6c3483)':'linear-gradient(135deg,#d97706,#b45309)'};color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">${allClosed?'🏁 Todos cerrados — Archivar y Empezar Nuevo Mes':'📦 Archivar anticipos y empezar nuevo mes'}${nPendientes > 0 ? ' ⚠️ ('+nPendientes+' pendientes)' : ''}</button>` : ''}
         ${!pendientesHtml && !sobreHtml && !cobradosHtml && filtro ? `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.85em;">Sin resultados para "${_cierreMesFiltro}"</div>` : ''}
         ${pendientesHtml ? `<div style="font-weight:700;font-size:0.77em;color:#991b1b;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">⏳ Pendientes (${nPendientesFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #fecaca;margin-bottom:12px;">${pendientesHtml}</div>` : ''}
@@ -1595,6 +1601,42 @@ function cierresMes_render(refocusBuscador = false) {
     }
 }
 
+// Cálculo del cierre de un socio. Compartido por el cierre individual y el
+// masivo, para que ambos produzcan EXACTAMENTE el mismo resultado.
+async function cierresMes_calcularSocio(socio) {
+    let remanente = 0, aPagar = 0;
+    let saldoAnterior = 0, sumaPedido = 0, alcance = 0, anticiposList = [];
+    const response = await fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${socio.id}`);
+    const res = await response.json();
+    if (res.status === 'success') {
+        const data = res.data || {};
+        saldoAnterior = Number(data.saldoAnterior || 0);
+        if (data.anticipos) data.anticipos.forEach(a => {
+            const m = Number(a.cantidad || a.monto || 0);
+            sumaPedido += m;
+            let f = a.fecha || ''; if (typeof f === 'string' && f.includes('T')) f = f.split('T')[0];
+            anticiposList.push({ fecha: f, monto: m, responsable: a.responsable || a.encargado || '' });
+        });
+        const fechasAusencia = new Set();
+        if (data.extras) data.extras.forEach(e => {
+            if (e.tipo && e.tipo.toLowerCase().includes('ausencia')) {
+                let f = e.fecha; if (f.includes('T')) f = f.split('T')[0]; fechasAusencia.add(f);
+            }
+        });
+        if (socio.contrato === 'Part-Time') {
+            (globalDiasPT[socio.id] || []).forEach(d => { if (!fechasAusencia.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
+            alcance *= socio.puntos;
+        } else {
+            for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) { if (!fechasAusencia.has(dia)) alcance += valor; }
+            alcance *= socio.puntos;
+        }
+        const saldoReal = alcance + saldoAnterior - sumaPedido;
+        aPagar = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
+        remanente = Math.round(saldoReal - aPagar);
+    }
+    return { aPagar, remanente, alcance, saldoAnterior, sumaPedido, anticiposList };
+}
+
 async function cierresMes_ejecutarCierreSocio(socioId) {
     const socio = cacheSocios.find(s => s.id === socioId);
     if (!socio) return showToast('Socio no encontrado', 'error');
@@ -1604,39 +1646,7 @@ async function cierresMes_ejecutarCierreSocio(socioId) {
 
     toggleLoader(true, `Cerrando mes de ${socio.nombre}...`);
     try {
-        const response = await fetch(`${URL_SOCIOS}?action=getDatosSocio&socioId=${socio.id}`);
-        const res = await response.json();
-        let remanente = 0, aPagar = 0;
-        let saldoAnterior = 0, sumaPedido = 0, alcance = 0, anticiposList = [];
-
-        if (res.status === 'success') {
-            const data = res.data || {};
-            saldoAnterior = Number(data.saldoAnterior || 0);
-            if (data.anticipos) data.anticipos.forEach(a => {
-                const m = Number(a.cantidad || a.monto || 0);
-                sumaPedido += m;
-                let f = a.fecha || ''; if (typeof f === 'string' && f.includes('T')) f = f.split('T')[0];
-                anticiposList.push({ fecha: f, monto: m, responsable: a.responsable || a.encargado || '' });
-            });
-
-            const fechasAusencia = new Set();
-            if (data.extras) data.extras.forEach(e => {
-                if (e.tipo && e.tipo.toLowerCase().includes('ausencia')) {
-                    let f = e.fecha; if (f.includes('T')) f = f.split('T')[0]; fechasAusencia.add(f);
-                }
-            });
-
-            if (socio.contrato === 'Part-Time') {
-                (globalDiasPT[socio.id] || []).forEach(d => { if (!fechasAusencia.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
-                alcance *= socio.puntos;
-            } else {
-                for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) { if (!fechasAusencia.has(dia)) alcance += valor; }
-                alcance *= socio.puntos;
-            }
-            const saldoReal = alcance + saldoAnterior - sumaPedido;
-            aPagar = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
-            remanente = Math.round(saldoReal - aPagar);
-        }
+        const { aPagar, remanente, alcance, saldoAnterior, sumaPedido, anticiposList } = await cierresMes_calcularSocio(socio);
 
         await callApiSocios('registrarSaldoAnterior', { id: socio.id, nombre: `${socio.nombre} ${socio.apellido}`, monto: remanente });
         const cobraAhora = confirm(`¿${socio.nombre} está cobrando ahora?\n\n✅ Aceptar → 💵 Cobrado\n❌ Cancelar → 📩 Queda en sobre`);
@@ -1656,11 +1666,105 @@ async function cierresMes_ejecutarCierreSocio(socioId) {
     }
 }
 
-async function cierresMes_finalizarPeriodo() {
+
+// ── CIERRE MASIVO: cierra a TODOS los socios pendientes de una sola vez ──────
+// Por cada socio hace EXACTAMENTE lo mismo que el botón "🔒 Cerrar" individual:
+// mismo cálculo (cierresMes_calcularSocio), mismo guardado del remanente como
+// saldo anterior y mismo registro con su detalle.
+// Diferencias propias del modo masivo:
+//   · Todos quedan 📩 EN SOBRE (no se pregunta socio por socio si cobra ahora),
+//     así que NO se archivan los anticipos de cada uno (igual que al elegir
+//     "queda en sobre" en el cierre individual).
+//   · Exige una NOTA obligatoria explicando por qué se cerró a todos de una vez;
+//     esa nota queda en la auditoría.
+//   · Opcionalmente ejecuta después el archivado e inicio de nuevo mes.
+async function cierresMes_cerrarTodos() {
+    const yaCerrados = new Set(cierresMes_obtener().map(c => c.id));
+    const pendientes = (cacheSocios || []).filter(s => !yaCerrados.has(s.id));
+    if (!pendientes.length) { showToast('No hay socios pendientes: todos ya están cerrados', 'info'); return; }
+
+    const fmtM = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v || 0);
+
+    if (!confirm('🔒 CERRAR MES A TODOS LOS SOCIOS\n\n'
+        + 'Se cerrará el mes de ' + pendientes.length + ' socio(s) pendiente(s).\n\n'
+        + 'Por CADA socio se hace lo mismo que el botón "Cerrar" individual:\n'
+        + '  1. Calcular su alcance (valor punto × sus puntos, sin ausencias)\n'
+        + '  2. Sumar su saldo anterior y restar sus anticipos\n'
+        + '  3. Determinar A Pagar (al millar) y el remanente\n'
+        + '  4. GUARDAR el remanente como su saldo del próximo mes\n\n'
+        + 'Todos quedan 📩 EN SOBRE. Luego marcas "Cobrado" a quien retire.\n\n'
+        + '¿Continuar?')) return;
+
+    let motivo = prompt('¿POR QUÉ se cierra a todos de una vez?\n\n'
+        + 'Esta nota queda en la auditoría como constancia.\n'
+        + 'Ej.: "cierre de fin de mes", "el encargado no estará disponible",\n'
+        + '"se cerró masivamente para cuadrar el período".\n\n'
+        + 'Motivo (obligatorio):', '');
+    if (motivo === null) { showToast('Cierre masivo cancelado', 'info'); return; }
+    motivo = motivo.trim();
+    if (motivo.length < 5) { showToast('Debes escribir un motivo (mínimo 5 caracteres)', 'warning'); return; }
+
+    const tambienArchivar = confirm('¿Además ARCHIVAR los anticipos y empezar nuevo mes?\n\n'
+        + '✅ Aceptar → cierra a todos Y archiva (deja el período limpio)\n'
+        + '❌ Cancelar → solo cierra a todos, sin archivar\n\n'
+        + '⚠️ El archivado borra los anticipos activos (quedan en el historial)\n'
+        + 'y no se puede deshacer desde la app.');
+
+    const fallidos = [];
+    let hechos = 0, sumaPagar = 0, sumaRem = 0;
+    for (let i = 0; i < pendientes.length; i++) {
+        const socio = pendientes[i];
+        toggleLoader(true, `Cerrando ${i + 1}/${pendientes.length}: ${socio.nombre}...`);
+        try {
+            const r = await cierresMes_calcularSocio(socio);
+            await callApiSocios('registrarSaldoAnterior', {
+                id: socio.id, nombre: `${socio.nombre} ${socio.apellido}`, monto: r.remanente
+            });
+            cierresMes_registrar(socio.id, `${socio.nombre} ${socio.apellido}`, r.aPagar, r.remanente, 'en_sobre', {
+                alcance: Math.round(r.alcance), saldoAnterior: r.saldoAnterior,
+                anticiposTotal: r.sumaPedido, anticipos: r.anticiposList,
+                motivoMasivo: motivo
+            });
+            hechos++; sumaPagar += r.aPagar; sumaRem += r.remanente;
+        } catch (e) {
+            console.error('[cierre masivo]', socio.id, e);
+            fallidos.push(`${socio.nombre} ${socio.apellido}`);
+        }
+    }
+
+    const detalle = `Cierre masivo de ${hechos} socio(s). Motivo: ${motivo}`
+        + ` | A pagar: ${fmtM(sumaPagar)} | Remanentes: ${fmtM(sumaRem)}`
+        + (fallidos.length ? ` | FALLARON: ${fallidos.join(', ')}` : '')
+        + (tambienArchivar ? ' | Incluye archivado de anticipos' : '');
+    try { logAccion('Cierre Masivo de Socios', detalle); } catch (e) {}
+    try {
+        if (typeof sbAuditLog === 'function') sbAuditLog('Cierre Masivo de Socios', {
+            detalle,
+            datos: { motivo, cerrados: hechos, fallidos, total_a_pagar: sumaPagar, total_remanentes: sumaRem, archivado: tambienArchivar }
+        });
+    } catch (e) {}
+
+    cierresMes_render();
+    if (typeof cierresMes_sincronizar === 'function') { try { await cierresMes_sincronizar(); } catch (e) {} }
+    toggleLoader(false);
+
+    if (fallidos.length) {
+        alert('Cierre masivo terminado CON ERRORES.\n\nCerrados: ' + hechos
+            + '\nFallaron (' + fallidos.length + '): ' + fallidos.join(', ')
+            + '\n\nCiérralos manualmente. NO se archivó, para no perder su remanente.');
+        showToast('Cierre masivo con errores: revisa los pendientes', 'warning');
+        return; // no archivar si quedó alguien sin cerrar
+    }
+
+    showToast(`✅ ${hechos} socios cerrados · A pagar ${fmtM(sumaPagar)} · Rem. ${fmtM(sumaRem)}`, 'success');
+    if (tambienArchivar) await cierresMes_finalizarPeriodo(motivo);
+}
+
+async function cierresMes_finalizarPeriodo(motivoMasivo) {
     const hoy = new Date();
     const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
     const tabNombre = `Anticipos_${MESES[hoy.getMonth()]}_${hoy.getFullYear()}`;
-    if (!confirm(`¿Archivar TODOS los anticipos del período?\n\nSe moverán a la pestaña "${tabNombre}" y se borrarán de la hoja activa y de Supabase.\n\n⚠️ Esta acción no se puede deshacer.\n\n✅ Hazlo cuando ya hayas cobrado a todos o quieras limpiar y empezar el mes nuevo.`)) return;
+    if (!motivoMasivo && !confirm(`¿Archivar TODOS los anticipos del período?\n\nSe moverán a la pestaña "${tabNombre}" y se borrarán de la hoja activa y de Supabase.\n\n⚠️ Esta acción no se puede deshacer.\n\n✅ Hazlo cuando ya hayas cobrado a todos o quieras limpiar y empezar el mes nuevo.`)) return;
     toggleLoader(true, 'Archivando anticipos...');
     try {
         // Guardar la FOTO completa del mes por socio (Meses Anteriores) ANTES de limpiar.
@@ -1668,7 +1772,7 @@ async function cierresMes_finalizarPeriodo() {
         try { await callApiSocios('archivarCierresMes', { periodo: periodoFoto }); } catch (eF) { console.warn('[cierres] foto mes:', eF); }
         await callApiSocios('reiniciarAnticipos', { tabNombre });
         showToast('✅ Anticipos archivados en ' + tabNombre, 'success');
-        logAccion('Finalizar Período', `Archivado en ${tabNombre}`);
+        logAccion('Finalizar Período', `Archivado en ${tabNombre}` + (motivoMasivo ? ` | Motivo del cierre masivo: ${motivoMasivo}` : ''));
         cierresMes_limpiarTodo();
         _cierresMesSaldoLive = {}; _cierresMesSaldoListo = false;
         cierresMes_render();

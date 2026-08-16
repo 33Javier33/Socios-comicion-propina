@@ -232,6 +232,15 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Botón "Cerrar mes a TODOS" con motivo obligatorio y archivado incluido (SW v54)
+- **Qué se hizo:** en *Estado de Cobros del Período* se agregó **🔒 Cerrar mes a TODOS (N pendientes)**, que hace por cada socio **exactamente lo mismo que el botón "Cerrar" individual**: calcula alcance (valor punto × puntos, sin ausencias) + saldo anterior − anticipos, determina *A Pagar* (al millar) y el remanente, y **guarda el remanente como saldo del próximo mes**. Guarda además el mismo detalle (alcance, saldo anterior, anticipos).
+- **Sin duplicar lógica:** el cálculo se extrajo a `cierresMes_calcularSocio()`, que ahora usan **tanto el cierre individual como el masivo** — así no pueden dar resultados distintos.
+- **Motivo obligatorio:** pide una nota (mínimo 5 caracteres) explicando por qué se cerró a todos de una vez; queda en la auditoría (`logAccion` + `sbAuditLog`) junto con totales y socios fallidos, y también en el registro de cada socio (`motivoMasivo`).
+- **Archivado incluido:** ofrece ejecutar en el mismo paso el *Archivar anticipos y empezar nuevo mes* (`cierresMes_finalizarPeriodo`), que además registra el motivo.
+- **Protecciones:** todos quedan 📩 *en sobre* (no se archivan sus anticipos, igual que al elegir "queda en sobre" en el cierre individual); si algún socio falla, **no se archiva** para no perder su remanente y se listan los pendientes.
+- La interfaz explica en el propio panel qué hace el botón y cuándo usarlo.
+- Archivos: `js/anticipos.js`, `index.html`. `anticipos.js?v=44`, SW `fondo-admin-v54`, versión visible **v54**.
+
 #### 2026-08-02 — Aviso de "falta por recaudar" en Recaudaciones (SW v53)
 - **Qué se hizo:** igual que en propi.solicitada, la sección **Recaudaciones** ahora muestra un aviso ámbar **"📅 Falta por recaudar"** con los días **sin recaudación registrada**, cada uno como una etiqueta (día de semana + fecha).
 - **Criterio:** revisa desde el día más antiguo con datos hasta **ayer** (el día en curso no se marca como faltante). Rango acotado a los últimos 45 días. Si no falta ninguno, el aviso no se muestra.
