@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Fix real: los escalamientos salían en 0 en el informe (SW v61)
+- **Causa de fondo:** el panel "Socios próximos a subir de puntaje" es una **alerta** y por diseño **oculta a quien ya tiene el aumento aplicado** (`socio.puntos >= puntosDespues` → se descarta). Como los aniversarios caen el **día 15** y esa fecha ya pasó, Cristóbal y Rodrigo ya tenían sus puntos actualizados → la alerta los quitaba → el informe (que leía esa lista) mostraba 0.
+- **Fix:** un informe necesita lo contrario: **dejar constancia de todos**. Ahora lista a **todo socio cuyo aniversario de puntos cae en el mes** (actual y anterior), esté aplicado o no, con una columna **ESTADO**: *Aplicado* (verde), *Pendiente de aplicar* (ámbar) o *Sube el día N*.
+- Los puntos se calculan con las **mismas funciones de la app** (`calcularPuntosPorAnios` / `calcularPuntosMaximos`), respetando el tope por área y excluyendo Gastos Comisión. Cada tabla trae el total de puntos que se suman.
+- Verificado con una simulación: con aniversarios día 15 y fecha posterior, aparecen correctamente en su mes con el estado correspondiente.
+- Archivos: `js/reports.js`. `reports.js?v=38`, SW `fondo-admin-v61`, versión visible **v61**.
+
 #### 2026-08-02 — Fix: el informe mostraba 0 en "suben este mes / subieron el mes pasado" (SW v60)
 - **Causa:** el informe **recalculaba por su cuenta** los escalamientos con una versión propia de la regla, que no coincidía con la de la app y devolvía listas vacías.
 - **Fix:** ahora **no recalcula nada**. `verificarEscalamientos()` expone su resultado en `window._escalamientos` (siempre, incluso sin avisos) y el informe **lee esas mismas listas** — las que muestra "Socios próximos a subir de puntaje". Así el informe no puede contradecir la pantalla.
