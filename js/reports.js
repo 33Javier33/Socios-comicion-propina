@@ -609,59 +609,80 @@ async function informeSociosPuntos() {
         let gTotSocios = 0, gPlantaN = 0, gPtN = 0, gPlantaPts = 0, gPtPts = 0;
         const resumen = [];
 
+        // Fila de socio (reutilizada por la tabla de planta y la de Part-Time)
+        const filaSocio = (s, i, areaKey) => {
+            const pts = Number(s.puntos) || 0;
+            const activo = s.puntosActivos !== false && s.visible !== false;
+            return '<tr>'
+                + '<td class="c">' + (i + 1) + '</td>'
+                + '<td class="nom">' + esc((s.nombre || '') + ' ' + (s.apellido || '')) + '</td>'
+                + '<td class="c" style="color:' + subColor(s) + ';font-weight:800;">' + esc(subNombre(s, areaKey)) + '</td>'
+                + '<td class="c">' + esc(s.rut || '—') + '</td>'
+                + '<td class="c">' + fmtFecha(s.fechaIngreso) + '</td>'
+                + '<td class="c">' + (Number(s.anios) || 0) + '</td>'
+                + '<td class="c pts">' + pts + '</td>'
+                + '<td class="c" style="color:' + (activo ? '#166534' : '#b45309') + ';font-weight:700;">'
+                +   (activo ? 'Activo' : 'Por activar') + '</td>'
+                + '</tr>';
+        };
+        const cabecera = '<thead><tr><th style="width:4%">#</th><th style="width:28%">NOMBRE</th>'
+            + '<th style="width:13%">SUB-ÁREA</th><th style="width:14%">RUT</th><th style="width:12%">INGRESO</th>'
+            + '<th style="width:7%">AÑOS</th><th style="width:9%">PUNTOS</th><th style="width:13%">ESTADO</th></tr></thead>';
+        const sumaPts = arr => arr.reduce((t, s) => t + (Number(s.puntos) || 0), 0);
+        const ordenar = arr => arr.slice().sort((a, b) =>
+            (subOrden(a) - subOrden(b))
+            || (a.nombre || '').localeCompare(b.nombre || '')
+            || (a.apellido || '').localeCompare(b.apellido || ''));
+
         const secciones = areas.map(k => {
-            // Sub-áreas: primero el área principal, luego Cambistas y por último Part-Time
-            const lista = grupos[k].slice().sort((a, b) =>
-                (subOrden(a) - subOrden(b))
-                || (a.nombre || '').localeCompare(b.nombre || '')
-                || (a.apellido || '').localeCompare(b.apellido || ''));
-
-            let plantaN = 0, ptN = 0, plantaPts = 0, ptPts = 0;
-            let cambN = 0, cambPts = 0;
-            const filas = lista.map((s, i) => {
-                const esPT = String(s.contrato || '').toLowerCase().includes('part');
-                const pts = Number(s.puntos) || 0;
-                const camb = esCambista(s);
-                if (esPT) { ptN++; ptPts += pts; } else { plantaN++; plantaPts += pts; }
-                if (camb) { cambN++; cambPts += pts; }
-                const activo = s.puntosActivos !== false && s.visible !== false;
-                return '<tr>'
-                    + '<td class="c">' + (i + 1) + '</td>'
-                    + '<td class="nom">' + esc((s.nombre || '') + ' ' + (s.apellido || '')) + '</td>'
-                    + '<td class="c" style="color:' + subColor(s) + ';font-weight:800;">' + esc(subNombre(s, k)) + '</td>'
-                    + '<td class="c">' + (esPT ? 'Part-Time' : 'Planta') + '</td>'
-                    + '<td class="c">' + esc(s.rut || '—') + '</td>'
-                    + '<td class="c">' + fmtFecha(s.fechaIngreso) + '</td>'
-                    + '<td class="c">' + (Number(s.anios) || 0) + '</td>'
-                    + '<td class="c pts">' + pts + '</td>'
-                    + '<td class="c" style="color:' + (activo ? '#166534' : '#b45309') + ';font-weight:700;">'
-                    +   (activo ? 'Activo' : 'Por activar') + '</td>'
-                    + '</tr>';
-            }).join('');
-
+            const todos = grupos[k];
+            // La PLANTA del área (incluye Cambistas) y, en bloque aparte, los
+            // PART-TIME de esa misma área con su propio total.
+            const planta = ordenar(todos.filter(s => !esPartTime(s)));
+            const listaPT = ordenar(todos.filter(esPartTime));
+            const plantaPts = sumaPts(planta), ptPts = sumaPts(listaPT);
+            const plantaN = planta.length, ptN = listaPT.length;
+            const cambistas = planta.filter(esCambista);
+            const cambN = cambistas.length, cambPts = sumaPts(cambistas);
             const totArea = plantaPts + ptPts;
-            gTotSocios += lista.length; gPlantaN += plantaN; gPtN += ptN;
+            const nombreArea = NOMBRE_AREA[k] || k.toUpperCase();
+
+            gTotSocios += todos.length; gPlantaN += plantaN; gPtN += ptN;
             gPlantaPts += plantaPts; gPtPts += ptPts;
-            resumen.push({ area: NOMBRE_AREA[k] || k.toUpperCase(), n: lista.length, plantaN, ptN, plantaPts, ptPts, total: totArea, cambN, cambPts });
+            resumen.push({ area: nombreArea, n: todos.length, plantaN, ptN, plantaPts, ptPts, total: totArea, cambN, cambPts });
 
-            return '<div class="area">'
-                + '<div class="areahead"><span>' + esc(NOMBRE_AREA[k] || k.toUpperCase())
-                +   ((cambN || ptN) ? ' <span style="font-weight:600;opacity:.85;">(incluye '
-                +     [cambN ? 'Cambistas' : '', ptN ? 'Part-Time' : ''].filter(Boolean).join(' y ') + ')</span>' : '') + '</span>'
-                +   '<span>' + lista.length + ' socio' + (lista.length !== 1 ? 's' : '') + ' &nbsp;|&nbsp; ' + totArea + ' pts</span></div>'
-                + '<table class="tbl">'
-                + '<thead><tr><th style="width:4%">#</th><th style="width:24%">NOMBRE</th><th style="width:11%">SUB-ÁREA</th>'
-                +   '<th style="width:10%">CONTRATO</th><th style="width:13%">RUT</th><th style="width:11%">INGRESO</th>'
-                +   '<th style="width:6%">AÑOS</th><th style="width:8%">PUNTOS</th><th style="width:13%">ESTADO</th></tr></thead>'
-                + '<tbody>' + filas + '</tbody>'
-                + '<tfoot><tr class="sub">'
-                +   '<td colspan="7">SUBTOTAL — Planta: ' + plantaN + ' (' + plantaPts + ' pts) &nbsp;·&nbsp; Part-Time: ' + ptN + ' (' + ptPts + ' pts)'
-                +     (cambN ? ' &nbsp;·&nbsp; <span style="color:#7c3aed;">incluye Cambistas: ' + cambN + ' (' + cambPts + ' pts)</span>' : '') + '</td>'
-                +   '<td class="c pts">' + totArea + '</td><td></td>'
-                + '</tr></tfoot>'
-                + '</table></div>';
+            let html = '<div class="area">'
+                + '<div class="areahead"><span>' + esc(nombreArea)
+                +   (cambN ? ' <span style="font-weight:600;opacity:.85;">(incluye Cambistas)</span>' : '') + '</span>'
+                +   '<span>' + plantaN + ' de planta &nbsp;|&nbsp; ' + plantaPts + ' pts</span></div>';
+
+            if (plantaN) {
+                html += '<table class="tbl">' + cabecera
+                    + '<tbody>' + planta.map((s, i) => filaSocio(s, i, k)).join('') + '</tbody>'
+                    + '<tfoot><tr class="sub">'
+                    +   '<td colspan="6">SUBTOTAL PLANTA — ' + plantaN + ' socio' + (plantaN !== 1 ? 's' : '')
+                    +     (cambN ? ' &nbsp;·&nbsp; <span style="color:#7c3aed;">incluye Cambistas: ' + cambN + ' (' + cambPts + ' pts)</span>' : '') + '</td>'
+                    +   '<td class="c pts">' + plantaPts + '</td><td></td>'
+                    + '</tr></tfoot></table>';
+            } else {
+                html += '<div style="border:1px solid #cbd5e1;border-top:none;padding:5px 8px;font-size:8px;color:#64748b;">Sin socios de planta en esta área.</div>';
+            }
+
+            if (ptN) {
+                html += '<div class="subhead"><span>PART-TIME DE ' + esc(nombreArea) + '</span>'
+                    +   '<span>' + ptN + ' socio' + (ptN !== 1 ? 's' : '') + ' &nbsp;|&nbsp; ' + ptPts + ' pts</span></div>'
+                    + '<table class="tbl">' + cabecera
+                    + '<tbody>' + listaPT.map((s, i) => filaSocio(s, i, k)).join('') + '</tbody>'
+                    + '<tfoot><tr class="sub pt">'
+                    +   '<td colspan="6">TOTAL PART-TIME ' + esc(nombreArea) + ' — ' + ptN + ' socio' + (ptN !== 1 ? 's' : '') + '</td>'
+                    +   '<td class="c pts">' + ptPts + '</td><td></td>'
+                    + '</tr></tfoot></table>';
+            }
+
+            html += '<div class="areatot">TOTAL ' + esc(nombreArea) + ' (planta + part-time): '
+                + todos.length + ' socios &nbsp;|&nbsp; ' + totArea + ' pts</div>';
+            return html + '</div>';
         }).join('');
-
 
         // ── ESCALAMIENTOS DE PUNTOS ────────────────────────────────────
         // Mismo criterio que "Socios próximos a subir de puntaje" de la app:
@@ -769,6 +790,9 @@ async function informeSociosPuntos() {
             + '.tbl .nom { font-weight:700; }'
             + '.tbl .pts { font-weight:900; }'
             + '.tbl tfoot .sub td { background:#f1f5f9; font-weight:800; font-size:7.5px; }'
+            + '.tbl tfoot .sub.pt td { background:#fef3c7; color:#7c2d12; }'
+            + '.subhead { background:#b45309; color:#fff; padding:3px 8px; font-size:8.5px; font-weight:800; display:flex; justify-content:space-between; margin-top:4px; }'
+            + '.areatot { background:#334155; color:#fff; padding:3px 8px; font-size:8.5px; font-weight:900; text-align:right; border-radius:0 0 3px 3px; }'
             + '.resumen { width:100%; border-collapse:collapse; margin-top:6px; }'
             + '.resumen th { background:#0f172a; color:#fff; border:1px solid #0f172a; padding:4px; font-size:7.5px; text-transform:uppercase; }'
             + '.resumen td { border:1px solid #94a3b8; padding:4px; font-size:8.5px; }'

@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Informe: los Part-Time van en bloque aparte dentro de cada área (SW v59)
+- **Corrección:** los Part-Time estaban mezclados en la misma lista del área. Como puede haber Part-Time de **Mesas, Máquinas o Bóveda**, ahora cada área muestra **dos bloques separados**:
+  1. **Planta** del área (incluye Cambistas como sub-área) con su *SUBTOTAL PLANTA*.
+  2. **PART-TIME DE \<ÁREA\>** —, en bloque ámbar propio, con sus socios, sus puntos y su *TOTAL PART-TIME*.
+- Cierra con una barra **TOTAL \<ÁREA\> (planta + part-time)** con la cantidad de socios y los puntos sumados.
+- Si un área no tiene Part-Time, ese bloque simplemente no aparece; si no tiene planta, lo indica.
+- Archivos: `js/reports.js`. `reports.js?v=36`, SW `fondo-admin-v59`, versión visible **v59**.
+
 #### 2026-08-02 — Informe: Part-Time como sub-área + quiénes suben de puntaje (SW v58)
 - **Part-Time como sub-área:** igual que Cambistas, los Part-Time ya no se mezclan: dentro de cada área la columna **SUB-ÁREA** los identifica (Part-Time en ámbar, Cambistas en violeta, área principal en gris) y se ordenan **área principal → Cambistas → Part-Time**. El encabezado indica "(incluye Cambistas y Part-Time)".
 - **Escalamientos de puntos:** dos secciones nuevas — **⬆ SUBEN ESTE MES** y **✅ SUBIERON EL MES PASADO** — con nombre, sub-área, área, **día en que sube**, años cumplidos, **puntos antes → después** y el aumento (+2). Si no hay nadie, lo indica explícitamente.
