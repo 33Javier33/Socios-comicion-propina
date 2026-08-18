@@ -549,3 +549,165 @@ async function imprimirReciboSocio() {
         });
     }
 }
+
+// ============================================================
+// INFORME DE SOCIOS Y PUNTOS POR ÁREA
+// Muestra la información completa de cada socio agrupada por área,
+// con subtotales de puntos Planta / Part-Time y el resumen general.
+// ============================================================
+async function informeSociosPuntos() {
+    if (!cacheSocios.length) return showToast('No hay socios cargados', 'error');
+    toggleLoader(true, 'Generando informe de socios...');
+    try {
+        const hoyDate = new Date();
+        const fechaHoyVis = hoyDate.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const fileName = 'Socios y Puntos por Area ' + fechaHoyVis.replace(/\//g, '-');
+        const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+        const fmtFecha = f => {
+            if (!f) return '—';
+            const p = String(f).substring(0, 10).split('-');
+            return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : String(f);
+        };
+
+        // Nombre legible de cada área
+        const NOMBRE_AREA = {
+            mesas: 'MESAS', cambistas: 'CAMBISTAS', maquinas: 'MÁQUINAS',
+            tecnicos: 'TÉCNICOS', boveda: 'BÓVEDA', gastoscomision: 'GASTOS COMISIÓN'
+        };
+        const ORDEN = ['mesas', 'cambistas', 'maquinas', 'tecnicos', 'boveda', 'gastoscomision'];
+        const claveArea = s => {
+            const a = String(s.area || '').toLowerCase().replace(/\s+/g, '');
+            if (a.includes('gasto')) return 'gastoscomision';
+            if (a.includes('cambist')) return 'cambistas';
+            if (a.includes('maquina')) return 'maquinas';
+            if (a.includes('tecnic')) return 'tecnicos';
+            if (a.includes('boveda')) return 'boveda';
+            if (a.includes('mesa')) return 'mesas';
+            return a || 'otros';
+        };
+
+        // Agrupar por área
+        const grupos = {};
+        cacheSocios.forEach(s => {
+            const k = claveArea(s);
+            if (!grupos[k]) grupos[k] = [];
+            grupos[k].push(s);
+        });
+        const areas = Object.keys(grupos).sort((a, b) => {
+            const ia = ORDEN.indexOf(a), ib = ORDEN.indexOf(b);
+            return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
+        });
+
+        let gTotSocios = 0, gPlantaN = 0, gPtN = 0, gPlantaPts = 0, gPtPts = 0;
+        const resumen = [];
+
+        const secciones = areas.map(k => {
+            const lista = grupos[k].slice().sort((a, b) =>
+                (a.nombre || '').localeCompare(b.nombre || '') || (a.apellido || '').localeCompare(b.apellido || ''));
+
+            let plantaN = 0, ptN = 0, plantaPts = 0, ptPts = 0;
+            const filas = lista.map((s, i) => {
+                const esPT = String(s.contrato || '').toLowerCase().includes('part');
+                const pts = Number(s.puntos) || 0;
+                if (esPT) { ptN++; ptPts += pts; } else { plantaN++; plantaPts += pts; }
+                const activo = s.puntosActivos !== false && s.visible !== false;
+                return '<tr>'
+                    + '<td class="c">' + (i + 1) + '</td>'
+                    + '<td class="nom">' + esc((s.nombre || '') + ' ' + (s.apellido || '')) + '</td>'
+                    + '<td class="c">' + (esPT ? 'Part-Time' : 'Planta') + '</td>'
+                    + '<td class="c">' + esc(s.rut || '—') + '</td>'
+                    + '<td class="c">' + fmtFecha(s.fechaIngreso) + '</td>'
+                    + '<td class="c">' + (Number(s.anios) || 0) + '</td>'
+                    + '<td class="c pts">' + pts + '</td>'
+                    + '<td class="c" style="color:' + (activo ? '#166534' : '#b45309') + ';font-weight:700;">'
+                    +   (activo ? 'Activo' : 'Por activar') + '</td>'
+                    + '</tr>';
+            }).join('');
+
+            const totArea = plantaPts + ptPts;
+            gTotSocios += lista.length; gPlantaN += plantaN; gPtN += ptN;
+            gPlantaPts += plantaPts; gPtPts += ptPts;
+            resumen.push({ area: NOMBRE_AREA[k] || k.toUpperCase(), n: lista.length, plantaN, ptN, plantaPts, ptPts, total: totArea });
+
+            return '<div class="area">'
+                + '<div class="areahead"><span>' + esc(NOMBRE_AREA[k] || k.toUpperCase()) + '</span>'
+                +   '<span>' + lista.length + ' socio' + (lista.length !== 1 ? 's' : '') + ' &nbsp;|&nbsp; ' + totArea + ' pts</span></div>'
+                + '<table class="tbl">'
+                + '<thead><tr><th style="width:4%">#</th><th style="width:28%">NOMBRE</th><th style="width:11%">CONTRATO</th>'
+                +   '<th style="width:14%">RUT</th><th style="width:12%">INGRESO</th><th style="width:7%">AÑOS</th>'
+                +   '<th style="width:9%">PUNTOS</th><th style="width:15%">ESTADO</th></tr></thead>'
+                + '<tbody>' + filas + '</tbody>'
+                + '<tfoot><tr class="sub">'
+                +   '<td colspan="6">SUBTOTAL — Planta: ' + plantaN + ' (' + plantaPts + ' pts) &nbsp;·&nbsp; Part-Time: ' + ptN + ' (' + ptPts + ' pts)</td>'
+                +   '<td class="c pts">' + totArea + '</td><td></td>'
+                + '</tr></tfoot>'
+                + '</table></div>';
+        }).join('');
+
+        const filasResumen = resumen.map(r =>
+            '<tr><td>' + esc(r.area) + '</td>'
+            + '<td class="c">' + r.n + '</td>'
+            + '<td class="c">' + r.plantaN + '</td><td class="c">' + r.plantaPts + '</td>'
+            + '<td class="c">' + r.ptN + '</td><td class="c">' + r.ptPts + '</td>'
+            + '<td class="c pts">' + r.total + '</td></tr>').join('');
+
+        const html =
+            '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + fileName + '</title><style>'
+            + '* { margin:0; padding:0; box-sizing:border-box; }'
+            + 'body { font-family:Arial,Helvetica,sans-serif; font-size:9px; color:#000; padding:10px; }'
+            + 'h1 { font-size:14px; text-align:center; font-weight:900; letter-spacing:1px; }'
+            + '.sub0 { text-align:center; font-size:8.5px; margin:2px 0 8px; font-weight:600; color:#334155; }'
+            + '.kpis { display:flex; gap:6px; margin-bottom:10px; }'
+            + '.kpi { flex:1; border:1px solid #cbd5e1; border-radius:4px; padding:5px 6px; text-align:center; }'
+            + '.kpi b { display:block; font-size:14px; color:#0f172a; }'
+            + '.kpi span { font-size:7px; text-transform:uppercase; letter-spacing:.06em; color:#64748b; font-weight:700; }'
+            + '.area { margin-bottom:10px; page-break-inside:avoid; break-inside:avoid; }'
+            + '.areahead { background:#1e3a5f; color:#fff; padding:4px 8px; font-size:9.5px; font-weight:900; display:flex; justify-content:space-between; border-radius:3px 3px 0 0; }'
+            + '.tbl { width:100%; border-collapse:collapse; table-layout:fixed; }'
+            + '.tbl th { background:#e2e8f0; border:1px solid #94a3b8; padding:3px 4px; font-size:7px; text-transform:uppercase; letter-spacing:.04em; }'
+            + '.tbl td { border:1px solid #cbd5e1; padding:3px 4px; font-size:8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }'
+            + '.tbl .c { text-align:center; }'
+            + '.tbl .nom { font-weight:700; }'
+            + '.tbl .pts { font-weight:900; }'
+            + '.tbl tfoot .sub td { background:#f1f5f9; font-weight:800; font-size:7.5px; }'
+            + '.resumen { width:100%; border-collapse:collapse; margin-top:6px; }'
+            + '.resumen th { background:#0f172a; color:#fff; border:1px solid #0f172a; padding:4px; font-size:7.5px; text-transform:uppercase; }'
+            + '.resumen td { border:1px solid #94a3b8; padding:4px; font-size:8.5px; }'
+            + '.resumen tfoot td { background:#1e3a5f; color:#fff; font-weight:900; }'
+            + '.footer { text-align:center; font-size:7.5px; color:#94a3b8; margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:4px; }'
+            + '@media print { @page { margin:8mm; size:216mm 330mm portrait; } body { padding:0 !important; } .page { max-width:none !important; padding:0 !important; box-shadow:none !important; } }'
+            + '@media screen { body { background:#ddd; } .page { background:#fff; max-width:860px; margin:0 auto; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,.2); } }'
+            + '<\/style>'
+            + '<scr' + 'ipt>window.onload=function(){setTimeout(function(){window.print();},400);}<\/scr' + 'ipt>'
+            + '</head><body><div class="page">'
+            + '<h1>SOCIOS Y PUNTOS POR ÁREA</h1>'
+            + '<div class="sub0">FONDO DE SOLIDARIDAD &mdash; CASINO DE PUERTO VARAS &nbsp;|&nbsp; LEY 17312 DEL 29/07/70</div>'
+            + '<div class="kpis">'
+            +   '<div class="kpi"><b>' + gTotSocios + '</b><span>Total socios</span></div>'
+            +   '<div class="kpi"><b>' + gPlantaN + '</b><span>Planta</span></div>'
+            +   '<div class="kpi"><b>' + gPtN + '</b><span>Part-Time</span></div>'
+            +   '<div class="kpi"><b>' + gPlantaPts + '</b><span>Puntos planta</span></div>'
+            +   '<div class="kpi"><b>' + gPtPts + '</b><span>Puntos PT</span></div>'
+            +   '<div class="kpi"><b>' + (gPlantaPts + gPtPts) + '</b><span>Puntos totales</span></div>'
+            + '</div>'
+            + secciones
+            + '<div class="areahead" style="border-radius:3px 3px 0 0;">RESUMEN POR ÁREA</div>'
+            + '<table class="resumen">'
+            + '<thead><tr><th>ÁREA</th><th>SOCIOS</th><th>PLANTA</th><th>PTS PLANTA</th><th>PART-TIME</th><th>PTS PT</th><th>TOTAL PTS</th></tr></thead>'
+            + '<tbody>' + filasResumen + '</tbody>'
+            + '<tfoot><tr><td>TOTAL GENERAL</td><td class="c">' + gTotSocios + '</td><td class="c">' + gPlantaN + '</td>'
+            +   '<td class="c">' + gPlantaPts + '</td><td class="c">' + gPtN + '</td><td class="c">' + gPtPts + '</td>'
+            +   '<td class="c">' + (gPlantaPts + gPtPts) + '</td></tr></tfoot>'
+            + '</table>'
+            + '<div class="footer">Emitido: ' + fechaHoyVis + ' &nbsp;|&nbsp; Sistema Fondo Solidario &mdash; Casino de Puerto Varas</div>'
+            + '</div></body></html>';
+
+        printHTML(html, fileName);
+        try { logAccion('Informe Socios y Puntos', `${gTotSocios} socios · ${gPlantaPts + gPtPts} pts`); } catch (e) {}
+    } catch (e) {
+        console.error(e);
+        showToast('Error generando el informe', 'error');
+    } finally {
+        toggleLoader(false);
+    }
+}

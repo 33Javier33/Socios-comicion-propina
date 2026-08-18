@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Informe "Socios y Puntos por Área" (SW v56)
+- **Qué se hizo:** nuevo informe imprimible (mismo estilo que los existentes) con **toda la información de cada socio agrupada por área**: nombre, contrato (Planta / Part-Time), RUT, fecha de ingreso, años, puntos y estado (Activo / Por activar).
+- **Totales:** subtotal por área separando **Planta** y **Part-Time** (cantidad de socios y puntos de cada uno), tarjetas KPI arriba (total socios, planta, PT, puntos planta, puntos PT, puntos totales) y una **tabla de resumen por área** al final con el total general.
+- **Orden:** áreas en el orden habitual (Mesas → Cambistas → Máquinas → Técnicos → Bóveda → Gastos Comisión) y socios alfabéticos dentro de cada una. Cada área evita cortarse entre páginas al imprimir.
+- **Dónde:** botón **📄 Informe** en *Gestión de Socios*, junto al buscador y al botón de IDs.
+- Archivos: `js/reports.js` (`informeSociosPuntos`), `index.html`. `reports.js?v=33`, SW `fondo-admin-v56`, versión visible **v56**.
+
 #### 2026-08-02 — El motivo del cierre masivo ahora se escribe en varias líneas (SW v55)
 - **Problema:** el motivo se pedía con `prompt()`, que es de **una sola línea**: al escribir un texto largo no se alcanzaba a leer ni revisar si había errores.
 - **Fix:** cuadro propio con **área de texto de varias líneas** (5 filas, redimensionable), con **contador de caracteres**, aviso de mínimo requerido y el botón *Continuar* **deshabilitado** hasta cumplirlo. Incluye ejemplos de motivos. Se cierra con *Cancelar* o tocando fuera; si por algún motivo faltara el modal, cae al `prompt` como respaldo.
