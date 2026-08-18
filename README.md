@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Escalamientos: se agrega "Suben el próximo mes" (SW v63)
+- El informe ahora muestra **tres tablas** de escalamiento de puntos: **✅ Subieron el mes pasado**, **⬆ Suben este mes** y **🔮 Suben el próximo mes** (azul), cada una con su total de puntos.
+- El **estado** se ajusta al período: en el próximo mes siempre es *"Sube el día N"*; en el mes actual distingue *Aplicado* / *Pendiente de aplicar* / *Sube el día N* según la fecha; en el mes pasado, *Aplicado* o *Pendiente de aplicar*.
+- Maneja el cambio de año (diciembre → enero) tanto hacia atrás como hacia adelante.
+- Verificado con simulación de los tres casos.
+- Archivos: `js/reports.js`. `reports.js?v=40`, SW `fondo-admin-v63`, versión visible **v63**.
+
 #### 2026-08-02 — Escalamientos: se agregan fecha de ingreso y fecha base de puntos (SW v62)
 - En las tablas **⬆ Suben este mes** y **✅ Subieron el mes pasado** se agregaron dos columnas:
   - **INGRESO** — fecha de ingreso del socio.

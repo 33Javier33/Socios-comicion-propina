@@ -695,7 +695,9 @@ async function informeSociosPuntos() {
         const _mesAct = hoyDate.getMonth(), _anioAct = hoyDate.getFullYear(), _diaAct = hoyDate.getDate();
         const _mesPas = _mesAct === 0 ? 11 : _mesAct - 1;
         const _anioPas = _mesAct === 0 ? _anioAct - 1 : _anioAct;
-        const subenEsteMes = [], subieronMesPasado = [];
+        const _mesProx = _mesAct === 11 ? 0 : _mesAct + 1;
+        const _anioProx = _mesAct === 11 ? _anioAct + 1 : _anioAct;
+        const subenEsteMes = [], subieronMesPasado = [], subenProxMes = [];
 
         cacheSocios.forEach(so => {
             const base = (so.fechaInicioPuntos && so.fechaInicioPuntos !== so.fechaIngreso)
@@ -709,7 +711,7 @@ async function informeSociosPuntos() {
             const ptsPor = a => {
                 try { return calcularPuntosPorAnios(a, so.area); } catch (e) { return null; }
             };
-            const evaluar = (mesRef, anioRef, destino, esPasado) => {
+            const evaluar = (mesRef, anioRef, destino, tipo) => {
                 if (mesIng !== mesRef) return;
                 const anios = anioRef - anioIng;
                 if (anios < 1) return;
@@ -717,21 +719,25 @@ async function informeSociosPuntos() {
                 if (antes === null || desp === null || desp <= antes) return;   // ya está en el tope
                 const actuales = Number(so.puntos) || 0;
                 const aplicado = actuales >= desp;
-                const yaPaso = esPasado || (_diaAct >= diaIng);
+                let estado;
+                if (tipo === 'proximo') estado = 'Sube el día ' + diaIng;          // aún no llega el mes
+                else if (tipo === 'pasado') estado = aplicado ? 'Aplicado' : 'Pendiente de aplicar';
+                else estado = aplicado ? 'Aplicado' : (_diaAct >= diaIng ? 'Pendiente de aplicar' : 'Sube el día ' + diaIng);
                 destino.push({
                     socio: so, antes, desp, dia: diaIng, anios,
                     fIngreso: so.fechaIngreso, fBase: base,
                     baseDistinta: String(base).substring(0,10) !== String(so.fechaIngreso || '').substring(0,10),
-                    estado: aplicado ? 'Aplicado' : (yaPaso ? 'Pendiente de aplicar' : 'Sube el día ' + diaIng)
+                    estado: estado
                 });
             };
-            evaluar(_mesAct, _anioAct, subenEsteMes, false);
-            evaluar(_mesPas, _anioPas, subieronMesPasado, true);
+            evaluar(_mesAct, _anioAct, subenEsteMes, 'actual');
+            evaluar(_mesPas, _anioPas, subieronMesPasado, 'pasado');
+            evaluar(_mesProx, _anioProx, subenProxMes, 'proximo');
         });
 
         const _ordEsc = (a, b) => (a.dia - b.dia)
             || (a.socio.nombre || '').localeCompare(b.socio.nombre || '');
-        subenEsteMes.sort(_ordEsc); subieronMesPasado.sort(_ordEsc);
+        subenEsteMes.sort(_ordEsc); subieronMesPasado.sort(_ordEsc); subenProxMes.sort(_ordEsc);
 
         function tablaEscalamiento(titulo, lista, color, vacio) {
             if (!lista.length) return '<div class="area"><div class="areahead" style="background:' + color + ';">'
@@ -771,7 +777,9 @@ async function informeSociosPuntos() {
             tablaEscalamiento('⬆ SUBEN ESTE MES (' + MESES_N[_mesAct].toUpperCase() + ' ' + _anioAct + ')', subenEsteMes, '#b45309',
                 'Ningún socio cumple aniversario de puntos este mes.')
             + tablaEscalamiento('✅ SUBIERON EL MES PASADO (' + MESES_N[_mesPas].toUpperCase() + ' ' + _anioPas + ')', subieronMesPasado, '#166534',
-                'Ningún socio cumplió aniversario de puntos el mes pasado.');
+                'Ningún socio cumplió aniversario de puntos el mes pasado.')
+            + tablaEscalamiento('🔮 SUBEN EL PRÓXIMO MES (' + MESES_N[_mesProx].toUpperCase() + ' ' + _anioProx + ')', subenProxMes, '#4338ca',
+                'Ningún socio cumple aniversario de puntos el próximo mes.');
 
         const filasResumen = resumen.map(r => {
             let fila = '<tr><td>' + esc(r.area) + '</td>'
