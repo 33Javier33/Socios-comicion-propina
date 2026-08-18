@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Fix: el informe mostraba 0 en "suben este mes / subieron el mes pasado" (SW v60)
+- **Causa:** el informe **recalculaba por su cuenta** los escalamientos con una versión propia de la regla, que no coincidía con la de la app y devolvía listas vacías.
+- **Fix:** ahora **no recalcula nada**. `verificarEscalamientos()` expone su resultado en `window._escalamientos` (siempre, incluso sin avisos) y el informe **lee esas mismas listas** — las que muestra "Socios próximos a subir de puntaje". Así el informe no puede contradecir la pantalla.
+- Se incluyen tanto `subenEsteMes` como `subieronMesPasado` + `subieronReciente`, con día de aniversario, años cumplidos y puntos **antes → después**. Si el cálculo aún no se ejecutó, el informe lo dispara antes de generarse.
+- Archivos: `js/socios.js` (expone `window._escalamientos`), `js/reports.js`. `socios.js?v=40`, `reports.js?v=37`, SW `fondo-admin-v60`, versión visible **v60**.
+
 #### 2026-08-02 — Informe: los Part-Time van en bloque aparte dentro de cada área (SW v59)
 - **Corrección:** los Part-Time estaban mezclados en la misma lista del área. Como puede haber Part-Time de **Mesas, Máquinas o Bóveda**, ahora cada área muestra **dos bloques separados**:
   1. **Planta** del área (incluye Cambistas como sub-área) con su *SUBTOTAL PLANTA*.

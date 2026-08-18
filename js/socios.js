@@ -488,6 +488,11 @@ function verificarEscalamientos() {
         }
     });
 
+    // Se exponen los resultados para que otros módulos (p. ej. el informe de
+    // socios) usen EXACTAMENTE el mismo cálculo y no puedan contradecir esta
+    // pantalla. Se guarda siempre, incluso cuando no hay avisos.
+    window._escalamientos = { subieronMesPasado, subieronReciente, subenEsteMes, subenProximoPeriodo, ingresaronEstePeriodo };
+
     const panel = document.getElementById('panelEscalamientos');
     const lista  = document.getElementById('listaEscalamientos');
 
