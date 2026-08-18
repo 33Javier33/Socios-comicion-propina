@@ -571,14 +571,16 @@ async function informeSociosPuntos() {
 
         // Nombre legible de cada área
         const NOMBRE_AREA = {
-            mesas: 'MESAS', cambistas: 'CAMBISTAS', maquinas: 'MÁQUINAS',
+            mesas: 'MESAS', maquinas: 'MÁQUINAS',
             tecnicos: 'TÉCNICOS', boveda: 'BÓVEDA', gastoscomision: 'GASTOS COMISIÓN'
         };
-        const ORDEN = ['mesas', 'cambistas', 'maquinas', 'tecnicos', 'boveda', 'gastoscomision'];
+        const ORDEN = ['mesas', 'maquinas', 'tecnicos', 'boveda', 'gastoscomision'];
+        // Cambistas NO es un área aparte: es una SUB-ÁREA de Mesas.
+        const esCambista = s => String(s.area || '').toLowerCase().includes('cambist');
         const claveArea = s => {
             const a = String(s.area || '').toLowerCase().replace(/\s+/g, '');
             if (a.includes('gasto')) return 'gastoscomision';
-            if (a.includes('cambist')) return 'cambistas';
+            if (a.includes('cambist')) return 'mesas';   // sub-área de Mesas
             if (a.includes('maquina')) return 'maquinas';
             if (a.includes('tecnic')) return 'tecnicos';
             if (a.includes('boveda')) return 'boveda';
@@ -602,18 +604,25 @@ async function informeSociosPuntos() {
         const resumen = [];
 
         const secciones = areas.map(k => {
+            // Dentro de Mesas: primero los de Mesas y después los Cambistas
             const lista = grupos[k].slice().sort((a, b) =>
-                (a.nombre || '').localeCompare(b.nombre || '') || (a.apellido || '').localeCompare(b.apellido || ''));
+                (esCambista(a) - esCambista(b))
+                || (a.nombre || '').localeCompare(b.nombre || '')
+                || (a.apellido || '').localeCompare(b.apellido || ''));
 
             let plantaN = 0, ptN = 0, plantaPts = 0, ptPts = 0;
+            let cambN = 0, cambPts = 0;
             const filas = lista.map((s, i) => {
                 const esPT = String(s.contrato || '').toLowerCase().includes('part');
                 const pts = Number(s.puntos) || 0;
+                const camb = esCambista(s);
                 if (esPT) { ptN++; ptPts += pts; } else { plantaN++; plantaPts += pts; }
+                if (camb) { cambN++; cambPts += pts; }
                 const activo = s.puntosActivos !== false && s.visible !== false;
                 return '<tr>'
                     + '<td class="c">' + (i + 1) + '</td>'
                     + '<td class="nom">' + esc((s.nombre || '') + ' ' + (s.apellido || '')) + '</td>'
+                    + '<td class="c"' + (camb ? ' style="color:#7c3aed;font-weight:800;"' : '') + '>' + (camb ? 'Cambistas' : '—') + '</td>'
                     + '<td class="c">' + (esPT ? 'Part-Time' : 'Planta') + '</td>'
                     + '<td class="c">' + esc(s.rut || '—') + '</td>'
                     + '<td class="c">' + fmtFecha(s.fechaIngreso) + '</td>'
@@ -627,29 +636,40 @@ async function informeSociosPuntos() {
             const totArea = plantaPts + ptPts;
             gTotSocios += lista.length; gPlantaN += plantaN; gPtN += ptN;
             gPlantaPts += plantaPts; gPtPts += ptPts;
-            resumen.push({ area: NOMBRE_AREA[k] || k.toUpperCase(), n: lista.length, plantaN, ptN, plantaPts, ptPts, total: totArea });
+            resumen.push({ area: NOMBRE_AREA[k] || k.toUpperCase(), n: lista.length, plantaN, ptN, plantaPts, ptPts, total: totArea, cambN, cambPts });
 
             return '<div class="area">'
-                + '<div class="areahead"><span>' + esc(NOMBRE_AREA[k] || k.toUpperCase()) + '</span>'
+                + '<div class="areahead"><span>' + esc(NOMBRE_AREA[k] || k.toUpperCase())
+                +   (cambN ? ' <span style="font-weight:600;opacity:.85;">(incluye Cambistas)</span>' : '') + '</span>'
                 +   '<span>' + lista.length + ' socio' + (lista.length !== 1 ? 's' : '') + ' &nbsp;|&nbsp; ' + totArea + ' pts</span></div>'
                 + '<table class="tbl">'
-                + '<thead><tr><th style="width:4%">#</th><th style="width:28%">NOMBRE</th><th style="width:11%">CONTRATO</th>'
-                +   '<th style="width:14%">RUT</th><th style="width:12%">INGRESO</th><th style="width:7%">AÑOS</th>'
-                +   '<th style="width:9%">PUNTOS</th><th style="width:15%">ESTADO</th></tr></thead>'
+                + '<thead><tr><th style="width:4%">#</th><th style="width:24%">NOMBRE</th><th style="width:11%">SUB-ÁREA</th>'
+                +   '<th style="width:10%">CONTRATO</th><th style="width:13%">RUT</th><th style="width:11%">INGRESO</th>'
+                +   '<th style="width:6%">AÑOS</th><th style="width:8%">PUNTOS</th><th style="width:13%">ESTADO</th></tr></thead>'
                 + '<tbody>' + filas + '</tbody>'
                 + '<tfoot><tr class="sub">'
-                +   '<td colspan="6">SUBTOTAL — Planta: ' + plantaN + ' (' + plantaPts + ' pts) &nbsp;·&nbsp; Part-Time: ' + ptN + ' (' + ptPts + ' pts)</td>'
+                +   '<td colspan="7">SUBTOTAL — Planta: ' + plantaN + ' (' + plantaPts + ' pts) &nbsp;·&nbsp; Part-Time: ' + ptN + ' (' + ptPts + ' pts)'
+                +     (cambN ? ' &nbsp;·&nbsp; <span style="color:#7c3aed;">incluye Cambistas: ' + cambN + ' (' + cambPts + ' pts)</span>' : '') + '</td>'
                 +   '<td class="c pts">' + totArea + '</td><td></td>'
                 + '</tr></tfoot>'
                 + '</table></div>';
         }).join('');
 
-        const filasResumen = resumen.map(r =>
-            '<tr><td>' + esc(r.area) + '</td>'
-            + '<td class="c">' + r.n + '</td>'
-            + '<td class="c">' + r.plantaN + '</td><td class="c">' + r.plantaPts + '</td>'
-            + '<td class="c">' + r.ptN + '</td><td class="c">' + r.ptPts + '</td>'
-            + '<td class="c pts">' + r.total + '</td></tr>').join('');
+        const filasResumen = resumen.map(r => {
+            let fila = '<tr><td>' + esc(r.area) + '</td>'
+                + '<td class="c">' + r.n + '</td>'
+                + '<td class="c">' + r.plantaN + '</td><td class="c">' + r.plantaPts + '</td>'
+                + '<td class="c">' + r.ptN + '</td><td class="c">' + r.ptPts + '</td>'
+                + '<td class="c pts">' + r.total + '</td></tr>';
+            // Sub-fila informativa: Cambistas está incluido en Mesas (no suma aparte)
+            if (r.cambN) {
+                fila += '<tr><td style="padding-left:18px;color:#7c3aed;font-size:7.5px;">↳ de los cuales Cambistas</td>'
+                    + '<td class="c" style="color:#7c3aed;font-size:7.5px;">' + r.cambN + '</td>'
+                    + '<td class="c" colspan="4" style="color:#94a3b8;font-size:7px;">(incluido en el total del área)</td>'
+                    + '<td class="c" style="color:#7c3aed;font-size:7.5px;font-weight:800;">' + r.cambPts + '</td></tr>';
+            }
+            return fila;
+        }).join('');
 
         const html =
             '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + fileName + '</title><style>'

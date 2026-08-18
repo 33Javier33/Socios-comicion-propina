@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Informe: Cambistas pasa a ser sub-área de Mesas (SW v57)
+- **Corrección:** Cambistas se listaba como un área independiente. Ahora se agrupa **dentro de MESAS**, que es a lo que pertenece.
+- **Se mantiene la distinción:** columna **SUB-ÁREA** que marca "Cambistas" (en violeta) frente a "—" para los de Mesas; dentro de la sección van primero los de Mesas y después los Cambistas; el encabezado del área indica "(incluye Cambistas)".
+- **Totales:** el subtotal de Mesas agrega el desglose *"incluye Cambistas: N (X pts)"*, y en el resumen por área aparece una sub-fila **"↳ de los cuales Cambistas"** marcada como *(incluido en el total del área)* para que no se sume dos veces.
+- Archivos: `js/reports.js`. `reports.js?v=34`, SW `fondo-admin-v57`, versión visible **v57**.
+
 #### 2026-08-02 — Informe "Socios y Puntos por Área" (SW v56)
 - **Qué se hizo:** nuevo informe imprimible (mismo estilo que los existentes) con **toda la información de cada socio agrupada por área**: nombre, contrato (Planta / Part-Time), RUT, fecha de ingreso, años, puntos y estado (Activo / Por activar).
 - **Totales:** subtotal por área separando **Planta** y **Part-Time** (cantidad de socios y puntos de cada uno), tarjetas KPI arriba (total socios, planta, PT, puntos planta, puntos PT, puntos totales) y una **tabla de resumen por área** al final con el total general.
