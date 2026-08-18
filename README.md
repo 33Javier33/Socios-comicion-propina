@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Escalamientos: se agregan fecha de ingreso y fecha base de puntos (SW v62)
+- En las tablas **⬆ Suben este mes** y **✅ Subieron el mes pasado** se agregaron dos columnas:
+  - **INGRESO** — fecha de ingreso del socio.
+  - **BASE PUNTOS** — la fecha que **realmente define el aumento** (`fecha_inicio_puntos`). Cuando difiere del ingreso se marca en **violeta con un asterisco**, y el pie de tabla lo aclara.
+- Esto permite verificar de un vistazo por qué a un socio le corresponde subir en ese mes, sobre todo cuando su fecha base fue ajustada y no coincide con su ingreso.
+- Archivos: `js/reports.js`. `reports.js?v=39`, SW `fondo-admin-v62`, versión visible **v62**.
+
 #### 2026-08-02 — Fix real: los escalamientos salían en 0 en el informe (SW v61)
 - **Causa de fondo:** el panel "Socios próximos a subir de puntaje" es una **alerta** y por diseño **oculta a quien ya tiene el aumento aplicado** (`socio.puntos >= puntosDespues` → se descarta). Como los aniversarios caen el **día 15** y esa fecha ya pasó, Cristóbal y Rodrigo ya tenían sus puntos actualizados → la alerta los quitaba → el informe (que leía esa lista) mostraba 0.
 - **Fix:** un informe necesita lo contrario: **dejar constancia de todos**. Ahora lista a **todo socio cuyo aniversario de puntos cae en el mes** (actual y anterior), esté aplicado o no, con una columna **ESTADO**: *Aplicado* (verde), *Pendiente de aplicar* (ámbar) o *Sube el día N*.

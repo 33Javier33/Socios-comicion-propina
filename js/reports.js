@@ -720,6 +720,8 @@ async function informeSociosPuntos() {
                 const yaPaso = esPasado || (_diaAct >= diaIng);
                 destino.push({
                     socio: so, antes, desp, dia: diaIng, anios,
+                    fIngreso: so.fechaIngreso, fBase: base,
+                    baseDistinta: String(base).substring(0,10) !== String(so.fechaIngreso || '').substring(0,10),
                     estado: aplicado ? 'Aplicado' : (yaPaso ? 'Pendiente de aplicar' : 'Sube el día ' + diaIng)
                 });
             };
@@ -743,6 +745,9 @@ async function informeSociosPuntos() {
                     + '<td class="nom">' + esc((so.nombre || '') + ' ' + (so.apellido || '')) + '</td>'
                     + '<td class="c" style="color:' + subColor(so) + ';font-weight:800;">' + esc(subNombre(so, claveArea(so))) + '</td>'
                     + '<td class="c">' + esc(NOMBRE_AREA[claveArea(so)] || (so.area || '')) + '</td>'
+                    + '<td class="c">' + fmtFecha(e.fIngreso) + '</td>'
+                    + '<td class="c" style="font-weight:700;' + (e.baseDistinta ? 'color:#7c3aed;' : '') + '">'
+                    +   fmtFecha(e.fBase) + (e.baseDistinta ? ' *' : '') + '</td>'
                     + '<td class="c">día ' + e.dia + '</td>'
                     + '<td class="c">' + e.anios + '</td>'
                     + '<td class="c">' + e.antes + ' → <b style="color:' + color + ';">' + e.desp + '</b></td>'
@@ -752,11 +757,13 @@ async function informeSociosPuntos() {
             return '<div class="area"><div class="areahead" style="background:' + color + ';">'
                 + '<span>' + titulo + '</span><span>' + lista.length + ' socio' + (lista.length !== 1 ? 's' : '') + ' &nbsp;|&nbsp; +' + totalPts + ' pts</span></div>'
                 + '<table class="tbl"><thead><tr>'
-                + '<th style="width:4%">#</th><th style="width:24%">NOMBRE</th><th style="width:11%">SUB-ÁREA</th>'
-                + '<th style="width:13%">ÁREA</th><th style="width:8%">SUBE EL</th><th style="width:6%">AÑOS</th>'
-                + '<th style="width:14%">PUNTOS</th><th style="width:8%">AUMENTO</th><th style="width:12%">ESTADO</th>'
+                + '<th style="width:3%">#</th><th style="width:20%">NOMBRE</th><th style="width:9%">SUB-ÁREA</th>'
+                + '<th style="width:11%">ÁREA</th><th style="width:9%">INGRESO</th>'
+                + '<th style="width:10%">BASE PUNTOS</th><th style="width:7%">SUBE EL</th><th style="width:5%">AÑOS</th>'
+                + '<th style="width:12%">PUNTOS</th><th style="width:6%">AUM.</th><th style="width:8%">ESTADO</th>'
                 + '</tr></thead><tbody>' + filas + '</tbody>'
-                + '<tfoot><tr class="sub"><td colspan="7">TOTAL — ' + lista.length + ' socio' + (lista.length !== 1 ? 's' : '') + '</td>'
+                + '<tfoot><tr class="sub"><td colspan="9">TOTAL — ' + lista.length + ' socio' + (lista.length !== 1 ? 's' : '')
+                +   ' &nbsp;·&nbsp; <span style="font-weight:600;color:#7c3aed;">* la fecha BASE PUNTOS es la que define el aumento (cuando difiere del ingreso)</span></td>'
                 + '<td class="c pts">+' + totalPts + '</td><td></td></tr></tfoot>'
                 + '</table></div>';
         }
