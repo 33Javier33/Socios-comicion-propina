@@ -575,8 +575,14 @@ async function informeSociosPuntos() {
             tecnicos: 'TÉCNICOS', boveda: 'BÓVEDA', gastoscomision: 'GASTOS COMISIÓN'
         };
         const ORDEN = ['mesas', 'maquinas', 'tecnicos', 'boveda', 'gastoscomision'];
-        // Cambistas NO es un área aparte: es una SUB-ÁREA de Mesas.
+        // Cambistas y Part-Time NO son áreas aparte: son SUB-ÁREAS de Mesas.
         const esCambista = s => String(s.area || '').toLowerCase().includes('cambist');
+        const esPartTime = s => String(s.contrato || '').toLowerCase().includes('part');
+        // Sub-área: 0 = principal (planta), 1 = Cambistas, 2 = Part-Time
+        const subOrden = s => esPartTime(s) ? 2 : (esCambista(s) ? 1 : 0);
+        const subNombre = (s, areaKey) => esPartTime(s) ? 'Part-Time'
+            : (esCambista(s) ? 'Cambistas' : (NOMBRE_AREA[areaKey] || '—'));
+        const subColor = s => esPartTime(s) ? '#b45309' : (esCambista(s) ? '#7c3aed' : '#64748b');
         const claveArea = s => {
             const a = String(s.area || '').toLowerCase().replace(/\s+/g, '');
             if (a.includes('gasto')) return 'gastoscomision';
@@ -604,9 +610,9 @@ async function informeSociosPuntos() {
         const resumen = [];
 
         const secciones = areas.map(k => {
-            // Dentro de Mesas: primero los de Mesas y después los Cambistas
+            // Sub-áreas: primero el área principal, luego Cambistas y por último Part-Time
             const lista = grupos[k].slice().sort((a, b) =>
-                (esCambista(a) - esCambista(b))
+                (subOrden(a) - subOrden(b))
                 || (a.nombre || '').localeCompare(b.nombre || '')
                 || (a.apellido || '').localeCompare(b.apellido || ''));
 
@@ -622,7 +628,7 @@ async function informeSociosPuntos() {
                 return '<tr>'
                     + '<td class="c">' + (i + 1) + '</td>'
                     + '<td class="nom">' + esc((s.nombre || '') + ' ' + (s.apellido || '')) + '</td>'
-                    + '<td class="c"' + (camb ? ' style="color:#7c3aed;font-weight:800;"' : '') + '>' + (camb ? 'Cambistas' : '—') + '</td>'
+                    + '<td class="c" style="color:' + subColor(s) + ';font-weight:800;">' + esc(subNombre(s, k)) + '</td>'
                     + '<td class="c">' + (esPT ? 'Part-Time' : 'Planta') + '</td>'
                     + '<td class="c">' + esc(s.rut || '—') + '</td>'
                     + '<td class="c">' + fmtFecha(s.fechaIngreso) + '</td>'
@@ -640,7 +646,8 @@ async function informeSociosPuntos() {
 
             return '<div class="area">'
                 + '<div class="areahead"><span>' + esc(NOMBRE_AREA[k] || k.toUpperCase())
-                +   (cambN ? ' <span style="font-weight:600;opacity:.85;">(incluye Cambistas)</span>' : '') + '</span>'
+                +   ((cambN || ptN) ? ' <span style="font-weight:600;opacity:.85;">(incluye '
+                +     [cambN ? 'Cambistas' : '', ptN ? 'Part-Time' : ''].filter(Boolean).join(' y ') + ')</span>' : '') + '</span>'
                 +   '<span>' + lista.length + ' socio' + (lista.length !== 1 ? 's' : '') + ' &nbsp;|&nbsp; ' + totArea + ' pts</span></div>'
                 + '<table class="tbl">'
                 + '<thead><tr><th style="width:4%">#</th><th style="width:24%">NOMBRE</th><th style="width:11%">SUB-ÁREA</th>'
@@ -654,6 +661,78 @@ async function informeSociosPuntos() {
                 + '</tr></tfoot>'
                 + '</table></div>';
         }).join('');
+
+
+        // ── ESCALAMIENTOS DE PUNTOS ────────────────────────────────────
+        // Mismo criterio que "Socios próximos a subir de puntaje" de la app:
+        // el aumento ocurre en el mes del aniversario (regla del día 15).
+        const _hoy = hoyDate;
+        const _mesAct = _hoy.getMonth(), _anioAct = _hoy.getFullYear(), _diaAct = _hoy.getDate();
+        const _mesPas = _mesAct === 0 ? 11 : _mesAct - 1;
+        const _anioPas = _mesAct === 0 ? _anioAct - 1 : _anioAct;
+        const subenEsteMes = [], subieronMesPasado = [];
+        cacheSocios.forEach(so => {
+            if (!so.fechaIngreso) return;
+            if (String(so.area || '').toLowerCase().includes('gasto')) return;
+            const base = (so.fechaInicioPuntos && so.fechaInicioPuntos !== so.fechaIngreso) ? so.fechaInicioPuntos : so.fechaIngreso;
+            const pz = String(base).split('-');
+            const anioIng = parseInt(pz[0]), mesIng = parseInt(pz[1]) - 1, diaIng = parseInt(pz[2]);
+            if (isNaN(anioIng) || isNaN(mesIng)) return;
+            let max = 10;
+            try { if (typeof calcularPuntosMaximos === 'function') max = calcularPuntosMaximos(so.area); } catch (e) {}
+            if ((Number(so.puntos) || 0) >= max) return;
+            const ptsPor = a => { try { return calcularPuntosPorAnios(a, so.area); } catch (e) { return null; } };
+
+            if (mesIng === _mesPas) {
+                const an = _anioPas - anioIng;
+                if (an >= 1) {
+                    const antes = ptsPor(an - 1), desp = ptsPor(an);
+                    if (antes !== null && desp !== null && desp > antes && (Number(so.puntos) || 0) < desp)
+                        subieronMesPasado.push({ s: so, antes, desp, dia: diaIng, anios: an });
+                }
+            }
+            if (mesIng === _mesAct) {
+                const an = _anioAct - anioIng;
+                if (an >= 1) {
+                    const antes = ptsPor(an - 1), desp = ptsPor(an);
+                    if (antes !== null && desp !== null && desp > antes) {
+                        const yaOcurrio = _diaAct >= diaIng;
+                        if (!(yaOcurrio && (Number(so.puntos) || 0) >= desp))
+                            subenEsteMes.push({ s: so, antes, desp, dia: diaIng, anios: an, yaOcurrio });
+                    }
+                }
+            }
+        });
+        const _ordEsc = (a, b) => (a.dia - b.dia) || (a.s.nombre || '').localeCompare(b.s.nombre || '');
+        subenEsteMes.sort(_ordEsc); subieronMesPasado.sort(_ordEsc);
+
+        const MESES_N = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        function tablaEscalamiento(titulo, lista, color, vacio) {
+            if (!lista.length) return '<div class="area"><div class="areahead" style="background:' + color + ';">'
+                + '<span>' + titulo + '</span><span>0</span></div>'
+                + '<div style="border:1px solid #cbd5e1;border-top:none;padding:6px 8px;font-size:8px;color:#64748b;">' + vacio + '</div></div>';
+            const filas = lista.map((e, i) =>
+                '<tr><td class="c">' + (i + 1) + '</td>'
+                + '<td class="nom">' + esc((e.s.nombre || '') + ' ' + (e.s.apellido || '')) + '</td>'
+                + '<td class="c">' + esc(subNombre(e.s, claveArea(e.s))) + '</td>'
+                + '<td class="c">' + esc(NOMBRE_AREA[claveArea(e.s)] || '') + '</td>'
+                + '<td class="c">día ' + e.dia + '</td>'
+                + '<td class="c">' + e.anios + '</td>'
+                + '<td class="c">' + e.antes + ' → <b style="color:' + color + ';">' + e.desp + '</b></td>'
+                + '<td class="c pts" style="color:' + color + ';">+' + (e.desp - e.antes) + '</td></tr>').join('');
+            return '<div class="area"><div class="areahead" style="background:' + color + ';">'
+                + '<span>' + titulo + '</span><span>' + lista.length + ' socio' + (lista.length !== 1 ? 's' : '') + '</span></div>'
+                + '<table class="tbl"><thead><tr>'
+                + '<th style="width:4%">#</th><th style="width:26%">NOMBRE</th><th style="width:12%">SUB-ÁREA</th>'
+                + '<th style="width:14%">ÁREA</th><th style="width:10%">SUBE EL</th><th style="width:8%">AÑOS</th>'
+                + '<th style="width:16%">PUNTOS</th><th style="width:10%">AUMENTO</th>'
+                + '</tr></thead><tbody>' + filas + '</tbody></table></div>';
+        }
+        const bloqueEscalamientos =
+            tablaEscalamiento('⬆ SUBEN ESTE MES (' + MESES_N[_mesAct].toUpperCase() + ')', subenEsteMes, '#b45309',
+                'Ningún socio sube de puntaje este mes.')
+            + tablaEscalamiento('✅ SUBIERON EL MES PASADO (' + MESES_N[_mesPas].toUpperCase() + ')', subieronMesPasado, '#166534',
+                'Ningún socio subió de puntaje el mes pasado (o ya tienen el aumento aplicado).');
 
         const filasResumen = resumen.map(r => {
             let fila = '<tr><td>' + esc(r.area) + '</td>'
@@ -711,6 +790,7 @@ async function informeSociosPuntos() {
             +   '<div class="kpi"><b>' + (gPlantaPts + gPtPts) + '</b><span>Puntos totales</span></div>'
             + '</div>'
             + secciones
+            + bloqueEscalamientos
             + '<div class="areahead" style="border-radius:3px 3px 0 0;">RESUMEN POR ÁREA</div>'
             + '<table class="resumen">'
             + '<thead><tr><th>ÁREA</th><th>SOCIOS</th><th>PLANTA</th><th>PTS PLANTA</th><th>PART-TIME</th><th>PTS PT</th><th>TOTAL PTS</th></tr></thead>'

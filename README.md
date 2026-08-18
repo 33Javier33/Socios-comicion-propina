@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Informe: Part-Time como sub-área + quiénes suben de puntaje (SW v58)
+- **Part-Time como sub-área:** igual que Cambistas, los Part-Time ya no se mezclan: dentro de cada área la columna **SUB-ÁREA** los identifica (Part-Time en ámbar, Cambistas en violeta, área principal en gris) y se ordenan **área principal → Cambistas → Part-Time**. El encabezado indica "(incluye Cambistas y Part-Time)".
+- **Escalamientos de puntos:** dos secciones nuevas — **⬆ SUBEN ESTE MES** y **✅ SUBIERON EL MES PASADO** — con nombre, sub-área, área, **día en que sube**, años cumplidos, **puntos antes → después** y el aumento (+2). Si no hay nadie, lo indica explícitamente.
+- **Mismo criterio que la app:** reutiliza la regla de `verificarEscalamientos` (aniversario según `fechaInicioPuntos`, regla del día 15, tope de puntos por área, excluye Gastos Comisión y a quienes ya tienen el aumento aplicado), así el informe no puede contradecir la pantalla.
+- Archivos: `js/reports.js`. `reports.js?v=35`, SW `fondo-admin-v58`, versión visible **v58**.
+
 #### 2026-08-02 — Informe: Cambistas pasa a ser sub-área de Mesas (SW v57)
 - **Corrección:** Cambistas se listaba como un área independiente. Ahora se agrupa **dentro de MESAS**, que es a lo que pertenece.
 - **Se mantiene la distinción:** columna **SUB-ÁREA** que marca "Cambistas" (en violeta) frente a "—" para los de Mesas; dentro de la sección van primero los de Mesas y después los Cambistas; el encabezado del área indica "(incluye Cambistas)".
