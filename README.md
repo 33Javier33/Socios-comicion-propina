@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Escalamientos en orden cronológico (SW v64)
+- Las tres tablas ahora van en orden natural: **✅ Subieron el mes pasado → ⬆ Suben este mes → 🔮 Suben el próximo mes** (antes el mes actual iba primero).
+- Archivos: `js/reports.js`. `reports.js?v=41`, SW `fondo-admin-v64`, versión visible **v64**.
+
 #### 2026-08-02 — Escalamientos: se agrega "Suben el próximo mes" (SW v63)
 - El informe ahora muestra **tres tablas** de escalamiento de puntos: **✅ Subieron el mes pasado**, **⬆ Suben este mes** y **🔮 Suben el próximo mes** (azul), cada una con su total de puntos.
 - El **estado** se ajusta al período: en el próximo mes siempre es *"Sube el día N"*; en el mes actual distingue *Aplicado* / *Pendiente de aplicar* / *Sube el día N* según la fecha; en el mes pasado, *Aplicado* o *Pendiente de aplicar*.

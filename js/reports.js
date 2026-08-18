@@ -773,11 +773,12 @@ async function informeSociosPuntos() {
                 + '<td class="c pts">+' + totalPts + '</td><td></td></tr></tfoot>'
                 + '</table></div>';
         }
+        // Orden cronológico: mes pasado → mes actual → mes siguiente
         const bloqueEscalamientos =
-            tablaEscalamiento('⬆ SUBEN ESTE MES (' + MESES_N[_mesAct].toUpperCase() + ' ' + _anioAct + ')', subenEsteMes, '#b45309',
-                'Ningún socio cumple aniversario de puntos este mes.')
-            + tablaEscalamiento('✅ SUBIERON EL MES PASADO (' + MESES_N[_mesPas].toUpperCase() + ' ' + _anioPas + ')', subieronMesPasado, '#166534',
+            tablaEscalamiento('✅ SUBIERON EL MES PASADO (' + MESES_N[_mesPas].toUpperCase() + ' ' + _anioPas + ')', subieronMesPasado, '#166534',
                 'Ningún socio cumplió aniversario de puntos el mes pasado.')
+            + tablaEscalamiento('⬆ SUBEN ESTE MES (' + MESES_N[_mesAct].toUpperCase() + ' ' + _anioAct + ')', subenEsteMes, '#b45309',
+                'Ningún socio cumple aniversario de puntos este mes.')
             + tablaEscalamiento('🔮 SUBEN EL PRÓXIMO MES (' + MESES_N[_mesProx].toUpperCase() + ' ' + _anioProx + ')', subenProxMes, '#4338ca',
                 'Ningún socio cumple aniversario de puntos el próximo mes.');
 
