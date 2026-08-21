@@ -69,6 +69,7 @@ function egresos_render() {
                 <div style="flex:1;min-width:0;">
                     <div style="font-weight:800;font-size:0.85em;color:#075985;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_escEgr(e.socio_nombre || 'Socio')}</div>
                     <div style="font-size:0.72em;color:#0369a1;">Solicita ${fmt(e.monto)}${e.nota ? ' · ' + _escEgr(e.nota) : ''}</div>
+                    ${e.encargado ? `<div style="font-size:0.7em;color:#7c3aed;font-weight:700;margin-top:1px;">👤 Entregado por: ${_escEgr(e.encargado)}</div>` : ''}
                     <div style="font-size:0.7em;color:#0284c7;margin-top:2px;">📅 ${_hora(e.created_at) || 'Sin fecha'}</div>
                 </div>
             </div>

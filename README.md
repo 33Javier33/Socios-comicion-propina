@@ -232,6 +232,10 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Egresos: se muestra el encargado que entregó el dinero (SW v65)
+- La tarjeta de **Egresos pendientes** ahora muestra **👤 Entregado por: \<encargado\>** cuando el socio lo indicó al solicitar el egreso desde propi.solicitada.
+- Archivos: `js/egresos.js`. `egresos.js?v=38`, SW `fondo-admin-v65`, versión visible **v65**.
+
 #### 2026-08-02 — Escalamientos en orden cronológico (SW v64)
 - Las tres tablas ahora van en orden natural: **✅ Subieron el mes pasado → ⬆ Suben este mes → 🔮 Suben el próximo mes** (antes el mes actual iba primero).
 - Archivos: `js/reports.js`. `reports.js?v=41`, SW `fondo-admin-v64`, versión visible **v64**.
