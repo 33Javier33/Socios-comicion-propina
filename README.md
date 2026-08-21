@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Egresos: desglose del dinero entregado, billete por billete (SW v66)
+- La tarjeta de **Egresos pendientes** ahora muestra el **desglose del dinero** que el socio declaró al solicitar el egreso desde propi.solicitada: **💵 3×$20.000 · 1×$10.000 = $70.000**.
+- Si la suma del desglose **no cuadra** con el monto solicitado, se marca con el aviso *(no cuadra con lo solicitado)* en ámbar, para revisarlo antes de aprobar.
+- El desglose llega en la columna `billetes` (jsonb) de `solicitudes_egreso`; mientras esa columna no exista, propi.solicitada lo anexa a la nota y se ve igual en la tarjeta.
+- Archivos: `js/egresos.js` (`_egrDesglose`). `egresos.js?v=39`, SW `fondo-admin-v66`, versión visible **v66**.
+
 #### 2026-08-02 — Egresos: se muestra el encargado que entregó el dinero (SW v65)
 - La tarjeta de **Egresos pendientes** ahora muestra **👤 Entregado por: \<encargado\>** cuando el socio lo indicó al solicitar el egreso desde propi.solicitada.
 - Archivos: `js/egresos.js`. `egresos.js?v=38`, SW `fondo-admin-v65`, versión visible **v65**.

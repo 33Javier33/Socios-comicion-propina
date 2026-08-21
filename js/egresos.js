@@ -36,6 +36,23 @@ async function egresos_cargarPendientes() {
     } catch (e) { console.warn('[egresos]', e); }
 }
 
+// Desglose de billetes que el socio declaró haber recibido ({20000:3, ...}).
+// Muestra el detalle y avisa si la suma no cuadra con el monto solicitado.
+function _egrDesglose(billetes, monto) {
+    if (!billetes || typeof billetes !== 'object') return '';
+    const claves = Object.keys(billetes).filter(d => Number(billetes[d]) > 0);
+    if (!claves.length) return '';
+    claves.sort((a, b) => Number(b) - Number(a));
+    const fmtD = v => '$' + Number(v).toLocaleString('es-CL');
+    let suma = 0;
+    const partes = claves.map(d => { suma += Number(d) * Number(billetes[d]); return Number(billetes[d]) + '×' + fmtD(d); });
+    const cuadra = !monto || suma === Number(monto);
+    return '<div style="font-size:0.68em;color:#0f766e;margin-top:1px;">💵 ' + _escEgr(partes.join(' · '))
+        + ' <b>= ' + fmtD(suma) + '</b>'
+        + (cuadra ? '' : ' <span style="color:#b45309;font-weight:700;">(no cuadra con lo solicitado)</span>')
+        + '</div>';
+}
+
 function egresos_render() {
     const box = document.getElementById('egresosPendientesBox');
     if (!box) return;
@@ -70,6 +87,7 @@ function egresos_render() {
                     <div style="font-weight:800;font-size:0.85em;color:#075985;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_escEgr(e.socio_nombre || 'Socio')}</div>
                     <div style="font-size:0.72em;color:#0369a1;">Solicita ${fmt(e.monto)}${e.nota ? ' · ' + _escEgr(e.nota) : ''}</div>
                     ${e.encargado ? `<div style="font-size:0.7em;color:#7c3aed;font-weight:700;margin-top:1px;">👤 Entregado por: ${_escEgr(e.encargado)}</div>` : ''}
+                    ${_egrDesglose(e.billetes, e.monto)}
                     <div style="font-size:0.7em;color:#0284c7;margin-top:2px;">📅 ${_hora(e.created_at) || 'Sin fecha'}</div>
                 </div>
             </div>
