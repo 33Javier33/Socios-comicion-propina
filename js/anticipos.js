@@ -994,7 +994,14 @@ function mostrarModalBorrar(item) {
         document.getElementById('borrarUUID').value = item.uuid;
         document.getElementById('borrarFecha').value = item.fecha || '';
     }
-    document.getElementById('borrarTipo').value = item.montoTotal > 0 ? 'Anticipo' : 'Extra';
+    // El tipo se deduce del movimiento, NO del monto. Las ausencias muestran su
+    // monto informativo (punto_noche × puntos), así que con la regla anterior
+    // (montoTotal > 0 → 'Anticipo') se intentaban borrar de la tabla `anticipos`
+    // y la ausencia nunca se eliminaba — o peor, se borraba el anticipo del mismo día.
+    const _tipos = Array.from(item.tipos || []).map(t => String(t).toUpperCase());
+    const _esAusencia = _tipos.some(t => t.includes('AUSENCIA'));
+    const _esAnticipo = _tipos.some(t => t.includes('ANTICIPO'));
+    document.getElementById('borrarTipo').value = (_esAnticipo && !_esAusencia) ? 'Anticipo' : 'Extra';
 }
 
 async function borrarItemConfirmado() {
@@ -1016,15 +1023,31 @@ async function borrarItemConfirmado() {
         try { const f = JSON.parse(fechaVal); fechas = Array.isArray(f) ? f : [fechaVal]; }
         catch(e) { fechas = [fechaVal]; }
 
+        // Se revisa la respuesta de cada borrado: antes se asumía que todo salía
+        // bien y se mostraba "Eliminado correctamente" aunque no se borrara nada.
+        let borrados = 0;
+        const fallos = [];
         for (let i = 0; i < uuids.length; i++) {
-            await callApiSocios('borrarMovimiento', { uuid: uuids[i], tipo, socioId, fecha: fechas[i] || fechas[0] || '' });
+            const res = await callApiSocios('borrarMovimiento', { uuid: uuids[i], tipo, socioId, fecha: fechas[i] || fechas[0] || '' });
+            if (res && res.status === 'error') fallos.push(res.message || 'error'); else borrados++;
         }
-        showToast(uuids.length > 1 ? `${uuids.length} registros eliminados` : 'Eliminado correctamente', 'success');
+
+        // Refrescar SIEMPRE (aunque algo falle) para que la pantalla muestre el estado real.
         globalCacheAllData = null;
         try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
         const idSocio = document.getElementById('gestionSocioId').value;
-        cargarHistorialSocio(idSocio);
+        // cargarHistorialSocio recalcula alcance, saldo real, a pagar y remanente
+        // con las ausencias que quedan, así que al borrar una el descuento se revierte solo.
+        await cargarHistorialSocio(idSocio);
         if (typeof aq_fetchAnticipos === 'function') aq_fetchAnticipos(true);
+
+        if (fallos.length && !borrados) {
+            showToast('No se pudo eliminar: ' + fallos[0], 'error');
+        } else if (fallos.length) {
+            showToast(`${borrados} eliminados, ${fallos.length} con error`, 'error');
+        } else {
+            showToast(uuids.length > 1 ? `${uuids.length} registros eliminados` : 'Eliminado correctamente', 'success');
+        }
     } catch(e) {
         showToast('Error al eliminar', 'error');
     } finally {

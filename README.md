@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Fix: no se borraban las ausencias al mantener presionado (SW v67)
+- **Causa:** en `mostrarModalBorrar()` el tipo de movimiento se deducía del monto — `item.montoTotal > 0 ? 'Anticipo' : 'Extra'`. Las ausencias muestran su **monto informativo** (`punto_noche × puntos`), que es mayor que 0, así que se enviaban como `'Anticipo'` y el borrado buscaba en la tabla `anticipos`, donde la ausencia no está. No se borraba nada — y si ese mismo día había un anticipo, **se borraba el anticipo en su lugar**.
+- **Fix:** el tipo ahora se deduce de `item.tipos` (`AUSENCIA` → `Extra`), no del monto.
+- **Fix 2 — borrado impreciso:** `borrarMovimiento` eliminaba por `socio_id + fecha`, o sea **todos** los movimientos del socio en ese día. Ahora borra por `id` y solo cae a `socio_id + fecha` cuando la fila no trae id (registros heredados de GAS).
+- **Fix 3 — éxito falso:** si el borrado no encontraba la fila, igual respondía `success` y la app decía *"Eliminado correctamente"*. Ahora se verifica cuántas filas se borraron y, si son cero, se informa el error.
+- **Descuento revertido:** el descuento de una ausencia no está almacenado, se calcula excluyendo esas fechas del alcance. Al borrar el registro, `cargarHistorialSocio()` recalcula alcance, saldo real, a pagar y remanente sin él. El refresco ahora se hace **siempre**, incluso si algún borrado falla, para que la pantalla muestre el estado real.
+- Archivos: `js/anticipos.js` (`mostrarModalBorrar`, `borrarItemConfirmado`), `js/supabase-config.js` (`borrarMovimiento`). `anticipos.js?v=46`, `supabase-config.js?v=57`, SW `fondo-admin-v67`, versión visible **v67**.
+
 #### 2026-08-02 — Egresos: desglose del dinero entregado, billete por billete (SW v66)
 - La tarjeta de **Egresos pendientes** ahora muestra el **desglose del dinero** que el socio declaró al solicitar el egreso desde propi.solicitada: **💵 3×$20.000 · 1×$10.000 = $70.000**.
 - Si la suma del desglose **no cuadra** con el monto solicitado, se marca con el aviso *(no cuadra con lo solicitado)* en ámbar, para revisarlo antes de aprobar.

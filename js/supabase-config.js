@@ -725,12 +725,24 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 idAfectado: uuid || (socioId + '_' + fecha),
                 datos: { tipo, socio_id: socioId, fecha, uuid }
             });
-            // Borrar en Supabase (por socio_id+fecha o por id)
-            const query = (socioId && fecha)
-                ? dbSoc.from(tbl).delete().eq('socio_id', socioId).eq('fecha', fecha)
-                : dbSoc.from(tbl).delete().eq('id', uuid);
-            const { error: sbErr } = await query;
-            if (sbErr) console.error('[sb] borrarMovimiento error:', sbErr.message);
+            // Borrar en Supabase. Se prioriza el id: borrar por socio_id+fecha
+            // eliminaba TODOS los movimientos del socio en ese día (por ejemplo
+            // una ausencia y un anticipo de la misma fecha). Solo se cae a
+            // socio_id+fecha cuando el registro no trae id (filas heredadas de GAS).
+            const query = uuid
+                ? dbSoc.from(tbl).delete().eq('id', uuid).select('id')
+                : dbSoc.from(tbl).delete().eq('socio_id', socioId).eq('fecha', fecha).select('id');
+            const { data: borrados, error: sbErr } = await query;
+            if (sbErr) {
+                console.error('[sb] borrarMovimiento error:', sbErr.message);
+                return _mockOk({ status: 'error', message: sbErr.message });
+            }
+            // Si no se borró ninguna fila hay que avisar: antes se respondía
+            // "success" igual y la app mostraba "Eliminado correctamente" sin serlo.
+            if (Array.isArray(borrados) && borrados.length === 0) {
+                console.warn('[sb] borrarMovimiento: no se encontró el registro en', tbl, { uuid, socioId, fecha });
+                return _mockOk({ status: 'error', message: 'No se encontró el registro en ' + tbl });
+            }
             _origFetch(url, options).catch(() => {}); // sync GAS en segundo plano
             return _mockOk({ status: 'success', message: 'Eliminado en Supabase' });
         }
