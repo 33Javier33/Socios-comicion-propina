@@ -67,7 +67,7 @@ function aq_initSiNoIniciado() {
     const sm = localStorage.getItem(AQ_SK_MOVI);
     const sr = localStorage.getItem(AQ_SK_RETIROS);
     if(sc) aq_conteo = JSON.parse(sc);
-    if(sm) aq_movi = JSON.parse(sm);
+    if(sm) { aq_movi = JSON.parse(sm); aq_normTraceTodos(); }  // limpia rastros antiguos con "Manual"/paréntesis
     if(sr) aq_totalRetirado = parseInt(sr);
     // Si hay cambios locales pendientes (ej: anticipo aplicado antes de recargar),
     // marcar dirty para que aq_recuperarDeNube empuje a la nube en vez de sobrescribir.
@@ -102,6 +102,57 @@ function aq_initSiNoIniciado() {
 }
 
 function aq_fmt(n) { return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(Math.round(n || 0)); }
+
+// ── Rastro del conteo en formato tipo Excel ──────────────────────────────
+// El rastro se muestra como una fórmula plana: solo números y los signos
+// + y −, sin palabras ("Manual") y sin paréntesis. Ej: 40+20+1-6+8
+//
+// Los paréntesis NO se borran a secas: cada grupo se RESUELVE a su valor
+// antes de quitarlo, porque borrarlos cambiaría la cuenta — "-(2+3)" vale
+// −5, pero "-2+3" vale +1. Así el rastro se ve limpio y sigue sumando igual.
+function aq_normTrace(str) {
+    if (str === null || str === undefined) return '';
+    let t = String(str).replace(/\s+/g, '');
+    t = t.replace(/[^0-9+\-*/().]/g, '');          // fuera palabras: "Manual", etc.
+
+    const evalNum = expr => {
+        if (!expr) return null;
+        try {
+            const v = Function('"use strict"; return (' + expr + ')')();
+            return (typeof v === 'number' && isFinite(v)) ? v : null;
+        } catch (e) { return null; }
+    };
+
+    // Resolver los paréntesis de adentro hacia afuera
+    let guard = 0;
+    while (t.indexOf('(') !== -1 && guard++ < 60) {
+        const antes = t;
+        t = t.replace(/\(([^()]*)\)/g, (m, dentro) => {
+            const v = evalNum(dentro);
+            if (v === null) return '';
+            return v < 0 ? '-' + Math.abs(v) : '+' + v;   // el signo se colapsa abajo
+        });
+        if (t === antes) { t = t.replace(/[()]/g, ''); break; }
+    }
+
+    // Colapsar signos seguidos: +- → -, -- → +, ++ → +, -+ → -
+    let g2 = 0;
+    while (/[+\-]{2}/.test(t) && g2++ < 60) {
+        t = t.replace(/\+\-/g, '-').replace(/\-\-/g, '+').replace(/\+\+/g, '+').replace(/\-\+/g, '-');
+    }
+
+    t = t.replace(/^\+/, '');       // sin "+" al inicio
+    t = t.replace(/[+\-*/]+$/, ''); // sin operador colgando al final
+    return t;
+}
+
+// Deja todos los rastros guardados en formato limpio (datos ya existentes).
+function aq_normTraceTodos() {
+    Object.keys(aq_movi || {}).forEach(k => {
+        const limpio = aq_normTrace(aq_movi[k]);
+        if (limpio) aq_movi[k] = limpio; else delete aq_movi[k];
+    });
+}
 
 function aq_evalFormula(str, valDenom) {
     let clean = str.toString().replace(/[^0-9+\-*/().]/g, '');
@@ -180,7 +231,7 @@ function aq_generarCampos() {
                 <div style="font-weight:bold; font-size:0.85em;">${aq_fmt(val * aq_conteo[val])}</div>
             </div>
         </div>
-        <div class="aq-denom-trace"><span>${aq_movi[val] || 'Sin detalle'}</span></div>`;
+        <div class="aq-denom-trace"><span>${aq_normTrace(aq_movi[val]) || 'Sin detalle'}</span></div>`;
         form.appendChild(row);
     });
     aq_realizarArqueo();
@@ -196,9 +247,14 @@ function aq_actCant(val, sign) {
     aq_saveState();
     if(sign === -1) { aq_totalRetirado += Math.abs(res.neto) * val; aq_conteo[val] -= res.neto; }
     else { aq_conteo[val] += res.neto; aq_totalRetirado += res.retirosMonetarios; }
-    let prev = aq_movi[val] || "";
-    let conector = prev === "" ? (sign === -1 ? "-" : "") : (sign === 1 ? "+" : "-");
-    aq_movi[val] = prev + conector + "(" + formula + ")";
+    // Se anota el RESULTADO de la fórmula, no la fórmula entre paréntesis.
+    // Así el rastro queda plano (40+20-6) y la cuenta no cambia aunque el
+    // socio escriba algo como "2+3" y presione −: se guarda −5, no "-2+3".
+    const delta = sign * res.neto;
+    const prev = aq_normTrace(aq_movi[val] || "");
+    const n = Math.abs(delta);
+    if (prev === '') aq_movi[val] = (delta < 0 ? '-' : '') + n;
+    else             aq_movi[val] = prev + (delta < 0 ? '-' : '+') + n;
     inp.value = '';
     aq_generarCampos();
 }
@@ -208,12 +264,14 @@ function aq_manualEdit(val) {
     const nc = parseInt(inp.value) || 0;
     aq_saveState();
     if(nc < aq_conteo[val]) aq_totalRetirado += (aq_conteo[val] - nc) * val;
-    aq_conteo[val] = nc; aq_movi[val] = "Manual"; aq_generarCampos();
+    // Antes se escribía la palabra "Manual" en el rastro. Ahora se anota el
+    // número que quedó, que es lo que corresponde a una fórmula de Excel.
+    aq_conteo[val] = nc; aq_movi[val] = String(nc); aq_generarCampos();
 }
 
 function aq_abrirModalEdicion(val) {
     aq_denomEditando = val;
-    document.getElementById('aq-formula-input').value = aq_movi[val] || "";
+    document.getElementById('aq-formula-input').value = aq_normTrace(aq_movi[val]) || "";
     document.getElementById('aq-modalEdicion').style.display = 'block';
 }
 
@@ -227,7 +285,7 @@ function aq_guardarEdicionDetalle() {
     aq_totalRetirado -= resVieja.retirosMonetarios;
     aq_totalRetirado += resNueva.retirosMonetarios;
     if(aq_totalRetirado < 0) aq_totalRetirado = 0;
-    aq_conteo[val] = resNueva.neto; aq_movi[val] = fNueva;
+    aq_conteo[val] = resNueva.neto; aq_movi[val] = aq_normTrace(fNueva);
     aq_generarCampos(); document.getElementById('aq-modalEdicion').style.display = 'none';
 }
 
@@ -704,6 +762,7 @@ async function aq_recuperarDeNube(silencioso = false) {
         if(datos && datos.conteoActual !== undefined) {
             aq_conteo = datos.conteoActual || {};
             aq_movi = datos.movimientoDisplay || {};
+            aq_normTraceTodos();   // los rastros que vienen de la nube también quedan limpios
             aq_totalRetirado = datos.totalRetirado || 0;
             if(silencioso) {
                 aq_histStates = [{ c: JSON.parse(JSON.stringify(aq_conteo)), r: aq_totalRetirado, m: JSON.parse(JSON.stringify(aq_movi)) }];

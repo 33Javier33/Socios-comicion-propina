@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Gestión de Efectivo: el rastro del conteo queda como fórmula de Excel (SW v68)
+- El rastro de cada denominación ya **no muestra palabras ni paréntesis**: solo números y los signos `+` y `−`, como una fórmula de planilla.
+  - Antes: `Manual+(40)+(20)+(1)+(30)+(6)`
+  - Ahora: `40+20+1+30+6`
+- **De dónde salía "Manual":** `aq_manualEdit()` escribía literalmente esa palabra al editar la cantidad a mano. Ahora anota el número que quedó.
+- **De dónde salían los paréntesis:** `aq_actCant()` guardaba la fórmula escrita envuelta en paréntesis (`+(40)`). Ahora guarda el **resultado** de la fórmula como número con signo, así el rastro queda plano y la cuenta no cambia aunque se escriba `2+3` y se presione `−` (se anota `−5`, no `-2+3`).
+- **Los rastros ya guardados se limpian solos** al abrir el arqueo y al recuperarlo de la nube (`aq_normTraceTodos`). Los paréntesis no se borran a secas: cada grupo se **resuelve a su valor** antes de quitarlo, porque `-(2+3)` vale −5 y `-2+3` vale +1 — así el rastro se ve limpio y sigue sumando igual.
+- Verificado con los rastros reales de las cinco denominaciones: el neto de cada una se conserva exacto (508, 85, 22, 4 …) y el total de retiros no varía.
+- **Efecto lateral conocido:** un retiro hecho con fórmula (`−` con `2+3`) quedaba como `-(2+3)`, que el contador de retiros **no sabía leer** y no sumaba a "Total retiros". Al quedar como `-5` ahora sí se cuenta, que es lo correcto. En los datos actuales no hay ningún caso así, por lo que el total no cambia.
+- Archivos: `js/arqueo.js` (`aq_normTrace`, `aq_normTraceTodos`, `aq_actCant`, `aq_manualEdit`, `aq_generarCampos`, `aq_abrirModalEdicion`, `aq_guardarEdicionDetalle`, `aq_recuperarDeNube`). `arqueo.js?v=33`, SW `fondo-admin-v68`, versión visible **v68**.
+
 #### 2026-08-02 — Fix: no se borraban las ausencias al mantener presionado (SW v67)
 - **Causa:** en `mostrarModalBorrar()` el tipo de movimiento se deducía del monto — `item.montoTotal > 0 ? 'Anticipo' : 'Extra'`. Las ausencias muestran su **monto informativo** (`punto_noche × puntos`), que es mayor que 0, así que se enviaban como `'Anticipo'` y el borrado buscaba en la tabla `anticipos`, donde la ausencia no está. No se borraba nada — y si ese mismo día había un anticipo, **se borraba el anticipo en su lugar**.
 - **Fix:** el tipo ahora se deduce de `item.tipos` (`AUSENCIA` → `Extra`), no del monto.
