@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Documentación: se puede subir cualquier tipo de archivo (SW v69)
+- La sección **Documentación** aceptaba solo **PDF e imágenes** (`accept="application/pdf,image/*"` en los dos selectores). Ahora acepta **cualquier archivo**: Word, Excel, PowerPoint —**también los de macros**—, PDF, imágenes, comprimidos, texto, video, audio.
+- **MIME deducido de la extensión:** los navegadores dejan `file.type` **vacío** en varios formatos de Office, sobre todo los de macros (`.xlsm`, `.docm`, `.pptm`). Sin `contentType` el archivo se guardaba como binario genérico y después no abría con su programa. Se agregó `DOC_MIME_POR_EXT` con ~35 extensiones y `_docMime(file)`, que usa el tipo del navegador y, si viene vacío, lo deduce de la extensión.
+- **Icono y tipo por archivo:** 📄 PDF · 📝 Word · 📊 Excel · 📽️ PowerPoint · 🗜️ Comprimido · 🖼️ Imagen · 🎬 Video · 🎵 Audio · 📃 Texto · 📎 otros. Antes solo había dos iconos (PDF o imagen) y todo lo demás se veía como imagen. La fila ahora muestra **tipo · tamaño · fecha**, con el tamaño en MB cuando corresponde (antes siempre en KB: un Excel de 5 MB decía "5120 KB").
+- **Botón según el archivo:** *👁 Ver* para lo que el navegador puede mostrar (PDF, imagen, texto) y *⬇ Abrir* para Word/Excel/PowerPoint, que se descargan para abrirse con su programa — así no parece que fallara.
+- **Error entendible:** si el bucket rechaza el tipo, el mensaje lo dice en vez de mostrar el error crudo de Supabase.
+- **Puede requerir un paso en Supabase:** si el bucket `documentos` se creó con `allowed_mime_types` limitado a PDF/imagen, Storage rechaza el resto aunque la app los deje elegir. Se dejó `sql/storage_documentos_tipos.sql` con la consulta para revisarlo y liberarlo. El bucket sigue **privado** (se abre con URL firmada).
+- Límite por archivo: **20 MB** (sin cambios).
+- Archivos: `js/documentacion.js`, `index.html`, `sql/storage_documentos_tipos.sql`. `documentacion.js?v=33`, SW `fondo-admin-v69`, versión visible **v69**.
+
 #### 2026-08-02 — Gestión de Efectivo: el rastro del conteo queda como fórmula de Excel (SW v68)
 - El rastro de cada denominación ya **no muestra palabras ni paréntesis**: solo números y los signos `+` y `−`, como una fórmula de planilla.
   - Antes: `Manual+(40)+(20)+(1)+(30)+(6)`

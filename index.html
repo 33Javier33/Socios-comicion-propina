@@ -1300,7 +1300,7 @@
         <div id="tab-documentacion" class="tab-content">
             <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:12px;padding:14px 18px;margin-bottom:16px;">
                 <div style="color:white;font-weight:800;font-size:1em;">📁 Documentación</div>
-                <div style="color:#bfdbfe;font-size:0.78em;margin-top:2px;">Documentos generales (reglamento, etc.) y documentos que suben los socios</div>
+                <div style="color:#bfdbfe;font-size:0.78em;margin-top:2px;">Archivos generales (reglamento, planillas, etc.) y documentos que suben los socios</div>
             </div>
 
             <div style="display:flex;gap:8px;margin-bottom:16px;">
@@ -1310,8 +1310,9 @@
 
             <!-- Panel: Documentos generales -->
             <div id="doc-panel-generales">
-                <input type="file" id="doc-general-file" accept="application/pdf,image/*" style="display:none" onchange="doc_subirGeneral(this)">
-                <button onclick="document.getElementById('doc-general-file').click()" style="width:100%;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:white;border:none;border-radius:10px;padding:12px;font-weight:800;font-size:0.88em;cursor:pointer;margin-bottom:14px;">⬆️ Subir documento general (PDF/imagen)</button>
+                <input type="file" id="doc-general-file" style="display:none" onchange="doc_subirGeneral(this)">
+                <button onclick="document.getElementById('doc-general-file').click()" style="width:100%;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:white;border:none;border-radius:10px;padding:12px;font-weight:800;font-size:0.88em;cursor:pointer;margin-bottom:14px;">⬆️ Subir archivo general</button>
+                <div style="font-size:0.72em;color:#94a3b8;margin:-8px 0 12px;text-align:center;line-height:1.4;">Word, Excel (también con macros), PowerPoint, PDF, imágenes, comprimidos… cualquier archivo hasta 20 MB.</div>
                 <div id="doc-generales-lista"></div>
             </div>
 
@@ -2063,7 +2064,7 @@
     <script src="js/dineros.js?v=32"></script>
     <script src="js/certificados.js?v=32"></script>
     <script src="js/diario-pins.js?v=33"></script>
-    <script src="js/documentacion.js?v=32"></script>
+    <script src="js/documentacion.js?v=33"></script>
     <script src="js/egresos.js?v=39"></script>
     <script src="js/pt-dias.js?v=36"></script>
     <script src="js/conexiones-log.js?v=2"></script>
@@ -2416,7 +2417,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v68</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v69</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">
