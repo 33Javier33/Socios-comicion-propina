@@ -137,6 +137,7 @@ function switchTab(tabName) {
     else if(tabName === 'certificados') { fabRec.style.display = 'none'; aq_detenerSync(); cert_init(); }
     else if(tabName === 'diariopins') { fabRec.style.display = 'none'; aq_detenerSync(); dp_init(); }
     else if(tabName === 'documentacion') { fabRec.style.display = 'none'; aq_detenerSync(); doc_init(); }
+    else if(tabName === 'donaciones') { fabRec.style.display = 'none'; aq_detenerSync(); don_init(); }
     else if(tabName === 'mensajes') { fabRec.style.display = 'none'; aq_detenerSync(); msgAdmin_init(); }
     else if(tabName === 'desglose') { fabRec.style.display = 'none'; aq_detenerSync(); if(typeof dsg_cargarHistorial === 'function' && _dsgRegistros.length === 0) dsg_cargarHistorial(); }
     else if(tabName === 'mesesant') { fabRec.style.display = 'none'; aq_detenerSync(); if(typeof mesesAnt_init === 'function') mesesAnt_init(); }

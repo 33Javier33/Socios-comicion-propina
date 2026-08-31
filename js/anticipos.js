@@ -666,16 +666,23 @@ async function cargarHistorialSocio(id) {
             });
             if(data.extras && Array.isArray(data.extras)) {
                 data.extras.forEach(e => {
-                    // Ausencias muestran su monto real (punto_noche × puntos) como referencia informativa
+                    // Ausencias muestran su monto real (punto_noche × puntos) como referencia informativa.
+                    // Las donaciones sí llevan monto porque DESCUENTAN del saldo del socio.
                     const esAus = e.tipo && e.tipo.toLowerCase().includes('ausencia');
-                    procesarEntrada(e.fecha, (e.tipo || 'Extra').toUpperCase(), e.detalle, esAus ? (parseFloat(e.monto)||0) : 0, e.uuid);
+                    const esDon = typeof don_esDonacion === 'function' && don_esDonacion(e.tipo);
+                    procesarEntrada(e.fecha, (e.tipo || 'Extra').toUpperCase(), e.detalle, (esAus || esDon) ? (parseFloat(e.monto)||0) : 0, e.uuid);
                 });
             }
 
             const listaFinal = Object.values(agrupados);
-            // Ausencias NO suman a pedidos: su impacto ya está en la reducción del alcance
+            // Ausencias NO suman a pedidos: su impacto ya está en la reducción del alcance.
+            // Las donaciones SÍ suman: son un descuento directo sobre el saldo del socio.
+            let sumaDonaciones = 0;
             listaFinal.forEach(item => {
-                if (!Array.from(item.tipos).includes('AUSENCIA')) sumaTotalPedido += item.montoTotal;
+                const tipos = Array.from(item.tipos);
+                if (tipos.includes('AUSENCIA')) return;
+                sumaTotalPedido += item.montoTotal;
+                if (tipos.some(t => typeof don_esDonacion === 'function' && don_esDonacion(t))) sumaDonaciones += item.montoTotal;
             });
 
             const ptsSocio = parseFloat(document.getElementById('gestionSocioPuntos').value) || 0;
@@ -717,6 +724,18 @@ async function cargarHistorialSocio(id) {
 
             document.getElementById('gestionSocioRemanente').value = remanente;
             document.getElementById('socioTotalPedido').innerText = formatearMoneda(sumaTotalPedido);
+            // Si parte de lo pedido son donaciones, se avisa para que no se confunda
+            // con anticipos en efectivo que el socio haya retirado.
+            const _elPedido = document.getElementById('socioTotalPedido');
+            const _avisoDon = document.getElementById('socioAvisoDonaciones');
+            if (_avisoDon) _avisoDon.remove();
+            if (sumaDonaciones > 0 && _elPedido && _elPedido.parentNode) {
+                const sp = document.createElement('div');
+                sp.id = 'socioAvisoDonaciones';
+                sp.style.cssText = 'font-size:0.68em;color:#db2777;font-weight:700;margin-top:2px;';
+                sp.textContent = '💝 incluye ' + formatearMoneda(sumaDonaciones) + ' en donaciones';
+                _elPedido.parentNode.appendChild(sp);
+            }
             document.getElementById('socioAlcance').innerText = formatearMoneda(alcance);
             _actualizarValorPunto(socio);
 
@@ -776,6 +795,8 @@ async function cargarHistorialSocio(id) {
                     tipoHtml = item.uuidsGrupo
                         ? '<span class="tag-absent" style="background:#991b1b;font-size:0.7em;letter-spacing:0.3px;">🔴 T.CONTRATO</span>'
                         : '<span class="tag-absent">AUSENCIA</span>';
+                } else if (tiposArr.some(t => typeof don_esDonacion === 'function' && don_esDonacion(t))) {
+                    tipoHtml = '<span style="background:#db2777;color:white;border-radius:4px;padding:1px 6px;font-size:0.7em;font-weight:800;letter-spacing:0.3px;">💝 DONACIÓN</span>';
                 } else {
                     tipoHtml = `<span style="font-weight:bold; color:#7f8c8d;">${tiposArr.join(' + ')}</span>`;
                 }
@@ -1644,6 +1665,11 @@ async function cierresMes_calcularSocio(socio) {
         if (data.extras) data.extras.forEach(e => {
             if (e.tipo && e.tipo.toLowerCase().includes('ausencia')) {
                 let f = e.fecha; if (f.includes('T')) f = f.split('T')[0]; fechasAusencia.add(f);
+            }
+            // Las donaciones descuentan del saldo igual que un anticipo,
+            // así que también entran en lo pedido al cerrar el mes.
+            else if (typeof don_esDonacion === 'function' && don_esDonacion(e.tipo)) {
+                sumaPedido += Number(e.monto || 0);
             }
         });
         if (socio.contrato === 'Part-Time') {

@@ -98,6 +98,7 @@
             <button class="nav-btn active" data-tab="registro" onclick="switchTab('registro')">Gestión de Socios</button>
             <button class="nav-btn" data-tab="gestion" onclick="switchTab('gestion')">Anticipos y Ausencias</button>
             <button class="nav-btn" data-tab="desglose" onclick="switchTab('desglose')">💸 Desglose Anticipos</button>
+            <button class="nav-btn" data-tab="donaciones" onclick="switchTab('donaciones')">💝 Donaciones</button>
             <button class="nav-btn" data-tab="mesesant" onclick="switchTab('mesesant')">🗓️ Meses Anteriores</button>
             <button class="nav-btn" data-tab="recaudacion" onclick="switchTab('recaudacion')">Montos Recaudados</button>
             <button class="nav-btn" data-tab="arqueo" onclick="switchTab('arqueo')">💰 Arqueo de Caja</button>
@@ -1297,6 +1298,56 @@
         </div>
 
         <!-- PESTAÑA: DOCUMENTACIÓN -->
+        <div id="tab-donaciones" class="tab-content">
+            <div style="background:linear-gradient(135deg,#9d174d,#db2777);border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+                <div style="color:white;font-weight:800;font-size:1em;">💝 Donaciones</div>
+                <div style="color:#fbcfe8;font-size:0.78em;margin-top:2px;">Colectas entre socios. A cada donante se le descuenta su aporte del balance a recibir y lo ve en su app.</div>
+            </div>
+
+            <!-- Nueva colecta -->
+            <div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:18px;background:white;">
+                <div style="font-weight:800;font-size:0.9em;color:#0f172a;margin-bottom:10px;">➕ Nueva colecta</div>
+
+                <label style="display:block;font-size:0.7em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Motivo — para quién es la ayuda <span style="color:#dc2626;">(obligatorio)</span></label>
+                <input type="text" id="don-motivo" placeholder="Ej: Ayuda a Juan Pérez por licencia médica" maxlength="90"
+                    style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.88em;color:#0f172a;background:white;box-sizing:border-box;margin-bottom:4px;">
+                <div style="font-size:0.7em;color:#94a3b8;margin-bottom:12px;line-height:1.4;">Este texto es el que verá el socio en su app junto al descuento, y el que agrupa los aportes en una misma colecta.</div>
+
+                <label style="display:block;font-size:0.7em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Fecha</label>
+                <input type="date" id="don-fecha" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.88em;color:#0f172a;background:white;box-sizing:border-box;margin-bottom:12px;">
+
+                <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+                    <select id="don-area" onchange="don_filtrarSocios()" style="flex:1;min-width:140px;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.85em;font-weight:700;color:#0f172a;background:white;">
+                        <option value="todas">Todas las áreas</option>
+                    </select>
+                    <input type="text" id="don-buscar" oninput="don_filtrarSocios()" placeholder="Buscar socio..."
+                        style="flex:1;min-width:140px;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.85em;color:#0f172a;background:white;box-sizing:border-box;">
+                </div>
+
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+                    <input type="text" inputmode="numeric" id="don-monto-todos" oninput="don_fmtMonto(this)" placeholder="Mismo monto para todos"
+                        style="flex:1;min-width:150px;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.85em;font-weight:700;text-align:right;color:#0f172a;background:white;box-sizing:border-box;">
+                    <button onclick="don_montoParaTodos()" style="background:#0f766e;color:white;border:none;border-radius:9px;padding:9px 14px;font-size:0.8em;font-weight:700;cursor:pointer;white-space:nowrap;">Aplicar</button>
+                    <button onclick="don_limpiarSeleccion()" style="background:white;color:#64748b;border:1px solid #cbd5e1;border-radius:9px;padding:9px 12px;font-size:0.8em;font-weight:700;cursor:pointer;white-space:nowrap;">Limpiar</button>
+                </div>
+
+                <div id="don-socios-lista" style="max-height:340px;overflow-y:auto;margin-bottom:10px;"></div>
+
+                <div id="don-resumen" style="font-size:0.82em;color:#0f172a;text-align:center;padding:8px;background:#f8fafc;border-radius:9px;margin-bottom:10px;"></div>
+
+                <button id="don-btn-registrar" onclick="don_registrar()" style="width:100%;background:linear-gradient(135deg,#9d174d,#db2777);color:white;border:none;border-radius:10px;padding:12px;font-weight:800;font-size:0.9em;cursor:pointer;">
+                    💝 Registrar aportes
+                </button>
+            </div>
+
+            <!-- Colectas registradas -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div style="font-weight:800;font-size:0.9em;color:#0f172a;">📋 Colectas registradas</div>
+                <div style="font-size:0.78em;color:#64748b;">Total juntado: <b id="don-total-general" style="color:#15803d;">$0</b></div>
+            </div>
+            <div id="don-colectas"></div>
+        </div>
+
         <div id="tab-documentacion" class="tab-content">
             <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:12px;padding:14px 18px;margin-bottom:16px;">
                 <div style="color:white;font-weight:800;font-size:1em;">📁 Documentación</div>
@@ -2048,7 +2099,7 @@
     <script src="js/api.js?v=36"></script>
     <script src="js/socios.js?v=40"></script>
     <script src="js/puntos.js?v=32"></script>
-    <script src="js/anticipos.js?v=46"></script>
+    <script src="js/anticipos.js?v=47"></script>
     <script src="js/desglose-anticipos.js?v=32"></script>
     <script src="js/meses-anteriores.js?v=32"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
@@ -2057,19 +2108,20 @@
     <script src="js/canje.js?v=32"></script>
     <script src="js/notas.js?v=32"></script>
     <script src="js/reports.js?v=41"></script>
-    <script src="js/help.js?v=36"></script>
+    <script src="js/help.js?v=37"></script>
     <script src="js/auditoria.js?v=32"></script>
     <script src="js/carpetas.js?v=46"></script>
     <script src="js/materiales.js?v=32"></script>
     <script src="js/dineros.js?v=32"></script>
     <script src="js/certificados.js?v=32"></script>
     <script src="js/diario-pins.js?v=33"></script>
+    <script src="js/donaciones.js?v=1"></script>
     <script src="js/documentacion.js?v=33"></script>
     <script src="js/egresos.js?v=39"></script>
     <script src="js/pt-dias.js?v=36"></script>
     <script src="js/conexiones-log.js?v=2"></script>
 <script src="js/mensajes-admin.js?v=48"></script>
-    <script src="js/app-init.js?v=41"></script>
+    <script src="js/app-init.js?v=42"></script>
 
 <!-- ══════════════════════════════════════════
      MODAL: ACERCA DE / RESEÑA
@@ -2417,7 +2469,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v69</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v70</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

@@ -232,6 +232,31 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Nueva sección: Donaciones (colectas entre socios) (SW v70)
+Sección nueva **💝 Donaciones** para organizar una colecta cuando un socio necesita ayuda. El aporte se descuenta del balance a recibir del donante y le aparece en propi.solicitada.
+
+**Cómo se usa**
+1. Se escribe el **motivo** (para quién es la ayuda) — obligatorio. Ese texto es el que ve el socio en su app y el que agrupa los aportes en una misma colecta.
+2. Se elige el **área** (o "Todas") y, si hace falta, se busca al socio por nombre.
+3. Se le escribe el **monto** a cada socio que aporta. Hay un campo **"Mismo monto para todos"** que lo aplica de una vez a todos los socios visibles del filtro.
+4. El resumen muestra cuántos socios aportan y cuánto se junta; **Registrar aportes** los guarda todos juntos con confirmación previa.
+5. Más abajo, las **colectas registradas** se agrupan por motivo, con el total juntado y el detalle de cada aporte (socio, área, fecha, quién lo registró).
+
+**Decisiones de diseño**
+- **Sin tabla nueva:** cada aporte es una fila de `extras` con `tipo = 'DONACION'` y `detalle = 'Donación: <motivo>'`. Se eligió `extras` a propósito, porque es la misma vía por la que ya viajan las ausencias hasta la app del socio (`getDatosSocio` → `data.extras`) — así la función quedó operativa **sin ninguna migración en Supabase**.
+- **Lo recaudado NO se abona al beneficiado.** A los donantes se les descuenta; al socio ayudado se le entrega el dinero aparte y la app solo lleva la cuenta.
+- **El descuento se aplica al registrar**, igual que los anticipos y las ausencias. No hay confirmación del socio.
+
+**Cálculo del saldo — se tocaron los dos lugares**
+- `cargarHistorialSocio()`: las donaciones ahora entran en `sumaTotalPedido` (antes los extras que no eran ausencia se registraban con monto 0 y no descontaban nada). Bajo "Total pedido" aparece un aviso *"💝 incluye $X en donaciones"* para no confundirlas con anticipos en efectivo.
+- `cierresMes_calcularSocio()`: las donaciones también suman a `sumaPedido`, así el cierre de mes queda con el mismo saldo que la pantalla.
+- Verificado con una simulación de los dos cálculos (socios-comicion y propi.solicitada) sobre 7 escenarios y 10 variantes del tipo: dan el mismo saldo en todos.
+- La fila del historial muestra la etiqueta **💝 DONACIÓN**, y el 🗑 de cada aporte lo anula devolviendo el monto al socio.
+
+**A tener en cuenta**
+- **Reiniciar Ausencias borra también las donaciones**, porque limpia toda la tabla `extras`. Es lo correcto para el saldo (el descuento es del período, como un anticipo), pero significa que el detalle de quién aportó qué queda solo en el archivo de GAS y en el respaldo JSON — `extras` ya estaba incluido en el respaldo, así que no hubo que tocar nada ahí.
+- Archivos: `js/donaciones.js` (nuevo), `js/anticipos.js`, `js/app-init.js`, `js/help.js`, `index.html`. `donaciones.js?v=1`, `anticipos.js?v=47`, `app-init.js?v=42`, `help.js?v=37`, SW `fondo-admin-v70`, versión visible **v70**.
+
 #### 2026-08-02 — Documentación: se puede subir cualquier tipo de archivo (SW v69)
 - La sección **Documentación** aceptaba solo **PDF e imágenes** (`accept="application/pdf,image/*"` en los dos selectores). Ahora acepta **cualquier archivo**: Word, Excel, PowerPoint —**también los de macros**—, PDF, imágenes, comprimidos, texto, video, audio.
 - **MIME deducido de la extensión:** los navegadores dejan `file.type` **vacío** en varios formatos de Office, sobre todo los de macros (`.xlsm`, `.docm`, `.pptm`). Sin `contentType` el archivo se guardaba como binario genérico y después no abría con su programa. Se agregó `DOC_MIME_POR_EXT` con ~35 extensiones y `_docMime(file)`, que usa el tipo del navegador y, si viene vacío, lo deduce de la extensión.
