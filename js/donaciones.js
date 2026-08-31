@@ -47,11 +47,34 @@ function _donAreaNombre(a) {
     return N[k] || (a ? a.charAt(0).toUpperCase() + a.slice(1) : '—');
 }
 
+// El motivo se escribe en un textarea de 3 líneas que crece solo, para poder
+// releer lo escrito sin que quede cortado en una sola línea.
+function don_autoAltoMotivo(ta) {
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(200, Math.max(68, ta.scrollHeight)) + 'px';
+    const c = document.getElementById('don-motivo-contador');
+    if (c) {
+        const n = (ta.value || '').length;
+        c.textContent = n + ' / ' + (ta.maxLength > 0 ? ta.maxLength : 220);
+        c.style.color = n > 190 ? '#b45309' : '#94a3b8';
+    }
+}
+
+// Se guarda en una sola línea: el motivo es la clave que agrupa la colecta y
+// el texto que el socio ve junto al descuento en su app. Los saltos de línea
+// del textarea se convierten en espacios para que no rompan ni el agrupado ni
+// la lectura en la app del socio.
+function don_normalizarMotivo(txt) {
+    return String(txt || '').replace(/\s+/g, ' ').trim();
+}
+
 function don_init() {
     _donMontos = {};
     const hoy = new Date().toISOString().split('T')[0];
     const fIn = document.getElementById('don-fecha');
     if (fIn && !fIn.value) fIn.value = hoy;
+    don_autoAltoMotivo(document.getElementById('don-motivo'));
     don_pintarAreas();
     don_pintarSocios();
     don_cargarAportes();
@@ -145,7 +168,7 @@ function don_actualizarResumen() {
 
 // ── Registrar los aportes ──────────────────────────────────────────────
 async function don_registrar() {
-    const motivo = (document.getElementById('don-motivo')?.value || '').trim();
+    const motivo = don_normalizarMotivo(document.getElementById('don-motivo')?.value);
     const fecha = (document.getElementById('don-fecha')?.value || '').trim() || new Date().toISOString().split('T')[0];
     const ids = Object.keys(_donMontos);
 
@@ -249,10 +272,10 @@ function don_pintarColectas() {
         }).join('');
 
         return `<div style="border:1px solid #e2e8f0;border-radius:11px;margin-bottom:10px;overflow:hidden;background:white;">
-            <button onclick="don_toggleColecta(${i})" style="width:100%;display:flex;align-items:center;gap:10px;padding:11px 12px;background:#f8fafc;border:none;border-bottom:1px solid #e2e8f0;cursor:pointer;text-align:left;">
-                <span style="font-size:1.15em;">💝</span>
+            <button onclick="don_toggleColecta(${i})" style="width:100%;display:flex;align-items:flex-start;gap:10px;padding:11px 12px;background:#f8fafc;border:none;border-bottom:1px solid #e2e8f0;cursor:pointer;text-align:left;">
+                <span style="font-size:1.15em;line-height:1.2;">💝</span>
                 <div style="flex:1;min-width:0;">
-                    <div style="font-weight:800;font-size:0.88em;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_donEsc(g.motivo)}</div>
+                    <div style="font-weight:800;font-size:0.88em;color:#0f172a;line-height:1.35;overflow-wrap:anywhere;">${_donEsc(g.motivo)}</div>
                     <div style="font-size:0.7em;color:#64748b;margin-top:1px;">${g.aportes.length} aporte${g.aportes.length === 1 ? '' : 's'} · último ${_donFechaVis(g.ultima)}</div>
                 </div>
                 <b style="font-size:0.95em;color:#15803d;white-space:nowrap;">${_donMoneda(g.total)}</b>

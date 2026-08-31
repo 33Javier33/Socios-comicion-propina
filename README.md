@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Donaciones: el motivo se escribe y se lee completo (SW v72)
+- El campo **Motivo** pasó de ser un `<input>` de una línea a un **textarea de 3 líneas que crece solo** hasta 200 px, con contador de caracteres. El límite subió de **90 a 220** caracteres, así se puede explicar bien de qué se trata la ayuda sin quedar cortado.
+- **Los saltos de línea se guardan como espacios** (`don_normalizarMotivo`): el motivo es la clave que agrupa la colecta y el texto que ve el socio en su app, así que se almacena en una sola línea limpia. El textarea es para escribir y releer cómodo, no para maquetar.
+- **El título de cada colecta ya no se corta:** antes usaba `text-overflow: ellipsis` y con un motivo largo solo se veía el principio. Ahora hace salto de línea y la cabecera se alinea arriba.
+- Archivos: `index.html` (textarea + contador), `js/donaciones.js` (`don_autoAltoMotivo`, `don_normalizarMotivo`, título de la colecta). `donaciones.js?v=3`, SW `fondo-admin-v72`, versión visible **v72**.
+
 #### 2026-08-02 — Donaciones: comprobante imprimible y copia de respaldo (SW v71)
 Cada colecta tiene ahora dos botones que resuelven el respaldo del descuento.
 
