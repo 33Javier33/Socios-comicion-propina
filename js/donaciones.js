@@ -258,6 +258,12 @@ function don_pintarColectas() {
                 <b style="font-size:0.95em;color:#15803d;white-space:nowrap;">${_donMoneda(g.total)}</b>
                 <span id="don-cx-${i}" style="color:#94a3b8;font-size:0.8em;">▾</span>
             </button>
+            <div style="display:flex;gap:6px;padding:8px 10px;background:#fdf2f8;border-bottom:1px solid #f9a8d4;flex-wrap:wrap;">
+                <button onclick="don_imprimirColecta(${JSON.stringify(g.motivo).replace(/"/g, '&quot;')})"
+                    style="flex:1;min-width:120px;background:#9d174d;color:white;border:none;border-radius:8px;padding:7px 10px;font-size:0.76em;font-weight:700;cursor:pointer;">🖨 Imprimir comprobante</button>
+                <button onclick="don_guardarCopia(${JSON.stringify(g.motivo).replace(/"/g, '&quot;')})"
+                    style="flex:1;min-width:120px;background:white;color:#9d174d;border:1.5px solid #9d174d;border-radius:8px;padding:7px 10px;font-size:0.76em;font-weight:700;cursor:pointer;">💾 Guardar copia</button>
+            </div>
             <div id="don-detalle-${i}" style="display:none;">${filas}</div>
         </div>`;
     }).join('');
@@ -293,4 +299,207 @@ async function don_borrarAporte(id, socioId, fecha) {
 function don_fmtMonto(input) {
     const n = parseInt(String(input.value || '').replace(/\D/g, '')) || 0;
     input.value = n ? new Intl.NumberFormat('es-CL').format(n) : '';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// COMPROBANTE DE COLECTA — para imprimir y para respaldar el descuento
+//
+// La copia se guarda como archivo real en el bucket 'documentos' y queda
+// listada en la sección Documentación. Eso importa porque "Reiniciar
+// Ausencias" limpia la tabla `extras` y con ella los aportes: la copia es
+// lo que deja constancia de quién aportó y cuánto se le descontó.
+// ══════════════════════════════════════════════════════════════════════
+
+function _donDatosColecta(motivo) {
+    const aportes = _donAportes.filter(a => don_motivoDe(a.detalle) === motivo);
+    const porArea = {};
+    let total = 0;
+    aportes.forEach(a => {
+        const s = (cacheSocios || []).find(x => String(x.id) === String(a.socio_id)) || {};
+        const areaKey = String(s.area || 'sin-area').toLowerCase();
+        if (!porArea[areaKey]) porArea[areaKey] = { nombre: _donAreaNombre(s.area), filas: [], total: 0 };
+        const monto = Number(a.monto) || 0;
+        total += monto;
+        porArea[areaKey].total += monto;
+        porArea[areaKey].filas.push({
+            nombre: (((s.nombre || '') + ' ' + (s.apellido || '')).trim()) || ('Socio ' + a.socio_id),
+            rut: s.rut || '—',
+            fecha: String(a.fecha || '').substring(0, 10),
+            autor: a.autor || '—',
+            monto: monto
+        });
+    });
+    Object.values(porArea).forEach(g => g.filas.sort((x, y) => x.nombre.localeCompare(y.nombre, 'es')));
+    const areas = Object.values(porArea).sort((a, b) => b.total - a.total);
+    return { motivo, aportes, areas, total };
+}
+
+function _donComprobanteHTML(motivo) {
+    const d = _donDatosColecta(motivo);
+    if (!d.aportes.length) return null;
+
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+    const money = n => '$' + Number(Math.round(n) || 0).toLocaleString('es-CL');
+    const hoy = new Date();
+    const fechaVis = hoy.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const horaVis = hoy.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    const fechas = d.aportes.map(a => String(a.fecha || '').substring(0, 10)).filter(Boolean).sort();
+    const rango = fechas.length
+        ? (_donFechaVis(fechas[0]) + (fechas[0] !== fechas[fechas.length - 1] ? ' al ' + _donFechaVis(fechas[fechas.length - 1]) : ''))
+        : '—';
+
+    let n = 0;
+    const secciones = d.areas.map(g =>
+        '<div class="area">'
+        + '<div class="areahead"><span>' + esc(g.nombre) + '</span><span>'
+        +   g.filas.length + ' aporte' + (g.filas.length !== 1 ? 's' : '') + ' &nbsp;|&nbsp; ' + money(g.total) + '</span></div>'
+        + '<table class="tbl"><thead><tr>'
+        +   '<th style="width:5%">#</th><th style="width:34%">SOCIO</th><th style="width:16%">RUT</th>'
+        +   '<th style="width:13%">FECHA</th><th style="width:17%">REGISTRADO POR</th><th style="width:15%">APORTE</th>'
+        + '</tr></thead><tbody>'
+        + g.filas.map(f => {
+            n++;
+            return '<tr><td class="c">' + n + '</td><td class="nom">' + esc(f.nombre) + '</td>'
+                + '<td class="c">' + esc(f.rut) + '</td><td class="c">' + _donFechaVis(f.fecha) + '</td>'
+                + '<td class="c">' + esc(f.autor) + '</td><td class="c pts">' + money(f.monto) + '</td></tr>';
+        }).join('')
+        + '</tbody><tfoot><tr class="sub"><td colspan="5">SUBTOTAL ' + esc(g.nombre.toUpperCase()) + '</td>'
+        +   '<td class="c">' + money(g.total) + '</td></tr></tfoot></table>'
+        + '</div>'
+    ).join('');
+
+    const resumen = '<table class="resumen"><thead><tr><th>ÁREA</th><th>APORTES</th><th>TOTAL</th></tr></thead><tbody>'
+        + d.areas.map(g => '<tr><td>' + esc(g.nombre) + '</td><td class="c">' + g.filas.length + '</td>'
+            + '<td class="c" style="font-weight:800;">' + money(g.total) + '</td></tr>').join('')
+        + '</tbody><tfoot><tr><td>TOTAL GENERAL</td><td class="c">' + d.aportes.length + '</td>'
+        + '<td class="c">' + money(d.total) + '</td></tr></tfoot></table>';
+
+    const fileName = 'Colecta - ' + motivo.replace(/[\\/:*?"<>|]/g, ' ').substring(0, 60).trim() + ' - ' + fechaVis.replace(/\//g, '-');
+
+    const html =
+        '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + esc(fileName) + '</title><style>'
+        + '* { margin:0; padding:0; box-sizing:border-box; }'
+        + 'body { font-family:Arial,Helvetica,sans-serif; font-size:9px; color:#000; padding:10px; }'
+        + 'h1 { font-size:14px; text-align:center; font-weight:900; letter-spacing:1px; }'
+        + '.sub0 { text-align:center; font-size:8.5px; margin:2px 0 4px; font-weight:600; color:#334155; }'
+        + '.motivo { text-align:center; font-size:11px; font-weight:900; color:#9d174d; border:1.5px solid #f9a8d4; background:#fdf2f8; border-radius:4px; padding:6px; margin:6px 0 8px; }'
+        + '.kpis { display:flex; gap:6px; margin-bottom:10px; }'
+        + '.kpi { flex:1; border:1px solid #cbd5e1; border-radius:4px; padding:5px 6px; text-align:center; }'
+        + '.kpi b { display:block; font-size:13px; color:#0f172a; }'
+        + '.kpi span { font-size:7px; text-transform:uppercase; letter-spacing:.06em; color:#64748b; font-weight:700; }'
+        + '.area { margin-bottom:10px; page-break-inside:avoid; break-inside:avoid; }'
+        + '.areahead { background:#9d174d; color:#fff; padding:4px 8px; font-size:9.5px; font-weight:900; display:flex; justify-content:space-between; border-radius:3px 3px 0 0; }'
+        + '.tbl { width:100%; border-collapse:collapse; table-layout:fixed; }'
+        + '.tbl th { background:#e2e8f0; border:1px solid #94a3b8; padding:3px 4px; font-size:7px; text-transform:uppercase; letter-spacing:.04em; }'
+        + '.tbl td { border:1px solid #cbd5e1; padding:3px 4px; font-size:8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }'
+        + '.tbl .c { text-align:center; } .tbl .nom { font-weight:700; } .tbl .pts { font-weight:900; }'
+        + '.tbl tfoot .sub td { background:#fdf2f8; font-weight:800; font-size:7.5px; }'
+        + '.resumen { width:100%; border-collapse:collapse; margin-top:6px; }'
+        + '.resumen th { background:#0f172a; color:#fff; border:1px solid #0f172a; padding:4px; font-size:7.5px; text-transform:uppercase; }'
+        + '.resumen td { border:1px solid #94a3b8; padding:4px; font-size:8.5px; }'
+        + '.resumen tfoot td { background:#9d174d; color:#fff; font-weight:900; }'
+        + '.nota { margin-top:8px; border:1px dashed #cbd5e1; border-radius:4px; padding:6px 8px; font-size:8px; color:#334155; line-height:1.45; }'
+        + '.firmas { display:flex; gap:30px; margin-top:24px; }'
+        + '.firma { flex:1; text-align:center; font-size:8px; color:#334155; }'
+        + '.firma .linea { border-top:1px solid #000; margin-bottom:3px; height:1px; }'
+        + '.footer { text-align:center; font-size:7.5px; color:#94a3b8; margin-top:10px; border-top:1px dashed #cbd5e1; padding-top:4px; }'
+        + '@media print { @page { margin:8mm; size:216mm 330mm portrait; } body { padding:0 !important; } .page { max-width:none !important; padding:0 !important; box-shadow:none !important; } }'
+        + '@media screen { body { background:#ddd; } .page { background:#fff; max-width:860px; margin:0 auto; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,.2); } }'
+        + '<\/style></head><body><div class="page">'
+        + '<h1>COMPROBANTE DE COLECTA SOLIDARIA</h1>'
+        + '<div class="sub0">FONDO DE SOLIDARIDAD &mdash; CASINO DE PUERTO VARAS &nbsp;|&nbsp; LEY 17312 DEL 29/07/70</div>'
+        + '<div class="motivo">' + esc(d.motivo) + '</div>'
+        + '<div class="kpis">'
+        +   '<div class="kpi"><b>' + d.aportes.length + '</b><span>Aportes</span></div>'
+        +   '<div class="kpi"><b>' + d.areas.length + '</b><span>Áreas</span></div>'
+        +   '<div class="kpi"><b>' + money(d.total) + '</b><span>Total juntado</span></div>'
+        +   '<div class="kpi"><b>' + esc(rango) + '</b><span>Período de los aportes</span></div>'
+        + '</div>'
+        + secciones
+        + '<div class="areahead" style="border-radius:3px 3px 0 0;">RESUMEN POR ÁREA</div>'
+        + resumen
+        + '<div class="nota"><b>Respaldo del descuento:</b> a cada socio de esta lista se le descontó el monto indicado '
+        +   'de su <b>balance a recibir</b> del período, y el descuento le aparece en su aplicación con el motivo de la colecta. '
+        +   'El total juntado <b>no se abona</b> al balance del socio beneficiado: se le entrega aparte.</div>'
+        + '<div class="firmas">'
+        +   '<div class="firma"><div class="linea"></div>Administración del Fondo</div>'
+        +   '<div class="firma"><div class="linea"></div>Recibí conforme</div>'
+        + '</div>'
+        + '<div class="footer">Emitido el ' + fechaVis + ' a las ' + horaVis + ' &middot; Sistema Integral Fondo Solidario</div>'
+        + '</div></body></html>';
+
+    return { html, fileName, datos: d };
+}
+
+// Imprimir / guardar como PDF
+function don_imprimirColecta(motivo) {
+    const r = _donComprobanteHTML(motivo);
+    if (!r) { showToast('Esta colecta no tiene aportes', 'error'); return; }
+    printHTML(r.html, r.fileName);
+}
+
+// CSV plano por si se quiere abrir en Excel
+function _donCSV(motivo) {
+    const d = _donDatosColecta(motivo);
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const lineas = [['Colecta', 'Area', 'Socio', 'RUT', 'Fecha', 'Registrado por', 'Aporte'].map(q).join(';')];
+    d.areas.forEach(g => g.filas.forEach(f => {
+        lineas.push([d.motivo, g.nombre, f.nombre, f.rut, _donFechaVis(f.fecha), f.autor, f.monto].map(q).join(';'));
+    }));
+    lineas.push(['', '', '', '', '', 'TOTAL', d.total].map(q).join(';'));
+    return '﻿' + lineas.join('\r\n');   // BOM para que Excel respete los acentos
+}
+
+// Guardar la copia como archivo en Documentación (bucket 'documentos').
+// Sube el comprobante HTML y el CSV; ambos quedan descargables desde ahí.
+async function don_guardarCopia(motivo) {
+    const r = _donComprobanteHTML(motivo);
+    if (!r) { showToast('Esta colecta no tiene aportes', 'error'); return; }
+    if (!confirm(`¿Guardar la copia de "${motivo}"?\n\nQuedará en Documentación → Generales como comprobante (HTML) y planilla (CSV), aunque después se reinicien las ausencias.`)) return;
+
+    const sesion = typeof getSesionResponsableObj === 'function' ? getSesionResponsableObj() : {};
+    const quien = sesion.ini ? (sesion.ini + (sesion.area ? ' (' + sesion.area + ')' : '')) : 'Administración';
+    const stamp = Date.now();
+    const safe = r.fileName.replace(/[^a-zA-Z0-9._ -]/g, '_');
+
+    toggleLoader(true, 'Guardando copia...');
+    try {
+        const archivos = [
+            { nombre: safe + '.html', cuerpo: r.html, mime: 'text/html;charset=utf-8' },
+            { nombre: safe + '.csv',  cuerpo: _donCSV(motivo), mime: 'text/csv;charset=utf-8' }
+        ];
+        for (const f of archivos) {
+            const blob = new Blob([f.cuerpo], { type: f.mime });
+            const path = 'donaciones/' + stamp + '_' + f.nombre.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const up = await dbSoc.storage.from('documentos').upload(path, blob, { contentType: f.mime, upsert: false });
+            if (up.error) throw up.error;
+            await dbSoc.from('documentos').insert({
+                id: crypto.randomUUID(), socio_id: null, socio_nombre: null, categoria: 'general',
+                nombre_archivo: f.nombre, storage_path: path, mime: f.mime, tamano: blob.size, subido_por: quien
+            });
+        }
+        if (typeof sbAuditLog === 'function') sbAuditLog('Respaldar Colecta', {
+            detalle: 'Copia guardada: ' + motivo + ' — ' + r.datos.aportes.length + ' aportes, ' + _donMoneda(r.datos.total),
+            datos: { motivo, aportes: r.datos.aportes.length, total: r.datos.total }
+        });
+        showToast('Copia guardada en Documentación ✅', 'success');
+    } catch(e) {
+        showToast('No se pudo guardar la copia: ' + (e.message || e), 'error');
+    } finally { toggleLoader(false); }
+}
+
+// ¿Hay aportes registrados sin copia guardada? Lo usa el aviso antes de
+// reiniciar ausencias, que borra la tabla `extras` y con ella los aportes.
+async function don_colectasSinCopia() {
+    try {
+        if (!_donAportes.length) await don_cargarAportes();
+        if (!_donAportes.length) return [];
+        const motivos = [...new Set(_donAportes.map(a => don_motivoDe(a.detalle)))];
+        const { data } = await dbSoc.from('documentos').select('nombre_archivo').like('storage_path', 'donaciones/%');
+        const guardados = (data || []).map(d => String(d.nombre_archivo || ''));
+        return motivos.filter(m => {
+            const clave = 'Colecta - ' + m.replace(/[\\/:*?"<>|]/g, ' ').substring(0, 60).trim();
+            return !guardados.some(g => g.indexOf(clave) === 0);
+        });
+    } catch(e) { return []; }
 }

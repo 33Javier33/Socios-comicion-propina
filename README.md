@@ -232,6 +232,21 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Donaciones: comprobante imprimible y copia de respaldo (SW v71)
+Cada colecta tiene ahora dos botones que resuelven el respaldo del descuento.
+
+- **🖨 Imprimir comprobante** — genera un documento tamaño oficio (mismo formato que los demás informes de la app) con:
+  - Encabezado del Fondo y el **motivo de la colecta** destacado.
+  - KPIs: aportes, áreas, total juntado y rango de fechas de los aportes.
+  - Una **tabla por área** (# · socio · RUT · fecha · quién lo registró · aporte) con subtotal por área.
+  - **Resumen por área** y total general.
+  - Una nota que deja constancia de que a cada socio de la lista **se le descontó ese monto de su balance a recibir**, y de que el total no se abona al beneficiado.
+  - Dos líneas de firma: *Administración del Fondo* y *Recibí conforme*.
+- **💾 Guardar copia** — sube el comprobante **HTML** y una **planilla CSV** al bucket `documentos`, quedando listados en **Documentación → Generales**, descargables para siempre. Se eligió guardarlos como archivos reales (y no en una tabla) para que sean un respaldo que se puede abrir, imprimir y enviar sin depender de la app.
+- **Aviso antes de "Reiniciar Ausencias":** esa acción limpia toda la tabla `extras` y con ella los aportes. Ahora, antes de ejecutarla, la app revisa qué colectas **no tienen copia guardada**, las lista por nombre y pide confirmación explícita. Si la revisión falla por cualquier motivo, no bloquea el reinicio.
+- Verificado con datos simulados: agrupación por área y totales correctos, HTML balanceado, sin mezclar aportes de otras colectas, y el CSV sale con BOM para que Excel respete los acentos.
+- Archivos: `js/donaciones.js` (`_donDatosColecta`, `_donComprobanteHTML`, `don_imprimirColecta`, `_donCSV`, `don_guardarCopia`, `don_colectasSinCopia`), `js/anticipos.js` (aviso en `ejecutarReiniciarAusencias`), `js/help.js`. `donaciones.js?v=2`, `anticipos.js?v=48`, `help.js?v=38`, SW `fondo-admin-v71`, versión visible **v71**.
+
 #### 2026-08-02 — Nueva sección: Donaciones (colectas entre socios) (SW v70)
 Sección nueva **💝 Donaciones** para organizar una colecta cuando un socio necesita ayuda. El aporte se descuenta del balance a recibir del donante y le aparece en propi.solicitada.
 

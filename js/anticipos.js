@@ -1162,6 +1162,24 @@ function abrirModalReiniciarAusencias() {
 }
 
 async function ejecutarReiniciarAusencias() {
+    // Reiniciar limpia TODA la tabla `extras`, y ahí viven también los aportes
+    // de las colectas. Antes de borrar se avisa cuáles no tienen copia guardada,
+    // porque esa copia es el respaldo del descuento que se le hizo a cada socio.
+    if (typeof don_colectasSinCopia === 'function') {
+        try {
+            const sinCopia = await don_colectasSinCopia();
+            if (sinCopia.length) {
+                const lista = sinCopia.map(m => '  · ' + m).join('\n');
+                const seguir = confirm(
+                    '⚠️ Hay colectas de donación SIN copia guardada:\n\n' + lista +
+                    '\n\nAl reiniciar se borran los aportes y se pierde el detalle de quién aportó.\n\n' +
+                    'Recomendado: cancela, entra a 💝 Donaciones y usa "Guardar copia" en cada colecta.\n\n' +
+                    '¿Reiniciar de todas formas?'
+                );
+                if (!seguir) return;
+            }
+        } catch(e) { /* si falla la revisión, no se bloquea el reinicio */ }
+    }
     document.getElementById('modalReiniciarAusencias').style.display = 'none';
     toggleLoader(true, 'Archivando ausencias...');
     try {
