@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Fix: el menú de secciones no se podía desplazar en celular + ojo para ver la contraseña (SW v74)
+
+**Scroll del menú en celular**
+- **Causa:** el arrastre táctil para reordenar llamaba a `e.preventDefault()` apenas el dedo se movía 10 px **en cualquier dirección**. Un deslizamiento vertical —que en un menú largo es "quiero hacer scroll"— arrastraba una sección en vez de desplazar la lista, así que **no se llegaba a las secciones de abajo**. En computador no pasaba porque ahí el reordenamiento usa HTML5 drag, no eventos táctiles.
+- **Fix:** el reordenamiento pasa a un **modo aparte**. Con el modo apagado (lo normal) los handlers táctiles no hacen nada y el dedo **solo hace scroll**.
+- **Modo "↕ Mover"** — botón nuevo en la cabecera del menú. Al activarlo:
+  - Cada sección muestra un asa ⠿ y **tocarla la selecciona** en vez de abrirla (el clic se intercepta en fase de captura, antes del `onclick` del botón).
+  - Aparece una barra fija con **▲ Subir / ▼ Bajar / ✓ Listo** que mueve la sección seleccionada de a una posición y **guarda el orden** al instante.
+  - El arrastre táctil también queda habilitado, pero solo dentro de este modo.
+  - El modo se apaga solo al cerrar el menú.
+- Se eligió seleccionar-y-mover con flechas en vez de solo arrastrar porque en un menú de 18 secciones con scroll, arrastrar hasta el otro extremo en un celular es poco práctico.
+- Verificado con una simulación del reordenamiento: sube, baja y respeta los bordes (la primera no sube, la última no baja).
+
+**Ojo para ver la contraseña**
+- Se agregó el botón 👁 / 🙈 a **todos** los campos de contraseña: PIN de ingreso al iniciar sesión, cambiar PIN del sistema (actual, nuevo y repetir), clave de recuperación, el PIN personal de cada responsable y la clave maestra de recuperación.
+- `cfg_ponerOjo()` envuelve el input y cuelga el botón adentro; es **idempotente**, así que se puede llamar cada vez que se redibuja un formulario sin duplicarlo. Los campos de PIN quedan acolchados por ambos lados para que el texto centrado no se descentre.
+- Archivos: `js/app-init.js` (modo mover, ojo en el login), `js/config.js` (`cfg_ponerOjo`, `cfg_ojosEnTodos`), `styles.css`, `index.html`. `config.js?v=34`, `app-init.js?v=43`, `styles.css?v=74`, SW `fondo-admin-v74`, versión visible **v74**.
+
 #### 2026-08-02 — Fix: no se podía cambiar el PIN personal en Configuración (SW v73)
 - **Causa — una carrera al iniciar la app.** `app-init.js` lanza en paralelo `cargarCredenciales()` (trae los PINs desde `responsable_creds`) y `cfg_cargarDesdeSupabase()` (trae la lista de responsables desde `config_sistema`). Esa lista se guarda **a propósito sin PINs**, y se escribía **tal cual** sobre `localStorage`, borrando el `pin` que la otra carga acababa de poner. Ganaba la que respondiera última — por eso "antes funcionaba y de repente no".
 - **Efecto:** con el PIN local borrado, el responsable se dibujaba como *"Crear mi PIN personal"* y **el campo "PIN actual" no se renderizaba**. Pero al guardar, la validación sí encontraba el PIN en la nube (`credencialesCache`) y lo exigía: leía un campo inexistente, obtenía `''` y respondía **"❌ El PIN actual no es correcto"**, sin manera de escribirlo. Cambio bloqueado.

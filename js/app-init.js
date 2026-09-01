@@ -17,8 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.sbCargarResponsables === 'function') window.sbCargarResponsables();
     cfg_cargarDesdeSupabase().catch(() => {});
     cargarCredenciales().catch(() => {});
-    // Enfocar PIN
+    // Enfocar PIN + ojito para revisar lo escrito
     setTimeout(() => document.getElementById('pinInput').focus(), 300);
+    if (typeof cfg_ponerOjo === 'function') cfg_ponerOjo(document.getElementById('pinInput'));
 });
 
 function iniciarApp() {
@@ -197,8 +198,19 @@ function initLayout() {
         drawer.innerHTML = `
             <div id="mobileDrawerPanel">
                 <div id="mobileDrawerHeader">
-                    <span>Secciones <small style="font-size:0.7em;color:#94a3b8;font-weight:500">— mantén para reordenar</small></span>
-                    <button id="mobileDrawerClose" onclick="mobileNav_close()">✕</button>
+                    <span>Secciones</span>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <button id="mobileDrawerMover" onclick="mobileNav_toggleMover()">↕ Mover</button>
+                        <button id="mobileDrawerClose" onclick="mobileNav_close()">✕</button>
+                    </div>
+                </div>
+                <div id="mobileMoverBarra">
+                    <span id="mobileMoverTexto">Toca la sección que quieres mover</span>
+                    <div style="display:flex;gap:6px;flex-shrink:0;">
+                        <button onclick="mobileNav_moverSel(-1)" title="Subir">▲</button>
+                        <button onclick="mobileNav_moverSel(1)" title="Bajar">▼</button>
+                        <button onclick="mobileNav_toggleMover()" class="listo">✓ Listo</button>
+                    </div>
                 </div>
                 <div id="mobileDrawerNav"></div>
             </div>`;
@@ -209,9 +221,21 @@ function initLayout() {
         navTabs.style.cssText = 'display:flex;flex-direction:column;gap:6px;border:none;margin:0;padding:0;overflow:visible;background:none;';
         drawerNav.appendChild(navTabs);
 
+        // En modo mover, tocar una sección la selecciona en lugar de abrirla.
+        // Va en fase de CAPTURA sobre el contenedor para adelantarse al
+        // onclick="switchTab(...)" que cada botón trae en su atributo.
+        drawerNav.addEventListener('click', e => {
+            if (!_navModoMover) return;
+            const b = e.target.closest('.nav-btn[data-tab]');
+            if (!b) return;
+            e.preventDefault();
+            e.stopPropagation();
+            mobileNav_seleccionar(b === _navSeleccion ? null : b);
+        }, true);
+
         // Cerrar drawer al pulsar una sección
         navTabs.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
-            btn.addEventListener('click', () => setTimeout(mobileNav_close, 80));
+            btn.addEventListener('click', () => { if (!_navModoMover) setTimeout(mobileNav_close, 80); });
         });
     }
 }
@@ -226,6 +250,57 @@ function mobileNav_close() {
     const d = document.getElementById('mobileDrawer');
     if (d) d.classList.remove('open');
     document.body.style.overflow = '';
+    if (_navModoMover) mobileNav_toggleMover();   // salir del modo mover al cerrar
+}
+
+// ── Modo "Mover secciones" ────────────────────────────────────────────
+// El arrastre táctil hacía preventDefault() apenas el dedo se movía 10px en
+// CUALQUIER dirección, así que deslizar para hacer scroll dentro del menú
+// arrastraba una sección en vez de desplazar la lista: en celular no se podía
+// llegar a las secciones de abajo. Ahora el reordenamiento vive en un modo
+// aparte: mientras está apagado (lo normal) el dedo solo hace scroll.
+let _navModoMover = false;
+let _navSeleccion = null;
+
+function mobileNav_toggleMover() {
+    _navModoMover = !_navModoMover;
+    const nav = document.getElementById('mobileDrawerNav');
+    const btn = document.getElementById('mobileDrawerMover');
+    const barra = document.getElementById('mobileMoverBarra');
+    if (nav) nav.classList.toggle('modo-mover', _navModoMover);
+    if (barra) barra.style.display = _navModoMover ? 'flex' : 'none';
+    if (btn) {
+        btn.textContent = _navModoMover ? '✓ Listo' : '↕ Mover';
+        btn.classList.toggle('activo', _navModoMover);
+    }
+    mobileNav_seleccionar(null);
+}
+
+function mobileNav_seleccionar(btn) {
+    document.querySelectorAll('#mobileDrawerNav .nav-btn.sel-mover').forEach(b => b.classList.remove('sel-mover'));
+    _navSeleccion = btn || null;
+    if (_navSeleccion) _navSeleccion.classList.add('sel-mover');
+    const txt = document.getElementById('mobileMoverTexto');
+    if (txt) {
+        txt.textContent = _navSeleccion
+            ? _navSeleccion.textContent.trim()
+            : 'Toca la sección que quieres mover';
+        txt.style.fontWeight = _navSeleccion ? '800' : '500';
+    }
+}
+
+// Mueve la sección seleccionada una posición arriba (-1) o abajo (+1)
+function mobileNav_moverSel(dir) {
+    if (!_navSeleccion) { showToast('Primero toca la sección que quieres mover', 'info'); return; }
+    const btn = _navSeleccion;
+    const hermanos = Array.from(btn.parentNode.querySelectorAll('.nav-btn[data-tab]'));
+    const i = hermanos.indexOf(btn);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= hermanos.length) return;
+    if (dir < 0) btn.parentNode.insertBefore(btn, hermanos[j]);
+    else btn.parentNode.insertBefore(hermanos[j], btn);
+    nav_saveOrder();
+    try { btn.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch(e) {}
 }
 
 function initDragReorder() {
@@ -262,10 +337,13 @@ function initDragReorder() {
 
     btns.forEach(btn => {
         btn.addEventListener('touchstart', e => {
+            // Fuera del modo mover no se arrastra nada: el dedo hace scroll.
+            if (!_navModoMover) { ts = null; return; }
             ts = { btn, startX: e.touches[0].clientX, startY: e.touches[0].clientY, isDragging: false };
         }, { passive: true });
 
         btn.addEventListener('touchmove', e => {
+            if (!_navModoMover) return;
             if (!ts || ts.btn !== btn) return;
             const dx = e.touches[0].clientX - ts.startX;
             const dy = e.touches[0].clientY - ts.startY;
@@ -282,6 +360,7 @@ function initDragReorder() {
         }, { passive: false });
 
         btn.addEventListener('touchend', e => {
+            if (!_navModoMover) return;
             if (!ts || ts.btn !== btn) return;
             if (ts.isDragging) {
                 const touch = e.changedTouches[0];

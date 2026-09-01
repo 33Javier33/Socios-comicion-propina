@@ -63,6 +63,7 @@ function cfg_limpiarCampos() {
         const el = document.getElementById(id);
         if(el) el.textContent = '';
     });
+    cfg_ojosEnTodos(document.getElementById('tab-config'));
 }
 
 function cfg_cambiarPin() {
@@ -304,6 +305,8 @@ function cfg_renderResponsables() {
             ${pinForm}
         </div>`;
     }).join('');
+
+    cfg_ojosEnTodos(cont);
 }
 
 function cfg_toggleFormPin(idx) {
@@ -448,4 +451,49 @@ function responsables_poblarLoginSelector() {
     });
     // Actualizar hint de PIN si quedó un responsable preseleccionado
     if (ultimo && typeof actualizarHintPin === 'function') actualizarHintPin();
+}
+
+// ══════════════════════════════════════════════════════════
+// OJITO PARA VER LA CONTRASEÑA
+// Se aplica a cualquier <input type="password">, envolviéndolo en un
+// contenedor relativo y colgando el botón adentro. Es idempotente, así que
+// se puede llamar de nuevo cada vez que se redibuja un formulario.
+// ══════════════════════════════════════════════════════════
+
+function cfg_ponerOjo(inp) {
+    if (!inp || inp.dataset.ojo === '1' || inp.type !== 'password') return;
+    inp.dataset.ojo = '1';
+
+    const cont = document.createElement('div');
+    cont.style.cssText = 'position:relative;display:block;';
+    inp.parentNode.insertBefore(cont, inp);
+    cont.appendChild(inp);
+
+    // Se acolcha por los dos lados para no descentrar los PIN, que van
+    // con text-align:center.
+    inp.style.paddingRight = '38px';
+    inp.style.paddingLeft = '38px';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '👁';
+    btn.title = 'Ver';
+    btn.setAttribute('aria-label', 'Mostrar u ocultar');
+    btn.style.cssText = 'position:absolute;right:4px;top:50%;transform:translateY(-50%);'
+        + 'background:none;border:none;cursor:pointer;font-size:1.05em;line-height:1;'
+        + 'padding:4px 7px;opacity:0.55;';
+    btn.onclick = () => {
+        const mostrar = inp.type === 'password';
+        inp.type = mostrar ? 'text' : 'password';
+        btn.textContent = mostrar ? '🙈' : '👁';
+        btn.title = mostrar ? 'Ocultar' : 'Ver';
+        btn.style.opacity = mostrar ? '1' : '0.55';
+    };
+    cont.appendChild(btn);
+}
+
+function cfg_ojosEnTodos(raiz) {
+    try {
+        (raiz || document).querySelectorAll('input[type="password"]').forEach(cfg_ponerOjo);
+    } catch(e) {}
 }
