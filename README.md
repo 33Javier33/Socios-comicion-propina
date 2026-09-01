@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-08-02 — Fix: no se podía cambiar el PIN personal en Configuración (SW v73)
+- **Causa — una carrera al iniciar la app.** `app-init.js` lanza en paralelo `cargarCredenciales()` (trae los PINs desde `responsable_creds`) y `cfg_cargarDesdeSupabase()` (trae la lista de responsables desde `config_sistema`). Esa lista se guarda **a propósito sin PINs**, y se escribía **tal cual** sobre `localStorage`, borrando el `pin` que la otra carga acababa de poner. Ganaba la que respondiera última — por eso "antes funcionaba y de repente no".
+- **Efecto:** con el PIN local borrado, el responsable se dibujaba como *"Crear mi PIN personal"* y **el campo "PIN actual" no se renderizaba**. Pero al guardar, la validación sí encontraba el PIN en la nube (`credencialesCache`) y lo exigía: leía un campo inexistente, obtenía `''` y respondía **"❌ El PIN actual no es correcto"**, sin manera de escribirlo. Cambio bloqueado.
+- **Fix 1:** `cfg_cargarDesdeSupabase()` ahora **fusiona** en vez de sobrescribir: conserva el PIN de la nube o el local para cada responsable.
+- **Fix 2 (defensivo):** `cfg_renderResponsables()` decide "tiene PIN propio" con **la misma fuente que usa la validación** (nube primero, local después). Así nunca puede exigirse un campo que no se dibujó.
+- **Fix 3:** si aun así faltara el campo, `cfg_guardarRespPin()` **redibuja el formulario y lo abre** en vez de rechazar con "PIN incorrecto".
+- **Claridad en las etiquetas** (había confusión sobre qué significaba "Confirmar"): "PIN actual" → **"PIN actual — el que usas hoy para entrar"**, "Confirmar" → **"Repetir el nuevo PIN"**, más una línea que explica el orden. El error de PIN equivocado ahora sugiere la opción *"¿Olvidaste tu PIN personal?"*.
+- Verificado con una simulación de la carrera en los dos órdenes posibles: antes quedaba trabado cuando `config` respondía última; ahora funciona en ambos.
+- Archivos: `js/config.js`. `config.js?v=33`, SW `fondo-admin-v73`, versión visible **v73**.
+
 #### 2026-08-02 — Donaciones: el motivo se escribe y se lee completo (SW v72)
 - El campo **Motivo** pasó de ser un `<input>` de una línea a un **textarea de 3 líneas que crece solo** hasta 200 px, con contador de caracteres. El límite subió de **90 a 220** caracteres, así se puede explicar bien de qué se trata la ayuda sin quedar cortado.
 - **Los saltos de línea se guardan como espacios** (`don_normalizarMotivo`): el motivo es la clave que agrupa la colecta y el texto que ve el socio en su app, así que se almacena en una sola línea limpia. El textarea es para escribir y releer cómodo, no para maquetar.

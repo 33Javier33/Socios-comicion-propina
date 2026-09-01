@@ -20,12 +20,28 @@ async function cfg_cargarDesdeSupabase() {
         if (cfg.clave_recup) {
             localStorage.setItem(CLAVE_RECUP_KEY, cfg.clave_recup);
         }
-        // Responsables (solo sobreescribe si Supabase tiene datos)
+        // Responsables (solo sobreescribe si Supabase tiene datos).
+        //
+        // OJO: la lista que vive en `config_sistema` se guarda A PROPÓSITO sin
+        // PINs (los PINs están en `responsable_creds`). Antes esta lista se
+        // escribía tal cual sobre localStorage y BORRABA el `pin` local que
+        // cargarCredenciales() acababa de poner — las dos cargas corren en
+        // paralelo al iniciar, así que ganaba la que respondía última. Cuando
+        // ganaba esta, el responsable aparecía como "sin PIN propio", no se
+        // dibujaba el campo "PIN actual" y el cambio de PIN quedaba trabado.
+        // Por eso ahora se FUSIONA conservando el PIN de la nube o el local.
         if (cfg.responsables) {
             try {
                 const lista = JSON.parse(cfg.responsables);
                 if (Array.isArray(lista) && lista.length > 0) {
-                    localStorage.setItem(RESP_KEY, JSON.stringify(lista));
+                    const previos = responsables_cargar();
+                    const fusionada = lista.map(r => {
+                        const prev = previos.find(p => p.ini === r.ini && p.area === r.area);
+                        const pin = (typeof credencialesCache === 'object' && credencialesCache[r.ini + '|' + r.area])
+                            || (prev && prev.pin) || '';
+                        return pin ? { ini: r.ini, area: r.area, pin } : { ini: r.ini, area: r.area };
+                    });
+                    localStorage.setItem(RESP_KEY, JSON.stringify(fusionada));
                     responsables_poblarLoginSelector();
                     if (document.getElementById('cfg-responsables-lista')) cfg_renderResponsables();
                 }
@@ -200,7 +216,12 @@ function cfg_renderResponsables() {
     const sesion = getSesionResponsableObj();
 
     cont.innerHTML = lista.map((r, i) => {
-        const tienePinPropio = !!r.pin;
+        // El "tiene PIN" se decide con la MISMA fuente que usa la validación al
+        // guardar (cfg_guardarRespPin): nube primero, local después. Si se mira
+        // solo `r.pin` puede pasar que el formulario no dibuje el campo
+        // "PIN actual" y que guardar igual lo exija — dejando el cambio trabado.
+        const pinEfectivo = (typeof credencialesCache === 'object' && credencialesCache[r.ini + '|' + r.area]) || r.pin || '';
+        const tienePinPropio = !!pinEfectivo;
         const esMio = (r.ini === sesion.ini && r.area === sesion.area);
 
         const pinBadge = tienePinPropio
@@ -213,11 +234,16 @@ function cfg_renderResponsables() {
                 <div style="font-size:0.78em;font-weight:700;color:#7f8c8d;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em;">
                     ${tienePinPropio ? 'Cambiar mi PIN personal' : 'Crear mi PIN personal'}
                 </div>
+                <div style="font-size:0.72em;color:#7f8c8d;line-height:1.45;margin:-6px 0 10px;">
+                    ${tienePinPropio
+                        ? 'Escribe tu <b>PIN actual</b> para autorizar el cambio y, abajo, el <b>PIN nuevo</b> dos veces.'
+                        : 'Escribe el <b>PIN nuevo</b> dos veces. Son 4 dígitos.'}
+                </div>
 
                 ${tienePinPropio ? `
                 <!-- Campo PIN actual (solo cuando ya tiene PIN) -->
                 <div id="cfg-pin-actual-wrap-${i}">
-                    <label style="font-size:0.75em;color:#7f8c8d;display:block;margin-bottom:4px;">PIN actual</label>
+                    <label style="font-size:0.75em;color:#7f8c8d;display:block;margin-bottom:4px;">PIN actual — el que usas hoy para entrar</label>
                     <input type="password" id="cfg-rpin-actual-${i}" maxlength="4" inputmode="numeric" placeholder="●●●●"
                         style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.9em;letter-spacing:6px;text-align:center;box-sizing:border-box;margin-bottom:8px;">
                 </div>` : ''}
@@ -229,7 +255,7 @@ function cfg_renderResponsables() {
                             style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.9em;letter-spacing:6px;text-align:center;box-sizing:border-box;">
                     </div>
                     <div>
-                        <label style="font-size:0.75em;color:#7f8c8d;display:block;margin-bottom:4px;">Confirmar</label>
+                        <label style="font-size:0.75em;color:#7f8c8d;display:block;margin-bottom:4px;">Repetir el nuevo PIN</label>
                         <input type="password" id="cfg-rpin-confirm-${i}" maxlength="4" inputmode="numeric" placeholder="●●●●"
                             style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.9em;letter-spacing:6px;text-align:center;box-sizing:border-box;">
                     </div>
@@ -298,8 +324,21 @@ async function cfg_guardarRespPin(idx) {
     // Si ya tiene PIN (nube o local) y NO está en modo recuperación → pedir PIN actual
     const pinExistente = credencialesCache[key] || r.pin;
     if (pinExistente && !_pinRecoveryModes[idx]) {
-        const pinActual = (document.getElementById('cfg-rpin-actual-' + idx)?.value || '').trim();
-        if (pinActual !== pinExistente) return setMsg('var(--danger)', '❌ El PIN actual no es correcto.');
+        const campoActual = document.getElementById('cfg-rpin-actual-' + idx);
+        // Si se va a exigir el PIN actual, el campo TIENE que existir. Si no está,
+        // el formulario se dibujó desactualizado: se redibuja en vez de rechazar
+        // con "PIN incorrecto", que era lo que dejaba el cambio sin salida.
+        if (!campoActual) {
+            cfg_renderResponsables();
+            const form = document.getElementById('cfg-pin-form-' + idx);
+            if (form) form.style.display = 'block';
+            return setMsg('var(--danger)', '⚠️ Faltaba el campo del PIN actual. Ya está arriba: escríbelo y vuelve a intentar.');
+        }
+        const pinActual = (campoActual.value || '').trim();
+        if (!pinActual) return setMsg('var(--danger)', '❌ Escribe tu PIN actual (el que usas hoy para entrar).');
+        if (pinActual !== pinExistente) {
+            return setMsg('var(--danger)', '❌ El PIN actual no es correcto. Si no lo recuerdas, usa "¿Olvidaste tu PIN personal?" más abajo.');
+        }
     }
 
     const pin1 = (document.getElementById('cfg-rpin-' + idx)?.value || '').trim();
