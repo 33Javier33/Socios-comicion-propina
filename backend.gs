@@ -4,8 +4,12 @@
 // ==============================================================================
 
 // ── CONFIGURACIÓN TELEGRAM ────────────────────────────────────────────────────
-const TELEGRAM_TOKEN = '8318855772:AAEDfwR7BdyF5gL7nMJjaYowvMF9gh6yfCw';
-const TELEGRAM_CHAT_ID = '5981473068';
+// El token y el chat_id NO van en el código: se leen de Script Properties
+// (Ajustes → Propiedades del script → Script Properties → + Add property):
+//   TELEGRAM_TOKEN   → token del bot, lo da @BotFather
+//   TELEGRAM_CHAT_ID → chat al que llegan los avisos
+function tg_token() { return PropertiesService.getScriptProperties().getProperty('TELEGRAM_TOKEN') || ''; }
+function tg_chatId() { return PropertiesService.getScriptProperties().getProperty('TELEGRAM_CHAT_ID') || ''; }
 
 // ── SUPABASE (socios/anticipos/extras) ────────────────────────────────────────
 const SB_URL = 'https://teemahksasdougehrcly.supabase.co';
@@ -78,11 +82,13 @@ function tgAnticipos() {
 
 function telegramEnviar(mensaje) {
   try {
-    const url = 'https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage';
+    const token = tg_token();
+    if (!token) { console.log('Telegram: TELEGRAM_TOKEN no configurado en Script Properties'); return; }
+    const url = 'https://api.telegram.org/bot' + token + '/sendMessage';
     UrlFetchApp.fetch(url, {
       method: 'post',
       contentType: 'application/json',
-      payload: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: mensaje, parse_mode: 'HTML' }),
+      payload: JSON.stringify({ chat_id: tg_chatId(), text: mensaje, parse_mode: 'HTML' }),
       muteHttpExceptions: true
     });
   } catch(e) {
@@ -96,7 +102,9 @@ function probarTelegram() {
 
 function telegramEnviarA(chatId, mensaje) {
   try {
-    const url = 'https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage';
+    const token = tg_token();
+    if (!token) { console.log('Telegram: TELEGRAM_TOKEN no configurado en Script Properties'); return; }
+    const url = 'https://api.telegram.org/bot' + token + '/sendMessage';
     UrlFetchApp.fetch(url, {
       method: 'post',
       contentType: 'application/json',
