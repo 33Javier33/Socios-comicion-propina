@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Aviso de nueva versión: ya no hay que recargar a mano (SW v78)
+- **Causa:** la actualización era **silenciosa a propósito**. El Service Worker hacía `skipWaiting()` al instalarse, tomaba el control solo y no avisaba nada — pero **la pestaña ya abierta seguía corriendo el código viejo** hasta que alguien recargaba a mano. Se había hecho así para evitar un banner anterior que se quedaba pegado en "actualizando".
+- **Fix:** se quitó el `skipWaiting()` del `install`. Ahora la versión nueva **queda en espera** y aparece una barra arriba:
+
+  > 🔄 **Nueva versión disponible** — Actualiza para ver los cambios &nbsp;&nbsp; **[ Actualizar ]** [ Después ]
+
+- **Actualizar** aplica la versión y recarga; **Después** oculta la barra hasta la próxima. No se recarga nunca sin permiso: en esta app se está en medio de un arqueo o registrando un anticipo, y perder eso sería peor que ver la versión vieja un rato.
+- **No se puede quedar pegado.** Es el mismo patrón ya probado en propi.solicitada: sin cuenta regresiva automática (eso era lo que colgaba el banner anterior) y con un guard que garantiza **una sola recarga**, más un respaldo a los 1,5 s por si `controllerchange` no dispara.
+- La app revisa si hay versión nueva **cada 60 segundos** y también al volver a primer plano, así que una pestaña abierta se entera sola en menos de un minuto.
+- Verificado con una simulación del ciclo de vida del SW: antes no había banner y sí recarga sin avisar; ahora el banner aparece, aplica al presionar y recarga exactamente una vez aunque se insista.
+- Archivos: `index.html` (barra + registro del SW), `sw.js` (sin `skipWaiting` en install). SW `fondo-admin-v78`, versión visible **v78**.
+
 #### 2026-09-05 — Fix: el menú quedaba inservible al minimizar y maximizar la ventana (SW v77)
 - **Causa:** `initLayout()` armaba la estructura **una sola vez al iniciar** y no reaccionaba a cambios de tamaño. Hay dos layouts distintos según el ancho, con el corte en **900 px**: en escritorio los botones van a una barra lateral (`.app-sidebar`); en celular se mueven **dentro del cajón** (`#mobileDrawer`, oculto salvo que se abra) y se crea una barra con el botón ☰.
 - **Efecto al cruzar los 900 px:**

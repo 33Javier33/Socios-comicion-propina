@@ -1,5 +1,5 @@
 // Service Worker — Sistema Integral (Fondo Solidario, app admin)
-const CACHE = 'fondo-admin-v77';
+const CACHE = 'fondo-admin-v78';
 
 // ── Push (notificaciones aunque la app esté cerrada) ──
 self.addEventListener('push', event => {
@@ -31,15 +31,21 @@ self.addEventListener('notificationclick', event => {
 const CORE = ['/', 'index.html', 'styles.css', 'manifest.json', 'img/fondo-192.png', 'img/fondo-512.png'];
 
 self.addEventListener('install', event => {
-    // Activar de inmediato (skipWaiting): la versión nueva toma el control sola,
-    // sin quedar en "waiting". Actualización silenciosa, sin banner.
+    // NO se llama skipWaiting() aquí a propósito. La versión nueva queda EN
+    // ESPERA y la app muestra la barra "Nueva versión disponible"; recién al
+    // presionar Actualizar se manda SKIP_WAITING y se aplica.
+    //
+    // Antes sí se activaba sola: la actualización era silenciosa, pero la
+    // pestaña abierta seguía corriendo el código viejo hasta que alguien
+    // recargaba a mano — que es justo el problema que esto resuelve. Tampoco
+    // se puede recargar sin avisar: en esta app se está en medio de un arqueo
+    // o registrando un anticipo, y perder eso sería peor.
     event.waitUntil(
         caches.open(CACHE).then(c => c.addAll(CORE).catch(() => {}))
-            .then(() => self.skipWaiting())
     );
 });
 
-// Compatibilidad: si alguna versión previa aún manda SKIP_WAITING, se atiende.
+// La app pide aplicar la versión nueva (botón "Actualizar" de la barra).
 self.addEventListener('message', event => {
     if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
