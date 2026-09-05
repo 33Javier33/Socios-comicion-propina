@@ -150,16 +150,77 @@ function switchTab(tabName) {
 // ── Sidebar + drag-to-reorder ────────────────────────────────
 const NAV_ORDER_KEY = 'fondo_nav_order';
 
+// ══════════════════════════════════════════════════════════════════════
+// LAYOUT — escritorio (barra lateral) vs celular (barra + cajón)
+//
+// Antes esto se armaba UNA sola vez al iniciar y no reaccionaba a cambios de
+// tamaño. Al minimizar y volver a maximizar la ventana en un computador se
+// cruzaba el corte de 900px y el menú quedaba inservible: si la app había
+// arrancado en tamaño chico, los botones estaban dentro del cajón (oculto en
+// escritorio) y no había barra lateral; al revés, la barra lateral quedaba
+// escondida por CSS y nunca se creaba la barra de celular. Solo se arreglaba
+// recargando. Ahora el layout se puede desmontar y volver a montar, y se
+// recalcula cuando la ventana cruza el corte.
+// ══════════════════════════════════════════════════════════════════════
+const LAYOUT_CORTE = 900;
+let _layoutModo = null;      // 'escritorio' | 'celular'
+let _layoutPiezas = null;    // posición y estilo originales de lo que se mueve
+
+// Se guarda una sola vez, ANTES de mover nada, para poder volver al original.
+function _layoutGuardarOriginal() {
+    if (_layoutPiezas) return;
+    const container = document.querySelector('.container');
+    if (!container) return;
+    const orden = [
+        container.querySelector('.nav-tabs'),
+        document.getElementById('recPresenciaCard'),
+        document.getElementById('actividadCard'),
+        ...Array.from(container.querySelectorAll('.tab-content'))
+    ].filter(Boolean);
+    _layoutPiezas = orden.map(el => ({ el, style: el.getAttribute('style') }));
+}
+
+// Devuelve todo a la estructura original del HTML y borra lo que se creó.
+function _layoutDesmontar() {
+    if (!_layoutPiezas) return;
+    const container = document.querySelector('.container');
+    const header = container && container.querySelector('.header-section');
+    if (!header) return;
+    // Se reinsertan en cadena justo después del encabezado, en su orden
+    // original, sin depender de qué más haya en el contenedor.
+    let ancla = header;
+    _layoutPiezas.forEach(({ el, style }) => {
+        ancla.insertAdjacentElement('afterend', el);
+        ancla = el;
+        if (style === null) el.removeAttribute('style'); else el.setAttribute('style', style);
+    });
+    document.querySelectorAll('.app-layout').forEach(n => n.remove());
+    const mb = document.getElementById('mobileNavBar'); if (mb) mb.remove();
+    const dr = document.getElementById('mobileDrawer'); if (dr) dr.remove();
+    _navModoMover = false;
+    _navSeleccion = null;
+    document.body.style.overflow = '';
+    _layoutModo = null;
+}
+
 function initLayout() {
     const container = document.querySelector('.container');
+    if (!container) return;
+    const modo = window.innerWidth >= LAYOUT_CORTE ? 'escritorio' : 'celular';
+    if (_layoutModo === modo) return;      // nada que hacer
+
+    _layoutGuardarOriginal();
+    _layoutDesmontar();
+
     const headerSection = container.querySelector('.header-section');
     const navTabs = container.querySelector('.nav-tabs');
     const tabContents = Array.from(container.querySelectorAll('.tab-content'));
+    if (!headerSection || !navTabs) return;
 
     nav_restoreOrder(navTabs);
 
-    if (window.innerWidth >= 900) {
-        // Desktop: sidebar fijo a la izquierda
+    if (modo === 'escritorio') {
+        // Escritorio: barra lateral fija a la izquierda
         const layout = document.createElement('div');
         layout.className = 'app-layout';
         const sidebar = document.createElement('div');
@@ -178,7 +239,7 @@ function initLayout() {
         layout.appendChild(main);
         headerSection.insertAdjacentElement('afterend', layout);
     } else {
-        // Mobile: barra + drawer desde abajo
+        // Celular: barra + cajón desde abajo
         navTabs.style.display = 'none';
 
         // Barra de navegación mobile (muestra sección activa + botón menú)
@@ -236,12 +297,31 @@ function initLayout() {
             mobileNav_seleccionar(b === _navSeleccion ? null : b);
         }, true);
 
-        // Cerrar drawer al pulsar una sección
+        // Cerrar drawer al pulsar una sección. El guard evita duplicar el
+        // listener si se vuelve a montar el layout al cambiar de tamaño.
         navTabs.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+            if (btn.dataset.cierraDrawer === '1') return;
+            btn.dataset.cierraDrawer = '1';
             btn.addEventListener('click', () => { if (!_navModoMover) setTimeout(mobileNav_close, 80); });
         });
+
+        // Poner en la barra el nombre de la sección que está abierta
+        const activo = document.querySelector('.nav-btn[data-tab].active');
+        const label = document.getElementById('mobileActiveLabel');
+        if (activo && label) label.textContent = activo.textContent.trim();
     }
+
+    _layoutModo = modo;
 }
+
+// Rearmar el layout cuando la ventana cruza el corte (minimizar/maximizar,
+// rotar el dispositivo, arrastrar el borde de la ventana). initLayout() sale
+// solo si el modo no cambió, así que esto no cuesta nada mientras se arrastra.
+let _layoutResizeTimer = null;
+window.addEventListener('resize', () => {
+    clearTimeout(_layoutResizeTimer);
+    _layoutResizeTimer = setTimeout(initLayout, 150);
+});
 
 function mobileNav_open() {
     const d = document.getElementById('mobileDrawer');

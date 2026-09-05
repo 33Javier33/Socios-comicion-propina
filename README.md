@@ -232,6 +232,19 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Fix: el menú quedaba inservible al minimizar y maximizar la ventana (SW v77)
+- **Causa:** `initLayout()` armaba la estructura **una sola vez al iniciar** y no reaccionaba a cambios de tamaño. Hay dos layouts distintos según el ancho, con el corte en **900 px**: en escritorio los botones van a una barra lateral (`.app-sidebar`); en celular se mueven **dentro del cajón** (`#mobileDrawer`, oculto salvo que se abra) y se crea una barra con el botón ☰.
+- **Efecto al cruzar los 900 px:**
+  - Si la app había arrancado en tamaño chico y luego se maximizaba, los botones seguían **dentro del cajón**, que en escritorio está oculto — y la barra lateral nunca se creó. **Menú invisible.**
+  - Al revés, achicando desde escritorio, la barra lateral quedaba escondida por CSS y **nunca se creaba la barra de celular**, así que tampoco había botón ☰.
+  - En ambos casos solo se arreglaba recargando la página.
+- **Fix:** el layout ahora se puede **desmontar y volver a montar**. Antes de mover nada se guarda la posición y el estilo original de cada pieza (`.nav-tabs`, las dos tarjetas y todas las secciones); al desmontar se reinsertan en cadena después del encabezado, en su orden original, y se borra lo creado (`.app-layout`, la barra y el cajón).
+- Un `resize` con 150 ms de espera recalcula el modo. `initLayout()` **sale de inmediato si el modo no cambió**, así que arrastrar el borde de la ventana no cuesta nada.
+- Al volver a montar en modo celular, la barra recupera el nombre de la sección abierta, y el listener que cierra el cajón lleva un guard para no duplicarse en cada remontaje.
+- También cubre **rotar el dispositivo** y abrir la app en pantalla dividida, que tenían el mismo problema.
+- Verificado con una simulación de cinco cambios de tamaño encadenados: el menú queda alcanzable en todos y la estructura vuelve idéntica al HTML original.
+- Archivos: `js/app-init.js` (`initLayout`, `_layoutGuardarOriginal`, `_layoutDesmontar`, listener de `resize`). `app-init.js?v=45`, SW `fondo-admin-v77`, versión visible **v77**.
+
 #### 2026-09-05 — "Actividad reciente" arranca minimizada (SW v76)
 - La tarjeta ocupaba seis filas fijas en **todas** las secciones. Ahora arranca **minimizada en una sola línea**: el título, el **último movimiento** (quién, qué y a qué hora), un contador con cuántos hay y la flecha para desplegar.
 - Se abre y se cierra tocando la barra, y **el estado se recuerda** entre recargas: si la dejas abierta, sigue abierta.
