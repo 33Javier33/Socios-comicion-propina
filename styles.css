@@ -307,6 +307,14 @@
         .aq-syncing { animation: aq-pulse 1s ease-in-out infinite; background:#f59e0b !important; }
         .arqueo-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         @media (max-width: 768px) { .arqueo-layout { grid-template-columns: 1fr; } }
+        /* Tres columnas en pantalla ancha: menú (barra lateral) · Datos
+           Esperados con el Análisis debajo · Resultados. La columna de
+           Resultados queda fija al hacer scroll, porque es la que se mira
+           mientras se cuenta la caja. */
+        @media (min-width: 1280px) {
+            .arqueo-layout { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; }
+            .arqueo-layout > div:last-child { position: sticky; top: 16px; }
+        }
         .arqueo-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .arqueo-card h2 { margin: 0 0 15px 0; font-size: 1.1em; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .arqueo-info-box { background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; }

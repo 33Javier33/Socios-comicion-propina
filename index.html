@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/fondo-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=79">
+    <link rel="stylesheet" href="styles.css?v=80">
 </head>
 <body>
 
@@ -1667,7 +1667,7 @@
             </div>
 
             <div class="arqueo-layout">
-                <!-- IZQUIERDA: Datos Esperados -->
+                <!-- COLUMNA 1: Datos Esperados y, debajo, Análisis -->
                 <div>
                     <div class="arqueo-card">
                         <h2 style="display:flex;align-items:center;gap:8px;"><i class="fas fa-bullseye"></i> Datos Esperados <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-datos-esperados',this)" title="Ayuda rápida">?</button><div id="pop-datos-esperados" class="ayuda-popover"><div class="ayuda-popover-titulo">🎯 ¿Qué son los Datos Esperados?</div><div class="ayuda-popover-texto">Es el <strong>monto que debería haber en caja</strong> según los registros del sistema: lo que entró menos lo que salió.</div><ol class="ayuda-popover-pasos"><li><strong>Recaudación Nube:</strong> total recaudado según Google Sheets</li><li><strong>Anticipos:</strong> dinero entregado a socios durante el mes</li><li><strong>Retiros:</strong> montos retirados oficialmente de la caja</li><li>Total Esperado = Recaudación − Anticipos − Retiros</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Si el total contado coincide con el esperado, el arqueo cuadra ✅.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaIrA('arqueo')">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-datos-esperados')">✕</span></div></div></div></h2>
@@ -1687,9 +1687,21 @@
                         </div>
                         <div id="aq-desglose-esperado" style="margin-top:20px;"></div>
                     </div>
+                    <div class="arqueo-card">
+                        <h2><i class="fas fa-chart-pie"></i> Análisis</h2>
+                        <!-- Puntos Totales — destacado -->
+                        <div style="font-size:0.7em;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px;">📊 Total Puntos del Período</div>
+                        <div id="aq-division-result" style="font-size:1.5rem;font-weight:700;color:#2563eb;text-align:right;padding:10px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;margin-bottom:14px;">0</div>
+                        <!-- Diferencia Real -->
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:1.1em;">
+                            <strong>Diferencia Real:</strong> <span id="aq-diferencia" style="font-weight:800;">$0</span>
+                        </div>
+                        <p id="aq-mensaje-arqueo" class="aq-mensaje"></p>
+                        <button onclick="aq_archivarEnNube()" class="aq-btn aq-btn-danger" style="width:100%; margin-top:10px;"><i class="fas fa-archive"></i> Archivar Informe Final</button>
+                    </div>
                 </div>
 
-                <!-- DERECHA: Resultados y Análisis -->
+                <!-- COLUMNA 2: Resultados -->
                 <div>
                     <div class="arqueo-card">
                         <h2><i class="fas fa-cash-register"></i> Resultados</h2>
@@ -1706,18 +1718,6 @@
                                 <span id="aq-total-retiros" style="font-weight:700;">$0</span>
                             </div>
                         </div>
-                    </div>
-                    <div class="arqueo-card">
-                        <h2><i class="fas fa-chart-pie"></i> Análisis</h2>
-                        <!-- Puntos Totales — destacado -->
-                        <div style="font-size:0.7em;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px;">📊 Total Puntos del Período</div>
-                        <div id="aq-division-result" style="font-size:1.5rem;font-weight:700;color:#2563eb;text-align:right;padding:10px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;margin-bottom:14px;">0</div>
-                        <!-- Diferencia Real -->
-                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:1.1em;">
-                            <strong>Diferencia Real:</strong> <span id="aq-diferencia" style="font-weight:800;">$0</span>
-                        </div>
-                        <p id="aq-mensaje-arqueo" class="aq-mensaje"></p>
-                        <button onclick="aq_archivarEnNube()" class="aq-btn aq-btn-danger" style="width:100%; margin-top:10px;"><i class="fas fa-archive"></i> Archivar Informe Final</button>
                     </div>
                 </div>
             </div>
@@ -2538,7 +2538,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v79</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v80</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Arqueo de Caja: tres columnas en pantalla ancha (SW v80)
+- Mismo criterio que Gestión. Desde **1280 px** la sección se reparte así:
+
+  | 1 · Menú | 2 · Datos Esperados + Análisis | 3 · Resultados |
+  |---|---|---|
+  | barra lateral | resto del ancho | 360 px |
+
+- **Análisis se movió**: estaba debajo de *Resultados* en la columna derecha; ahora va **debajo de Datos Esperados**, que es con lo que se compara. Quedan juntos lo que se espera y el cálculo sobre eso.
+- **Resultados queda solo a la derecha y fijo al hacer scroll** — es lo que se mira mientras se cuenta la caja, así que ahora acompaña sin tener que subir.
+- Bajo 1280 px se mantiene el reparto de dos columnas de siempre, y bajo 768 px todo apilado.
+- Archivos: `index.html` (se movió la tarjeta de Análisis a la primera columna), `styles.css`. `styles.css?v=80`, SW `fondo-admin-v80`, versión visible **v80**.
+
 #### 2026-09-05 — Gestión: "Cierre de Mes" minimizable y cuatro columnas en pantalla ancha (SW v79)
 
 **Cierre de Mes minimizable**
