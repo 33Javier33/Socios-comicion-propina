@@ -199,6 +199,7 @@
         .result-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
         .result-item:hover { background-color: #f9f9f9; padding-left: 15px; }
         .detail-panel { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); display: none; }
+        .detail-panel.visible { display: block; }
         .detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
 
         .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
@@ -239,6 +240,37 @@
         .type-value { font-weight: bold; color: #333; }
 
         @media (max-width: 768px) { .gestion-layout { grid-template-columns: 1fr; } .action-grid { grid-template-columns: 1fr; } }
+
+        /* ── Cuatro columnas en pantallas anchas ──────────────────────────
+           menú (barra lateral) · buscar socio · ficha del socio · anticipos
+           y ausencias. La ficha y las acciones viven en el mismo
+           .detail-panel, así que se reparten con grid: todo cae en la
+           columna 1 y .action-grid se manda a la 2, ocupando el alto
+           completo y quedando fija al hacer scroll.
+           Debajo de 1280px se vuelve al apilado de siempre. */
+        @media (min-width: 1280px) {
+            .gestion-layout { grid-template-columns: 280px minmax(0, 1fr); }
+            .detail-panel.visible {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 310px;
+                gap: 26px;
+                align-items: start;
+                padding: 24px;
+            }
+            .detail-panel.visible > * { grid-column: 1; min-width: 0; }
+            .detail-panel.visible > .action-grid {
+                grid-column: 2;
+                grid-row: 1 / span 100;   /* alto completo: sin esto la fila 1 se
+                                             estiraría al alto de las acciones y
+                                             dejaría un hueco bajo la ficha */
+                grid-template-columns: 1fr;   /* anticipo y ausencia, uno bajo el otro */
+                gap: 16px;
+                margin-bottom: 0;
+                position: sticky;
+                top: 16px;
+                align-self: start;
+            }
+        }
         @media (max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .stat-card { padding: 14px 12px; } .stat-value { font-size: 1.1em; } }
 
         /* Calendario filtro recaudación */

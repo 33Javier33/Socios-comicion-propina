@@ -232,6 +232,25 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Gestión: "Cierre de Mes" minimizable y cuatro columnas en pantalla ancha (SW v79)
+
+**Cierre de Mes minimizable**
+- La tarjeta morada ocupaba media pantalla arriba de Gestión aunque no se la esté usando. Ahora **arranca cerrada** en una sola línea, con un resumen de lo que de verdad se mira al pasar: **el período y el total de anticipos**.
+- Se abre y cierra tocando la barra, y **el estado se recuerda** entre recargas. Al abrirla vuelven los tres montos completos y los botones (*Saldo real a pagar*, *Detalle Anticipos*, *Saldos por período*).
+- El resumen se repinta cuando llegan los totales, así que no se queda mostrando `...`.
+
+**Cuatro columnas al seleccionar un socio**
+- En pantallas de **1280 px o más**, la sección se reparte así:
+
+  | 1 · Menú | 2 · Buscar socio | 3 · Ficha del socio | 4 · Anticipos y ausencias |
+  |---|---|---|---|
+  | barra lateral | 280 px | resto | 310 px |
+
+- Antes los formularios de **Anticipo** y **Ausencia** iban lado a lado *debajo* de la ficha, así que había que bajar para registrar algo. Ahora quedan **a la derecha, uno bajo el otro y fijos al hacer scroll**: la ficha, el historial y los movimientos se leen a la izquierda mientras el formulario sigue a la vista.
+- Bajo 1280 px todo vuelve al apilado de siempre, sin cambios.
+- **Detalle técnico:** la ficha y las acciones viven en el mismo `.detail-panel`, así que se reparten con grid — todo cae en la columna 1 y `.action-grid` se manda a la 2 con `grid-row: 1 / span 100` (sin ese span, la primera fila se estiraría al alto de los formularios y dejaría un hueco bajo la ficha). Para que el grid funcione hubo que **dejar de mostrar el panel con `style.display`** desde JS y pasar a una clase `.visible`: un estilo inline siempre le gana al CSS, y habría anulado el `display:grid`.
+- Archivos: `index.html` (tarjeta plegable), `js/anticipos.js` (`cierreMes_pintarCard`, `cierreMes_toggleCard`, clase `.visible`), `js/app-init.js`, `styles.css`. `anticipos.js?v=50`, `app-init.js?v=46`, `styles.css?v=79`, SW `fondo-admin-v79`, versión visible **v79**.
+
 #### 2026-09-05 — Aviso de nueva versión: ya no hay que recargar a mano (SW v78)
 - **Causa:** la actualización era **silenciosa a propósito**. El Service Worker hacía `skipWaiting()` al instalarse, tomaba el control solo y no avisaba nada — pero **la pestaña ya abierta seguía corriendo el código viejo** hasta que alguien recargaba a mano. Se había hecho así para evitar un banner anterior que se quedaba pegado en "actualizando".
 - **Fix:** se quitó el `skipWaiting()` del `install`. Ahora la versión nueva **queda en espera** y aparece una barra arriba:

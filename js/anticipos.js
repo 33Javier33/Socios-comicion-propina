@@ -2115,6 +2115,7 @@ async function gestion_cargarTotalAnticipos() {
         const allData = await fetchAllDataCached();
         const total = aq_filtrarAnticiposPeriodo(allData.anticipos || {});
         el.textContent = formatearMoneda(total);
+        if (typeof cierreMes_pintarCard === 'function') cierreMes_pintarCard();
     } catch(e) {
         el.textContent = 'Error';
     }
@@ -2248,7 +2249,10 @@ async function gestion_cargarRemanenteVivo() {
 function seleccionarSocio(id) {
     const socio = cacheSocios.find(s => s.id === id);
     if (!socio) return;
-    document.getElementById('panelDetalle').style.display = 'block';
+    // Se usa una clase en vez de style.display para que el layout de 4 columnas
+    // (que necesita display:grid en pantallas anchas) no quede pisado por el
+    // inline style, que siempre le gana al CSS.
+    document.getElementById('panelDetalle').classList.add('visible');
     document.getElementById('mensajeSeleccion').style.display = 'none';
     document.getElementById('gestionSocioId').value = socio.id;
     document.getElementById('gestionSocioNombre').value = `${socio.nombre} ${socio.apellido}`;
@@ -2708,4 +2712,37 @@ function _saldosRealesImprimir() {
         + '</table></body></html>';
 
     printHTML(html, 'Saldo Real a Pagar ' + new Date().toLocaleDateString('es-CL').replace(/\//g, '-'));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// TARJETA "CIERRE DE MES" MINIMIZABLE
+// Ocupaba media pantalla en Gestión sin que se la necesite todo el tiempo.
+// Arranca cerrada, con un resumen de una línea, y recuerda el estado.
+// ══════════════════════════════════════════════════════════════════════
+const CIERRE_CARD_KEY = 'fondo_cierremes_abierta';
+
+function cierreMes_cardAbierta() {
+    try { return localStorage.getItem(CIERRE_CARD_KEY) === '1'; } catch (e) { return false; }
+}
+
+function cierreMes_pintarCard() {
+    const body = document.getElementById('cierreMesCardBody');
+    const icon = document.getElementById('cierreMesCardIcon');
+    const res  = document.getElementById('cierreMesCardResumen');
+    if (!body) return;
+    const abierta = cierreMes_cardAbierta();
+    body.style.display = abierta ? 'flex' : 'none';
+    if (icon) icon.textContent = abierta ? '▴' : '▾';
+    if (res) {
+        // Cerrada muestra lo que de verdad se mira de un vistazo: período y anticipos.
+        const per = (document.getElementById('gestionPeriodoRemanentes')?.textContent || '').trim();
+        const ant = (document.getElementById('gestionTotalAnticipos')?.textContent || '').trim();
+        res.textContent = abierta ? '' : [per, ant && ant !== '...' ? 'Anticipos ' + ant : ''].filter(Boolean).join('  ·  ');
+        res.style.display = abierta ? 'none' : 'block';
+    }
+}
+
+function cierreMes_toggleCard() {
+    try { localStorage.setItem(CIERRE_CARD_KEY, cierreMes_cardAbierta() ? '0' : '1'); } catch (e) {}
+    cierreMes_pintarCard();
 }

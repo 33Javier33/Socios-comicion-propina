@@ -117,6 +117,7 @@ function switchTab(tabName) {
         gestion_cargarTotalRemanentes();
         gestion_cargarRemanenteVivo();
         cierresMes_render();
+        if (typeof cierreMes_pintarCard === 'function') cierreMes_pintarCard();
         if (typeof anticipos_initRealtime === 'function') anticipos_initRealtime();
         if (typeof egresos_initRealtime === 'function') egresos_initRealtime();
         if (typeof egresos_cargarPendientes === 'function') egresos_cargarPendientes();

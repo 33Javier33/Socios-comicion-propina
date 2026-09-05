@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/fondo-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=74">
+    <link rel="stylesheet" href="styles.css?v=79">
 </head>
 <body>
 
@@ -383,7 +383,14 @@
         <div id="tab-gestion" class="tab-content">
 
             <!-- BANNER CIERRE MES GLOBAL -->
-            <div style="background:linear-gradient(135deg, #6c3483, #8e44ad); border-radius:12px; padding:14px 18px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div id="cierreMesCard" style="background:linear-gradient(135deg, #6c3483, #8e44ad); border-radius:12px; margin-bottom:20px; overflow:hidden;">
+                <button type="button" onclick="cierreMes_toggleCard()" id="cierreMesCardHead"
+                    style="width:100%; display:flex; align-items:center; gap:10px; background:none; border:none; padding:11px 16px; cursor:pointer; text-align:left; font-family:inherit; color:white;">
+                    <span style="flex-shrink:0; font-size:1em; font-weight:800;">🔒 Cierre de Mes</span>
+                    <span id="cierreMesCardResumen" style="flex:1; min-width:0; font-size:0.78em; color:#e8d5f5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+                    <span id="cierreMesCardIcon" style="flex-shrink:0; font-size:0.75em; color:#e8d5f5;">▾</span>
+                </button>
+                <div id="cierreMesCardBody" style="display:none; padding:0 18px 14px; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                 <div>
                     <div style="color:white; font-weight:800; font-size:1em;">🔒 Cierre de Mes</div>
                     <div style="color:#e8d5f5; font-size:0.78em; margin-top:2px;">Guarda el remanente de cada socio como saldo del próximo mes</div>
@@ -406,6 +413,7 @@
                     <button onclick="verSaldosPorPeriodo()" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.5); border-radius:8px; padding:9px 18px; font-weight:800; font-size:0.85em; cursor:pointer; white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
                         📜 Saldos por período
                     </button>
+                </div>
                 </div>
             </div>
 
@@ -2101,7 +2109,7 @@
     <script src="js/api.js?v=36"></script>
     <script src="js/socios.js?v=40"></script>
     <script src="js/puntos.js?v=32"></script>
-    <script src="js/anticipos.js?v=49"></script>
+    <script src="js/anticipos.js?v=50"></script>
     <script src="js/desglose-anticipos.js?v=32"></script>
     <script src="js/meses-anteriores.js?v=32"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
@@ -2123,7 +2131,7 @@
     <script src="js/pt-dias.js?v=36"></script>
     <script src="js/conexiones-log.js?v=3"></script>
 <script src="js/mensajes-admin.js?v=48"></script>
-    <script src="js/app-init.js?v=45"></script>
+    <script src="js/app-init.js?v=46"></script>
 
 <!-- ══════════════════════════════════════════
      MODAL: ACERCA DE / RESEÑA
@@ -2530,7 +2538,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v78</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v79</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">
