@@ -394,6 +394,15 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     function _invalidarDatosSocio(_id) { _allDataCache = null; }
     function _invalidarTodosLosDatos() { _allDataCache = null; _saldosCache = null; }
 
+    // Expuesto para que un cambio hecho en OTRO dispositivo pueda tirar esta
+    // caché. Sin esto, al llegar el aviso en vivo la app volvía a pedir los
+    // datos pero el interceptor respondía con lo que tenía guardado (TTL de 5
+    // minutos), así que el anticipo nuevo seguía sin verse.
+    window.sbInvalidarCacheDatos = function () {
+        _invalidarTodosLosDatos();
+        try { localStorage.removeItem('fondo_cache_all_data'); } catch(e) {}
+    };
+
     // ── Helper: registrar evento de auditoría en Supabase (fire-and-forget) ────
     async function _sbAudit(accion, extra = {}) {
         try {

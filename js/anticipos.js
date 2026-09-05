@@ -1054,13 +1054,10 @@ async function borrarItemConfirmado() {
         }
 
         // Refrescar SIEMPRE (aunque algo falle) para que la pantalla muestre el estado real.
-        globalCacheAllData = null;
-        try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
         const idSocio = document.getElementById('gestionSocioId').value;
-        // cargarHistorialSocio recalcula alcance, saldo real, a pagar y remanente
-        // con las ausencias que quedan, así que al borrar una el descuento se revierte solo.
-        await cargarHistorialSocio(idSocio);
-        if (typeof aq_fetchAnticipos === 'function') aq_fetchAnticipos(true);
+        // anticipos_refrescarTodo limpia la caché y recalcula alcance, saldo real,
+        // a pagar, remanente y los totales del período con lo que queda.
+        anticipos_cambioLocal(idSocio);
 
         if (fallos.length && !borrados) {
             showToast('No se pudo eliminar: ' + fallos[0], 'error');
@@ -1117,13 +1114,9 @@ async function guardarEdicionAnticipo() {
     try {
         await callApiSocios('actualizarAnticipo', { uuid, fecha, monto, responsable, areaResponsable });
         showToast('Anticipo actualizado', 'success');
-
-        // Invalidar caché de datos para forzar refresco real
-        globalCacheAllData = null;
-        try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
-
-        const idSocio = document.getElementById('gestionSocioId').value;
-        if (idSocio) cargarHistorialSocio(idSocio);
+        // Editar el monto cambia el saldo del socio y los totales del período,
+        // así que se refresca todo, no solo el historial.
+        anticipos_cambioLocal(document.getElementById('gestionSocioId').value);
     } catch(e) {
         showToast('Error al actualizar', 'error');
     } finally {
@@ -1340,6 +1333,88 @@ async function cierresMes_sincronizar(silent = true) {
         try { localStorage.setItem(CIERRES_MES_KEY, JSON.stringify(remoto)); } catch {}
         cierresMes_render();
     } catch (e) { if (!silent) console.warn('[cierres] sync:', e); }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ANTICIPOS EN VIVO
+//
+// Al registrar, editar o borrar un anticipo hay que refrescar TODO lo que
+// depende de él, no solo el historial del socio:
+//   · Total de anticipos del período (tarjeta de Gestión)
+//   · Remanentes (total y en vivo)
+//   · Total de anticipos del arqueo, que se resta al cuadrar la caja
+// Antes solo se refrescaba el historial del socio y el arqueo, así que la
+// tarjeta "Total anticipos" quedaba con el valor viejo hasta cambiar de
+// pestaña — parecía que el anticipo no se había guardado.
+// ══════════════════════════════════════════════════════════════════════
+function anticipos_refrescarTodo(socioId) {
+    globalCacheAllData = null;
+    try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
+    // También la caché interna del interceptor de Supabase: si no, se vuelve a
+    // pedir el dato y responde con lo que tenía guardado hasta 5 minutos.
+    if (typeof window.sbInvalidarCacheDatos === 'function') window.sbInvalidarCacheDatos();
+    if (socioId && typeof cargarHistorialSocio === 'function') cargarHistorialSocio(socioId);
+    if (typeof gestion_cargarTotalAnticipos === 'function') gestion_cargarTotalAnticipos();
+    if (typeof gestion_cargarTotalRemanentes === 'function') gestion_cargarTotalRemanentes();
+    if (typeof gestion_cargarRemanenteVivo === 'function') gestion_cargarRemanenteVivo();
+    if (typeof aq_fetchAnticipos === 'function') aq_fetchAnticipos(true);
+    if (typeof recalcularAnticipos === 'function') recalcularAnticipos();
+}
+
+// Refresca esta pantalla Y avisa a los otros dispositivos. Se usa cuando el
+// cambio lo originó este equipo (registrar, editar o borrar).
+function anticipos_cambioLocal(socioId) {
+    anticipos_refrescarTodo(socioId);
+    anticipos_avisarCambio();
+}
+
+// Realtime: cuando OTRO dispositivo registra, edita o borra un anticipo,
+// esta pantalla se actualiza sola. Sin esto, el segundo encargado seguía
+// viendo los totales viejos hasta recargar la app.
+//
+// Se escucha por DOS vías a propósito:
+//  1. `postgres_changes` sobre la tabla `anticipos` — la vía natural, pero
+//     solo llega si la tabla está publicada en Realtime dentro de Supabase.
+//  2. Un canal de aviso (broadcast) que la propia app emite al guardar —
+//     no depende de ninguna configuración en la base, así que funciona
+//     aunque la publicación no esté activada.
+// Las dos caen en el mismo agrupador, así que si llegan ambas se recarga
+// una sola vez.
+let _anticiposRtListo = false;
+let _anticiposRtTimer = null;
+let _anticiposCanal = null;
+
+function _anticiposRefrescoAgrupado() {
+    // Un registro dispara varios eventos seguidos (el insert y el aviso):
+    // se agrupan para no recargar cuatro veces.
+    clearTimeout(_anticiposRtTimer);
+    _anticiposRtTimer = setTimeout(() => {
+        const abierto = document.getElementById('gestionSocioId');
+        anticipos_refrescarTodo(abierto ? abierto.value : '');
+    }, 700);
+}
+
+function anticipos_initRealtime() {
+    if (_anticiposRtListo || typeof dbSoc === 'undefined') return;
+    _anticiposRtListo = true;
+    try {
+        _anticiposCanal = dbSoc.channel('anticipos-rt')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'anticipos' }, _anticiposRefrescoAgrupado)
+            .on('broadcast', { event: 'cambio' }, _anticiposRefrescoAgrupado)
+            .subscribe();
+    } catch (e) {
+        console.warn('[anticipos] realtime no disponible:', e);
+        _anticiposCanal = null;
+    }
+}
+
+// Avisa a los otros dispositivos que hubo un cambio. El emisor no se recibe
+// a sí mismo (ya se refrescó al guardar), así que no hay recarga doble.
+function anticipos_avisarCambio() {
+    if (!_anticiposCanal) return;
+    try {
+        _anticiposCanal.send({ type: 'broadcast', event: 'cambio', payload: { ts: Date.now() } });
+    } catch (e) { /* sin conexión: el otro equipo se enterará al recargar */ }
 }
 
 // Realtime: cuando otro dispositivo cierra/cobra un socio, refrescar aquí.
@@ -2373,8 +2448,6 @@ async function confirmarDesgloseAnticipo() {
         } catch(e2) { console.warn('[DSG] Error guardando desglose:', e2.message); }
 
         showToast('✅ Anticipo registrado — generando boucher...', 'success');
-        globalCacheAllData = null;
-        try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
         if (campoMonto) {
             campoMonto.value = '';
             campoMonto.classList.remove('input-ok');
@@ -2382,9 +2455,7 @@ async function confirmarDesgloseAnticipo() {
         const fechaInput = document.getElementById('fechaAnticipo');
         if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
         if (campoMonto) campoMonto.focus();
-        cargarHistorialSocio(id);
-        if (typeof aq_fetchAnticipos === 'function') aq_fetchAnticipos(true);
-        if (typeof recalcularAnticipos === 'function') recalcularAnticipos();
+        anticipos_cambioLocal(id);
         generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, billetes, folio });
         if (typeof dsg_onNuevoAnticipo === 'function') dsg_onNuevoAnticipo({ firma: folio, socio_nombre: nombre, socio_id: id, monto, fecha, billetes, responsable: respIni + (respArea ? ' ' + respArea : ''), created_at: new Date().toISOString() });
         // Si este anticipo procesa una solicitud de egreso pendiente, marcarla

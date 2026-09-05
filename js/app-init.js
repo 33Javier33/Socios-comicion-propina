@@ -53,6 +53,8 @@ function iniciarApp() {
     if (typeof conexionesLog_limpiarViejos === 'function') setTimeout(conexionesLog_limpiarViejos, 9000);
     if (typeof ptdias_initRealtime === 'function') ptdias_initRealtime();
     if (typeof ptdias_cargarPendientes === 'function') setTimeout(ptdias_cargarPendientes, 1700);
+    // Anticipos en vivo: si otro encargado registra uno, esta pantalla se actualiza sola
+    if (typeof anticipos_initRealtime === 'function') anticipos_initRealtime();
     // Estado de Cobros sincronizado entre dispositivos (realtime + carga inicial)
     if (typeof cierresMes_initRealtime === 'function') cierresMes_initRealtime();
     if (typeof cierresMes_sincronizar === 'function') setTimeout(() => cierresMes_sincronizar(true), 1200);
@@ -115,6 +117,7 @@ function switchTab(tabName) {
         gestion_cargarTotalRemanentes();
         gestion_cargarRemanenteVivo();
         cierresMes_render();
+        if (typeof anticipos_initRealtime === 'function') anticipos_initRealtime();
         if (typeof egresos_initRealtime === 'function') egresos_initRealtime();
         if (typeof egresos_cargarPendientes === 'function') egresos_cargarPendientes();
         if (typeof ptdias_initRealtime === 'function') ptdias_initRealtime();

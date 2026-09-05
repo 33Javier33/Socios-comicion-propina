@@ -232,6 +232,27 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Los anticipos se actualizan solos, aquí y en los otros dispositivos (SW v75)
+Se revisó el refresco tras registrar un anticipo y había **dos huecos**, uno en el propio equipo y otro entre equipos.
+
+**1 · En el mismo equipo faltaban las tarjetas de totales**
+- Al registrar, solo se refrescaba el historial del socio y el arqueo. **No** se refrescaban `Total anticipos`, `Total remanentes` ni `Remanente vivo`, así que esas tarjetas quedaban con el valor viejo hasta cambiar de pestaña — parecía que el anticipo no se había guardado.
+- Se agregó `anticipos_refrescarTodo()`, que limpia las cachés y recarga **todo lo que depende de un anticipo**: historial del socio, total de anticipos del período, remanentes (total y en vivo), total del arqueo y el recálculo de recaudación. La usan por igual el registro, la edición y el borrado.
+
+**2 · Entre dispositivos no se avisaba nada**
+- **No existía ningún canal de tiempo real para `anticipos`** (sí lo hay para egresos, días PT, cierres de mes, mensajes y recaudación). Un segundo encargado no veía el anticipo del primero hasta recargar la app entera.
+- Se agregó el canal `anticipos-rt`, que escucha por **dos vías** a propósito:
+  - `postgres_changes` sobre la tabla — la vía natural, pero solo llega si la tabla está publicada en Realtime dentro de Supabase.
+  - Un **aviso propio** (broadcast) que la app emite al guardar — no depende de ninguna configuración en la base, así que funciona igual sin tocar nada.
+  - Las dos caen en el mismo agrupador con 700 ms de espera, así que si llegan ambas se recarga una sola vez. El emisor no se recibe a sí mismo.
+
+**3 · La caché interna tapaba el refresco (lo que habría dejado el fix a medias)**
+- Al llegar el aviso, el otro equipo limpiaba su caché y volvía a pedir los datos… pero el **interceptor de Supabase respondía con lo que tenía guardado** (`_allDataCache`, TTL de 5 minutos), porque ese equipo nunca ejecutó el registro y nadie invalidó su caché. El anticipo seguía sin verse.
+- Se expuso `window.sbInvalidarCacheDatos()` para poder tirar esa caché desde afuera, y `anticipos_refrescarTodo()` la llama siempre.
+
+- **SQL opcional:** `sql/realtime_anticipos.sql` publica la tabla en Realtime. No hace falta para que esto funcione — cubre además los cambios hechos fuera de la app, como editar una fila a mano en el panel de Supabase.
+- Archivos: `js/anticipos.js` (`anticipos_refrescarTodo`, `anticipos_cambioLocal`, `anticipos_initRealtime`, `anticipos_avisarCambio`), `js/supabase-config.js`, `js/app-init.js`. `anticipos.js?v=49`, `supabase-config.js?v=58`, `app-init.js?v=44`, SW `fondo-admin-v75`, versión visible **v75**.
+
 #### 2026-08-02 — Fix: el menú de secciones no se podía desplazar en celular + ojo para ver la contraseña (SW v74)
 
 **Scroll del menú en celular**
