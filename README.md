@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — "Actividad reciente" arranca minimizada (SW v76)
+- La tarjeta ocupaba seis filas fijas en **todas** las secciones. Ahora arranca **minimizada en una sola línea**: el título, el **último movimiento** (quién, qué y a qué hora), un contador con cuántos hay y la flecha para desplegar.
+- Se abre y se cierra tocando la barra, y **el estado se recuerda** entre recargas: si la dejas abierta, sigue abierta.
+- Minimizada usa menos relleno y menos margen inferior, así que el ahorro de espacio no es solo por las filas ocultas.
+- Sin actividad registrada la tarjeta sigue sin aparecer, como antes.
+- Archivos: `js/conexiones-log.js` (`conexionesLog_estaAbierta`, `conexionesLog_toggle`, render). `conexiones-log.js?v=3`, SW `fondo-admin-v76`, versión visible **v76**.
+
 #### 2026-09-05 — Los anticipos se actualizan solos, aquí y en los otros dispositivos (SW v75)
 Se revisó el refresco tras registrar un anticipo y había **dos huecos**, uno en el propio equipo y otro entre equipos.
 

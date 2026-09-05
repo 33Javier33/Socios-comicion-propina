@@ -91,11 +91,23 @@ function _conexHora(ts) {
 function _conexEsc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
 }
+// La tarjeta arranca MINIMIZADA: una sola línea con el último movimiento, para
+// no comerse la pantalla. El estado se recuerda entre recargas.
+const CONEX_ABIERTA_KEY = 'fondo_actividad_abierta';
+function conexionesLog_estaAbierta() {
+    try { return localStorage.getItem(CONEX_ABIERTA_KEY) === '1'; } catch (e) { return false; }
+}
+function conexionesLog_toggle() {
+    try { localStorage.setItem(CONEX_ABIERTA_KEY, conexionesLog_estaAbierta() ? '0' : '1'); } catch (e) {}
+    conexionesLog_render();
+}
+
 function conexionesLog_render() {
     const el = document.getElementById('actividadCard');
     if (!el) return;
     const items = (conexionesLog || []).slice(0, 6);
     if (!items.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    const abierta = conexionesLog_estaAbierta();
     const filas = items.map(c => {
         const ico = c.evento === 'recaudacion' ? '📊' : (c.evento === 'desconectado' ? '⚪' : '🟢');
         const col = c.evento === 'recaudacion' ? '#0284c7' : (c.evento === 'desconectado' ? '#94a3b8' : '#10b981');
@@ -108,10 +120,35 @@ function conexionesLog_render() {
             + '<span style="flex-shrink:0;font-size:0.68em;color:' + col + ';font-weight:700;">' + _conexHora(c.created_at) + '</span>'
             + '</div>';
     }).join('');
+    // Resumen de una línea para el estado minimizado: el movimiento más reciente.
+    const ultimo = items[0];
+    const resumen = ultimo
+        ? '<span style="min-width:0;flex:1;font-size:0.76em;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;text-transform:none;letter-spacing:0;">'
+            + '<b style="color:var(--text-color,#1e293b);">' + _conexEsc(ultimo.nombre || 'Socio') + '</b> · '
+            + _conexEsc(_conexTexto(ultimo)) + ' · ' + _conexHora(ultimo.created_at)
+          + '</span>'
+        : '';
+
     el.style.cssText = 'background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);'
-        + 'border-left:4px solid #0284c7;border-radius:12px;padding:10px 14px;margin-bottom:16px;'
-        + 'box-shadow:0 2px 8px rgba(0,0,0,0.05);display:block;';
-    el.innerHTML = '<div style="font-size:0.68em;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#0284c7;margin-bottom:6px;">'
-        + '🕘 Actividad reciente</div>'
-        + '<div style="display:flex;flex-direction:column;gap:5px;">' + filas + '</div>';
+        + 'border-left:4px solid #0284c7;border-radius:12px;padding:' + (abierta ? '10px 14px' : '7px 12px') + ';margin-bottom:'
+        + (abierta ? '16px' : '10px') + ';box-shadow:0 2px 8px rgba(0,0,0,0.05);display:block;';
+
+    el.innerHTML =
+        '<button type="button" onclick="conexionesLog_toggle()" aria-expanded="' + (abierta ? 'true' : 'false') + '"'
+        + ' title="' + (abierta ? 'Minimizar' : 'Ver la actividad reciente') + '"'
+        + ' style="width:100%;display:flex;align-items:center;gap:8px;background:none;border:none;padding:0;'
+        + 'cursor:pointer;text-align:left;font-family:inherit;' + (abierta ? 'margin-bottom:6px;' : '') + '">'
+        +   '<span style="flex-shrink:0;font-size:0.68em;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#0284c7;white-space:nowrap;">'
+        +     '🕘 Actividad reciente'
+        +   '</span>'
+        +   (abierta
+                ? '<span style="flex:1;"></span>'
+                : resumen)
+        +   '<span style="flex-shrink:0;font-size:0.62em;font-weight:800;color:#0284c7;background:rgba(2,132,199,0.12);'
+        +     'border-radius:9px;padding:1px 7px;">' + items.length + '</span>'
+        +   '<span style="flex-shrink:0;color:#94a3b8;font-size:0.72em;">' + (abierta ? '▴' : '▾') + '</span>'
+        + '</button>'
+        + (abierta
+            ? '<div style="display:flex;flex-direction:column;gap:5px;">' + filas + '</div>'
+            : '');
 }
