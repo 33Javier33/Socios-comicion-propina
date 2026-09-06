@@ -232,6 +232,28 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Donaciones: seguir una colecta abierta y sumar gente ajena al fondo (SW v81)
+
+**1 · Seguir una colecta que sigue abierta**
+- Una colecta no se cierra sola: puede seguir sumando gente días después. Se agregó un selector **"— Colecta nueva —" / colectas abiertas** que rellena el motivo exacto y lo deja de solo lectura.
+- Importa porque el motivo es la **clave que agrupa** los aportes: retipearlo a mano con una coma de diferencia habría partido la colecta en dos.
+
+**2 · Aportantes que no pertenecen al fondo**
+- Bloque nuevo para agregar personas de fuera con **nombre, área o procedencia y monto**. Suman al total juntado, pero **no se les descuenta nada**, porque no tienen saldo en el fondo — entregan el dinero aparte.
+- Se guardan como `extras` con tipo `DONACION_EXTERNA` y un `socio_id` ficticio (`EXTERNO`), separado del tipo `DONACION` de los socios.
+- **La detección de descuentos se hizo más estricta en las dos apps:** `don_esDonacion()` (socios-comicion) y `_esDonacion()` (propi.solicitada) ahora exigen que el tipo contenga *donacion* **y no** *extern*. Sin este cambio los aportes externos habrían descontado un saldo inexistente. Se agregó `don_esAporte()` para lo que sí debe sumar al total de la colecta.
+- El nombre y el área del externo viajan al final del `detalle`, entre corchetes (`[ext:Nombre|Área]`), y `don_motivoDe()` los recorta — así el aporte externo cae en la **misma colecta** que los de socios.
+- **Verificación al guardar:** los externos usan un `socio_id` que no existe; si la base lo rechazara, la capa de respaldo devolvería "success" igual. Se comprueba contra lo que quedó guardado y se avisa si no entraron, en vez de dar por hecho algo falso.
+
+**3 · El informe los detalla por separado**
+- Bloque naranjo aparte: **"APORTES DE PERSONAS QUE NO PERTENECEN AL FONDO"**, con nombre, procedencia, fecha y monto, más la leyenda de que no se les descontó nada.
+- El resumen pasó de *"Resumen por área"* a **"Resumen de la colecta"**, con tres renglones: áreas de socios, **subtotal socios (con descuento)**, **subtotal ajenos (sin descuento)** y el total juntado.
+- KPIs nuevos arriba: socios con descuento, ajenos sin descuento y total.
+- El CSV lleva una columna **Origen** que dice si el aporte descuenta o no.
+- La lista en pantalla marca los externos en ámbar con *"no pertenece al fondo"*, y la cabecera de cada colecta indica cuántos son de fuera.
+- Verificado con datos simulados: dos socios y dos externos caen en una sola colecta, descuentan $15.000 (solo socios) y el total juntado suma $38.000.
+- Archivos: `js/donaciones.js`, `index.html`. `donaciones.js?v=4`, SW `fondo-admin-v81`, versión visible **v81**.
+
 #### 2026-09-05 — Arqueo de Caja: tres columnas en pantalla ancha (SW v80)
 - Mismo criterio que Gestión. Desde **1280 px** la sección se reparte así:
 
