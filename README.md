@@ -232,6 +232,19 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Donaciones: aviso de aporte repetido en la misma colecta (SW v82)
+Como una colecta sigue abierta y se le suma gente en varias tandas, era fácil registrarle a alguien un segundo aporte sin darse cuenta. Ahora se avisa en **tres momentos**, del más temprano al último:
+
+1. **En la lista, mientras se carga.** El socio que ya aportó a la colecta escrita en el motivo se pinta en ámbar con **"⚠ Ya aportó $X a esta colecta"** (y cuántos aportes, si fueron varios). Las marcas se recalculan solas al cambiar el motivo o elegir otra colecta del selector.
+2. **Al agregar una persona externa.** Se revisa contra las que ya están en la lista sin registrar **y** contra las ya guardadas en esa colecta. La comparación de nombres ignora mayúsculas, tildes y espacios de más, así que *"PEDRO LAGOS"* y *"Pédro Lagos"* se reconocen como la misma persona. En la lista pendiente quedan marcadas en rojo.
+3. **Al presionar Registrar.** Última barrera: se listan todos los repetidos —socios y externos, con lo que ya tenían aportado— y se pide confirmación explícita. Se revisa contra lo guardado, por si otro encargado registró aportes desde otro equipo después de que se cargó la pantalla.
+
+- **"Mismo monto para todos"** también avisa: si entre los socios visibles hay quienes ya aportaron, pregunta si ponerles el monto igual o **dejarlos fuera y cargar solo a los que faltan**.
+- En ningún caso se bloquea: a veces alguien aporta dos veces a propósito. Solo se pide confirmar.
+- El aviso es **por colecta**: haber aportado a otra colecta no marca nada.
+- Verificado con datos simulados: detecta al socio con dos aportes sumando $15.000, ignora al que aportó a otra colecta, y reconoce al externo repetido pese a mayúsculas y tildes.
+- Archivos: `js/donaciones.js` (`don_sociosYaAportaron`, `don_externosYaAportaron`, `_donMismoNombre`, `don_motivoCambio`), `index.html`. `donaciones.js?v=5`, SW `fondo-admin-v82`, versión visible **v82**.
+
 #### 2026-09-05 — Donaciones: seguir una colecta abierta y sumar gente ajena al fondo (SW v81)
 
 **1 · Seguir una colecta que sigue abierta**

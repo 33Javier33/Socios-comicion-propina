@@ -100,6 +100,54 @@ function don_normalizarMotivo(txt) {
     return String(txt || '').replace(/\s+/g, ' ').trim();
 }
 
+// ── Control de repetidos dentro de una misma colecta ───────────────────
+// El motivo es lo que agrupa la colecta, así que con el motivo en pantalla se
+// puede saber quién ya aportó y avisar ANTES de duplicar el aporte.
+function don_motivoEnPantalla() {
+    return don_normalizarMotivo(document.getElementById('don-motivo')?.value);
+}
+
+// socioId -> { monto, veces } de lo ya registrado en esta colecta
+function don_sociosYaAportaron(motivo) {
+    const mapa = {};
+    if (!motivo) return mapa;
+    (_donAportes || []).forEach(a => {
+        if (!don_esDonacion(a.tipo)) return;
+        if (don_motivoDe(a.detalle) !== motivo) return;
+        const k = String(a.socio_id);
+        if (!mapa[k]) mapa[k] = { monto: 0, veces: 0 };
+        mapa[k].monto += Number(a.monto) || 0;
+        mapa[k].veces++;
+    });
+    return mapa;
+}
+
+// Aportes de personas ajenas ya registrados en esta colecta
+function don_externosYaAportaron(motivo) {
+    const lista = [];
+    if (!motivo) return lista;
+    (_donAportes || []).forEach(a => {
+        if (!don_esExterna(a.tipo)) return;
+        if (don_motivoDe(a.detalle) !== motivo) return;
+        const ext = don_externoDe(a.detalle);
+        if (ext) lista.push({ nombre: ext.nombre, area: ext.area, monto: Number(a.monto) || 0 });
+    });
+    return lista;
+}
+
+function _donMismoNombre(a, b) {
+    const n = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+    return n(a) === n(b);
+}
+
+// Repintar la lista cuando cambia el motivo, para que las marcas de
+// "ya aportó" correspondan a la colecta que se está escribiendo.
+let _donMotivoTimer = null;
+function don_motivoCambio() {
+    clearTimeout(_donMotivoTimer);
+    _donMotivoTimer = setTimeout(() => { don_pintarSocios(); don_pintarExternos(); }, 250);
+}
+
 function don_init() {
     _donMontos = {};
     _donExternos = [];
@@ -159,8 +207,20 @@ function don_agregarExterno() {
     if (!nombre) { showToast('Escribe el nombre de la persona', 'error'); iN?.focus(); return; }
     if (!monto)  { showToast('Escribe cuánto aporta', 'error'); iM?.focus(); return; }
 
-    const rep = _donExternos.find(x => x.nombre.toLowerCase() === nombre.toLowerCase());
-    if (rep && !confirm('Ya agregaste a "' + rep.nombre + '" en esta lista.\n\n¿Agregarlo igual como un segundo aporte?')) return;
+    // ¿Repetido en la lista que aún no se registra?
+    const rep = _donExternos.find(x => _donMismoNombre(x.nombre, nombre));
+    if (rep && !confirm('Ya agregaste a "' + rep.nombre + '" en esta lista, por ' + _donMoneda(rep.monto)
+        + '.\n\n¿Agregarlo igual como un segundo aporte?')) return;
+
+    // ¿Y ya aportó antes a esta misma colecta?
+    const motivoActual = don_motivoEnPantalla();
+    const yaExt = don_externosYaAportaron(motivoActual).filter(x => _donMismoNombre(x.nombre, nombre));
+    if (yaExt.length) {
+        const suma = yaExt.reduce((t, x) => t + x.monto, 0);
+        if (!confirm('⚠️ "' + yaExt[0].nombre + '" YA aportó ' + _donMoneda(suma)
+            + ' a esta colecta' + (yaExt.length > 1 ? ' (' + yaExt.length + ' aportes)' : '') + '.\n\n'
+            + 'Colecta: ' + motivoActual + '\n\n¿Registrarle otro aporte igual?')) return;
+    }
 
     _donExternos.push({ nombre, area, monto });
     if (iN) iN.value = '';
@@ -182,18 +242,25 @@ function don_pintarExternos() {
         don_actualizarResumen();
         return;
     }
-    cont.innerHTML = _donExternos.map((x, i) =>
-        `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid #fcd34d;background:#fffbeb;border-radius:9px;margin-bottom:5px;">
+    const yaExt = don_externosYaAportaron(don_motivoEnPantalla());
+    cont.innerHTML = _donExternos.map((x, i) => {
+        const previos = yaExt.filter(y => _donMismoNombre(y.nombre, x.nombre));
+        const sumaPrev = previos.reduce((t, y) => t + y.monto, 0);
+        const avisoRep = previos.length
+            ? `<div style="font-size:0.66em;color:#b91c1c;font-weight:800;">⚠ Ya había aportado ${_donMoneda(sumaPrev)} a esta colecta</div>`
+            : '';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid ${previos.length ? '#f87171' : '#fcd34d'};background:${previos.length ? '#fef2f2' : '#fffbeb'};border-radius:9px;margin-bottom:5px;">
             <span style="flex-shrink:0;font-size:0.9em;">👤</span>
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:700;font-size:0.83em;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_donEsc(x.nombre)}</div>
                 <div style="font-size:0.68em;color:#b45309;">${_donEsc(x.area)} · no pertenece al fondo</div>
+                ${avisoRep}
             </div>
             <b style="font-size:0.83em;color:#b45309;white-space:nowrap;">${_donMoneda(x.monto)}</b>
             <button onclick="don_quitarExterno(${i})" title="Quitar de la lista"
                 style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:3px 7px;font-size:0.72em;cursor:pointer;">✕</button>
-        </div>`
-    ).join('');
+        </div>`;
+    }).join('');
     don_actualizarResumen();
 }
 
@@ -235,17 +302,28 @@ function don_pintarSocios() {
         don_actualizarResumen();
         return;
     }
+    // Quién ya aportó a la colecta que está escrita en el motivo, para avisarlo
+    // en la misma fila y no registrarle un segundo aporte sin darse cuenta.
+    const yaAportaron = don_sociosYaAportaron(don_motivoEnPantalla());
+
     cont.innerHTML = lista.map(s => {
         const val = _donMontos[s.id] ? new Intl.NumberFormat('es-CL').format(_donMontos[s.id]) : '';
         const activo = !!_donMontos[s.id];
-        return `<div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border:1px solid ${activo ? '#86efac' : '#e2e8f0'};border-radius:9px;margin-bottom:6px;background:${activo ? '#f0fdf4' : 'white'};">
+        const ya = yaAportaron[String(s.id)];
+        const borde = ya ? '#f59e0b' : (activo ? '#86efac' : '#e2e8f0');
+        const fondo = ya ? '#fffbeb' : (activo ? '#f0fdf4' : 'white');
+        const avisoYa = ya
+            ? `<div style="font-size:0.68em;color:#b45309;font-weight:700;">⚠ Ya aportó ${_donMoneda(ya.monto)}${ya.veces > 1 ? ' en ' + ya.veces + ' aportes' : ''} a esta colecta</div>`
+            : '';
+        return `<div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border:1px solid ${borde};border-radius:9px;margin-bottom:6px;background:${fondo};">
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:700;font-size:0.85em;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_donEsc(s.nombre)} ${_donEsc(s.apellido || '')}</div>
                 <div style="font-size:0.7em;color:#94a3b8;">${_donEsc(_donAreaNombre(s.area))}</div>
+                ${avisoYa}
             </div>
             <input type="text" inputmode="numeric" id="don-m-${_donEsc(s.id)}" value="${val}" placeholder="$0"
                 oninput="don_montoCambio('${_donEsc(s.id)}', this)"
-                style="width:96px;padding:7px 8px;border:1.5px solid ${activo ? '#22c55e' : '#e2e8f0'};border-radius:8px;font-size:0.85em;font-weight:700;text-align:right;color:#0f172a;background:white;box-sizing:border-box;">
+                style="width:96px;padding:7px 8px;border:1.5px solid ${ya ? '#f59e0b' : (activo ? '#22c55e' : '#e2e8f0')};border-radius:8px;font-size:0.85em;font-weight:700;text-align:right;color:#0f172a;background:white;box-sizing:border-box;">
         </div>`;
     }).join('');
     don_actualizarResumen();
@@ -263,8 +341,26 @@ function don_montoParaTodos() {
     const inp = document.getElementById('don-monto-todos');
     const n = parseInt(String(inp?.value || '').replace(/\D/g, '')) || 0;
     const lista = _donSociosVisibles();
-    if (!n) { lista.forEach(s => delete _donMontos[s.id]); }
-    else { lista.forEach(s => { _donMontos[s.id] = n; }); }
+    if (!n) { lista.forEach(s => delete _donMontos[s.id]); don_pintarSocios(); return; }
+
+    // Los que ya aportaron a esta colecta se dejan fuera salvo que se confirme.
+    const ya = don_sociosYaAportaron(don_motivoEnPantalla());
+    const repiten = lista.filter(s => ya[String(s.id)]);
+    let incluirRepetidos = true;
+    if (repiten.length) {
+        incluirRepetidos = confirm(
+            '⚠️ ' + repiten.length + ' socio(s) YA aportaron a esta colecta:\n\n'
+            + repiten.slice(0, 12).map(s => '  · ' + (s.nombre + ' ' + (s.apellido || '')).trim()
+                + ' — ' + _donMoneda(ya[String(s.id)].monto)).join('\n')
+            + (repiten.length > 12 ? '\n  … y ' + (repiten.length - 12) + ' más' : '')
+            + '\n\nACEPTAR  → ponerles el monto igual (aportarían de nuevo)\n'
+            + 'CANCELAR → dejarlos fuera y cargar solo a los que faltan'
+        );
+    }
+    lista.forEach(s => {
+        if (!incluirRepetidos && ya[String(s.id)]) return;
+        _donMontos[s.id] = n;
+    });
     don_pintarSocios();
 }
 
@@ -307,6 +403,33 @@ async function don_registrar() {
         return;
     }
     if (!ids.length && !_donExternos.length) { showToast('No hay ningún aporte cargado', 'error'); return; }
+
+    // ── Última barrera: avisar quién estaría aportando DOS VECES a la misma
+    // colecta. Se revisa contra lo ya guardado, por si la lista se cargó antes
+    // de que otro encargado registrara aportes desde otro equipo.
+    const yaSoc = don_sociosYaAportaron(motivo);
+    const yaExt = don_externosYaAportaron(motivo);
+    const repes = [];
+    ids.forEach(id => {
+        const y = yaSoc[String(id)];
+        if (!y) return;
+        const so = (cacheSocios || []).find(x => String(x.id) === String(id)) || {};
+        repes.push('  · ' + ((so.nombre || '') + ' ' + (so.apellido || '')).trim()
+            + ' — ya aportó ' + _donMoneda(y.monto));
+    });
+    _donExternos.forEach(x => {
+        const previos = yaExt.filter(y => _donMismoNombre(y.nombre, x.nombre));
+        if (!previos.length) return;
+        repes.push('  · ' + x.nombre + ' (externo) — ya aportó '
+            + _donMoneda(previos.reduce((t, y) => t + y.monto, 0)));
+    });
+    if (repes.length) {
+        if (!confirm('⚠️ REPETIDOS EN ESTA COLECTA\n\n' + repes.slice(0, 15).join('\n')
+            + (repes.length > 15 ? '\n  … y ' + (repes.length - 15) + ' más' : '')
+            + '\n\nColecta: ' + motivo
+            + '\n\nSi continúas se les registrará un aporte ADICIONAL, que se suma al que ya tenían.'
+            + '\n\n¿Continuar de todas formas?')) return;
+    }
 
     const totalSoc = ids.reduce((s, k) => s + _donMontos[k], 0);
     const totalExt = _donExternos.reduce((s, x) => s + x.monto, 0);
@@ -387,6 +510,9 @@ async function don_cargarAportes() {
         _donAportes = data || [];
         don_pintarColectas();
         don_pintarSelectorColectas();
+        // Con los aportes ya cargados se pueden marcar los repetidos del formulario
+        don_pintarSocios();
+        don_pintarExternos();
     } catch(e) {
         cont.innerHTML = '<div style="text-align:center;padding:20px;color:#dc2626;font-size:0.85em;">Error al cargar las colectas</div>';
     }
