@@ -136,6 +136,7 @@ function dp_render() {
             </div>
         </div>`;
     }).join('');
+    dp_aplicarVista();   // la lista se repuebla al cambiar de área
 }
 
 async function dp_guardarPin(socioId) {
@@ -184,4 +185,34 @@ async function dp_quitarPin(socioId) {
 
 function _htmlEscDp(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// VISTA MOSAICO — los socios uno al lado del otro
+// Mismo criterio que Montos Recaudados y Desglose. Encendido por defecto en
+// pantalla ancha; apagarlo queda a un clic y se recuerda.
+// ══════════════════════════════════════════════════════════════════════
+const DP_VISTA_KEY = 'fondo_dp_mosaico';
+
+function dp_vistaMosaico() {
+    try { return localStorage.getItem(DP_VISTA_KEY) !== '0'; } catch (e) { return true; }
+}
+
+function dp_aplicarVista() {
+    const cont = document.getElementById('dp-lista');
+    const btn = document.getElementById('dpVistaBtn');
+    const on = dp_vistaMosaico();
+    if (cont) cont.classList.toggle('mosaico', on);
+    if (btn) {
+        btn.textContent = on ? '▦ Dos columnas' : '☰ Una columna';
+        btn.title = on ? 'Volver a una sola columna' : 'Ver los socios en dos columnas';
+        btn.style.background = on ? '#2563eb' : 'white';
+        btn.style.color = on ? 'white' : '#475569';
+        btn.style.borderColor = on ? '#2563eb' : '#cbd5e1';
+    }
+}
+
+function dp_toggleVista() {
+    try { localStorage.setItem(DP_VISTA_KEY, dp_vistaMosaico() ? '0' : '1'); } catch (e) {}
+    dp_aplicarVista();
 }

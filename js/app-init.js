@@ -141,7 +141,10 @@ function switchTab(tabName) {
     else if(tabName === 'materiales') { fabRec.style.display = 'none'; document.getElementById('fabMatAgregar').style.display = 'flex'; aq_detenerSync(); mat_cargar(); }
     else if(tabName === 'dineros') { fabRec.style.display = 'none'; aq_detenerSync(); ds_cargar(); }
     else if(tabName === 'certificados') { fabRec.style.display = 'none'; aq_detenerSync(); cert_init(); }
-    else if(tabName === 'diariopins') { fabRec.style.display = 'none'; aq_detenerSync(); dp_init(); }
+    else if(tabName === 'diariopins') {
+        fabRec.style.display = 'none'; aq_detenerSync(); dp_init();
+        if (typeof dp_aplicarVista === 'function') dp_aplicarVista();
+    }
     else if(tabName === 'documentacion') { fabRec.style.display = 'none'; aq_detenerSync(); doc_init(); }
     else if(tabName === 'donaciones') { fabRec.style.display = 'none'; aq_detenerSync(); don_init(); }
     else if(tabName === 'mensajes') { fabRec.style.display = 'none'; aq_detenerSync(); msgAdmin_init(); }

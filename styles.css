@@ -252,6 +252,15 @@
             #dsg-lista.mosaico { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px; align-items: start; }
         }
 
+        /* PIN Diario: mismo mosaico. Las tarjetas traen margin-bottom inline,
+           que en una grilla sobra, así que se anula solo dentro del mosaico. */
+        #dpVistaBtn { display: none; }
+        @media (min-width: 1100px) {
+            #dpVistaBtn { display: inline-block; }
+            #dp-lista.mosaico { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 10px; align-items: start; }
+            #dp-lista.mosaico > div { margin-bottom: 0 !important; }
+        }
+
         /* ── Donaciones: cargar a la izquierda, lo registrado a la derecha ──
            Con la barra lateral quedan tres columnas. La de colectas se fija al
            hacer scroll para ver quién ya aportó mientras se carga la lista. */

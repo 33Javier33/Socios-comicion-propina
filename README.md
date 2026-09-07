@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — PIN Diario: vista en dos columnas (SW v86)
+- Mismo mosaico que Montos Recaudados y Desglose. El botón **▦ Dos columnas** va al final de la fila de áreas (Mesas · Máquinas · Técnicos · Cambistas), y se pinta azul cuando está activo.
+- **Encendido por defecto** en pantalla ancha, con su propia preferencia guardada. Bajo **1100 px** el botón no aparece y la lista sigue en una columna.
+- El ancho mínimo por tarjeta es de **400 px**, así que en un notebook quedan **dos columnas** y en un monitor grande tres, sin saltos bruscos.
+- Las tarjetas traen `margin-bottom` inline, que dentro de una grilla sobraba y dejaba doble separación; se anula solo dentro del mosaico.
+- La vista se re-aplica al final de cada render, porque la lista se repuebla entera al cambiar de área.
+- Archivos: `index.html` (botón), `js/diario-pins.js` (`dp_aplicarVista`, `dp_toggleVista`), `js/app-init.js`, `styles.css`. `diario-pins.js?v=34`, `app-init.js?v=49`, `styles.css?v=86`, SW `fondo-admin-v86`, versión visible **v86**.
+
 #### 2026-09-05 — Fix: el mosaico de Desglose Anticipos no se aplicaba (SW v85)
 - **Causa:** `#dsg-lista` traía `style="display:flex;flex-direction:column"` **escrito en el HTML**. Un estilo inline le gana siempre a la hoja de estilos, así que anulaba el `display:grid` del mosaico y la lista seguía en una sola columna aunque el botón cambiara de estado. Es el mismo tropiezo del panel del socio en la v79.
 - **Fix:** el apilado base se movió del HTML al CSS, donde la clase `.mosaico` sí puede reemplazarlo.

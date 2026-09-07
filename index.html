@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/fondo-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=85">
+    <link rel="stylesheet" href="styles.css?v=86">
 </head>
 <body>
 
@@ -1296,11 +1296,12 @@
 
             <!-- Contenido -->
             <div id="dp-contenido" style="display:none;">
-                <div id="dp-area-selector" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+                <div id="dp-area-selector" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
                     <button id="dp-area-Mesas" onclick="dp_setArea('Mesas')" style="padding:7px 16px;border-radius:20px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:0.82em;font-weight:800;cursor:pointer;">Mesas</button>
                     <button id="dp-area-Maquinas" onclick="dp_setArea('Maquinas')" style="padding:7px 16px;border-radius:20px;border:2px solid #2563eb;background:white;color:#2563eb;font-size:0.82em;font-weight:800;cursor:pointer;">Máquinas</button>
                     <button id="dp-area-Tecnicos" onclick="dp_setArea('Tecnicos')" style="padding:7px 16px;border-radius:20px;border:2px solid #2563eb;background:white;color:#2563eb;font-size:0.82em;font-weight:800;cursor:pointer;">Técnicos</button>
                     <button id="dp-area-Cambistas" onclick="dp_setArea('Cambistas')" style="padding:7px 16px;border-radius:20px;border:2px solid #2563eb;background:white;color:#2563eb;font-size:0.82em;font-weight:800;cursor:pointer;">Cambistas</button>
+                    <button id="dpVistaBtn" onclick="dp_toggleVista()" title="Ver en dos columnas" style="margin-left:auto;padding:7px 14px;border-radius:20px;border:1px solid #cbd5e1;background:white;color:#475569;font-size:0.78em;font-weight:800;cursor:pointer;white-space:nowrap;">▦ Dos columnas</button>
                 </div>
                 <div id="dp-lista"></div>
             </div>
@@ -2158,14 +2159,14 @@
     <script src="js/materiales.js?v=32"></script>
     <script src="js/dineros.js?v=32"></script>
     <script src="js/certificados.js?v=32"></script>
-    <script src="js/diario-pins.js?v=33"></script>
+    <script src="js/diario-pins.js?v=34"></script>
     <script src="js/donaciones.js?v=5"></script>
     <script src="js/documentacion.js?v=33"></script>
     <script src="js/egresos.js?v=39"></script>
     <script src="js/pt-dias.js?v=36"></script>
     <script src="js/conexiones-log.js?v=3"></script>
 <script src="js/mensajes-admin.js?v=48"></script>
-    <script src="js/app-init.js?v=48"></script>
+    <script src="js/app-init.js?v=49"></script>
 
 <!-- ══════════════════════════════════════════
      MODAL: ACERCA DE / RESEÑA
@@ -2572,7 +2573,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v85</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v86</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">
