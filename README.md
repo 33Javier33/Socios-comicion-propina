@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Fix: el mosaico de Desglose Anticipos no se aplicaba (SW v85)
+- **Causa:** `#dsg-lista` traía `style="display:flex;flex-direction:column"` **escrito en el HTML**. Un estilo inline le gana siempre a la hoja de estilos, así que anulaba el `display:grid` del mosaico y la lista seguía en una sola columna aunque el botón cambiara de estado. Es el mismo tropiezo del panel del socio en la v79.
+- **Fix:** el apilado base se movió del HTML al CSS, donde la clase `.mosaico` sí puede reemplazarlo.
+- **Columnas que se acomodan solas:** en vez de fijar dos columnas y saltar a tres en 1700 px, ahora se usa `repeat(auto-fill, minmax(…))` — el mismo criterio del mosaico de socios. Caben las que entren según el ancho real: dos en un notebook, tres o cuatro en un monitor grande, sin saltos bruscos.
+- **El mosaico queda encendido por defecto** en Montos Recaudados y en Desglose, que es lo que se esperaba al pedirlo. Apagarlo es un clic y la preferencia se guarda; solo queda apagado si se apagó a mano.
+- Archivos: `index.html`, `styles.css`, `js/recaudacion.js`, `js/desglose-anticipos.js`. `recaudacion.js?v=48`, `desglose-anticipos.js?v=34`, `styles.css?v=85`, SW `fondo-admin-v85`, versión visible **v85**.
+
 #### 2026-09-05 — Dos columnas en Desglose Anticipos y tres en Donaciones (SW v84)
 
 **Desglose de Anticipos — vista mosaico**

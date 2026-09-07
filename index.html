@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/fondo-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=84">
+    <link rel="stylesheet" href="styles.css?v=85">
 </head>
 <body>
 
@@ -717,7 +717,7 @@
             <div id="dsg-resumen" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:0.82em;color:#1e40af;font-weight:700;"></div>
 
             <!-- Lista de registros -->
-            <div id="dsg-lista" style="display:flex;flex-direction:column;gap:10px;">
+            <div id="dsg-lista">
                 <div style="text-align:center;padding:40px;color:#94a3b8;font-size:0.9em;">Cargando desgloses...</div>
             </div>
 
@@ -2144,10 +2144,10 @@
     <script src="js/socios.js?v=40"></script>
     <script src="js/puntos.js?v=32"></script>
     <script src="js/anticipos.js?v=50"></script>
-    <script src="js/desglose-anticipos.js?v=33"></script>
+    <script src="js/desglose-anticipos.js?v=34"></script>
     <script src="js/meses-anteriores.js?v=32"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
-    <script src="js/recaudacion.js?v=47"></script>
+    <script src="js/recaudacion.js?v=48"></script>
     <script src="js/arqueo.js?v=33"></script>
     <script src="js/canje.js?v=32"></script>
     <script src="js/notas.js?v=32"></script>
@@ -2572,7 +2572,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v84</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v85</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

@@ -234,22 +234,22 @@
         #recVistaBtn { display: none; }
         @media (min-width: 1100px) {
             #recVistaBtn { display: inline-block; }
-            #contenedorFechas.mosaico { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+            /* auto-fill acomoda solo la cantidad de columnas que caben, igual que
+               el mosaico de socios: dos en un notebook, tres o más en un monitor. */
+            #contenedorFechas.mosaico { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 18px; align-items: start; }
             #contenedorFechas.mosaico .date-card { margin-bottom: 0; }
-        }
-        @media (min-width: 1700px) {
-            #contenedorFechas.mosaico { grid-template-columns: 1fr 1fr 1fr; }
         }
         #recVistaBtn.activo { background: var(--secondary); border-color: var(--secondary); color: #fff; }
 
-        /* Desglose de Anticipos: misma vista mosaico que Montos Recaudados */
+        /* Desglose de Anticipos: misma vista mosaico que Montos Recaudados.
+           El apilado base vive AQUÍ y no en un style inline del HTML: un estilo
+           inline le gana siempre a la hoja de estilos y anulaba el display:grid
+           del mosaico, dejando la lista en una sola columna. */
+        #dsg-lista { display: flex; flex-direction: column; gap: 10px; }
         #dsgVistaBtn { display: none; }
         @media (min-width: 1100px) {
             #dsgVistaBtn { display: inline-block; }
-            #dsg-lista.mosaico { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
-        }
-        @media (min-width: 1700px) {
-            #dsg-lista.mosaico { grid-template-columns: 1fr 1fr 1fr; }
+            #dsg-lista.mosaico { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px; align-items: start; }
         }
 
         /* ── Donaciones: cargar a la izquierda, lo registrado a la derecha ──

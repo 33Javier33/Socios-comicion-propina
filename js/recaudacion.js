@@ -844,7 +844,9 @@ function rec_abrirDetalle(d) {
 const REC_VISTA_KEY = 'fondo_rec_mosaico';
 
 function rec_vistaMosaico() {
-    try { return localStorage.getItem(REC_VISTA_KEY) === '1'; } catch (e) { return false; }
+    // Encendido por defecto: en pantalla ancha el mosaico es lo esperado.
+    // Solo queda apagado si se apagó a mano (queda guardado el '0').
+    try { return localStorage.getItem(REC_VISTA_KEY) !== '0'; } catch (e) { return true; }
 }
 
 function rec_aplicarVista() {

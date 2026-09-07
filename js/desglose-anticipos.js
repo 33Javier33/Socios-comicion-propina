@@ -616,7 +616,9 @@ function _htmlEsc(s) {
 const DSG_VISTA_KEY = 'fondo_dsg_mosaico';
 
 function dsg_vistaMosaico() {
-    try { return localStorage.getItem(DSG_VISTA_KEY) === '1'; } catch (e) { return false; }
+    // Encendido por defecto: en pantalla ancha el mosaico es lo esperado.
+    // Solo queda apagado si se apagó a mano (queda guardado el '0').
+    try { return localStorage.getItem(DSG_VISTA_KEY) !== '0'; } catch (e) { return true; }
 }
 
 function dsg_aplicarVista() {
