@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/fondo-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=80">
+    <link rel="stylesheet" href="styles.css?v=83">
 </head>
 <body>
 
@@ -1209,7 +1209,7 @@
             </div>
 
             <hr style="border:0; border-top:1px solid #ddd; margin:30px 0;">
-            <h3 style="color:var(--primary);margin-bottom:20px;display:flex;align-items:center;gap:8px;">Historial Detallado por Fecha <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-historial-rec',this)" title="Ayuda rápida">?</button><div id="pop-historial-rec" class="ayuda-popover"><div class="ayuda-popover-titulo">📊 Historial de Recaudación</div><div class="ayuda-popover-texto">Cada tarjeta representa una fecha con los montos recaudados por tipo (Mesas, MDA, Bóveda).</div><ol class="ayuda-popover-pasos"><li>El <strong>Punto Noche</strong> = Total ÷ Divisor</li><li>Si no hay divisor, aparece badge rojo ⚠️ y ese día no suma al total</li><li>Presiona ✏️ para editar un monto, 🗑️ para eliminar</li><li>Usa ➕ en cada tarjeta para agregar un tipo que falta</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Los días sin divisor no inflyen en el Cierre de Punto para proteger los cálculos.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaIrA('recaudacion')">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-historial-rec')">✕</span></div></div></div></h3>
+            <h3 style="color:var(--primary);margin-bottom:20px;display:flex;align-items:center;gap:8px;"><button id="recVistaBtn" onclick="rec_toggleVista()" title="Ver en dos columnas" style="order:9;margin-left:auto;background:white;border:1px solid #cbd5e1;color:#475569;border-radius:8px;padding:6px 11px;font-size:0.62em;font-weight:800;cursor:pointer;white-space:nowrap;">▦ Dos columnas</button>Historial Detallado por Fecha <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-historial-rec',this)" title="Ayuda rápida">?</button><div id="pop-historial-rec" class="ayuda-popover"><div class="ayuda-popover-titulo">📊 Historial de Recaudación</div><div class="ayuda-popover-texto">Cada tarjeta representa una fecha con los montos recaudados por tipo (Mesas, MDA, Bóveda).</div><ol class="ayuda-popover-pasos"><li>El <strong>Punto Noche</strong> = Total ÷ Divisor</li><li>Si no hay divisor, aparece badge rojo ⚠️ y ese día no suma al total</li><li>Presiona ✏️ para editar un monto, 🗑️ para eliminar</li><li>Usa ➕ en cada tarjeta para agregar un tipo que falta</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Los días sin divisor no inflyen en el Cierre de Punto para proteger los cálculos.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaIrA('recaudacion')">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-historial-rec')">✕</span></div></div></div></h3>
 
             <!-- Stats de recaudación -->
             <div class="stats-grid" style="margin-bottom:20px;">
@@ -2138,7 +2138,7 @@
     <script src="js/desglose-anticipos.js?v=32"></script>
     <script src="js/meses-anteriores.js?v=32"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
-    <script src="js/recaudacion.js?v=46"></script>
+    <script src="js/recaudacion.js?v=47"></script>
     <script src="js/arqueo.js?v=33"></script>
     <script src="js/canje.js?v=32"></script>
     <script src="js/notas.js?v=32"></script>
@@ -2156,7 +2156,7 @@
     <script src="js/pt-dias.js?v=36"></script>
     <script src="js/conexiones-log.js?v=3"></script>
 <script src="js/mensajes-admin.js?v=48"></script>
-    <script src="js/app-init.js?v=46"></script>
+    <script src="js/app-init.js?v=47"></script>
 
 <!-- ══════════════════════════════════════════
      MODAL: ACERCA DE / RESEÑA
@@ -2563,7 +2563,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v82</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v83</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

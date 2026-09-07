@@ -228,6 +228,21 @@
         .stat-sub { font-size: 0.72em; color: #7f8c8d; margin-top: 4px; }
         .date-card { background: white; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; overflow: hidden; transition: all 0.3s; }
         .date-card:hover { border-color: rgba(255,255,255,0.15); }
+        /* Vista mosaico: las fechas quedan una al lado de la otra. Solo tiene
+           sentido con ancho de sobra, así que el botón se esconde en pantallas
+           chicas y la grilla vuelve a una columna sola. */
+        #recVistaBtn { display: none; }
+        @media (min-width: 1100px) {
+            #recVistaBtn { display: inline-block; }
+            #contenedorFechas.mosaico { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+            #contenedorFechas.mosaico .date-card { margin-bottom: 0; }
+        }
+        @media (min-width: 1700px) {
+            #contenedorFechas.mosaico { grid-template-columns: 1fr 1fr 1fr; }
+        }
+        #recVistaBtn.activo { background: var(--secondary); border-color: var(--secondary); color: #fff; }
+        body.dark-mode #recVistaBtn { background:#1e293b; border-color:#334155; color:#cbd5e1; }
+        body.dark-mode #recVistaBtn.activo { background: var(--secondary); border-color: var(--secondary); color:#fff; }
         .date-header { background-color: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .date-title { font-size: 1.1em; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
         .date-divisor { background-color: #e8daef; color: #8e44ad; padding: 4px 10px; border-radius: 15px; font-size: 0.8em; font-weight: bold; }

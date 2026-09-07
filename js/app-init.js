@@ -126,6 +126,7 @@ function switchTab(tabName) {
     }
     else if(tabName === 'recaudacion') {
         fabRec.style.display = 'flex'; aq_detenerSync(); cargarRecaudaciones();
+        if (typeof rec_aplicarVista === 'function') rec_aplicarVista();
         // Presencia: la comisión también se anuncia mientras está en Recaudación
         if (typeof window.recPresEntrar === 'function') {
             const _r = (typeof getSesionResponsableObj === 'function') ? getSesionResponsableObj() : {};

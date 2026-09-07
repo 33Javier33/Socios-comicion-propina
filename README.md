@@ -232,6 +232,15 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Montos Recaudados: vista en dos columnas (SW v83)
+- En un computador la lista de fechas iba en **una sola columna**, dejando media pantalla vacía y obligando a bajar mucho para revisar varios días.
+- Botón nuevo **▦ Dos columnas** junto a *Historial Detallado por Fecha*: pone las fechas **una al lado de la otra**. Desde **1700 px** pasa a **tres columnas**, para aprovechar los monitores grandes.
+- Es **opcional y se recuerda** entre sesiones. El botón cambia a *☰ Una columna* y se pinta activo cuando el mosaico está encendido.
+- En pantallas de menos de **1100 px el botón ni aparece** y la lista sigue en una columna, que es lo correcto ahí.
+- Los filtros (fecha, tipo, con/sin divisor) siguen funcionando igual: las tarjetas ocultas salen de la grilla y las visibles se reacomodan solas.
+- La vista se re-aplica después de cada recarga de datos, porque el contenedor se repuebla entero en cada render.
+- Archivos: `index.html` (botón), `js/recaudacion.js` (`rec_aplicarVista`, `rec_toggleVista`), `js/app-init.js`, `styles.css`. `recaudacion.js?v=47`, `app-init.js?v=47`, `styles.css?v=83`, SW `fondo-admin-v83`, versión visible **v83**.
+
 #### 2026-09-05 — Donaciones: aviso de aporte repetido en la misma colecta (SW v82)
 Como una colecta sigue abierta y se le suma gente en varias tandas, era fácil registrarle a alguien un segundo aporte sin darse cuenta. Ahora se avisa en **tres momentos**, del más temprano al último:
 

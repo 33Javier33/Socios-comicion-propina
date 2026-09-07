@@ -228,6 +228,7 @@ function procesarDatosRecaudacion(datos, silent) {
             container.appendChild(card);
         });
     }
+    rec_aplicarVista();   // el contenedor se repuebla en cada render
     const elTP = document.getElementById('recTotalPuntos'); if(elTP) elTP.innerText = formatearMoneda(sumaPuntosGlobal);
     recalcularTotalPT();
     recalcularRemanentes();
@@ -831,4 +832,34 @@ function rec_abrirDetalle(d) {
         </div>
         ${billetesHtml}`;
     modal.style.display = 'flex';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// VISTA MOSAICO — las fechas una al lado de la otra
+// En un computador la lista de una sola columna deja media pantalla vacía y
+// obliga a bajar mucho. Con el mosaico caben dos fechas por fila (tres desde
+// 1700 px). Es opcional y se recuerda entre sesiones; en pantallas chicas el
+// botón ni aparece, porque ahí una columna es lo correcto.
+// ══════════════════════════════════════════════════════════════════════
+const REC_VISTA_KEY = 'fondo_rec_mosaico';
+
+function rec_vistaMosaico() {
+    try { return localStorage.getItem(REC_VISTA_KEY) === '1'; } catch (e) { return false; }
+}
+
+function rec_aplicarVista() {
+    const cont = document.getElementById('contenedorFechas');
+    const btn = document.getElementById('recVistaBtn');
+    const on = rec_vistaMosaico();
+    if (cont) cont.classList.toggle('mosaico', on);
+    if (btn) {
+        btn.classList.toggle('activo', on);
+        btn.textContent = on ? '▦ Dos columnas' : '☰ Una columna';
+        btn.title = on ? 'Volver a una sola columna' : 'Ver las fechas en dos columnas';
+    }
+}
+
+function rec_toggleVista() {
+    try { localStorage.setItem(REC_VISTA_KEY, rec_vistaMosaico() ? '0' : '1'); } catch (e) {}
+    rec_aplicarVista();
 }
