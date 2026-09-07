@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/fondo-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=83">
+    <link rel="stylesheet" href="styles.css?v=84">
 </head>
 <body>
 
@@ -680,6 +680,7 @@
                     <button onclick="dsg_cargarHistorial(true)" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.5);border-radius:8px;padding:8px 16px;font-weight:700;font-size:0.82em;cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
                         🔄 Actualizar
                     </button>
+                    <button id="dsgVistaBtn" onclick="dsg_toggleVista()" title="Ver en dos columnas" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.5);border-radius:8px;padding:9px 14px;font-weight:700;font-size:0.85em;cursor:pointer;white-space:nowrap;">▦ Dos columnas</button>
                 </div>
             </div>
 
@@ -1312,75 +1313,83 @@
                 <div style="color:#fbcfe8;font-size:0.78em;margin-top:2px;">Colectas entre socios. A cada donante se le descuenta su aporte del balance a recibir y lo ve en su app.</div>
             </div>
 
-            <!-- Nueva colecta -->
-            <div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:18px;background:white;">
-                <div style="font-weight:800;font-size:0.9em;color:#0f172a;margin-bottom:10px;">➕ Nueva colecta</div>
+            <!-- Dos columnas en pantalla ancha: cargar la colecta a la izquierda,
+                 lo ya registrado a la derecha. Así se ve qué hay mientras se carga. -->
+            <div class="don-layout">
+                <div>
+                <!-- Nueva colecta -->
+                <div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:18px;background:white;">
+                    <div style="font-weight:800;font-size:0.9em;color:#0f172a;margin-bottom:10px;">➕ Nueva colecta</div>
 
-                <div style="display:none;margin-bottom:12px;">
-                    <label style="display:block;font-size:0.7em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">¿Es una colecta nueva o sigues una abierta?</label>
-                    <select id="don-colecta-existente" onchange="don_elegirColecta(); don_motivoCambio();" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.86em;font-weight:700;color:#0f172a;background:white;">
-                        <option value="">— Colecta nueva —</option>
-                    </select>
-                    <div style="font-size:0.7em;color:#94a3b8;margin-top:3px;line-height:1.4;">Elige una colecta abierta para <b>seguir sumando aportes</b> a la misma. Así no se parte en dos por una diferencia al escribir el motivo.</div>
-                </div>
-
-                <label style="display:block;font-size:0.7em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Motivo — para quién es la ayuda <span style="color:#dc2626;">(obligatorio)</span></label>
-                <textarea id="don-motivo" rows="3" maxlength="220" oninput="don_autoAltoMotivo(this); don_motivoCambio();"
-                    placeholder="Ej: Ayuda a Juan Pérez por licencia médica prolongada — aporte voluntario del mes de agosto"
-                    style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.88em;line-height:1.45;color:#0f172a;background:white;box-sizing:border-box;margin-bottom:2px;font-family:inherit;resize:vertical;min-height:68px;"></textarea>
-                <div id="don-motivo-contador" style="font-size:0.66em;color:#94a3b8;text-align:right;margin-bottom:4px;">0 / 220</div>
-                <div style="font-size:0.7em;color:#94a3b8;margin-bottom:12px;line-height:1.4;">Este texto es el que verá el socio en su app junto al descuento, y el que agrupa los aportes en una misma colecta.</div>
-
-                <label style="display:block;font-size:0.7em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Fecha</label>
-                <input type="date" id="don-fecha" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.88em;color:#0f172a;background:white;box-sizing:border-box;margin-bottom:12px;">
-
-                <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-                    <select id="don-area" onchange="don_filtrarSocios()" style="flex:1;min-width:140px;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.85em;font-weight:700;color:#0f172a;background:white;">
-                        <option value="todas">Todas las áreas</option>
-                    </select>
-                    <input type="text" id="don-buscar" oninput="don_filtrarSocios()" placeholder="Buscar socio..."
-                        style="flex:1;min-width:140px;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.85em;color:#0f172a;background:white;box-sizing:border-box;">
-                </div>
-
-                <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
-                    <input type="text" inputmode="numeric" id="don-monto-todos" oninput="don_fmtMonto(this)" placeholder="Mismo monto para todos"
-                        style="flex:1;min-width:150px;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.85em;font-weight:700;text-align:right;color:#0f172a;background:white;box-sizing:border-box;">
-                    <button onclick="don_montoParaTodos()" style="background:#0f766e;color:white;border:none;border-radius:9px;padding:9px 14px;font-size:0.8em;font-weight:700;cursor:pointer;white-space:nowrap;">Aplicar</button>
-                    <button onclick="don_limpiarSeleccion()" style="background:white;color:#64748b;border:1px solid #cbd5e1;border-radius:9px;padding:9px 12px;font-size:0.8em;font-weight:700;cursor:pointer;white-space:nowrap;">Limpiar</button>
-                </div>
-
-                <div id="don-socios-lista" style="max-height:340px;overflow-y:auto;margin-bottom:10px;"></div>
-
-                <!-- Personas que NO pertenecen al fondo: suman al total pero no se les descuenta nada -->
-                <div style="border-top:1px dashed #e2e8f0;margin:14px 0 10px;padding-top:12px;">
-                    <label style="display:block;font-size:0.7em;font-weight:800;color:#b45309;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;">👤 Aportes de personas que no son socios</label>
-                    <div style="font-size:0.7em;color:#94a3b8;margin-bottom:8px;line-height:1.4;">Suman al total juntado, pero <b>no se les descuenta nada</b> porque no tienen saldo en el fondo. Entregan el dinero aparte.</div>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-                        <input type="text" id="don-ext-nombre" maxlength="60" placeholder="Nombre y apellido"
-                            style="flex:2;min-width:150px;padding:9px 10px;border:1.5px solid #fcd34d;border-radius:9px;font-size:0.85em;color:#0f172a;background:white;box-sizing:border-box;">
-                        <input type="text" id="don-ext-area" maxlength="40" placeholder="Área o procedencia"
-                            style="flex:1;min-width:120px;padding:9px 10px;border:1.5px solid #fcd34d;border-radius:9px;font-size:0.85em;color:#0f172a;background:white;box-sizing:border-box;">
-                        <input type="text" inputmode="numeric" id="don-ext-monto" oninput="don_fmtMontoExt(this)" placeholder="Monto"
-                            onkeydown="if(event.key==='Enter'){event.preventDefault();don_agregarExterno();}"
-                            style="width:110px;padding:9px 10px;border:1.5px solid #fcd34d;border-radius:9px;font-size:0.85em;font-weight:700;text-align:right;color:#0f172a;background:white;box-sizing:border-box;">
-                        <button onclick="don_agregarExterno()" style="background:#b45309;color:white;border:none;border-radius:9px;padding:9px 15px;font-size:0.8em;font-weight:700;cursor:pointer;white-space:nowrap;">+ Agregar</button>
+                    <div style="display:none;margin-bottom:12px;">
+                        <label style="display:block;font-size:0.7em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">¿Es una colecta nueva o sigues una abierta?</label>
+                        <select id="don-colecta-existente" onchange="don_elegirColecta(); don_motivoCambio();" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.86em;font-weight:700;color:#0f172a;background:white;">
+                            <option value="">— Colecta nueva —</option>
+                        </select>
+                        <div style="font-size:0.7em;color:#94a3b8;margin-top:3px;line-height:1.4;">Elige una colecta abierta para <b>seguir sumando aportes</b> a la misma. Así no se parte en dos por una diferencia al escribir el motivo.</div>
                     </div>
-                    <div id="don-externos-lista"></div>
+
+                    <label style="display:block;font-size:0.7em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Motivo — para quién es la ayuda <span style="color:#dc2626;">(obligatorio)</span></label>
+                    <textarea id="don-motivo" rows="3" maxlength="220" oninput="don_autoAltoMotivo(this); don_motivoCambio();"
+                        placeholder="Ej: Ayuda a Juan Pérez por licencia médica prolongada — aporte voluntario del mes de agosto"
+                        style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.88em;line-height:1.45;color:#0f172a;background:white;box-sizing:border-box;margin-bottom:2px;font-family:inherit;resize:vertical;min-height:68px;"></textarea>
+                    <div id="don-motivo-contador" style="font-size:0.66em;color:#94a3b8;text-align:right;margin-bottom:4px;">0 / 220</div>
+                    <div style="font-size:0.7em;color:#94a3b8;margin-bottom:12px;line-height:1.4;">Este texto es el que verá el socio en su app junto al descuento, y el que agrupa los aportes en una misma colecta.</div>
+
+                    <label style="display:block;font-size:0.7em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Fecha</label>
+                    <input type="date" id="don-fecha" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.88em;color:#0f172a;background:white;box-sizing:border-box;margin-bottom:12px;">
+
+                    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+                        <select id="don-area" onchange="don_filtrarSocios()" style="flex:1;min-width:140px;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.85em;font-weight:700;color:#0f172a;background:white;">
+                            <option value="todas">Todas las áreas</option>
+                        </select>
+                        <input type="text" id="don-buscar" oninput="don_filtrarSocios()" placeholder="Buscar socio..."
+                            style="flex:1;min-width:140px;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.85em;color:#0f172a;background:white;box-sizing:border-box;">
+                    </div>
+
+                    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+                        <input type="text" inputmode="numeric" id="don-monto-todos" oninput="don_fmtMonto(this)" placeholder="Mismo monto para todos"
+                            style="flex:1;min-width:150px;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.85em;font-weight:700;text-align:right;color:#0f172a;background:white;box-sizing:border-box;">
+                        <button onclick="don_montoParaTodos()" style="background:#0f766e;color:white;border:none;border-radius:9px;padding:9px 14px;font-size:0.8em;font-weight:700;cursor:pointer;white-space:nowrap;">Aplicar</button>
+                        <button onclick="don_limpiarSeleccion()" style="background:white;color:#64748b;border:1px solid #cbd5e1;border-radius:9px;padding:9px 12px;font-size:0.8em;font-weight:700;cursor:pointer;white-space:nowrap;">Limpiar</button>
+                    </div>
+
+                    <div id="don-socios-lista" style="max-height:340px;overflow-y:auto;margin-bottom:10px;"></div>
+
+                    <!-- Personas que NO pertenecen al fondo: suman al total pero no se les descuenta nada -->
+                    <div style="border-top:1px dashed #e2e8f0;margin:14px 0 10px;padding-top:12px;">
+                        <label style="display:block;font-size:0.7em;font-weight:800;color:#b45309;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;">👤 Aportes de personas que no son socios</label>
+                        <div style="font-size:0.7em;color:#94a3b8;margin-bottom:8px;line-height:1.4;">Suman al total juntado, pero <b>no se les descuenta nada</b> porque no tienen saldo en el fondo. Entregan el dinero aparte.</div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+                            <input type="text" id="don-ext-nombre" maxlength="60" placeholder="Nombre y apellido"
+                                style="flex:2;min-width:150px;padding:9px 10px;border:1.5px solid #fcd34d;border-radius:9px;font-size:0.85em;color:#0f172a;background:white;box-sizing:border-box;">
+                            <input type="text" id="don-ext-area" maxlength="40" placeholder="Área o procedencia"
+                                style="flex:1;min-width:120px;padding:9px 10px;border:1.5px solid #fcd34d;border-radius:9px;font-size:0.85em;color:#0f172a;background:white;box-sizing:border-box;">
+                            <input type="text" inputmode="numeric" id="don-ext-monto" oninput="don_fmtMontoExt(this)" placeholder="Monto"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();don_agregarExterno();}"
+                                style="width:110px;padding:9px 10px;border:1.5px solid #fcd34d;border-radius:9px;font-size:0.85em;font-weight:700;text-align:right;color:#0f172a;background:white;box-sizing:border-box;">
+                            <button onclick="don_agregarExterno()" style="background:#b45309;color:white;border:none;border-radius:9px;padding:9px 15px;font-size:0.8em;font-weight:700;cursor:pointer;white-space:nowrap;">+ Agregar</button>
+                        </div>
+                        <div id="don-externos-lista"></div>
+                    </div>
+
+                    <div id="don-resumen" style="font-size:0.82em;color:#0f172a;text-align:center;padding:8px;background:#f8fafc;border-radius:9px;margin-bottom:10px;"></div>
+
+                    <button id="don-btn-registrar" onclick="don_registrar()" style="width:100%;background:linear-gradient(135deg,#9d174d,#db2777);color:white;border:none;border-radius:10px;padding:12px;font-weight:800;font-size:0.9em;cursor:pointer;">
+                        💝 Registrar aportes
+                    </button>
                 </div>
 
-                <div id="don-resumen" style="font-size:0.82em;color:#0f172a;text-align:center;padding:8px;background:#f8fafc;border-radius:9px;margin-bottom:10px;"></div>
-
-                <button id="don-btn-registrar" onclick="don_registrar()" style="width:100%;background:linear-gradient(135deg,#9d174d,#db2777);color:white;border:none;border-radius:10px;padding:12px;font-weight:800;font-size:0.9em;cursor:pointer;">
-                    💝 Registrar aportes
-                </button>
+                </div>
+                <div class="don-col-registradas">
+                <!-- Colectas registradas -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                    <div style="font-weight:800;font-size:0.9em;color:#0f172a;">📋 Colectas registradas</div>
+                    <div style="font-size:0.78em;color:#64748b;">Total juntado: <b id="don-total-general" style="color:#15803d;">$0</b></div>
+                </div>
+                <div id="don-colectas"></div>
+                </div>
             </div>
-
-            <!-- Colectas registradas -->
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                <div style="font-weight:800;font-size:0.9em;color:#0f172a;">📋 Colectas registradas</div>
-                <div style="font-size:0.78em;color:#64748b;">Total juntado: <b id="don-total-general" style="color:#15803d;">$0</b></div>
-            </div>
-            <div id="don-colectas"></div>
         </div>
 
         <div id="tab-documentacion" class="tab-content">
@@ -2135,7 +2144,7 @@
     <script src="js/socios.js?v=40"></script>
     <script src="js/puntos.js?v=32"></script>
     <script src="js/anticipos.js?v=50"></script>
-    <script src="js/desglose-anticipos.js?v=32"></script>
+    <script src="js/desglose-anticipos.js?v=33"></script>
     <script src="js/meses-anteriores.js?v=32"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
     <script src="js/recaudacion.js?v=47"></script>
@@ -2156,7 +2165,7 @@
     <script src="js/pt-dias.js?v=36"></script>
     <script src="js/conexiones-log.js?v=3"></script>
 <script src="js/mensajes-admin.js?v=48"></script>
-    <script src="js/app-init.js?v=47"></script>
+    <script src="js/app-init.js?v=48"></script>
 
 <!-- ══════════════════════════════════════════
      MODAL: ACERCA DE / RESEÑA
@@ -2563,7 +2572,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v83</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v84</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

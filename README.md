@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Dos columnas en Desglose Anticipos y tres en Donaciones (SW v84)
+
+**Desglose de Anticipos — vista mosaico**
+- Mismo botón **▦ Dos columnas** que Montos Recaudados, en la barra morada junto a *Actualizar*. Los desgloses pasan a ir uno al lado del otro, y desde **1700 px** a tres columnas.
+- Opcional, se recuerda entre sesiones y con su propia preferencia, aparte de la de Montos Recaudados. Bajo **1100 px** el botón no aparece.
+- La vista se re-aplica al final de cada render, porque la lista se repuebla entera al recargar o al cambiar de período.
+
+**Donaciones — tres columnas**
+- Antes todo iba en una columna larguísima: había que bajar hasta el final para ver las colectas ya registradas. Ahora, desde **1280 px**:
+
+  | 1 · Menú | 2 · Cargar la colecta | 3 · Colectas registradas |
+  |---|---|---|
+  | barra lateral | resto del ancho | 400 px (460 desde 1700 px) |
+
+- La columna de colectas **queda fija al hacer scroll**, con su propio desplazamiento. Eso se apoya directamente en el aviso de repetidos de la v82: se ve quién ya aportó mientras se cargan los montos nuevos, sin perder de vista el formulario.
+- Bajo 1280 px vuelve a una sola columna, sin cambios.
+- Archivos: `index.html` (botón de desglose, `.don-layout`), `js/desglose-anticipos.js` (`dsg_aplicarVista`, `dsg_toggleVista`), `js/app-init.js`, `styles.css`. `desglose-anticipos.js?v=33`, `app-init.js?v=48`, `styles.css?v=84`, SW `fondo-admin-v84`, versión visible **v84**.
+
 #### 2026-09-05 — Montos Recaudados: vista en dos columnas (SW v83)
 - En un computador la lista de fechas iba en **una sola columna**, dejando media pantalla vacía y obligando a bajar mucho para revisar varios días.
 - Botón nuevo **▦ Dos columnas** junto a *Historial Detallado por Fecha*: pone las fechas **una al lado de la otra**. Desde **1700 px** pasa a **tres columnas**, para aprovechar los monitores grandes.

@@ -263,6 +263,7 @@ function dsg_renderHistorial() {
     }
 
     lista.innerHTML = _dsgFiltrados.map(r => _dsgRenderCard(r, r._numCreacion || 0)).join('');
+    dsg_aplicarVista();   // la lista se repuebla en cada render
 }
 
 function _dsgRenderCard(r, numero) {
@@ -604,4 +605,33 @@ function dsg_informe() {
 
 function _htmlEsc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// VISTA MOSAICO — los desgloses uno al lado del otro
+// Mismo criterio que Montos Recaudados: en computador la columna única deja
+// media pantalla vacía. Opcional, se recuerda, y en pantallas chicas el
+// botón ni aparece.
+// ══════════════════════════════════════════════════════════════════════
+const DSG_VISTA_KEY = 'fondo_dsg_mosaico';
+
+function dsg_vistaMosaico() {
+    try { return localStorage.getItem(DSG_VISTA_KEY) === '1'; } catch (e) { return false; }
+}
+
+function dsg_aplicarVista() {
+    const cont = document.getElementById('dsg-lista');
+    const btn = document.getElementById('dsgVistaBtn');
+    const on = dsg_vistaMosaico();
+    if (cont) cont.classList.toggle('mosaico', on);
+    if (btn) {
+        btn.textContent = on ? '▦ Dos columnas' : '☰ Una columna';
+        btn.title = on ? 'Volver a una sola columna' : 'Ver los desgloses en dos columnas';
+        btn.style.background = on ? 'rgba(255,255,255,0.42)' : 'rgba(255,255,255,0.15)';
+    }
+}
+
+function dsg_toggleVista() {
+    try { localStorage.setItem(DSG_VISTA_KEY, dsg_vistaMosaico() ? '0' : '1'); } catch (e) {}
+    dsg_aplicarVista();
 }
