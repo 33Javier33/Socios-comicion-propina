@@ -1189,3 +1189,129 @@ async function don_registrarEgreso() {
         showToast('No se pudo registrar: ' + (e.message || e), 'error');
     } finally { toggleLoader(false); }
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// EGRESO MANUAL — tarjeta en Anticipos y Ausencias
+// El monto se escribe a mano: no lo decide la app. Solo descuenta de la
+// CAJA; el balance del socio no se toca, porque los aportes ya se le
+// descontaron a cada donante al registrarlos en Donaciones.
+// ══════════════════════════════════════════════════════════════════════
+function don_egrMInit() {
+    const cont = document.getElementById('donEgrMBilletes');
+    if (cont && !cont.dataset.listo) {
+        const fmt = v => '$' + Number(v).toLocaleString('es-CL');
+        cont.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;">'
+            + AQ_DENOMINACIONES.map(den =>
+                '<div style="display:flex;align-items:center;gap:6px;">'
+                + '<span style="flex:1;font-size:0.78em;font-weight:700;color:#475569;">' + fmt(den) + '</span>'
+                + '<input type="text" inputmode="numeric" id="donEgrMBil-' + den + '" placeholder="0" '
+                +   'oninput="don_egrMTotal()" '
+                +   'style="width:58px;padding:6px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.85em;'
+                +   'font-weight:700;text-align:center;color:#0f172a;background:white;box-sizing:border-box;">'
+                + '</div>').join('')
+            + '</div>';
+        cont.dataset.listo = '1';
+    }
+    const f = document.getElementById('donEgrMFecha');
+    if (f && !f.value) f.value = new Date().toISOString().split('T')[0];
+    // Si nunca se abrió la sección Donaciones, los aportes aún no están
+    // cargados: se piden en segundo plano para poder sugerir las colectas y
+    // detectar retiros repetidos. Las funciones de pintado salen solas si su
+    // contenedor no existe.
+    if (!(_donAportes || []).length && typeof don_cargarAportes === 'function') {
+        don_cargarAportes().then(() => don_egrMInit()).catch(() => {});
+    }
+    // Sugerencias con las colectas que existen, sin obligar a elegir una.
+    const dl = document.getElementById('donEgrMotivosLista');
+    if (dl) {
+        const motivos = [...new Set((_donAportes || []).filter(a => don_esAporte(a.tipo))
+            .map(a => don_motivoDe(a.detalle)))].sort((x, y) => x.localeCompare(y, 'es'));
+        dl.innerHTML = motivos.map(m => '<option value="' + _donEsc(m) + '"></option>').join('');
+    }
+    don_egrMTotal();
+}
+
+function don_egrMFmt(input) {
+    const n = parseInt(String(input.value || '').replace(/\D/g, '')) || 0;
+    input.value = n ? new Intl.NumberFormat('es-CL').format(n) : '';
+    don_egrMTotal();
+}
+
+function don_egrMLeer() {
+    const bil = {};
+    AQ_DENOMINACIONES.forEach(den => {
+        const el = document.getElementById('donEgrMBil-' + den);
+        const n = Math.max(0, parseInt(String((el && el.value) || '').replace(/\D/g, '')) || 0);
+        if (n > 0) bil[den] = n;
+    });
+    return bil;
+}
+
+function don_egrMTotal() {
+    const bil = don_egrMLeer();
+    const total = Object.keys(bil).reduce((t, d) => t + Number(d) * bil[d], 0);
+    const monto = parseInt(String(document.getElementById('donEgrMMonto')?.value || '').replace(/\D/g, '')) || 0;
+    const el = document.getElementById('donEgrMBilTotal');
+    if (!el) return total;
+    if (!total) {
+        el.innerHTML = '<span style="color:#94a3b8;font-weight:600;">Total del desglose: $0</span>';
+    } else if (monto && total !== monto) {
+        const dif = Math.abs(monto - total);
+        el.innerHTML = 'Total del desglose: <b style="color:#b45309;">' + _donMoneda(total) + '</b>'
+            + '<span style="color:#b45309;font-weight:700;"> · ' + (total > monto ? 'sobran ' : 'faltan ') + _donMoneda(dif) + '</span>';
+    } else {
+        el.innerHTML = 'Total del desglose: <b style="color:#166534;">' + _donMoneda(total) + '</b>'
+            + (monto ? '<span style="color:#166534;font-weight:700;"> · coincide ✓</span>' : '');
+    }
+    return total;
+}
+
+async function don_egresoManual() {
+    const monto = parseInt(String(document.getElementById('donEgrMMonto')?.value || '').replace(/\D/g, '')) || 0;
+    const motivo = don_normalizarMotivo(document.getElementById('donEgrMMotivo')?.value);
+    const fecha = document.getElementById('donEgrMFecha')?.value || new Date().toISOString().split('T')[0];
+    const billetes = don_egrMLeer();
+    const totalBil = Object.keys(billetes).reduce((t, d) => t + Number(d) * billetes[d], 0);
+
+    if (!monto)  { showToast('Escribe el monto a retirar', 'error'); document.getElementById('donEgrMMonto')?.focus(); return; }
+    if (!motivo) { showToast('Escribe el motivo de la colecta', 'error'); document.getElementById('donEgrMMotivo')?.focus(); return; }
+    if (!totalBil) { showToast('Anota el desglose de billetes que sale de la caja', 'error'); return; }
+    if (totalBil !== monto) { showToast('El desglose no cuadra con el monto', 'error'); return; }
+
+    // Si el motivo coincide con una colecta que ya tuvo retiro, se avisa.
+    const previas = don_entregasDe(motivo);
+    if (previas.length && !confirm('⚠️ "' + motivo + '" ya tiene un retiro registrado por '
+        + _donMoneda(previas.reduce((t, e) => t + e.monto, 0)) + '.\n\n¿Registrar otro además de ese?')) return;
+
+    if (!confirm('Se van a RETIRAR ' + _donMoneda(monto) + ' del conteo de caja.\n\n'
+        + 'Motivo: ' + motivo + '\n\n'
+        + 'No se descuenta del balance de ningún socio: los aportes ya se descontaron en Donaciones.\n\n'
+        + '¿Confirmar?')) return;
+
+    toggleLoader(true, 'Registrando egreso...');
+    try {
+        if (typeof aq_aplicarBilletesAnticipo === 'function') aq_aplicarBilletesAnticipo(billetes);
+
+        const res = await callApiSocios('registrarBatchExtras', {
+            detalleExtras: [{
+                id: DON_SOCIO_EXT, nombre: 'Entrega de colecta', fecha: fecha,
+                tipo: DON_TIPO_ENTREGA, monto: monto,
+                detalle: DON_PREFIJO + motivo + DON_MARCA_ENT
+            }]
+        });
+        if (res && res.status === 'error') throw new Error(res.message || 'error');
+
+        if (typeof sbAuditLog === 'function') sbAuditLog('Egreso de Donación', {
+            detalle: 'Retiro de caja: ' + motivo + ' — ' + _donMoneda(monto),
+            datos: { motivo, monto, billetes, fecha }
+        });
+
+        showToast('Egreso registrado y descontado de la caja ✅', 'success');
+        document.getElementById('donEgrMMonto').value = '';
+        AQ_DENOMINACIONES.forEach(den => { const c = document.getElementById('donEgrMBil-' + den); if (c) c.value = ''; });
+        don_egrMTotal();
+        don_cargarAportes();
+    } catch(e) {
+        showToast('No se pudo registrar: ' + (e.message || e), 'error');
+    } finally { toggleLoader(false); }
+}

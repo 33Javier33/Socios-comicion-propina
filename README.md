@@ -232,6 +232,19 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — El egreso de donación pasa a Anticipos y Ausencias, con monto manual (SW v92)
+Corrección de ubicación y de forma respecto de la v91: se había puesto como un botón en la barra superior de Gestión, con la colecta elegida de una lista y el monto calculado por la app. Lo pedido era **una opción dentro de Anticipos y Ausencias** y **hacerlo a mano**.
+
+- **Tercera tarjeta en el panel del socio**, junto a *Anticipo* y *Ausencias*: **💝 Egreso de donación**. Se quitó el botón de la barra superior.
+- **El monto se escribe a mano.** La app no lo calcula ni lo precarga — sigue siendo quien registra el que decide cuánto sale.
+- El motivo también es texto libre, con las colectas existentes como **sugerencias** (no obliga a elegir una).
+- Pide el **desglose de billetes** y exige que cuadre con el monto, porque es exactamente lo que se descuenta del conteo del arqueo.
+- **Deja claro que no toca el balance del socio:** lo dice en la propia tarjeta y en la confirmación. Los aportes ya se le descontaron a cada donante al registrarlos en Donaciones; esto solo saca el efectivo de la caja.
+- Si el motivo coincide con una colecta que ya tuvo un retiro, avisa antes de registrar otro.
+- Las colectas siguen mostrando su estado (**✅ Retirado** / **⏳ Pendiente**) y conservan su botón *💵 Egreso de caja* en la sección Donaciones.
+- Verificado: las cuatro validaciones (sin monto, sin motivo, sin desglose, desglose que no cuadra) responden bien, y con un retiro de $267.000 la caja baja exactamente por el desglose sin alterar el saldo del socio.
+- Archivos: `index.html` (tarjeta), `js/donaciones.js` (`don_egrMInit`, `don_egresoManual`), `js/anticipos.js`. `donaciones.js?v=11`, `anticipos.js?v=51`, SW `fondo-admin-v92`, versión visible **v92**.
+
 #### 2026-09-05 — Donaciones: egreso de la colecta descontado de la caja (SW v91)
 Faltaba cerrar el círculo del dinero. Lo que aportan los socios **no sale de su bolsillo**: se les descuenta del balance, así que ese efectivo **ya está en la caja**. Cuando se le entrega la colecta al beneficiado, esa plata sale — y si no se registraba, el arqueo dejaba de cuadrar.
 
