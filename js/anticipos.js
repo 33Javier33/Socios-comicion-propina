@@ -2253,7 +2253,6 @@ function seleccionarSocio(id) {
     // (que necesita display:grid en pantallas anchas) no quede pisado por el
     // inline style, que siempre le gana al CSS.
     document.getElementById('panelDetalle').classList.add('visible');
-    if (typeof don_egrMInit === 'function') don_egrMInit();   // tarjeta de egreso de donación
     document.getElementById('mensajeSeleccion').style.display = 'none';
     document.getElementById('gestionSocioId').value = socio.id;
     document.getElementById('gestionSocioNombre').value = `${socio.nombre} ${socio.apellido}`;

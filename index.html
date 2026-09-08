@@ -437,6 +437,15 @@
                 </div>
             </div>
 
+            <!-- Egreso de donación: es GENERAL, no depende de tener un socio
+                 seleccionado, así que va fuera del panel del socio. -->
+            <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+                <button onclick="don_abrirEgreso()" title="Retirar de la caja el dinero de una colecta"
+                    style="background:linear-gradient(135deg,#9d174d,#db2777);color:white;border:none;border-radius:9px;padding:9px 16px;font-size:0.82em;font-weight:800;cursor:pointer;white-space:nowrap;">
+                    💝 Egreso de donación
+                </button>
+            </div>
+
             <div class="gestion-layout">
                 <div class="search-panel">
                     <h3 style="display:flex;align-items:center;gap:8px;">Buscar Socio <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-buscar-socio',this)" title="Ayuda rápida">?</button><div id="pop-buscar-socio" class="ayuda-popover"><div class="ayuda-popover-titulo">🔍 Buscar Socio</div><div class="ayuda-popover-texto">Escribe el nombre o apellido del socio para ver su información, anticipos y saldos.</div><ol class="ayuda-popover-pasos"><li>Escribe al menos 2 letras del nombre</li><li>Haz clic en el socio para seleccionarlo</li><li>Sus datos cargarán en el panel derecho</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Debes seleccionar un socio antes de registrar un anticipo o ausencia.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaIrA('anticipos')">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-buscar-socio')">✕</span></div></div></div></h3>
@@ -636,27 +645,6 @@
                                 <div id="infoRangoAusencia" style="margin-top:8px; font-size:0.82em; color:#991b1b; background:#fee2e2; border-radius:6px; padding:7px 10px; font-weight:600; min-height:28px;"></div>
                             </div>
                             <button class="btn-action" style="background-color:var(--danger); width:100%; margin-top:15px;" onclick="enviarAusencia()">Marcar Ausencia</button>
-                        </div>
-                        <div class="action-card" id="cardDonEgreso">
-                            <div class="action-title" style="color:#9d174d;">💝 Egreso de donación</div>
-                            <div style="font-size:0.78em;color:#7f8c8d;margin-bottom:12px;line-height:1.5;background:#fdf2f8;border:1px solid #f9a8d4;border-radius:9px;padding:9px 11px;">
-                                Retira de la caja el dinero de una colecta ya juntada, para entregárselo al beneficiado.
-                                <b>No descuenta del balance de este socio:</b> los aportes ya se descontaron a cada donante en la sección Donaciones.
-                            </div>
-                            <div class="form-group"><label>Monto a retirar ($)</label>
-                                <input type="text" inputmode="numeric" id="donEgrMMonto" placeholder="Ej: 267.000" oninput="don_egrMFmt(this)"></div>
-                            <div class="form-group" style="margin-top:10px;"><label>Motivo / colecta</label>
-                                <input type="text" id="donEgrMMotivo" maxlength="120" placeholder="Ej: Ayuda a Juan Pérez" list="donEgrMotivosLista">
-                                <datalist id="donEgrMotivosLista"></datalist></div>
-                            <div class="form-group" style="margin-top:10px;"><label>Fecha</label>
-                                <input type="date" id="donEgrMFecha"></div>
-                            <div style="margin-top:12px;">
-                                <label style="display:block;font-size:0.75em;color:#7f8c8d;margin-bottom:3px;">Desglose que sale de la caja</label>
-                                <div style="font-size:0.72em;color:#94a3b8;margin-bottom:7px;line-height:1.4;">Es lo que se descuenta del conteo del arqueo.</div>
-                                <div id="donEgrMBilletes" style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;"></div>
-                                <div id="donEgrMBilTotal" style="font-size:0.8em;font-weight:800;color:#0f172a;text-align:right;margin-top:6px;">Total del desglose: $0</div>
-                            </div>
-                            <button onclick="don_egresoManual()" class="btn-submit" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#9d174d,#db2777);border:none;">💝 Retirar de la caja</button>
                         </div>
                     </div>
 
@@ -1026,14 +1014,18 @@
                 subtotal de socios.
             </div>
 
-            <label style="display:block;font-size:0.72em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Colecta</label>
-            <select id="donEgrColecta" onchange="don_egrColectaCambio()" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.86em;font-weight:700;color:#0f172a;background:white;margin-bottom:10px;"></select>
+            <label style="display:block;font-size:0.72em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Motivo de la donación</label>
+            <input type="text" id="donEgrColecta" list="donEgrColectasLista" oninput="don_egrColectaCambio()" maxlength="220"
+                placeholder="Escribe o busca la colecta…"
+                style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.86em;font-weight:700;color:#0f172a;background:white;box-sizing:border-box;margin-bottom:3px;">
+            <datalist id="donEgrColectasLista"></datalist>
+            <div style="font-size:0.7em;color:#94a3b8;margin-bottom:10px;line-height:1.4;">Empieza a escribir y aparecen las colectas registradas. También puedes escribir un motivo distinto.</div>
 
             <div id="donEgrInfo" style="background:#fdf2f8;border:1px solid #f9a8d4;border-radius:9px;padding:10px 12px;font-size:0.8em;color:#0f172a;margin-bottom:12px;line-height:1.6;"></div>
 
             <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
                 <div style="flex:1;min-width:140px;">
-                    <label style="display:block;font-size:0.72em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Monto a retirar de la caja</label>
+                    <label style="display:block;font-size:0.72em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Monto a descontar</label>
                     <input type="text" inputmode="numeric" id="donEgrMonto" oninput="don_egrFmtMonto(this)" placeholder="$0"
                         style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:1em;font-weight:800;text-align:right;color:#0f172a;background:white;box-sizing:border-box;">
                 </div>
@@ -2210,7 +2202,7 @@
     <script src="js/api.js?v=36"></script>
     <script src="js/socios.js?v=40"></script>
     <script src="js/puntos.js?v=32"></script>
-    <script src="js/anticipos.js?v=51"></script>
+    <script src="js/anticipos.js?v=52"></script>
     <script src="js/desglose-anticipos.js?v=34"></script>
     <script src="js/meses-anteriores.js?v=32"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
@@ -2226,7 +2218,7 @@
     <script src="js/dineros.js?v=32"></script>
     <script src="js/certificados.js?v=32"></script>
     <script src="js/diario-pins.js?v=34"></script>
-    <script src="js/donaciones.js?v=12"></script>
+    <script src="js/donaciones.js?v=13"></script>
     <script src="js/documentacion.js?v=33"></script>
     <script src="js/egresos.js?v=39"></script>
     <script src="js/pt-dias.js?v=36"></script>
@@ -2639,7 +2631,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v93</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v94</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

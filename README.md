@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — El egreso de donación pasa a ser general, con buscador de motivo (SW v94)
+Segunda corrección de forma: en la v92 quedó como una tarjeta **dentro del panel del socio**, o sea que había que seleccionar un socio antes. Pero el egreso **no es de un socio**: es de una colecta.
+
+- **Ahora es general.** Botón **💝 Egreso de donación** siempre visible en *Anticipos y Ausencias*, arriba del buscador. No hace falta tener ningún socio seleccionado.
+- **El motivo se busca:** campo con autocompletado de las colectas registradas. Se escribe y van apareciendo; también se puede escribir un motivo distinto, porque el egreso no obliga a que la colecta exista.
+- **El monto se escribe a mano**, siempre en blanco al abrir. Al reconocer el motivo se muestran los totales de esa colecta **solo como referencia** —total juntado, de socios (está en la caja), de ajenos (no pasó por caja) y si ya tuvo un retiro—, pero la app no rellena el monto.
+- Si el motivo no coincide con ninguna colecta, avisa para revisar cómo está escrito, sin bloquear.
+- Se mantiene todo lo de la v93: **descuenta los billetes de la caja**, **suma a ANTICIPOS (Nube)**, queda en Desglose de Anticipos e **imprime el recibo** con folio `DON-`.
+- **Se unificó el código:** quedaba una implementación duplicada (la tarjeta y el modal). Ahora hay una sola.
+- Verificado: el buscador ofrece la colecta, la referencia muestra $283.000 juntados de los cuales $267.000 son de socios, las cuatro validaciones responden bien, y un egreso de $267.000 baja la caja por el desglose exacto y sube la nube de $80.000 a $347.000 sin tocar el balance de ningún socio.
+- Archivos: `index.html` (botón general y modal con buscador), `js/donaciones.js`, `js/anticipos.js`. `donaciones.js?v=13`, `anticipos.js?v=52`, SW `fondo-admin-v94`, versión visible **v94**.
+
 #### 2026-09-05 — El egreso de donación se comporta igual que un anticipo (SW v93)
 Faltaba que el egreso hiciera todo lo que hace un anticipo, no solo bajar la caja.
 
