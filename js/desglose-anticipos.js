@@ -17,6 +17,24 @@ function _dsgCalcPeriodoInicio() {
     return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-15';
 }
 
+// Rango completo del período: del 15 al 14 del mes siguiente.
+// El informe y el listado se mueven SIEMPRE dentro de estas fechas.
+function _dsgRangoPeriodo() {
+    const inicioISO = _dsgPeriodoSeleccionado || _dsgCalcPeriodoInicio();
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(inicioISO));
+    if (!m) return { inicio: inicioISO, fin: '9999-12-31' };
+    const fin = new Date(+m[1], +m[2] - 1, +m[3]);
+    fin.setMonth(fin.getMonth() + 1);
+    fin.setDate(fin.getDate() - 1);
+    const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    return { inicio: inicioISO, fin: iso(fin) };
+}
+function _dsgRangoVis() {
+    const { inicio, fin } = _dsgRangoPeriodo();
+    const v = f => f.split('-').reverse().join('/');
+    return v(inicio) + ' al ' + v(fin);
+}
+
 // "2026-06-15" → "15 Jun – 14 Jul 2026"
 function _dsgFormatPeriodo(key) {
     if (!key) return 'Período Actual';
@@ -172,7 +190,9 @@ async function dsg_cargarHistorial(forzar = false) {
         _dsgRenderPeriodSelector();
 
         // Cargar registros del período seleccionado
-        const body = { action: 'getRetirosAnticipos', limit: 300 };
+        // Antes el tope era 300 y podía cortar registros del período. El período
+        // completo tiene que venir entero, si no el informe sale incompleto.
+        const body = { action: 'getRetirosAnticipos', limit: 5000 };
         if (_dsgPeriodoSeleccionado) body.periodo = _dsgPeriodoSeleccionado;
 
         const res = await fetch(AQ_URL_POST, {
@@ -188,8 +208,11 @@ async function dsg_cargarHistorial(forzar = false) {
         if (notice) {
             if (_dsgPeriodoSeleccionado === null) {
                 const periodoInicio = _dsgCalcPeriodoInicio();
-                const hayViejos = _dsgRegistros.some(r => r.fecha && r.fecha < periodoInicio);
-                notice.style.display = hayViejos ? 'flex' : 'none';
+                const viejos = _dsgRegistros.filter(r => r.fecha && r.fecha < periodoInicio).length;
+                notice.style.display = viejos ? 'flex' : 'none';
+                const det = notice.querySelector('[data-dsg-viejos]');
+                if (det) det.textContent = viejos + ' registro(s) de períodos anteriores no se listan acá, '
+                    + 'porque esta sección solo muestra el período ' + _dsgRangoVis() + '. Archívalos para dejarlos guardados.';
             } else {
                 notice.style.display = 'none';
             }
@@ -210,9 +233,18 @@ function dsg_filtrar() {
     const desde  = document.getElementById('dsg-filtro-desde')?.value || '';
     const hasta  = document.getElementById('dsg-filtro-hasta')?.value || '';
 
+    // El período manda: primero se acota del 15 al 14, y recién ahí se aplican
+    // los filtros que haya puesto el usuario. Antes la lista traía registros de
+    // períodos anteriores mezclados con los del actual y el informe salía con
+    // fechas de más de un mes.
+    const { inicio: pIni, fin: pFin } = _dsgRangoPeriodo();
+
     _dsgFiltrados = _dsgRegistros.filter(r => {
         if (nombre && !(r.socio_nombre || '').toLowerCase().includes(nombre)) return false;
         const fechaReg = _dsgFechaISO(r);
+        // Si un registro no tiene fecha utilizable no se descarta: se muestra
+        // igual para que se pueda corregir, en vez de desaparecer sin aviso.
+        if (fechaReg && (fechaReg < pIni || fechaReg > pFin)) return false;
         if (desde && fechaReg && fechaReg < desde) return false;
         if (hasta && fechaReg && fechaReg > hasta) return false;
         return true;
@@ -222,6 +254,15 @@ function dsg_filtrar() {
     // asigna por orden de creación (#1 = más antiguo), arriba queda el número más
     // alto (#81) y abajo el #1.
     _dsgFiltrados.sort((a, b) => _dsgClaveOrden(b) - _dsgClaveOrden(a));
+
+    const info = document.getElementById('dsg-resumen');
+    if (info) {
+        info.style.display = 'block';
+        info.innerHTML = '<b>Período ' + _dsgRangoVis() + '</b> · '
+            + _dsgFiltrados.length + ' registro' + (_dsgFiltrados.length !== 1 ? 's' : '')
+            + ' · Total ' + new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 })
+                .format(_dsgFiltrados.reduce((t, r) => t + (Number(r.monto) || 0), 0));
+    }
 
     dsg_renderHistorial();
 }
@@ -526,7 +567,8 @@ function dsg_informe() {
     const registros = [..._dsgFiltrados].sort((a, b) => _dsgFechaISO(a).localeCompare(_dsgFechaISO(b)));
 
     const totalGeneral = registros.reduce((s, r) => s + Number(r.monto || 0), 0);
-    const periodoLabel = _dsgPeriodoSeleccionado ? _dsgFormatPeriodo(_dsgPeriodoSeleccionado) : 'Período Actual';
+    const periodoLabel = (_dsgPeriodoSeleccionado ? _dsgFormatPeriodo(_dsgPeriodoSeleccionado) : 'Período Actual')
+        + '  ·  ' + _dsgRangoVis();
     const hoy = new Date();
     const fechaHoyVis = hoy.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
 

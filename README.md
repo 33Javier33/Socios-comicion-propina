@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Desglose de Anticipos: todo se maneja dentro del período 15 → 14 (SW v95)
+- **Causa 1 — el listado no estaba acotado al período.** El desglose traía **todos** los registros sin archivar, mezclando el período actual con los anteriores. El informe salía con fechas de más de un mes, y como el orden es por creación, los del período quedaban repartidos entre medio de los viejos.
+- **Causa 2 — había un tope de 300 registros.** Si la cuenta pasaba de ahí, el resto simplemente no llegaba, y el informe salía incompleto sin ningún aviso. El tope subió a 5.000.
+- **Fix:** el período manda. Se calcula el rango real —**del 15 al 14 del mes siguiente**— y el listado se acota a esas fechas **antes** de aplicar los filtros de búsqueda. El informe usa esa misma lista, así que hereda el recorte.
+- **Los registros sin fecha utilizable no se descartan:** se siguen mostrando, para poder corregirlos en vez de que desaparezcan sin aviso.
+- **El rango queda a la vista:** una línea sobre el listado dice *«Período 15/08/2026 al 14/09/2026 · N registros · Total $X»*, y el encabezado del informe lleva las mismas fechas.
+- El aviso de registros de períodos anteriores ahora explica **cuántos son y que no se listan** porque quedan fuera del período, invitando a archivarlos.
+- Verificado sobre los bordes: con fecha 05/09 el rango es 15/08 → 14/09; el día 15 salta al período siguiente; el día 14 todavía pertenece al anterior; y febrero cierra bien (15/01 → 14/02). Del set de prueba, el 14/08 y el 15/09 quedan fuera y los tres del período más el que no tiene fecha se listan.
+- Archivos: `js/desglose-anticipos.js` (`_dsgRangoPeriodo`, `_dsgRangoVis`, `dsg_filtrar`, `dsg_cargarHistorial`, `dsg_informe`), `index.html`. `desglose-anticipos.js?v=35`, SW `fondo-admin-v95`, versión visible **v95**.
+
 #### 2026-09-05 — El egreso de donación pasa a ser general, con buscador de motivo (SW v94)
 Segunda corrección de forma: en la v92 quedó como una tarjeta **dentro del panel del socio**, o sea que había que seleccionar un socio antes. Pero el egreso **no es de un socio**: es de una colecta.
 
