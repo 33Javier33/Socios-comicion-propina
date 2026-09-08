@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Fix: el comprobante de donación se cortaba al imprimir (SW v87)
+Eran **dos problemas distintos** que daban el mismo síntoma: datos que no aparecían en el papel.
+
+**1 · Las barras de color salían en blanco**
+- Los títulos van en **texto blanco sobre fondo de color** (el motivo, las cabeceras de área, el bloque de externos, el total del resumen). Los navegadores **no imprimen fondos** salvo que se les pida, así que ese texto blanco quedaba sobre papel blanco: **invisible**.
+- Se agregó `print-color-adjust: exact`, con lo que los fondos se imprimen y el texto vuelve a leerse.
+
+**2 · El final de la hoja quedaba cortado**
+- `.area` estaba marcada como **"no partir"** (`page-break-inside: avoid`). Con pocos aportantes andaba, pero al crecer la lista la tabla supera el alto de la hoja y el navegador **la recorta** en vez de pasarla a la página siguiente — y con ella se perdía todo lo que venía después: la nota de respaldo, las firmas y el pie.
+- Ahora la tabla **sí se parte**, pero con cuidado: la cabecera no se separa de sus filas, **la cabecera se repite en cada hoja**, y ninguna fila se corta al medio. La nota, las firmas y el pie tampoco se parten.
+- El tamaño de hoja pasó de **oficio fijo** a `size: auto`. Con un tamaño fijo, si la impresora tiene carta o A4 el navegador escala o recorta, y lo primero que se pierde es justamente el final de la página.
+- Verificado generando el comprobante con 14 socios y 6 externos: están las siete reglas de impresión y todo el contenido de cierre.
+- Archivos: `js/donaciones.js` (CSS del comprobante). `donaciones.js?v=6`, SW `fondo-admin-v87`, versión visible **v87**.
+
 #### 2026-09-05 — PIN Diario: vista en dos columnas (SW v86)
 - Mismo mosaico que Montos Recaudados y Desglose. El botón **▦ Dos columnas** va al final de la fila de áreas (Mesas · Máquinas · Técnicos · Cambistas), y se pinta azul cuando está activo.
 - **Encendido por defecto** en pantalla ancha, con su propia preferencia guardada. Bajo **1100 px** el botón no aparece y la lista sigue en una columna.

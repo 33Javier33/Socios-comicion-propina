@@ -742,7 +742,9 @@ function _donComprobanteHTML(motivo) {
     const html =
         '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + esc(fileName) + '</title><style>'
         + '* { margin:0; padding:0; box-sizing:border-box; }'
-        + 'body { font-family:Arial,Helvetica,sans-serif; font-size:9px; color:#000; padding:10px; }'
+        + 'body { font-family:Arial,Helvetica,sans-serif; font-size:9px; color:#000; padding:10px;'
+        +   ' -webkit-print-color-adjust:exact; print-color-adjust:exact; }'
+        + '* { -webkit-print-color-adjust:exact; print-color-adjust:exact; }'
         + 'h1 { font-size:14px; text-align:center; font-weight:900; letter-spacing:1px; }'
         + '.sub0 { text-align:center; font-size:8.5px; margin:2px 0 4px; font-weight:600; color:#334155; }'
         + '.motivo { text-align:center; font-size:11px; font-weight:900; color:#9d174d; border:1.5px solid #f9a8d4; background:#fdf2f8; border-radius:4px; padding:6px; margin:6px 0 8px; }'
@@ -750,7 +752,16 @@ function _donComprobanteHTML(motivo) {
         + '.kpi { flex:1; border:1px solid #cbd5e1; border-radius:4px; padding:5px 6px; text-align:center; }'
         + '.kpi b { display:block; font-size:13px; color:#0f172a; }'
         + '.kpi span { font-size:7px; text-transform:uppercase; letter-spacing:.06em; color:#64748b; font-weight:700; }'
-        + '.area { margin-bottom:10px; page-break-inside:avoid; break-inside:avoid; }'
+        // Las áreas NO se marcan como "no partir": con muchos aportantes la tabla
+        // supera el alto de la hoja y el navegador la recorta en vez de pasarla a
+        // la página siguiente. Se deja que se parta y se cuida dónde: el
+        // encabezado no se separa de sus filas, y ninguna fila se corta al medio.
+        + '.area { margin-bottom:10px; }'
+        + '.areahead { break-after:avoid; page-break-after:avoid; }'
+        + '.tbl thead { display:table-header-group; }'   /* la cabecera se repite en cada hoja */
+        + '.tbl tfoot { display:table-row-group; }'
+        + '.tbl tr, .resumen tr { break-inside:avoid; page-break-inside:avoid; }'
+        + '.nota, .firmas, .footer, .kpis { break-inside:avoid; page-break-inside:avoid; }'
         + '.areahead { background:#9d174d; color:#fff; padding:4px 8px; font-size:9.5px; font-weight:900; display:flex; justify-content:space-between; border-radius:3px 3px 0 0; }'
         + '.areahead.ext { background:#b45309; }'
         + '.aviso-ext { background:#fffbeb; border:1px solid #fcd34d; border-top:none; padding:4px 8px; font-size:7.5px; color:#92400e; }'
@@ -770,7 +781,16 @@ function _donComprobanteHTML(motivo) {
         + '.firma { flex:1; text-align:center; font-size:8px; color:#334155; }'
         + '.firma .linea { border-top:1px solid #000; margin-bottom:3px; height:1px; }'
         + '.footer { text-align:center; font-size:7.5px; color:#94a3b8; margin-top:10px; border-top:1px dashed #cbd5e1; padding-top:4px; }'
-        + '@media print { @page { margin:8mm; size:216mm 330mm portrait; } body { padding:0 !important; } .page { max-width:none !important; padding:0 !important; box-shadow:none !important; } }'
+        // size:auto en vez de forzar oficio: si la impresora tiene carta o A4, un
+        // tamaño fijo hace que el navegador escale o recorte, y lo que se pierde
+        // es justamente el final de la hoja (nota, firmas y pie).
+        + '@media print {'
+        +   '@page { margin:10mm; size:auto; }'
+        +   'html, body { height:auto !important; overflow:visible !important; }'
+        +   'body { padding:0 !important; }'
+        +   '.page { max-width:none !important; padding:0 !important; box-shadow:none !important; overflow:visible !important; }'
+        +   '.firmas { margin-top:18px; }'
+        + '}'
         + '@media screen { body { background:#ddd; } .page { background:#fff; max-width:860px; margin:0 auto; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,.2); } }'
         + '<\/style></head><body><div class="page">'
         + '<h1>COMPROBANTE DE COLECTA SOLIDARIA</h1>'
