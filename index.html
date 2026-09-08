@@ -153,6 +153,9 @@
         <!-- Tarjeta de presencia: quién está en recaudaciones y dónde.
              Va aquí (en el flujo, antes de las pestañas) para que se vea en
              TODAS las secciones sin tapar el encabezado ni el contenido. -->
+        <!-- Aviso de días sin recaudación: se ve en TODAS las secciones, como la
+             tarjeta de presencia, para no tener que entrar a Montos Recaudados. -->
+        <div id="recFaltantesCard"></div>
         <div id="recPresenciaCard"></div>
         <!-- Actividad reciente de socios (conexiones / entradas a recaudación).
              Visible en todo momento, en todas las secciones. -->
@@ -2208,7 +2211,7 @@
     <script src="js/desglose-anticipos.js?v=35"></script>
     <script src="js/meses-anteriores.js?v=32"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
-    <script src="js/recaudacion.js?v=49"></script>
+    <script src="js/recaudacion.js?v=50"></script>
     <script src="js/arqueo.js?v=33"></script>
     <script src="js/canje.js?v=32"></script>
     <script src="js/notas.js?v=32"></script>
@@ -2226,7 +2229,7 @@
     <script src="js/pt-dias.js?v=36"></script>
     <script src="js/conexiones-log.js?v=3"></script>
 <script src="js/mensajes-admin.js?v=48"></script>
-    <script src="js/app-init.js?v=49"></script>
+    <script src="js/app-init.js?v=50"></script>
 
 <!-- ══════════════════════════════════════════
      MODAL: ACERCA DE / RESEÑA
@@ -2633,7 +2636,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v96</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v97</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

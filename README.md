@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-08 — El aviso de recaudación faltante se ve en todas las secciones (SW v97)
+- **Se revierte el recorte al período que había puesto la v96.** Un día sin recaudación de un **período ya cerrado** igual hay que saberlo para poder ingresarlo — es justo el caso de la captura del usuario, donde faltaba el **jueves 30-07** estando en septiembre. Vuelve la ventana de **45 días hacia atrás**.
+- **La tarjeta ahora se ve en TODAS las secciones**, como la de presencia y la de actividad: `#recFaltantesCard` se mueve al área principal en `initLayout`, tanto en escritorio como en celular. Antes solo estaba dentro de *Montos Recaudados*, así que había que entrar a esa pestaña para enterarse.
+- Se mantienen las mejoras de la v96: el título dice **«Falta la recaudación de N días»** y el aviso también aparece arriba de Montos Recaudados, además de junto al historial.
+- Sigue sin avisar cuando aún no hay datos cargados, y nunca revisa antes del primer día que trajo la consulta.
+- Verificado reproduciendo el caso de la captura (falta el 30/07 estando en septiembre → lo muestra) más cinco escenarios: sin datos, todo al día, falta ayer, falta un día del mes pasado, y un día de hace más de 45 días.
+- Archivos: `index.html` (`#recFaltantesCard`), `js/app-init.js` (layout), `js/recaudacion.js`. `recaudacion.js?v=50`, `app-init.js?v=50`, SW `fondo-admin-v97`, versión visible **v97**.
+
 #### 2026-09-08 — El aviso de recaudación faltante ahora se ve y dice qué falta (SW v96)
 - **Mensaje explícito.** Antes decía *«Falta por recaudar · Hay 1 día sin recaudación registrada»*. Ahora el título es directo: **«Falta la recaudación de 1 día»** (o de N días), con los días como chips y una línea que dice dónde cargarlos.
 - **Se muestra arriba de la sección, no solo abajo.** Estaba únicamente junto al historial por fecha, muy por debajo de las tarjetas de estadísticas — había que bajar bastante para verlo. Ahora aparece **también al principio de Montos Recaudados**, y el de abajo se mantiene, que es donde se corrige.

@@ -15,18 +15,13 @@ function _recDiasFaltantes(fechasConDatos) {
     const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
     const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
 
-    // Se revisa el PERÍODO ACTUAL (del 15 en adelante), nunca antes de eso, y
-    // tampoco antes del primer día que llegó en la consulta —esos días pueden
-    // tener recaudación sin haber sido cargados, y avisar ahí sería falso.
-    let cur;
-    if (typeof aq_calcularPeriodoActual === 'function') {
-        cur = new Date(aq_calcularPeriodoActual().inicio + 'T00:00:00');
-    } else {
-        const y = hoy.getFullYear(), m = hoy.getMonth(), d = hoy.getDate();
-        cur = (d >= 15) ? new Date(y, m, 15) : new Date(y, m - 1, 15);
-    }
-    const primero = new Date(keys[0] + 'T00:00:00');
-    if (primero > cur) cur = primero;
+    // Ventana de 45 días hacia atrás, NO solo el período actual: un día sin
+    // recaudación de un período ya cerrado igual hay que saberlo para poder
+    // ingresarlo. Nunca antes del primer día que llegó en la consulta, porque
+    // esos días pueden tener recaudación sin haber sido cargados.
+    let cur = new Date(keys[0] + 'T00:00:00');
+    const tope = new Date(ayer); tope.setDate(tope.getDate() - 45);
+    if (cur < tope) cur = tope;
     if (cur > ayer) return [];
 
     const faltan = [];
@@ -40,7 +35,7 @@ function _recDiasFaltantes(fechasConDatos) {
 function _recPintarFaltantes(fechasConDatos) {
     // Se pinta en DOS lugares: arriba de la sección (para verlo sin bajar) y
     // junto al historial por fecha, que es donde se corrige.
-    const destinos = ['recFaltantesAvisoTop', 'recFaltantesAviso']
+    const destinos = ['recFaltantesCard', 'recFaltantesAvisoTop', 'recFaltantesAviso']
         .map(id => document.getElementById(id)).filter(Boolean);
     if (!destinos.length) return;
     const faltan = _recDiasFaltantes(fechasConDatos);

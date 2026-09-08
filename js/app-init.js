@@ -182,6 +182,7 @@ function _layoutGuardarOriginal() {
     if (!container) return;
     const orden = [
         container.querySelector('.nav-tabs'),
+        document.getElementById('recFaltantesCard'),
         document.getElementById('recPresenciaCard'),
         document.getElementById('actividadCard'),
         ...Array.from(container.querySelectorAll('.tab-content'))
@@ -239,6 +240,8 @@ function initLayout() {
         main.className = 'app-main';
         // La tarjeta de presencia va ARRIBA de la columna principal (si se queda
         // fuera del layout cae al final de la página y se ve mal en escritorio).
+        const faltCard = document.getElementById('recFaltantesCard');
+        if (faltCard) main.appendChild(faltCard);
         const presCard = document.getElementById('recPresenciaCard');
         if (presCard) main.appendChild(presCard);
         const actCard = document.getElementById('actividadCard');
@@ -259,8 +262,10 @@ function initLayout() {
             <button id="mobileMenuBtn" onclick="mobileNav_open()">☰ Secciones</button>`;
         headerSection.insertAdjacentElement('afterend', mobileBar);
         // La tarjeta de presencia queda justo debajo de la barra de secciones
+        const faltCardM = document.getElementById('recFaltantesCard');
+        if (faltCardM) mobileBar.insertAdjacentElement('afterend', faltCardM);
         const presCardM = document.getElementById('recPresenciaCard');
-        if (presCardM) mobileBar.insertAdjacentElement('afterend', presCardM);
+        if (presCardM) (faltCardM || mobileBar).insertAdjacentElement('afterend', presCardM);
         const actCardM = document.getElementById('actividadCard');
         if (actCardM && presCardM) presCardM.insertAdjacentElement('afterend', actCardM);
 
