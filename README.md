@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-08 — El aviso nombra el día que falta (SW v98)
+- Cuando falta **un solo día**, el título lo dice con nombre y fecha: **«Falta agregar la recaudación del Lunes, 7 de septiembre»**, en vez de solo *«Falta la recaudación de 1 día»*.
+- Con varios días muestra el conteo y el detalle en los chips.
+- El texto de apoyo se ajusta al singular y sigue indicando que se carga en diario.propi.
+- Archivos: `js/recaudacion.js` (`_recPintarFaltantes`). `recaudacion.js?v=51`, SW `fondo-admin-v98`, versión visible **v98**.
+
 #### 2026-09-08 — El aviso de recaudación faltante se ve en todas las secciones (SW v97)
 - **Se revierte el recorte al período que había puesto la v96.** Un día sin recaudación de un **período ya cerrado** igual hay que saberlo para poder ingresarlo — es justo el caso de la captura del usuario, donde faltaba el **jueves 30-07** estando en septiembre. Vuelve la ventana de **45 días hacia atrás**.
 - **La tarjeta ahora se ve en TODAS las secciones**, como la de presencia y la de actividad: `#recFaltantesCard` se mueve al área principal en `initLayout`, tanto en escritorio como en celular. Antes solo estaba dentro de *Montos Recaudados*, así que había que entrar a esa pestaña para enterarse.

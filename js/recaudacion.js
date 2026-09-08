@@ -51,16 +51,27 @@ function _recPintarFaltantes(fechasConDatos) {
             + 'padding:3px 10px;border-radius:20px;margin:4px 4px 0 0;white-space:nowrap;">' + txt + '</span>';
     }).join('');
     const n = faltan.length;
+    // Con un solo día se nombra el día en el título.
+    let _dia1 = faltan[0];
+    try {
+        const d1 = new Date(faltan[0] + 'T12:00:00');
+        _dia1 = d1.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+        _dia1 = _dia1.charAt(0).toUpperCase() + _dia1.slice(1);
+    } catch (e) {}
+    const titulo = n === 1
+        ? 'Falta agregar la recaudación del ' + _dia1
+        : 'Faltan agregar ' + n + ' días de recaudación';
     const css = 'background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;'
         + 'padding:12px 14px;margin-bottom:16px;box-shadow:0 1px 6px rgba(120,80,0,0.14);display:block;';
     const html = '<div style="display:flex;align-items:center;gap:8px;">'
         + '<span style="font-size:1.15em;">⚠️</span>'
         + '<span style="font-weight:800;font-size:0.95em;color:#7c2d12;">'
-        +   (n === 1 ? 'Falta la recaudación de 1 día' : 'Falta la recaudación de ' + n + ' días')
+        +   titulo
         + '</span></div>'
         + '<div style="margin-top:4px;">' + chips + '</div>'
         + '<p style="font-size:0.75em;color:#92400e;margin:8px 0 0;line-height:1.45;">'
-        +   'Estos días del período no tienen ningún monto ingresado. Si los tienes, cárgalos en diario.propi.</p>';
+        +   (n === 1 ? 'Ese día no tiene ninguna recaudación ingresada. Si la tienes, cárgala en diario.propi.'
+                        : 'Esos días no tienen ninguna recaudación ingresada. Si las tienes, cárgalas en diario.propi.') + '</p>';
     destinos.forEach(e => { e.style.cssText = css; e.innerHTML = html; });
 }
 
