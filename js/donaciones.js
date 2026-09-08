@@ -790,6 +790,16 @@ function _donComprobanteHTML(motivo) {
         +   'body { padding:0 !important; }'
         +   '.page { max-width:none !important; padding:0 !important; box-shadow:none !important; overflow:visible !important; }'
         +   '.firmas { margin-top:18px; }'
+            /* En pantalla los nombres largos se recortan con "…" (overflow:hidden),
+               pero al IMPRIMIR esa combinación con table-layout:fixed hace que el
+               navegador DESCARTE filas enteras al partir la tabla entre páginas —
+               por eso la numeración saltaba, por ejemplo del 40 al 42.
+               En papel se prefiere el nombre completo en dos líneas antes que
+               perder una fila, así que se deja fluir el texto. */
+        +   '.tbl { table-layout:auto !important; }'
+        +   '.tbl td, .tbl th, .resumen td, .resumen th {'
+        +     ' overflow:visible !important; white-space:normal !important;'
+        +     ' text-overflow:clip !important; word-break:break-word; }'
         + '}'
         + '@media screen { body { background:#ddd; } .page { background:#fff; max-width:860px; margin:0 auto; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,.2); } }'
         + '<\/style></head><body><div class="page">'

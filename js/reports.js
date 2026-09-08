@@ -825,7 +825,16 @@ async function informeSociosPuntos() {
             + '.resumen td { border:1px solid #94a3b8; padding:4px; font-size:8.5px; }'
             + '.resumen tfoot td { background:#1e3a5f; color:#fff; font-weight:900; }'
             + '.footer { text-align:center; font-size:7.5px; color:#94a3b8; margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:4px; }'
-            + '@media print { @page { margin:8mm; size:216mm 330mm portrait; } body { padding:0 !important; } .page { max-width:none !important; padding:0 !important; box-shadow:none !important; } }'
+            + '@media print { @page { margin:8mm; size:216mm 330mm portrait; } body { padding:0 !important; } .page { max-width:none !important; padding:0 !important; box-shadow:none !important; }'
+            /* Mismo cuidado que en el comprobante de donaciones: overflow:hidden
+               en las celdas junto a table-layout:fixed hace que el navegador
+               descarte filas al partir la tabla entre páginas. */
+            +   '.tbl { table-layout:auto !important; }'
+            +   '.tbl td, .tbl th, .resumen td, .resumen th { overflow:visible !important; white-space:normal !important; text-overflow:clip !important; word-break:break-word; }'
+            +   '.tbl thead { display:table-header-group; }'
+            +   '.tbl tr, .resumen tr { break-inside:avoid; page-break-inside:avoid; }'
+            +   '* { -webkit-print-color-adjust:exact; print-color-adjust:exact; }'
+            + '}'
             + '@media screen { body { background:#ddd; } .page { background:#fff; max-width:860px; margin:0 auto; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,.2); } }'
             + '<\/style>'
             + '<scr' + 'ipt>window.onload=function(){setTimeout(function(){window.print();},400);}<\/scr' + 'ipt>'

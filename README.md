@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Fix: al imprimir se saltaban filas (del 40 al 42) (SW v88)
+- **Causa:** las celdas de las tablas usan `overflow:hidden` + `white-space:nowrap` para recortar los nombres largos con «…», y la tabla usa `table-layout:fixed`. Esa combinación, **al paginar**, hace que el navegador **descarte filas enteras** en el borde entre páginas en vez de pasarlas a la hoja siguiente. Por eso la numeración saltaba del 40 al 42: la fila 41 sí estaba en el documento, pero no se pintaba.
+- **Fix:** solo al imprimir, las celdas dejan de recortar (`overflow:visible`, `white-space:normal`) y la tabla pasa a `table-layout:auto`. En papel conviene el nombre completo en dos líneas antes que perder una fila; en pantalla el recorte con «…» sigue igual.
+- **Se aplicó también a los informes de `reports.js`** (Detalle de Anticipos, Montos Diarios, Socios y Puntos), que tenían exactamente el mismo patrón y por lo tanto el mismo defecto latente. De paso recibieron la impresión de fondos de color, la cabecera repetida por hoja y las filas que no se parten al medio.
+- Verificado generando un comprobante de **57 aportantes** con apellidos largos: la numeración va del 1 al 57 **sin un solo salto**.
+- Archivos: `js/donaciones.js`, `js/reports.js`. `donaciones.js?v=7`, `reports.js` +1, SW `fondo-admin-v88`, versión visible **v88**.
+
 #### 2026-09-05 — Fix: el comprobante de donación se cortaba al imprimir (SW v87)
 Eran **dos problemas distintos** que daban el mismo síntoma: datos que no aparecían en el papel.
 
