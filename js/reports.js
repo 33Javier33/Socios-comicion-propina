@@ -65,6 +65,32 @@ async function informeAnticipos() {
             });
         });
 
+        // Egresos de donación: se registran como anticipos con un socio_id propio
+        // ('DONACION'), así que no calzan con ningún socio y quedarían fuera del
+        // informe — pero SÍ están en ANTICIPOS (Nube). Se agregan al final para
+        // que el total del informe cuadre con esa cifra.
+        const _antDon = (todosAnticipos['DONACION'] || []).filter(a => {
+            let f = a.fecha || ''; if (f.includes('T')) f = f.split('T')[0];
+            return f >= inicio && f <= fin;
+        });
+        if (_antDon.length) {
+            const totalDon = _antDon.reduce((t, a) => t + (Number(a.cantidad || a.monto) || 0), 0);
+            totalGeneral += totalDon;
+            _antDon.forEach((ant, idx) => {
+                let f = ant.fecha || ''; if (f.includes('T')) f = f.split('T')[0];
+                const fp = f.split('-');
+                filas.push({
+                    n: idx === 0 ? numero++ : '',
+                    nombre: idx === 0 ? 'EGRESOS DE DONACIÓN' : '',
+                    resp: 'DON',
+                    fecha: fp.length === 3 ? fp[2] + '/' + (MESES_ABR[parseInt(fp[1]) - 1] || fp[1]) + '/' + fp[0] : f,
+                    valor: Number(ant.cantidad || ant.monto) || 0,
+                    responsable: ant.responsable || '', respArea: '',
+                    totalSocio: idx === _antDon.length - 1 ? totalDon : null
+                });
+            });
+        }
+
         if (!filas.length) { toggleLoader(false); return showToast('No hay anticipos en el período actual', 'error'); }
 
         // ── DOS COLUMNAS: dividir en grupos completos (nunca cortar en medio de un socio) ───

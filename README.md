@@ -232,6 +232,21 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — El egreso de donación se comporta igual que un anticipo (SW v93)
+Faltaba que el egreso hiciera todo lo que hace un anticipo, no solo bajar la caja.
+
+- **Imprime el recibo** con el mismo formato y el mismo diálogo de una o dos copias (copia socio / copia administración). Folio propio con prefijo **DON-**, para distinguirlo de los `ATC-` de anticipos.
+- **Suma a ANTICIPOS (Nube)**, y por lo tanto al total que el arqueo agrega al conteo para cuadrar contra lo esperado. Sin esto, la caja bajaba pero nada compensaba esa salida y el arqueo quedaba corto por ese monto.
+- **Descuenta de la caja** las cantidades exactas de billetes retiradas (ya venía de la v92).
+- **Queda en Desglose de Anticipos** con su detalle de billetes, y aparece en vivo si esa sección está abierta.
+- Refresca los totales del período igual que al registrar un anticipo.
+
+**Cómo se logra sin afectar a ningún socio:** el egreso se guarda como un anticipo con un `socio_id` propio, `DONACION`. Los totales suman por período sobre todas las claves, así que entra en la cifra de la nube; pero el balance de cada socio se calcula leyendo **su propia** lista de anticipos, y ninguno tiene ese id. Los aportes ya se descontaron a cada donante al registrarlos en Donaciones.
+
+**Un desajuste que esto abría, y quedó cerrado:** el informe **Detalle de Anticipos** recorre los socios, así que un anticipo con id `DONACION` habría quedado fuera y su total ya no cuadraría con ANTICIPOS (Nube). Se agregó al final del informe una línea **EGRESOS DE DONACIÓN**, con lo que ambos números vuelven a coincidir.
+- Verificado: con dos anticipos ($50.000 y $30.000) y un egreso de donación ($267.000), la nube marca **$347.000**, el informe también, la caja baja exactamente por el desglose y ninguno de los dos socios ve alterado su descuento.
+- Archivos: `js/donaciones.js` (`don_egresoManual`), `js/reports.js` (`informeAnticipos`). `donaciones.js?v=12`, `reports.js` +1, SW `fondo-admin-v93`, versión visible **v93**.
+
 #### 2026-09-05 — El egreso de donación pasa a Anticipos y Ausencias, con monto manual (SW v92)
 Corrección de ubicación y de forma respecto de la v91: se había puesto como un botón en la barra superior de Gestión, con la colecta elegida de una lista y el monto calculado por la app. Lo pedido era **una opción dentro de Anticipos y Ausencias** y **hacerlo a mano**.
 

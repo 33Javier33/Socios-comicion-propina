@@ -1266,6 +1266,13 @@ function don_egrMTotal() {
     return total;
 }
 
+// El egreso de una colecta se registra como un ANTICIPO más, con un socio_id
+// propio ('DONACION'). Así entra en ANTICIPOS (Nube) y en el total que el
+// arqueo suma al conteo para cuadrar, sin afectar el balance de ningún socio
+// —ninguno tiene ese id—. Además se guarda el desglose y se imprime el recibo,
+// igual que un anticipo normal.
+const DON_ID_ANTICIPO = 'DONACION';
+
 async function don_egresoManual() {
     const monto = parseInt(String(document.getElementById('donEgrMMonto')?.value || '').replace(/\D/g, '')) || 0;
     const motivo = don_normalizarMotivo(document.getElementById('donEgrMMotivo')?.value);
@@ -1278,35 +1285,79 @@ async function don_egresoManual() {
     if (!totalBil) { showToast('Anota el desglose de billetes que sale de la caja', 'error'); return; }
     if (totalBil !== monto) { showToast('El desglose no cuadra con el monto', 'error'); return; }
 
-    // Si el motivo coincide con una colecta que ya tuvo retiro, se avisa.
     const previas = don_entregasDe(motivo);
     if (previas.length && !confirm('⚠️ "' + motivo + '" ya tiene un retiro registrado por '
         + _donMoneda(previas.reduce((t, e) => t + e.monto, 0)) + '.\n\n¿Registrar otro además de ese?')) return;
 
-    if (!confirm('Se van a RETIRAR ' + _donMoneda(monto) + ' del conteo de caja.\n\n'
-        + 'Motivo: ' + motivo + '\n\n'
-        + 'No se descuenta del balance de ningún socio: los aportes ya se descontaron en Donaciones.\n\n'
+    const _r = (typeof getSesionResponsableObj === 'function') ? getSesionResponsableObj() : {};
+    const respIni = _r.ini || 'SYS';
+    const respArea = _r.area || '';
+
+    if (!confirm('EGRESO DE DONACIÓN\n\n'
+        + '💰 Monto: ' + _donMoneda(monto) + '\n'
+        + '💝 Colecta: ' + motivo + '\n'
+        + '📅 Fecha: ' + fecha.split('-').reverse().join('/') + '\n'
+        + '🔖 Responsable: ' + respIni + (respArea ? ' (' + respArea + ')' : '') + '\n\n'
+        + 'Se descuenta de la CAJA y suma a ANTICIPOS (Nube).\n'
+        + 'No se descuenta del balance de ningún socio.\n\n'
         + '¿Confirmar?')) return;
+
+    const _a = new Date();
+    const _p = n => String(n).padStart(2, '0');
+    const folio = 'DON-' + _a.getFullYear() + _p(_a.getMonth() + 1) + _p(_a.getDate())
+        + '-' + _p(_a.getHours()) + _p(_a.getMinutes()) + _p(_a.getSeconds())
+        + '-' + respIni.replace(/[^A-Za-z0-9]/g, '');
+    const nombreRecibo = 'COLECTA — ' + motivo;
 
     toggleLoader(true, 'Registrando egreso...');
     try {
+        // 1) Sale de la caja: baja el conteo del arqueo por esos billetes.
         if (typeof aq_aplicarBilletesAnticipo === 'function') aq_aplicarBilletesAnticipo(billetes);
 
-        const res = await callApiSocios('registrarBatchExtras', {
-            detalleExtras: [{
-                id: DON_SOCIO_EXT, nombre: 'Entrega de colecta', fecha: fecha,
-                tipo: DON_TIPO_ENTREGA, monto: monto,
-                detalle: DON_PREFIJO + motivo + DON_MARCA_ENT
-            }]
+        // 2) Entra a ANTICIPOS (Nube), con el id propio de donaciones.
+        const resAnt = await callApiSocios('registrarBatchAnticipos', {
+            detalleAnticipos: [{ id: DON_ID_ANTICIPO, nombre: nombreRecibo, fecha, monto,
+                                 responsable: respIni, areaResponsable: respArea }]
         });
-        if (res && res.status === 'error') throw new Error(res.message || 'error');
+        if (resAnt && resAnt.status === 'error') throw new Error(resAnt.message || 'error');
+
+        // 3) Desglose de billetes, para que aparezca en Desglose de Anticipos.
+        try {
+            await fetch(AQ_URL_POST, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'registrarRetiroAnticipo', firma: folio, nombre: nombreRecibo,
+                    socio_id: DON_ID_ANTICIPO, monto, fecha, billetes,
+                    responsable: respIni + (respArea ? ' ' + respArea : '')
+                })
+            });
+        } catch(e2) { console.warn('[DON-EGR] desglose:', e2.message); }
+
+        // 4) Marca la colecta como entregada (no suma al total juntado).
+        await callApiSocios('registrarBatchExtras', {
+            detalleExtras: [{ id: DON_SOCIO_EXT, nombre: 'Entrega de colecta', fecha,
+                              tipo: DON_TIPO_ENTREGA, monto, detalle: DON_PREFIJO + motivo + DON_MARCA_ENT }]
+        });
 
         if (typeof sbAuditLog === 'function') sbAuditLog('Egreso de Donación', {
-            detalle: 'Retiro de caja: ' + motivo + ' — ' + _donMoneda(monto),
-            datos: { motivo, monto, billetes, fecha }
+            detalle: 'Retiro de caja: ' + motivo + ' — ' + _donMoneda(monto) + ' (folio ' + folio + ')',
+            datos: { motivo, monto, billetes, fecha, folio }
         });
 
-        showToast('Egreso registrado y descontado de la caja ✅', 'success');
+        showToast('✅ Egreso registrado — generando recibo...', 'success');
+
+        // 5) Refrescar totales y desglose, igual que al registrar un anticipo.
+        if (typeof anticipos_cambioLocal === 'function') anticipos_cambioLocal(document.getElementById('gestionSocioId')?.value || '');
+        if (typeof dsg_onNuevoAnticipo === 'function') dsg_onNuevoAnticipo({
+            firma: folio, socio_nombre: nombreRecibo, socio_id: DON_ID_ANTICIPO, monto, fecha, billetes,
+            responsable: respIni + (respArea ? ' ' + respArea : ''), created_at: new Date().toISOString()
+        });
+
+        // 6) Recibo impreso, con el mismo formato que el de un anticipo.
+        if (typeof generarBoucherAnticipo === 'function') {
+            generarBoucherAnticipo({ id: DON_ID_ANTICIPO, nombre: nombreRecibo, fecha, monto, respIni, respArea, billetes, folio });
+        }
+
         document.getElementById('donEgrMMonto').value = '';
         AQ_DENOMINACIONES.forEach(den => { const c = document.getElementById('donEgrMBil-' + den); if (c) c.value = ''; });
         don_egrMTotal();
