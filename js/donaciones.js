@@ -29,27 +29,42 @@ let _donBusqueda = '';
 
 function _donNorm(t) { return String(t || '').toLowerCase().replace(/[óÓ]/g, 'o'); }
 
+// ENTREGA: el retiro de la caja cuando se le pasa la plata al beneficiado.
+// No es un aporte — no suma al total juntado ni descuenta a nadie. Es solo el
+// registro de que el dinero salió de la caja.
+function don_esEntrega(tipo) {
+    const t = _donNorm(tipo);
+    return t.indexOf('donacion') >= 0 && t.indexOf('entrega') >= 0;
+}
 // Aporte de alguien que NO pertenece al fondo. Suma al total de la colecta
 // pero no toca el balance de nadie, porque no hay saldo del cual descontar.
 function don_esExterna(tipo) {
     const t = _donNorm(tipo);
-    return t.indexOf('donacion') >= 0 && t.indexOf('extern') >= 0;
+    return t.indexOf('donacion') >= 0 && t.indexOf('extern') >= 0 && t.indexOf('entrega') < 0;
 }
 // Aporte de un socio: este SÍ se descuenta de su balance a recibir.
 function don_esDonacion(tipo) {
     const t = _donNorm(tipo);
-    return t.indexOf('donacion') >= 0 && t.indexOf('extern') < 0;
+    return t.indexOf('donacion') >= 0 && t.indexOf('extern') < 0 && t.indexOf('entrega') < 0;
 }
-// Cualquiera de los dos, para listar la colecta y sumar el total juntado.
-function don_esAporte(tipo) { return _donNorm(tipo).indexOf('donacion') >= 0; }
+// Los dos tipos de APORTE, para listar la colecta y sumar el total juntado.
+// La entrega queda fuera: si entrara, duplicaría el total.
+function don_esAporte(tipo) {
+    const t = _donNorm(tipo);
+    return t.indexOf('donacion') >= 0 && t.indexOf('entrega') < 0;
+}
 
 // El motivo va dentro de `detalle`, después de "Donación: ". Si es un aporte
 // externo, el nombre y el área van al final entre corchetes y se recortan
 // para que la colecta agrupe igual que la de los socios.
 function don_motivoDe(detalle) {
     let d = String(detalle || '').trim();
-    const k = d.indexOf(DON_MARCA_EXT);
-    if (k >= 0) d = d.slice(0, k).trim();
+    // Se recortan las marcas del final ( [ext:...] de un aporte externo,
+    // [entrega] de un retiro de caja) para que todo caiga en la MISMA colecta.
+    [DON_MARCA_EXT, ' [entrega]'].forEach(marca => {
+        const k = d.indexOf(marca);
+        if (k >= 0) d = d.slice(0, k).trim();
+    });
     const i = d.indexOf(':');
     const m = i >= 0 ? d.slice(i + 1).trim() : d;
     return m || 'Sin motivo';
@@ -532,14 +547,20 @@ function don_pintarColectas() {
     const grupos = {};
     _donAportes.forEach(a => {
         const m = don_motivoDe(a.detalle);
-        if (!grupos[m]) grupos[m] = { motivo: m, aportes: [], total: 0, ultima: '', nExt: 0 };
+        if (don_esEntrega(a.tipo)) {   // el retiro de caja no es un aporte
+            if (!grupos[m]) grupos[m] = { motivo: m, aportes: [], total: 0, ultima: '', nExt: 0, entregado: 0 };
+            grupos[m].entregado = (grupos[m].entregado || 0) + (Number(a.monto) || 0);
+            return;
+        }
+        if (!grupos[m]) grupos[m] = { motivo: m, aportes: [], total: 0, ultima: '', nExt: 0, entregado: 0 };
         grupos[m].aportes.push(a);
         grupos[m].total += Number(a.monto) || 0;
         if (don_esExterna(a.tipo)) grupos[m].nExt++;
         const f = String(a.fecha || '').substring(0, 10);
         if (f > grupos[m].ultima) grupos[m].ultima = f;
     });
-    const lista = Object.values(grupos).sort((a, b) => b.ultima.localeCompare(a.ultima));
+    const lista = Object.values(grupos).filter(g => g.aportes.length)
+        .sort((a, b) => b.ultima.localeCompare(a.ultima));
     const totalGeneral = lista.reduce((s, g) => s + g.total, 0);
     const tot = document.getElementById('don-total-general');
     if (tot) tot.textContent = _donMoneda(totalGeneral);
@@ -569,6 +590,7 @@ function don_pintarColectas() {
                 <div style="flex:1;min-width:0;">
                     <div style="font-weight:800;font-size:0.88em;color:#0f172a;line-height:1.35;overflow-wrap:anywhere;">${_donEsc(g.motivo)}</div>
                     <div style="font-size:0.7em;color:#64748b;margin-top:1px;">${g.aportes.length} aporte${g.aportes.length === 1 ? '' : 's'}${g.nExt ? ' (' + g.nExt + ' de fuera del fondo)' : ''} · último ${_donFechaVis(g.ultima)}</div>
+                    <div style="font-size:0.68em;margin-top:2px;font-weight:700;color:${g.entregado ? '#15803d' : '#b45309'};">${g.entregado ? '✅ Retirado de la caja: ' + _donMoneda(g.entregado) : '⏳ Pendiente de retirar de la caja'}</div>
                 </div>
                 <b style="font-size:0.95em;color:#15803d;white-space:nowrap;">${_donMoneda(g.total)}</b>
                 <span id="don-cx-${i}" style="color:#94a3b8;font-size:0.8em;">▾</span>
@@ -578,6 +600,9 @@ function don_pintarColectas() {
                     style="flex:1;min-width:120px;background:#9d174d;color:white;border:none;border-radius:8px;padding:7px 10px;font-size:0.76em;font-weight:700;cursor:pointer;">🖨 Imprimir comprobante</button>
                 <button onclick="don_guardarCopia(${JSON.stringify(g.motivo).replace(/"/g, '&quot;')})"
                     style="flex:1;min-width:120px;background:white;color:#9d174d;border:1.5px solid #9d174d;border-radius:8px;padding:7px 10px;font-size:0.76em;font-weight:700;cursor:pointer;">💾 Guardar copia</button>
+                <button onclick="don_abrirEgreso(${JSON.stringify(g.motivo).replace(/"/g, '&quot;')})"
+                    title="Sacar de la caja el dinero de esta colecta"
+                    style="flex:1;min-width:120px;background:white;color:#0f766e;border:1.5px solid #0f766e;border-radius:8px;padding:7px 10px;font-size:0.76em;font-weight:700;cursor:pointer;">💵 Egreso de caja</button>
             </div>
             <div id="don-detalle-${i}" style="display:none;">${filas}</div>
         </div>`;
@@ -626,7 +651,9 @@ function don_fmtMonto(input) {
 // ══════════════════════════════════════════════════════════════════════
 
 function _donDatosColecta(motivo) {
-    const aportes = _donAportes.filter(a => don_motivoDe(a.detalle) === motivo);
+    // Solo APORTES: la entrega (el retiro de caja) no es dinero juntado,
+    // así que no entra ni en los totales ni en el listado del comprobante.
+    const aportes = _donAportes.filter(a => don_esAporte(a.tipo) && don_motivoDe(a.detalle) === motivo);
     const porArea = {};
     const externos = [];
     let totalSocios = 0, totalExternos = 0;
@@ -984,4 +1011,181 @@ async function don_colectasSinCopia() {
             return !guardados.some(g => g.indexOf(clave) === 0);
         });
     } catch(e) { return []; }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// EGRESO DE LA COLECTA — sacar el dinero de la caja
+//
+// Lo que aportan los socios no sale de su bolsillo: se les descuenta del
+// balance, así que esa plata ya está FÍSICAMENTE en la caja. Cuando se le
+// entrega al beneficiado, ese efectivo sale — y si no se registra, el arqueo
+// deja de cuadrar. Esta pantalla hace ese retiro contra el conteo de caja.
+//
+// Lo que aportaron las personas ajenas al fondo NO pasó por la caja (lo
+// entregaron directo), así que el monto viene precargado con el subtotal de
+// socios, que es lo que de verdad hay que sacar del conteo.
+// ══════════════════════════════════════════════════════════════════════
+const DON_TIPO_ENTREGA = 'DONACION_ENTREGA';
+const DON_MARCA_ENT = ' [entrega]';
+
+// Entregas ya registradas de una colecta (para no pagar dos veces)
+function don_entregasDe(motivo) {
+    return (_donAportes || []).filter(a => don_esEntrega(a.tipo) && don_motivoDe(a.detalle) === motivo)
+        .map(a => ({ monto: Number(a.monto) || 0, fecha: String(a.fecha || '').substring(0, 10), autor: a.autor || '' }));
+}
+
+function don_abrirEgreso(motivoPre) {
+    const sel = document.getElementById('donEgrColecta');
+    if (!sel) return;
+    const motivos = [...new Set((_donAportes || []).filter(a => don_esAporte(a.tipo))
+        .map(a => don_motivoDe(a.detalle)))].sort((x, y) => x.localeCompare(y, 'es'));
+    if (!motivos.length) { showToast('No hay colectas registradas todavía', 'error'); return; }
+    sel.innerHTML = motivos.map(m => `<option value="${_donEsc(m)}">${_donEsc(m.length > 80 ? m.slice(0, 80) + '…' : m)}</option>`).join('');
+    if (motivoPre && motivos.indexOf(motivoPre) >= 0) sel.value = motivoPre;
+    const f = document.getElementById('donEgrFecha');
+    if (f) f.value = new Date().toISOString().split('T')[0];
+    don_egrRenderBilletes();
+    don_egrColectaCambio();
+    document.getElementById('modalDonEgreso').style.display = 'block';
+}
+
+function don_cerrarEgreso() {
+    const m = document.getElementById('modalDonEgreso');
+    if (m) m.style.display = 'none';
+}
+
+// Al elegir la colecta se muestran sus totales y se precarga el monto
+function don_egrColectaCambio() {
+    const motivo = document.getElementById('donEgrColecta')?.value || '';
+    const d = _donDatosColecta(motivo);
+    const entregas = don_entregasDe(motivo);
+    const yaEntregado = entregas.reduce((t, e) => t + e.monto, 0);
+
+    const info = document.getElementById('donEgrInfo');
+    if (info) {
+        info.innerHTML =
+            '<div style="display:flex;justify-content:space-between;gap:10px;"><span>Total juntado</span><b>' + _donMoneda(d.total) + '</b></div>'
+            + '<div style="display:flex;justify-content:space-between;gap:10px;color:#15803d;"><span>De socios <small>(está en la caja)</small></span><b>' + _donMoneda(d.totalSocios) + '</b></div>'
+            + (d.totalExternos
+                ? '<div style="display:flex;justify-content:space-between;gap:10px;color:#b45309;"><span>De personas ajenas <small>(no pasó por caja)</small></span><b>' + _donMoneda(d.totalExternos) + '</b></div>'
+                : '')
+            + (yaEntregado
+                ? '<div style="display:flex;justify-content:space-between;gap:10px;color:#b91c1c;margin-top:5px;border-top:1px dashed #fca5a5;padding-top:5px;"><span>⚠ Ya se retiró de la caja</span><b>' + _donMoneda(yaEntregado) + '</b></div>'
+                : '');
+    }
+    const inp = document.getElementById('donEgrMonto');
+    if (inp) {
+        const sugerido = Math.max(0, d.totalSocios - yaEntregado);
+        inp.value = sugerido ? new Intl.NumberFormat('es-CL').format(sugerido) : '';
+    }
+    // Limpiar el desglose al cambiar de colecta
+    AQ_DENOMINACIONES.forEach(den => {
+        const c = document.getElementById('donEgrBil-' + den);
+        if (c) c.value = '';
+    });
+    don_egrTotalBilletes();
+}
+
+function don_egrRenderBilletes() {
+    const cont = document.getElementById('donEgrBilletes');
+    if (!cont) return;
+    const fmt = v => '$' + Number(v).toLocaleString('es-CL');
+    cont.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;">'
+        + AQ_DENOMINACIONES.map(den =>
+            '<div style="display:flex;align-items:center;gap:6px;">'
+            + '<span style="flex:1;font-size:0.78em;font-weight:700;color:#475569;">' + fmt(den) + '</span>'
+            + '<input type="text" inputmode="numeric" id="donEgrBil-' + den + '" placeholder="0" '
+            +   'oninput="don_egrTotalBilletes()" '
+            +   'style="width:58px;padding:6px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.85em;'
+            +   'font-weight:700;text-align:center;color:#0f172a;background:white;box-sizing:border-box;">'
+            + '</div>').join('')
+        + '</div>';
+}
+
+function don_egrLeerBilletes() {
+    const bil = {};
+    AQ_DENOMINACIONES.forEach(den => {
+        const el = document.getElementById('donEgrBil-' + den);
+        const n = Math.max(0, parseInt(String(el && el.value || '').replace(/\D/g, '')) || 0);
+        if (n > 0) bil[den] = n;
+    });
+    return bil;
+}
+
+function don_egrTotalBilletes() {
+    const bil = don_egrLeerBilletes();
+    const total = Object.keys(bil).reduce((t, d) => t + Number(d) * bil[d], 0);
+    const monto = parseInt(String(document.getElementById('donEgrMonto')?.value || '').replace(/\D/g, '')) || 0;
+    const el = document.getElementById('donEgrBilTotal');
+    if (!el) return total;
+    if (!total) {
+        el.innerHTML = '<span style="color:#94a3b8;font-weight:600;">Total del desglose: $0</span>';
+    } else if (monto && total !== monto) {
+        const dif = Math.abs(monto - total);
+        el.innerHTML = 'Total del desglose: <b style="color:#b45309;">' + _donMoneda(total) + '</b>'
+            + '<span style="color:#b45309;font-weight:700;"> · ' + (total > monto ? 'sobran ' : 'faltan ') + _donMoneda(dif) + '</span>';
+    } else {
+        el.innerHTML = 'Total del desglose: <b style="color:#166534;">' + _donMoneda(total) + '</b>'
+            + (monto ? '<span style="color:#166534;font-weight:700;"> · coincide ✓</span>' : '');
+    }
+    return total;
+}
+
+function don_egrFmtMonto(input) {
+    const n = parseInt(String(input.value || '').replace(/\D/g, '')) || 0;
+    input.value = n ? new Intl.NumberFormat('es-CL').format(n) : '';
+    don_egrTotalBilletes();
+}
+
+async function don_registrarEgreso() {
+    const motivo = document.getElementById('donEgrColecta')?.value || '';
+    const fecha = document.getElementById('donEgrFecha')?.value || new Date().toISOString().split('T')[0];
+    const monto = parseInt(String(document.getElementById('donEgrMonto')?.value || '').replace(/\D/g, '')) || 0;
+    const billetes = don_egrLeerBilletes();
+    const totalBil = Object.keys(billetes).reduce((t, d) => t + Number(d) * billetes[d], 0);
+
+    if (!motivo) { showToast('Elige la colecta', 'error'); return; }
+    if (!monto) { showToast('Escribe el monto a retirar de la caja', 'error'); document.getElementById('donEgrMonto')?.focus(); return; }
+    if (!totalBil) { showToast('Anota el desglose de billetes que sale de la caja', 'error'); return; }
+    if (totalBil !== monto) { showToast('El desglose no cuadra con el monto', 'error'); return; }
+
+    const entregas = don_entregasDe(motivo);
+    if (entregas.length && !confirm('⚠️ Esta colecta YA tiene un retiro registrado por '
+        + _donMoneda(entregas.reduce((t, e) => t + e.monto, 0))
+        + '.\n\n¿Registrar otro retiro además de ese?')) return;
+
+    if (!confirm('Se van a RETIRAR ' + _donMoneda(monto) + ' del conteo de caja.\n\n'
+        + 'Colecta: ' + motivo + '\n\n'
+        + 'El arqueo va a mostrar ese monto como retirado. ¿Confirmar?')) return;
+
+    toggleLoader(true, 'Registrando egreso...');
+    try {
+        // 1) Descontar de la caja (mismo camino que un anticipo pagado)
+        if (typeof aq_aplicarBilletesAnticipo === 'function') aq_aplicarBilletesAnticipo(billetes);
+
+        // 2) Dejar constancia de la entrega. Va como extra con un tipo propio:
+        //    no suma al total juntado ni descuenta a ningún socio.
+        const res = await callApiSocios('registrarBatchExtras', {
+            detalleExtras: [{
+                id: DON_SOCIO_EXT,
+                nombre: 'Entrega de colecta',
+                fecha: fecha,
+                tipo: DON_TIPO_ENTREGA,
+                monto: monto,
+                detalle: DON_PREFIJO + motivo + DON_MARCA_ENT
+            }]
+        });
+        if (res && res.status === 'error') throw new Error(res.message || 'error');
+
+        if (typeof sbAuditLog === 'function') sbAuditLog('Egreso de Donación', {
+            detalle: 'Retiro de caja por colecta: ' + motivo + ' — ' + _donMoneda(monto),
+            datos: { motivo, monto, billetes, fecha }
+        });
+
+        showToast('Egreso registrado y descontado de la caja ✅', 'success');
+        don_cerrarEgreso();
+        await don_cargarAportes();
+    } catch(e) {
+        showToast('No se pudo registrar: ' + (e.message || e), 'error');
+    } finally { toggleLoader(false); }
 }

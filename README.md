@@ -232,6 +232,22 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Donaciones: egreso de la colecta descontado de la caja (SW v91)
+Faltaba cerrar el círculo del dinero. Lo que aportan los socios **no sale de su bolsillo**: se les descuenta del balance, así que ese efectivo **ya está en la caja**. Cuando se le entrega la colecta al beneficiado, esa plata sale — y si no se registraba, el arqueo dejaba de cuadrar.
+
+- **Botón nuevo 💝 Egreso de donación** en la fila de acciones de *Anticipos y Ausencias*, y también **💵 Egreso de caja** en cada colecta de la sección Donaciones.
+- El modal muestra los tres números que importan: **total juntado**, **de socios (está en la caja)** y **de personas ajenas (no pasó por caja)**.
+- **El monto viene precargado con el subtotal de socios**, que es lo que de verdad hay que sacar del conteo: lo que aportó gente de fuera del fondo lo entregaron directo y nunca entró a la caja. Es editable por si el caso es otro.
+- Pide el **desglose de billetes** y exige que cuadre con el monto, porque es exactamente lo que se descuenta del conteo del arqueo.
+- Al confirmar descuenta de la caja por el mismo camino que un anticipo pagado (`aq_aplicarBilletesAnticipo`), queda en la auditoría y avisa si esa colecta **ya tenía un retiro registrado**.
+- Cada colecta muestra ahora su estado: **✅ Retirado de la caja: $X** o **⏳ Pendiente de retirar de la caja**.
+
+**Dos errores encontrados al probarlo, antes de publicar:**
+- La marca `[entrega]` no se recortaba del motivo, así que el retiro caía en una **colecta distinta** y la original nunca aparecía como entregada.
+- `_donDatosColecta()` no excluía las entregas, con lo que el retiro **se sumaba al total juntado y al subtotal de socios** — el comprobante habría mostrado el doble.
+- Ambos corregidos y verificados: con 2 aportes de socios ($15.000), 1 externo ($20.000) y 1 entrega ($15.000), el total juntado queda en **$35.000**, se listan **3 aportes** y el retiro se registra sin descontarle a ningún socio.
+- Archivos: `js/donaciones.js`, `index.html`. `donaciones.js?v=10`, SW `fondo-admin-v91`, versión visible **v91**.
+
 #### 2026-09-05 — El comprobante ahora corta las hojas por su cuenta (SW v90)
 Tercer intento sobre el mismo problema, y esta vez atacando la raíz: **el reparto entre hojas ya no lo hace el navegador**.
 

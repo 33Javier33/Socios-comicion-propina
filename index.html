@@ -413,6 +413,9 @@
                     <button onclick="verSaldosPorPeriodo()" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.5); border-radius:8px; padding:9px 18px; font-weight:800; font-size:0.85em; cursor:pointer; white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
                         📜 Saldos por período
                     </button>
+                        <button onclick="don_abrirEgreso()" title="Sacar de la caja el dinero de una colecta ya juntada" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.5); border-radius:8px; padding:9px 18px; font-weight:800; font-size:0.85em; cursor:pointer; white-space:nowrap;">
+                            💝 Egreso de donación
+                        </button>
                 </div>
                 </div>
             </div>
@@ -990,7 +993,52 @@
         </div>
 
         <!-- MODAL CONFIRMAR BORRADO -->
-        <div id="modalConfirmarBorrar" class="modal">
+        <!-- MODAL: egreso de una colecta (retiro del dinero desde la caja) -->
+<div id="modalDonEgreso" class="modal">
+    <div class="modal-content" style="max-width:480px; margin-top:5%;">
+        <div class="modal-header" style="background:linear-gradient(135deg,#9d174d,#db2777); border-radius:12px 12px 0 0;">
+            <h2 style="color:white; margin:0; font-size:1em;">💝 Egreso de donación</h2>
+            <span class="close-modal" style="color:white;" onclick="don_cerrarEgreso()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div style="font-size:0.8em; color:#64748b; line-height:1.5; margin-bottom:14px;">
+                Registra la <b>salida del dinero de la caja</b> cuando se le entrega la colecta al beneficiado.
+                Lo que aportaron los socios ya está en la caja (se les descontó del balance); lo que aportaron
+                personas ajenas al fondo <b>no pasó por la caja</b>, así que el monto viene precargado con el
+                subtotal de socios.
+            </div>
+
+            <label style="display:block;font-size:0.72em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Colecta</label>
+            <select id="donEgrColecta" onchange="don_egrColectaCambio()" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.86em;font-weight:700;color:#0f172a;background:white;margin-bottom:10px;"></select>
+
+            <div id="donEgrInfo" style="background:#fdf2f8;border:1px solid #f9a8d4;border-radius:9px;padding:10px 12px;font-size:0.8em;color:#0f172a;margin-bottom:12px;line-height:1.6;"></div>
+
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:140px;">
+                    <label style="display:block;font-size:0.72em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Monto a retirar de la caja</label>
+                    <input type="text" inputmode="numeric" id="donEgrMonto" oninput="don_egrFmtMonto(this)" placeholder="$0"
+                        style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:1em;font-weight:800;text-align:right;color:#0f172a;background:white;box-sizing:border-box;">
+                </div>
+                <div style="flex:1;min-width:130px;">
+                    <label style="display:block;font-size:0.72em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Fecha</label>
+                    <input type="date" id="donEgrFecha" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:0.86em;color:#0f172a;background:white;box-sizing:border-box;">
+                </div>
+            </div>
+
+            <label style="display:block;font-size:0.72em;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;">Desglose que sale de la caja</label>
+            <div style="font-size:0.72em;color:#94a3b8;margin-bottom:8px;line-height:1.4;">Cuántos billetes y monedas de cada valor se entregan. Es lo que se descuenta del conteo del arqueo.</div>
+            <div id="donEgrBilletes" style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:6px;"></div>
+            <div id="donEgrBilTotal" style="font-size:0.82em;font-weight:800;color:#0f172a;text-align:right;margin-bottom:16px;">Total del desglose: $0</div>
+
+            <div style="display:flex;gap:10px;">
+                <button onclick="don_registrarEgreso()" class="btn-submit" style="flex:1;background:linear-gradient(135deg,#9d174d,#db2777);border:none;">💝 Retirar de la caja</button>
+                <button onclick="don_cerrarEgreso()" class="btn-submit" style="flex:1;background:#999;border:none;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modalConfirmarBorrar" class="modal">
             <div class="modal-content" style="max-width:400px; margin-top:20%;">
                 <div class="modal-body" style="text-align:center;">
                     <h3 style="color:var(--danger); margin-top:0;">¿Borrar Movimiento?</h3>
@@ -2160,7 +2208,7 @@
     <script src="js/dineros.js?v=32"></script>
     <script src="js/certificados.js?v=32"></script>
     <script src="js/diario-pins.js?v=34"></script>
-    <script src="js/donaciones.js?v=9"></script>
+    <script src="js/donaciones.js?v=10"></script>
     <script src="js/documentacion.js?v=33"></script>
     <script src="js/egresos.js?v=39"></script>
     <script src="js/pt-dias.js?v=36"></script>
@@ -2573,7 +2621,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v90</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v91</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">
