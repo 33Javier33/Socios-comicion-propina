@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — El comprobante ahora corta las hojas por su cuenta (SW v90)
+Tercer intento sobre el mismo problema, y esta vez atacando la raíz: **el reparto entre hojas ya no lo hace el navegador**.
+
+- **Por qué seguía fallando:** v88 y v89 cambiaron *cómo* se dibujan las filas (tabla → bloques) y le pidieron al navegador que no las partiera, pero **quien decidía dónde termina cada hoja seguía siendo él**. Al llegar al borde seguía descartando la entrada que quedaba justo ahí.
+- **Fix:** el comprobante se arma en **hojas explícitas**. Se cuentan las líneas (fila = 1, encabezado de área = 2, cabecera de columnas = 1, subtotal = 1) con un tope de **39 líneas por hoja** — 28 en la primera, porque el título, el motivo y los indicadores ocupan 11 — y se inserta un salto de página real. El navegador ya no elige nada.
+- **Al continuar un área en la hoja siguiente** se repiten su encabezado —marcado *(continuación)*— y la fila de columnas, para no perder el contexto.
+- **El bloque de cierre** (resumen, nota, firmas y pie) no se parte: si no cabe en lo que queda, arranca en hoja nueva.
+- **Línea de verificación al pie:** *«Este comprobante lista 44 de 44 aportes»*. Si alguna vez no cuadrara, lo dice en rojo en el mismo papel.
+- Verificado sobre cinco escenarios, incluido el caso real de la impresión (27 Mesas + 9 Máquinas + 5 Bóveda + 1 Cambistas + 2 externos) y un área sola de 100 aportantes: **ninguna hoja pasa del tope y no falta ni una entrada** en ninguno.
+- Archivos: `js/donaciones.js`. `donaciones.js?v=9`, SW `fondo-admin-v90`, versión visible **v90**.
+
 #### 2026-09-05 — Fix definitivo: el comprobante ya no puede perder filas (SW v89)
 El intento anterior (v88) no bastó: en el papel seguía imprimiéndose hasta el aporte **40** y saltando al **42** — la fila 41, la quinta de Bóveda, caía justo en el corte entre hojas y desaparecía, aunque el subtotal decía «5 aportes».
 

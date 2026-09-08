@@ -681,64 +681,97 @@ function _donComprobanteHTML(motivo) {
         ? (_donFechaVis(fechas[0]) + (fechas[0] !== fechas[fechas.length - 1] ? ' al ' + _donFechaVis(fechas[fechas.length - 1]) : ''))
         : '—';
 
-    // Las filas se arman como BLOQUES (div en grilla), no como <table>.
-    // Una tabla que se parte entre hojas puede perder la fila justo en el
-    // borde —pasaba con la Bóveda: se imprimía hasta la 40 y saltaba a la 42—
-    // porque el navegador fragmenta mal las filas de tabla. Los bloques se
-    // reparten uno por uno y no se pierde ninguno.
+    // ── Paginación propia ────────────────────────────────────────────────
+    // No se deja que el navegador reparta el contenido: al partir el listado
+    // entre hojas descartaba la fila justa del borde (se imprimía hasta el
+    // aporte 40 y saltaba al 42). Acá se arma cada hoja contando líneas y se
+    // corta a mano, así ninguna entrada puede perderse.
+    const LINEAS_POR_HOJA = 39;   // tope de líneas que entran en una hoja
+    const COSTO_ENCABEZADO = 11;  // título, motivo y KPIs ocupan la primera
+    const COSTO_CIERRE = 14;      // resumen, nota, firmas y pie
+
     const COLS_SOC = ['#', 'SOCIO', 'RUT', 'FECHA', 'REGISTRADO POR', 'APORTE'];
     const COLS_EXT = ['#', 'NOMBRE', 'PROCEDENCIA', 'FECHA', 'APORTE'];
     const cabecera = (clase, cols) => '<div class="fila cab ' + clase + '">'
         + cols.map(c => '<span>' + c + '</span>').join('') + '</div>';
+    const encAreaHTML = (nombre, cant, total, clase, cont) =>
+        '<div class="areahead ' + (clase || '') + '"><span>' + esc(nombre) + (cont ? ' (continuación)' : '') + '</span>'
+        + '<span>' + cant + ' aporte' + (cant !== 1 ? 's' : '') + ' &nbsp;|&nbsp; ' + money(total) + '</span></div>';
 
+    // Se arma la lista completa de líneas y recién después se reparte en hojas.
+    const items = [];
     let n = 0;
-    const secciones = d.areas.map(g =>
-        '<div class="area">'
-        + '<div class="areahead"><span>' + esc(g.nombre) + '</span><span>'
-        +   g.filas.length + ' aporte' + (g.filas.length !== 1 ? 's' : '') + ' &nbsp;|&nbsp; ' + money(g.total) + '</span></div>'
-        + cabecera('soc', COLS_SOC)
-        + g.filas.map(f => {
+    d.areas.forEach(g => {
+        items.push({ tipo: 'head', costo: 2,
+            html: encAreaHTML(g.nombre, g.filas.length, g.total, '', false),
+            cont: encAreaHTML(g.nombre, g.filas.length, g.total, '', true) });
+        items.push({ tipo: 'cab', costo: 1, html: cabecera('soc', COLS_SOC) });
+        g.filas.forEach(f => {
             n++;
-            return '<div class="fila soc">'
+            items.push({ tipo: 'fila', costo: 1, html:
+                '<div class="fila soc">'
                 + '<span class="c">' + n + '</span>'
                 + '<span class="nom">' + esc(f.nombre) + '</span>'
                 + '<span class="c">' + esc(f.rut) + '</span>'
                 + '<span class="c">' + _donFechaVis(f.fecha) + '</span>'
                 + '<span class="c">' + esc(f.autor) + '</span>'
                 + '<span class="pts">' + money(f.monto) + '</span>'
-                + '</div>';
-        }).join('')
-        + '<div class="fila sub soc"><span class="lbl">SUBTOTAL ' + esc(g.nombre.toUpperCase())
-        +   ' — ' + g.filas.length + ' aporte' + (g.filas.length !== 1 ? 's' : '') + '</span>'
-        +   '<span class="pts">' + money(g.total) + '</span></div>'
-        + '</div>'
-    ).join('');
+                + '</div>' });
+        });
+        items.push({ tipo: 'sub', costo: 1, html:
+            '<div class="fila sub soc"><span class="lbl">SUBTOTAL ' + esc(g.nombre.toUpperCase())
+            + ' — ' + g.filas.length + ' aporte' + (g.filas.length !== 1 ? 's' : '') + '</span>'
+            + '<span class="pts">' + money(g.total) + '</span></div>' });
+    });
 
-    // Bloque aparte: quienes NO pertenecen al fondo. Van separados a propósito,
-    // porque a ellos no se les descuenta nada — entregan el dinero aparte.
+    // Quienes NO pertenecen al fondo: van aparte porque no se les descuenta nada.
     let nExt = 0;
-    const bloqueExternos = d.externos.length
-        ? '<div class="area">'
-            + '<div class="areahead ext"><span>APORTES DE PERSONAS QUE NO PERTENECEN AL FONDO</span>'
-            +   '<span>' + d.externos.length + ' aporte' + (d.externos.length !== 1 ? 's' : '')
-            +   ' &nbsp;|&nbsp; ' + money(d.totalExternos) + '</span></div>'
-            + cabecera('ext', COLS_EXT)
-            + d.externos.map(f => {
-                nExt++;
-                return '<div class="fila ext">'
-                    + '<span class="c">' + nExt + '</span>'
-                    + '<span class="nom">' + esc(f.nombre) + '</span>'
-                    + '<span class="c">' + esc(f.area) + '</span>'
-                    + '<span class="c">' + _donFechaVis(f.fecha) + '</span>'
-                    + '<span class="pts">' + money(f.monto) + '</span>'
-                    + '</div>'; 
-            }).join('')
-            + '<div class="fila sub ext"><span class="lbl">SUBTOTAL EXTERNOS — '
-            +   d.externos.length + ' aporte' + (d.externos.length !== 1 ? 's' : '') + ', sin descuento</span>'
-            +   '<span class="pts">' + money(d.totalExternos) + '</span></div>'
-            + '<div class="aviso-ext">A estas personas <b>no se les descontó nada</b>: no pertenecen al fondo y entregaron el dinero directamente.</div>'
-          + '</div>'
-        : '';
+    if (d.externos.length) {
+        items.push({ tipo: 'head', costo: 2,
+            html: encAreaHTML('APORTES DE PERSONAS QUE NO PERTENECEN AL FONDO', d.externos.length, d.totalExternos, 'ext', false),
+            cont: encAreaHTML('APORTES DE PERSONAS QUE NO PERTENECEN AL FONDO', d.externos.length, d.totalExternos, 'ext', true) });
+        items.push({ tipo: 'cab', costo: 1, html: cabecera('ext', COLS_EXT) });
+        d.externos.forEach(f => {
+            nExt++;
+            items.push({ tipo: 'fila', costo: 1, html:
+                '<div class="fila ext">'
+                + '<span class="c">' + nExt + '</span>'
+                + '<span class="nom">' + esc(f.nombre) + '</span>'
+                + '<span class="c">' + esc(f.area) + '</span>'
+                + '<span class="c">' + _donFechaVis(f.fecha) + '</span>'
+                + '<span class="pts">' + money(f.monto) + '</span>'
+                + '</div>' });
+        });
+        items.push({ tipo: 'sub', costo: 1, html:
+            '<div class="fila sub ext"><span class="lbl">SUBTOTAL EXTERNOS — '
+            + d.externos.length + ' aporte' + (d.externos.length !== 1 ? 's' : '') + ', sin descuento</span>'
+            + '<span class="pts">' + money(d.totalExternos) + '</span></div>'
+            + '<div class="aviso-ext">A estas personas <b>no se les descontó nada</b>: no pertenecen al fondo y entregaron el dinero directamente.</div>' });
+    }
+
+    // Reparto en hojas. Al abrir una hoja nueva en medio de un área, se repite
+    // su encabezado y la fila de columnas para no perder el contexto.
+    const hojas = [];
+    let buf = [], usado = COSTO_ENCABEZADO, ctxHead = '', ctxCab = '';
+    const cerrarHoja = () => {
+        hojas.push(buf.join(''));
+        buf = []; usado = 0;
+        if (ctxHead) { buf.push(ctxHead); usado += 2; }
+        if (ctxCab)  { buf.push(ctxCab);  usado += 1; }
+    };
+    items.forEach(it => {
+        if (usado + it.costo > LINEAS_POR_HOJA) cerrarHoja();
+        buf.push(it.html);
+        usado += it.costo;
+        if (it.tipo === 'head') { ctxHead = it.cont; ctxCab = ''; }
+        else if (it.tipo === 'cab') { ctxCab = it.html; }
+        else if (it.tipo === 'sub') { ctxHead = ''; ctxCab = ''; }
+    });
+    // El cierre (resumen, nota, firmas y pie) no se parte: si no cabe, hoja nueva.
+    if (usado + COSTO_CIERRE > LINEAS_POR_HOJA) cerrarHoja();
+    const _hojasPrevias = hojas.slice();
+    const secciones = _hojasPrevias.map(h => h + '<div class="salto"></div>').join('') + buf.join('');
+    const bloqueExternos = '';   // ya viene dentro del reparto de hojas
 
     const resumen = '<table class="resumen"><thead><tr><th>ORIGEN DEL APORTE</th><th>APORTES</th><th>TOTAL</th></tr></thead><tbody>'
         + d.areas.map(g => '<tr><td>' + esc(g.nombre) + '</td><td class="c">' + g.filas.length + '</td>'
@@ -784,6 +817,7 @@ function _donComprobanteHTML(motivo) {
         + '.resumen .sub-ext td { background:#fffbeb; color:#92400e; font-weight:800; }'
         // Filas como bloques en grilla. Cada .fila es un bloque independiente:
         // el navegador las reparte de a una entre las hojas y no descarta ninguna.
+        + '.salto { page-break-after:always; break-after:page; height:0; overflow:hidden; }'
         + '.fila { display:grid; border:1px solid #cbd5e1; border-top:none;'
         +   ' break-inside:avoid; page-break-inside:avoid; }'
         + '.fila.soc { grid-template-columns: 6% 32% 16% 12% 19% 15%; }'
@@ -834,9 +868,7 @@ function _donComprobanteHTML(motivo) {
         +   '.resumen { table-layout:auto !important; }'
         +   '.resumen td, .resumen th { overflow:visible !important; white-space:normal !important;'
         +     ' text-overflow:clip !important; word-break:break-word; }'
-        +   '.resumen, .areahead + .fila.cab { break-inside:avoid; page-break-inside:avoid; }'
-            /* La cabecera de columnas no debe quedar sola al final de una hoja */
-        +   '.fila.cab { break-after:avoid; page-break-after:avoid; }'
+        +   '.resumen { break-inside:avoid; page-break-inside:avoid; }'
         + '}'
         + '@media screen { body { background:#ddd; } .page { background:#fff; max-width:860px; margin:0 auto; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,.2); } }'
         + '<\/style></head><body><div class="page">'
@@ -862,7 +894,10 @@ function _donComprobanteHTML(motivo) {
                   + money(d.totalExternos) + ' <b>sin descuento alguno</b>: no tienen saldo en el fondo y entregaron el '
                   + 'dinero directamente. Se listan solo para dejar constancia de lo recaudado.'
                 : '')
-        +   ' El total juntado <b>no se abona</b> al balance del socio beneficiado: se le entrega aparte.</div>'
+        +   ' El total juntado <b>no se abona</b> al balance del socio beneficiado: se le entrega aparte.'
+        +   '<br><b>Este comprobante lista ' + (n + nExt) + ' de ' + d.aportes.length + ' aportes</b>'
+        +   ((n + nExt) === d.aportes.length ? '.' : ' — <b style="color:#b91c1c;">faltan aportes, avisar a la administración.</b>')
+        +   '</div>'
         + '<div class="firmas">'
         +   '<div class="firma"><div class="linea"></div>Administración del Fondo</div>'
         +   '<div class="firma"><div class="linea"></div>Recibí conforme</div>'
