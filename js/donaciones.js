@@ -681,23 +681,36 @@ function _donComprobanteHTML(motivo) {
         ? (_donFechaVis(fechas[0]) + (fechas[0] !== fechas[fechas.length - 1] ? ' al ' + _donFechaVis(fechas[fechas.length - 1]) : ''))
         : '—';
 
+    // Las filas se arman como BLOQUES (div en grilla), no como <table>.
+    // Una tabla que se parte entre hojas puede perder la fila justo en el
+    // borde —pasaba con la Bóveda: se imprimía hasta la 40 y saltaba a la 42—
+    // porque el navegador fragmenta mal las filas de tabla. Los bloques se
+    // reparten uno por uno y no se pierde ninguno.
+    const COLS_SOC = ['#', 'SOCIO', 'RUT', 'FECHA', 'REGISTRADO POR', 'APORTE'];
+    const COLS_EXT = ['#', 'NOMBRE', 'PROCEDENCIA', 'FECHA', 'APORTE'];
+    const cabecera = (clase, cols) => '<div class="fila cab ' + clase + '">'
+        + cols.map(c => '<span>' + c + '</span>').join('') + '</div>';
+
     let n = 0;
     const secciones = d.areas.map(g =>
         '<div class="area">'
         + '<div class="areahead"><span>' + esc(g.nombre) + '</span><span>'
         +   g.filas.length + ' aporte' + (g.filas.length !== 1 ? 's' : '') + ' &nbsp;|&nbsp; ' + money(g.total) + '</span></div>'
-        + '<table class="tbl"><thead><tr>'
-        +   '<th style="width:5%">#</th><th style="width:34%">SOCIO</th><th style="width:16%">RUT</th>'
-        +   '<th style="width:13%">FECHA</th><th style="width:17%">REGISTRADO POR</th><th style="width:15%">APORTE</th>'
-        + '</tr></thead><tbody>'
+        + cabecera('soc', COLS_SOC)
         + g.filas.map(f => {
             n++;
-            return '<tr><td class="c">' + n + '</td><td class="nom">' + esc(f.nombre) + '</td>'
-                + '<td class="c">' + esc(f.rut) + '</td><td class="c">' + _donFechaVis(f.fecha) + '</td>'
-                + '<td class="c">' + esc(f.autor) + '</td><td class="c pts">' + money(f.monto) + '</td></tr>';
+            return '<div class="fila soc">'
+                + '<span class="c">' + n + '</span>'
+                + '<span class="nom">' + esc(f.nombre) + '</span>'
+                + '<span class="c">' + esc(f.rut) + '</span>'
+                + '<span class="c">' + _donFechaVis(f.fecha) + '</span>'
+                + '<span class="c">' + esc(f.autor) + '</span>'
+                + '<span class="pts">' + money(f.monto) + '</span>'
+                + '</div>';
         }).join('')
-        + '</tbody><tfoot><tr class="sub"><td colspan="5">SUBTOTAL ' + esc(g.nombre.toUpperCase()) + '</td>'
-        +   '<td class="c">' + money(g.total) + '</td></tr></tfoot></table>'
+        + '<div class="fila sub soc"><span class="lbl">SUBTOTAL ' + esc(g.nombre.toUpperCase())
+        +   ' — ' + g.filas.length + ' aporte' + (g.filas.length !== 1 ? 's' : '') + '</span>'
+        +   '<span class="pts">' + money(g.total) + '</span></div>'
         + '</div>'
     ).join('');
 
@@ -709,18 +722,20 @@ function _donComprobanteHTML(motivo) {
             + '<div class="areahead ext"><span>APORTES DE PERSONAS QUE NO PERTENECEN AL FONDO</span>'
             +   '<span>' + d.externos.length + ' aporte' + (d.externos.length !== 1 ? 's' : '')
             +   ' &nbsp;|&nbsp; ' + money(d.totalExternos) + '</span></div>'
-            + '<table class="tbl"><thead><tr>'
-            +   '<th style="width:5%">#</th><th style="width:40%">NOMBRE</th><th style="width:20%">PROCEDENCIA</th>'
-            +   '<th style="width:13%">FECHA</th><th style="width:22%">APORTE</th>'
-            + '</tr></thead><tbody>'
+            + cabecera('ext', COLS_EXT)
             + d.externos.map(f => {
                 nExt++;
-                return '<tr><td class="c">' + nExt + '</td><td class="nom">' + esc(f.nombre) + '</td>'
-                    + '<td class="c">' + esc(f.area) + '</td><td class="c">' + _donFechaVis(f.fecha) + '</td>'
-                    + '<td class="c pts">' + money(f.monto) + '</td></tr>';
+                return '<div class="fila ext">'
+                    + '<span class="c">' + nExt + '</span>'
+                    + '<span class="nom">' + esc(f.nombre) + '</span>'
+                    + '<span class="c">' + esc(f.area) + '</span>'
+                    + '<span class="c">' + _donFechaVis(f.fecha) + '</span>'
+                    + '<span class="pts">' + money(f.monto) + '</span>'
+                    + '</div>'; 
             }).join('')
-            + '</tbody><tfoot><tr class="sub"><td colspan="4">SUBTOTAL EXTERNOS — sin descuento</td>'
-            +   '<td class="c">' + money(d.totalExternos) + '</td></tr></tfoot></table>'
+            + '<div class="fila sub ext"><span class="lbl">SUBTOTAL EXTERNOS — '
+            +   d.externos.length + ' aporte' + (d.externos.length !== 1 ? 's' : '') + ', sin descuento</span>'
+            +   '<span class="pts">' + money(d.totalExternos) + '</span></div>'
             + '<div class="aviso-ext">A estas personas <b>no se les descontó nada</b>: no pertenecen al fondo y entregaron el dinero directamente.</div>'
           + '</div>'
         : '';
@@ -767,6 +782,26 @@ function _donComprobanteHTML(motivo) {
         + '.aviso-ext { background:#fffbeb; border:1px solid #fcd34d; border-top:none; padding:4px 8px; font-size:7.5px; color:#92400e; }'
         + '.resumen .sub-socios td { background:#fdf2f8; font-weight:800; }'
         + '.resumen .sub-ext td { background:#fffbeb; color:#92400e; font-weight:800; }'
+        // Filas como bloques en grilla. Cada .fila es un bloque independiente:
+        // el navegador las reparte de a una entre las hojas y no descarta ninguna.
+        + '.fila { display:grid; border:1px solid #cbd5e1; border-top:none;'
+        +   ' break-inside:avoid; page-break-inside:avoid; }'
+        + '.fila.soc { grid-template-columns: 6% 32% 16% 12% 19% 15%; }'
+        + '.fila.ext { grid-template-columns: 6% 38% 21% 13% 22%; }'
+        + '.fila > span { padding:3px 4px; font-size:8px; border-right:1px solid #cbd5e1;'
+        +   ' overflow-wrap:anywhere; word-break:break-word; min-width:0; }'
+        + '.fila > span:last-child { border-right:none; }'
+        + '.fila.cab { background:#e2e8f0; border-top:1px solid #94a3b8; }'
+        + '.fila.cab > span { font-size:7px; font-weight:700; text-transform:uppercase;'
+        +   ' letter-spacing:.04em; text-align:center; }'
+        + '.fila.cab > span:nth-child(2) { text-align:left; }'
+        + '.fila.sub { background:#fdf2f8; }'
+        + '.fila.sub.ext { background:#fffbeb; }'
+        + '.fila.sub > span { font-weight:800; font-size:7.5px; }'
+        + '.fila.sub .lbl { grid-column:1 / -2; }'
+        + '.fila .c { text-align:center; }'
+        + '.fila .nom { font-weight:700; }'
+        + '.fila .pts { font-weight:900; text-align:center; }'
         + '.tbl { width:100%; border-collapse:collapse; table-layout:fixed; }'
         + '.tbl th { background:#e2e8f0; border:1px solid #94a3b8; padding:3px 4px; font-size:7px; text-transform:uppercase; letter-spacing:.04em; }'
         + '.tbl td { border:1px solid #cbd5e1; padding:3px 4px; font-size:8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }'
@@ -796,10 +831,12 @@ function _donComprobanteHTML(motivo) {
                por eso la numeración saltaba, por ejemplo del 40 al 42.
                En papel se prefiere el nombre completo en dos líneas antes que
                perder una fila, así que se deja fluir el texto. */
-        +   '.tbl { table-layout:auto !important; }'
-        +   '.tbl td, .tbl th, .resumen td, .resumen th {'
-        +     ' overflow:visible !important; white-space:normal !important;'
+        +   '.resumen { table-layout:auto !important; }'
+        +   '.resumen td, .resumen th { overflow:visible !important; white-space:normal !important;'
         +     ' text-overflow:clip !important; word-break:break-word; }'
+        +   '.resumen, .areahead + .fila.cab { break-inside:avoid; page-break-inside:avoid; }'
+            /* La cabecera de columnas no debe quedar sola al final de una hoja */
+        +   '.fila.cab { break-after:avoid; page-break-after:avoid; }'
         + '}'
         + '@media screen { body { background:#ddd; } .page { background:#fff; max-width:860px; margin:0 auto; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,.2); } }'
         + '<\/style></head><body><div class="page">'

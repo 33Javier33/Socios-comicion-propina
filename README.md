@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-05 — Fix definitivo: el comprobante ya no puede perder filas (SW v89)
+El intento anterior (v88) no bastó: en el papel seguía imprimiéndose hasta el aporte **40** y saltando al **42** — la fila 41, la quinta de Bóveda, caía justo en el corte entre hojas y desaparecía, aunque el subtotal decía «5 aportes».
+
+- **Causa de fondo:** el listado se armaba con `<table>`. Cuando una tabla se parte entre páginas, el navegador fragmenta las filas por su cuenta y **puede descartar la que queda en el borde**. Ajustar `overflow`, `table-layout` y las reglas de corte —lo que se probó en v87 y v88— reduce el problema pero **no lo elimina**.
+- **Fix:** el listado dejó de usar tablas. Cada línea es ahora un **bloque independiente** (`div` en grilla CSS) con el mismo aspecto: columnas alineadas, bordes y cabecera. El navegador reparte bloques de a uno y **no descarta ninguno**.
+- **Los subtotales ahora dicen cuántos aportes tienen** — *SUBTOTAL BÓVEDA — 5 aportes* —, así una fila faltante se detecta contando, sin depender de la vista.
+- Los nombres largos ya no se cortan con «…»: se acomodan en dos líneas dentro de su columna.
+- La cabecera de columnas no puede quedar sola al final de una hoja.
+- Verificado reproduciendo el caso real de la impresión (27 Mesas + 9 Máquinas + 5 Bóveda + 1 Cambistas + 2 externos = 44): las 42 filas de socios salen numeradas del 1 al 42 **sin saltos**, y las 2 de externos completas.
+- Archivos: `js/donaciones.js` (armado del comprobante y su CSS). `donaciones.js?v=8`, SW `fondo-admin-v89`, versión visible **v89**.
+
 #### 2026-09-05 — Fix: al imprimir se saltaban filas (del 40 al 42) (SW v88)
 - **Causa:** las celdas de las tablas usan `overflow:hidden` + `white-space:nowrap` para recortar los nombres largos con «…», y la tabla usa `table-layout:fixed`. Esa combinación, **al paginar**, hace que el navegador **descarte filas enteras** en el borde entre páginas en vez de pasarlas a la hoja siguiente. Por eso la numeración saltaba del 40 al 42: la fila 41 sí estaba en el documento, pero no se pintaba.
 - **Fix:** solo al imprimir, las celdas dejan de recortar (`overflow:visible`, `white-space:normal`) y la tabla pasa a `table-layout:auto`. En papel conviene el nombre completo en dos líneas antes que perder una fila; en pantalla el recorte con «…» sigue igual.
