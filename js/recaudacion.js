@@ -8,13 +8,27 @@
 function _recDiasFaltantes(fechasConDatos) {
     const set = new Set(fechasConDatos);
     const keys = [...set].sort();
+    // Sin datos cargados no se avisa nada: si no, al abrir la app y antes de
+    // que llegue la consulta saldría el período entero como faltante.
     if (!keys.length) return [];
+
     const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
     const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
-    let cur = new Date(keys[0] + 'T00:00:00');
-    // No escanear rangos gigantes: como mucho, los últimos 45 días.
-    const tope = new Date(ayer); tope.setDate(tope.getDate() - 45);
-    if (cur < tope) cur = tope;
+
+    // Se revisa el PERÍODO ACTUAL (del 15 en adelante), nunca antes de eso, y
+    // tampoco antes del primer día que llegó en la consulta —esos días pueden
+    // tener recaudación sin haber sido cargados, y avisar ahí sería falso.
+    let cur;
+    if (typeof aq_calcularPeriodoActual === 'function') {
+        cur = new Date(aq_calcularPeriodoActual().inicio + 'T00:00:00');
+    } else {
+        const y = hoy.getFullYear(), m = hoy.getMonth(), d = hoy.getDate();
+        cur = (d >= 15) ? new Date(y, m, 15) : new Date(y, m - 1, 15);
+    }
+    const primero = new Date(keys[0] + 'T00:00:00');
+    if (primero > cur) cur = primero;
+    if (cur > ayer) return [];
+
     const faltan = [];
     for (let d = new Date(cur); d <= ayer; d.setDate(d.getDate() + 1)) {
         const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -24,10 +38,13 @@ function _recDiasFaltantes(fechasConDatos) {
 }
 
 function _recPintarFaltantes(fechasConDatos) {
-    const el = document.getElementById('recFaltantesAviso');
-    if (!el) return;
+    // Se pinta en DOS lugares: arriba de la sección (para verlo sin bajar) y
+    // junto al historial por fecha, que es donde se corrige.
+    const destinos = ['recFaltantesAvisoTop', 'recFaltantesAviso']
+        .map(id => document.getElementById(id)).filter(Boolean);
+    if (!destinos.length) return;
     const faltan = _recDiasFaltantes(fechasConDatos);
-    if (!faltan.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    if (!faltan.length) { destinos.forEach(e => { e.style.display = 'none'; e.innerHTML = ''; }); return; }
     const chips = faltan.map(k => {
         const d = new Date(k + 'T12:00:00');
         let txt = k;
@@ -39,13 +56,17 @@ function _recPintarFaltantes(fechasConDatos) {
             + 'padding:3px 10px;border-radius:20px;margin:4px 4px 0 0;white-space:nowrap;">' + txt + '</span>';
     }).join('');
     const n = faltan.length;
-    el.style.cssText = 'background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;'
+    const css = 'background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;'
         + 'padding:12px 14px;margin-bottom:16px;box-shadow:0 1px 6px rgba(120,80,0,0.14);display:block;';
-    el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;">'
-        + '<span style="font-size:1.05em;">📅</span>'
-        + '<span style="font-weight:800;font-size:0.9em;color:#7c2d12;">Falta por recaudar</span></div>'
-        + '<p style="font-size:0.78em;color:#7c2d12;opacity:0.9;margin:6px 0 0;">Hay ' + n + ' día' + (n !== 1 ? 's' : '')
-        + ' sin recaudación registrada:</p><div style="margin-top:2px;">' + chips + '</div>';
+    const html = '<div style="display:flex;align-items:center;gap:8px;">'
+        + '<span style="font-size:1.15em;">⚠️</span>'
+        + '<span style="font-weight:800;font-size:0.95em;color:#7c2d12;">'
+        +   (n === 1 ? 'Falta la recaudación de 1 día' : 'Falta la recaudación de ' + n + ' días')
+        + '</span></div>'
+        + '<div style="margin-top:4px;">' + chips + '</div>'
+        + '<p style="font-size:0.75em;color:#92400e;margin:8px 0 0;line-height:1.45;">'
+        +   'Estos días del período no tienen ningún monto ingresado. Si los tienes, cárgalos en diario.propi.</p>';
+    destinos.forEach(e => { e.style.cssText = css; e.innerHTML = html; });
 }
 
 async function cargarRecaudaciones(silent = false) {
@@ -144,6 +165,7 @@ function procesarDatosRecaudacion(datos, silent) {
     }
 
     _recPintarFaltantes(Object.keys(grupos));
+    _recPintarFaltantes.ultimo = Object.keys(grupos);
     const container = document.getElementById('contenedorFechas'); container.innerHTML = '';
     if (fechasOrdenadas.length === 0) { container.innerHTML = '<div style="text-align:center; color:#7f8c8d; padding:20px;">No hay registros.</div>'; } else {
         fechasOrdenadas.forEach(fecha => {

@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-08 — El aviso de recaudación faltante ahora se ve y dice qué falta (SW v96)
+- **Mensaje explícito.** Antes decía *«Falta por recaudar · Hay 1 día sin recaudación registrada»*. Ahora el título es directo: **«Falta la recaudación de 1 día»** (o de N días), con los días como chips y una línea que dice dónde cargarlos.
+- **Se muestra arriba de la sección, no solo abajo.** Estaba únicamente junto al historial por fecha, muy por debajo de las tarjetas de estadísticas — había que bajar bastante para verlo. Ahora aparece **también al principio de Montos Recaudados**, y el de abajo se mantiene, que es donde se corrige.
+- **Ventana acotada al período.** El escaneo se limita al **período actual (del 15 en adelante)** en vez de arrastrar hasta 45 días hacia atrás, que podía cruzar el corte de mes. Nunca revisa antes del primer día que trajo la consulta, para no marcar como faltantes días que sí tienen recaudación pero no vinieron cargados.
+- **No avisa si aún no hay datos:** al abrir la app, antes de que llegue la consulta, no aparece nada — si no, saldría el período entero como faltante.
+- Verificado sobre siete escenarios: sin datos, período completo salvo ayer, un día del medio, dos días, todo al día, lista que arranca a mitad de período e historial largo. En todos responde lo esperado.
+- Archivos: `js/recaudacion.js` (`_recDiasFaltantes`, `_recPintarFaltantes`), `index.html`. `recaudacion.js?v=49`, SW `fondo-admin-v96`, versión visible **v96**.
+
 #### 2026-09-05 — Desglose de Anticipos: todo se maneja dentro del período 15 → 14 (SW v95)
 - **Causa 1 — el listado no estaba acotado al período.** El desglose traía **todos** los registros sin archivar, mezclando el período actual con los anteriores. El informe salía con fechas de más de un mes, y como el orden es por creación, los del período quedaban repartidos entre medio de los viejos.
 - **Causa 2 — había un tope de 300 registros.** Si la cuenta pasaba de ahí, el resto simplemente no llegaba, y el informe salía incompleto sin ningún aviso. El tope subió a 5.000.
