@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-10 — Fix: la columna de Anticipo y Ausencias quedaba cortada (SW v99)
+- **Causa:** esa columna quedó **fija al hacer scroll** (`position: sticky`) en el layout de cuatro columnas de la v79. Una columna fija que es **más alta que la pantalla** deja su parte de abajo inalcanzable: se queda pegada arriba y el scroll de la página no la mueve, así que el final del formulario de Ausencias no se podía ver.
+- **Fix:** la columna tiene ahora **su propio alto máximo y su propio scroll** (`max-height: calc(100vh - 32px)` + `overflow-y: auto`). Sigue acompañando al hacer scroll, pero se puede llegar hasta el final de *Anticipo* y de *Ausencias*.
+- Se agregó `overscroll-behavior: contain`, para que al llegar al final de la columna el scroll no se contagie a la página, y un poco de aire a la derecha para la barra de desplazamiento.
+- **Mismo arreglo preventivo en Arqueo de Caja:** la columna de *Resultados* tenía exactamente el mismo `sticky` sin alto máximo, así que con muchas denominaciones se habría cortado igual.
+- Los globos de ayuda (el botón **?**) no se ven afectados: usan `position: fixed`, así que ningún contenedor con scroll los recorta.
+- Archivos: `styles.css`. `styles.css?v=99`, SW `fondo-admin-v99`, versión visible **v99**.
+
 #### 2026-09-08 — El aviso nombra el día que falta (SW v98)
 - Cuando falta **un solo día**, el título lo dice con nombre y fecha: **«Falta agregar la recaudación del Lunes, 7 de septiembre»**, en vez de solo *«Falta la recaudación de 1 día»*.
 - Con varios días muestra el conteo y el detalle en los chips.
