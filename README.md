@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-11 — Fix: el Remanente en vivo no coincidía con el del cierre (SW v100)
+- **Síntoma:** el **Remanente en vivo** del banner de *Anticipos y Ausencias* mostraba un total **más alto** que el que después salía al cerrar el mes.
+- **Causa:** "en vivo" tiene que responder *«cuánto quedaría si se cierra hoy»*, pero el cálculo del banner no era el mismo que el del cierre real (`cierresMes_calcularSocio`). Tenía **tres diferencias**, y las tres inflaban el total:
+  1. **No descontaba las donaciones.** Al cerrar, lo aportado a una colecta se descuenta igual que un anticipo; en vivo no se estaba restando.
+  2. **Descartaba anticipos repetidos** (misma fecha y mismo monto se tomaban como uno solo). Dos anticipos de $3.250 el mismo día son dos anticipos, y el cierre los cuenta por separado.
+  3. **Filtraba los anticipos por período.** El cierre suma **todos** los anticipos cargados; el filtro dejaba fuera los de antes del día 15 y esos montos desaparecían del descuento.
+- **Fix:** el cálculo en vivo replica ahora paso a paso el del cierre — suma todos los anticipos sin descartar repetidos ni filtrar por fecha, agrega las donaciones a lo pedido, y reparte con la misma regla (`a pagar` en múltiplos de $1.000, el resto es remanente; si el saldo queda negativo, el remanente es ese negativo).
+- **Por qué el error se notaba poco en algunos socios:** el remanente es justamente *lo que sobra de los miles*, así que una diferencia de monto redondo ($20.000, $15.000) se la comía el redondeo y no se veía. Se notaba con montos no redondos y con los saldos negativos, donde no hay redondeo que la absorba.
+- **Verificado** contra el cálculo del cierre en 8 casos (planta con anticipos, socio con donación, dos anticipos iguales el mismo día, saldo negativo, Part-Time, montos no redondos y Gastos Comisión excluido): los dos dan **exactamente** el mismo remanente. Con el cálculo anterior, 4 de esos 8 socios diferían.
+- No cambia el desglose por área de los chips ni la exclusión de *Gastos Comisión* (se retira completo, no deja remanente).
+- Archivos: `js/anticipos.js`. `js/anticipos.js?v=53`, SW `fondo-admin-v100`, versión visible **v100**.
+
 #### 2026-09-10 — Fix: la columna de Anticipo y Ausencias quedaba cortada (SW v99)
 - **Causa:** esa columna quedó **fija al hacer scroll** (`position: sticky`) en el layout de cuatro columnas de la v79. Una columna fija que es **más alta que la pantalla** deja su parte de abajo inalcanzable: se queda pegada arriba y el scroll de la página no la mueve, así que el final del formulario de Ausencias no se podía ver.
 - **Fix:** la columna tiene ahora **su propio alto máximo y su propio scroll** (`max-height: calc(100vh - 32px)` + `overflow-y: auto`). Sigue acompañando al hacer scroll, pero se puede llegar hasta el final de *Anticipo* y de *Ausencias*.

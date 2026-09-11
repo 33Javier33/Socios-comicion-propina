@@ -2191,29 +2191,45 @@ async function calcularRemanenteVivo() {
         const _area = _remAreaNorm(socio.area);
         if (_area.excl) return; // GastosComision no tiene remanente (se retira completo)
         const pts = Number(socio.puntos) || 0;
-        let sumaAnt = 0; const vistos = new Set();
+
+        // ── Lo pedido: anticipos + donaciones ───────────────────────────
+        // Se replica EXACTAMENTE lo que hace cierresMes_calcularSocio(), que es
+        // el cálculo del cierre real. "En vivo" significa «cuánto quedaría si se
+        // cierra hoy», así que cualquier diferencia con ese cálculo es un error.
+        //   · Sin descartar repetidos: dos anticipos del mismo monto el mismo
+        //     día son dos anticipos, y el cierre los cuenta por separado.
+        //   · Sin filtrar por período: el cierre suma todos los anticipos que
+        //     hay cargados (la tabla se vacía al reiniciar el período).
+        let sumaAnt = 0;
         (antObj[socio.id] || []).forEach(a => {
-            const m = parseFloat(a.cantidad) || 0; if (!m) return;
-            let f = a.fecha || ''; if (f.includes('T')) f = f.split('T')[0];
-            if (f < inicio || f > fin) return;
-            const firma = f + '|' + m; if (vistos.has(firma)) return; vistos.add(firma);
-            sumaAnt += m;
+            sumaAnt += Number(a.cantidad || a.monto || 0);
         });
+
         const aus = new Set();
         (extObj[socio.id] || []).forEach(e => {
             if (e.tipo && e.tipo.toLowerCase().includes('ausencia')) {
                 let f = e.fecha || ''; if (f.includes('T')) f = f.split('T')[0]; aus.add(f);
             }
+            // Las donaciones descuentan del saldo igual que un anticipo. Sin
+            // esto el remanente en vivo salía MÁS ALTO que el del cierre, por
+            // el total de lo aportado a colectas.
+            else if (typeof don_esDonacion === 'function' && don_esDonacion(e.tipo)) {
+                sumaAnt += Number(e.monto || 0);
+            }
         });
+
         let alcance = 0;
         if (socio.contrato === 'Part-Time') {
             (diasPT[socio.id] || globalDiasPT[socio.id] || []).forEach(d => { if (!aus.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
         } else {
-            for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) { if (!aus.has(dia) && valor) alcance += valor; }
+            for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) { if (!aus.has(dia)) alcance += (Number(valor) || 0); }
         }
         alcance *= pts;
         const saldoReal = alcance + (saldos[socio.id] || 0) - sumaAnt;
-        const rem = saldoReal > 0 ? Math.round(saldoReal - Math.floor(saldoReal / 1000) * 1000) : Math.round(saldoReal);
+        // Idéntico al cierre: a pagar en múltiplos de $1.000 y el resto queda
+        // como remanente; si el saldo es negativo, el remanente es ese negativo.
+        const aPagar = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
+        const rem = Math.round(saldoReal - aPagar);
         total += rem;
         const gk = (socio.contrato === 'Part-Time') ? { key: 'parttime', label: 'Part-Time' } : _area;
         if (!porAreaMap[gk.key]) porAreaMap[gk.key] = { label: gk.label, total: 0 };
