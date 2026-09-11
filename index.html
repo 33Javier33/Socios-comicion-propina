@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/fondo-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=102">
+    <link rel="stylesheet" href="styles.css?v=103">
 </head>
 <body>
 
@@ -1939,7 +1939,12 @@
                 <h3 style="margin:0;color:var(--primary);">⚙️ Configuración del Sistema</h3>
                 <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-config',this)" title="Ayuda rápida">?</button><div id="pop-config" class="ayuda-popover"><div class="ayuda-popover-titulo">⚙️ Configuración del Sistema</div><div class="ayuda-popover-texto">Panel de administración del sistema. Controla seguridad, responsables y conexiones.</div><ol class="ayuda-popover-pasos"><li><strong>PIN:</strong> tu contraseña de acceso al sistema</li><li><strong>Clave de recuperación:</strong> úsala si olvidas el PIN</li><li><strong>Responsables:</strong> personas autorizadas para registrar anticipos</li><li><strong>URLs:</strong> conexiones a Google Sheets (no modificar sin asistencia técnica)</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Guarda la clave de recuperación en un lugar físico seguro, separado del dispositivo.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaIrA('config')">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-config')">✕</span></div></div></div>
             </div>
-            <div style="max-width:500px; margin:0 auto;">
+            <!-- Dos columnas en computador (más el menú lateral = 3):
+                 Seguridad (PIN + clave de recuperación) al centro ·
+                 Responsables autorizados a la derecha. En angosto se apilan. -->
+            <div class="config-wrap">
+            <div class="config-layout">
+            <div class="config-col-seguridad">
 
                 <!-- Cambiar PIN -->
                 <div style="background:white; border-radius:14px; border:1px solid var(--border); padding:24px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
@@ -1997,8 +2002,11 @@
                     <button onclick="cfg_cambiarClave()" class="btn-submit" style="width:100%; background:var(--success);">Guardar nueva clave</button>
                 </div>
 
+            </div><!-- /config-col-seguridad -->
+
+            <div class="config-col-responsables">
                 <!-- Gestión de Responsables -->
-                <div style="background:white;border-radius:14px;border:1px solid var(--border);padding:24px;margin-top:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                <div style="background:white;border-radius:14px;border:1px solid var(--border);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;border-bottom:1px solid #eee;padding-bottom:14px;">
                         <span style="font-size:1.5em;">👥</span>
                         <div>
@@ -2015,8 +2023,10 @@
                         <button onclick="cfg_agregarResponsable()" class="btn-submit" style="padding:9px 16px;white-space:nowrap;">➕ Agregar</button>
                     </div>
                 </div>
+            </div><!-- /config-col-responsables -->
 
-            </div>
+            </div><!-- /config-layout -->
+            </div><!-- /config-wrap -->
         </div>
 
         <!-- PESTAÑA 7: AUDITORÍA -->
@@ -2233,7 +2243,7 @@
     <script src="js/dineros.js?v=32"></script>
     <script src="js/certificados.js?v=32"></script>
     <script src="js/diario-pins.js?v=34"></script>
-    <script src="js/donaciones.js?v=13"></script>
+    <script src="js/donaciones.js?v=14"></script>
     <script src="js/documentacion.js?v=33"></script>
     <script src="js/egresos.js?v=39"></script>
     <script src="js/pt-dias.js?v=36"></script>
@@ -2646,7 +2656,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v102</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v103</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

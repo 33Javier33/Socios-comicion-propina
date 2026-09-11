@@ -544,15 +544,17 @@ function don_pintarColectas() {
     }
 
     // Agrupar por motivo
+    const _grupoNuevo = m => ({ motivo: m, aportes: [], total: 0, ultima: '', nExt: 0, entregado: 0, entregas: [] });
     const grupos = {};
     _donAportes.forEach(a => {
         const m = don_motivoDe(a.detalle);
         if (don_esEntrega(a.tipo)) {   // el retiro de caja no es un aporte
-            if (!grupos[m]) grupos[m] = { motivo: m, aportes: [], total: 0, ultima: '', nExt: 0, entregado: 0 };
+            if (!grupos[m]) grupos[m] = _grupoNuevo(m);
             grupos[m].entregado = (grupos[m].entregado || 0) + (Number(a.monto) || 0);
+            grupos[m].entregas.push(a);   // se guardan una por una: así se ven y se pueden anular
             return;
         }
-        if (!grupos[m]) grupos[m] = { motivo: m, aportes: [], total: 0, ultima: '', nExt: 0, entregado: 0 };
+        if (!grupos[m]) grupos[m] = _grupoNuevo(m);
         grupos[m].aportes.push(a);
         grupos[m].total += Number(a.monto) || 0;
         if (don_esExterna(a.tipo)) grupos[m].nExt++;
@@ -584,13 +586,55 @@ function don_pintarColectas() {
             </div>`;
         }).join('');
 
-        return `<div style="border:1px solid #e2e8f0;border-radius:11px;margin-bottom:10px;overflow:hidden;background:white;">
+        // ── Retiros de caja de esta colecta ───────────────────────────────
+        // Se suman todos porque el dinero puede sacarse en varias veces. Pero
+        // dos retiros de IGUAL monto y FECHA casi siempre son el mismo cargado
+        // dos veces, y eso hace que "Retirado de la caja" muestre el doble; se
+        // avisa en vez de sumarlo callado. Igual se avisa si lo retirado supera
+        // lo juntado, que nunca debería pasar.
+        const _firmasEnt = {};
+        g.entregas.forEach(e => {
+            const k = String(e.fecha).substring(0, 10) + '|' + (Number(e.monto) || 0);
+            _firmasEnt[k] = (_firmasEnt[k] || 0) + 1;
+        });
+        const hayRepetido = Object.values(_firmasEnt).some(n => n > 1);
+        const excede = g.entregado > g.total;
+        const avisoEnt = (hayRepetido || excede) ? `
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 10px;margin:8px 10px 0;">
+                <div style="font-size:0.74em;font-weight:800;color:#b91c1c;">⚠️ Revisa los retiros de caja</div>
+                <div style="font-size:0.7em;color:#7f1d1d;margin-top:2px;line-height:1.45;">
+                    ${hayRepetido ? 'Hay <b>retiros repetidos</b> (mismo monto y misma fecha): lo más probable es que el mismo egreso quedara cargado dos veces, y por eso el total retirado aparece de más. ' : ''}
+                    ${excede ? 'Lo retirado (<b>' + _donMoneda(g.entregado) + '</b>) es <b>mayor</b> que lo juntado (<b>' + _donMoneda(g.total) + '</b>). ' : ''}
+                    Abre el detalle y anula el que sobre con el 🗑.
+                </div>
+            </div>` : '';
+
+        const filasEnt = g.entregas.length ? `
+            <div style="padding:8px 10px;border-top:2px solid #e2e8f0;background:#f8fafc;">
+                <div style="font-size:0.72em;font-weight:800;color:#0f766e;margin-bottom:5px;">💵 Retiros de caja (${g.entregas.length})</div>
+                ${g.entregas.slice().sort((a, b) => String(b.fecha).localeCompare(String(a.fecha))).map(e => {
+                    const k = String(e.fecha).substring(0, 10) + '|' + (Number(e.monto) || 0);
+                    const rep = _firmasEnt[k] > 1;
+                    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-bottom:1px dashed #e2e8f0;${rep ? 'background:#fef2f2;' : ''}">
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:0.76em;font-weight:700;color:#0f172a;">Retiro de caja${rep ? ' <span style="color:#b91c1c;font-weight:800;">· repetido</span>' : ''}</div>
+                            <div style="font-size:0.66em;color:#94a3b8;">${_donFechaVis(e.fecha)}${e.autor ? ' · ' + _donEsc(e.autor) : ''}</div>
+                        </div>
+                        <b style="font-size:0.8em;color:#0f766e;white-space:nowrap;">${_donMoneda(e.monto)}</b>
+                        <button onclick="don_borrarEntrega('${_donEsc(e.id)}','${_donEsc(String(e.fecha).substring(0,10))}')"
+                            title="Anular este retiro de caja (no toca el balance de ningún socio)"
+                            style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:3px 7px;font-size:0.72em;cursor:pointer;">🗑</button>
+                    </div>`;
+                }).join('')}
+            </div>` : '';
+
+        return `<div style="border:1px solid ${(hayRepetido || excede) ? '#fca5a5' : '#e2e8f0'};border-radius:11px;margin-bottom:10px;overflow:hidden;background:white;">
             <button onclick="don_toggleColecta(${i})" style="width:100%;display:flex;align-items:flex-start;gap:10px;padding:11px 12px;background:#f8fafc;border:none;border-bottom:1px solid #e2e8f0;cursor:pointer;text-align:left;">
                 <span style="font-size:1.15em;line-height:1.2;">💝</span>
                 <div style="flex:1;min-width:0;">
                     <div style="font-weight:800;font-size:0.88em;color:#0f172a;line-height:1.35;overflow-wrap:anywhere;">${_donEsc(g.motivo)}</div>
                     <div style="font-size:0.7em;color:#64748b;margin-top:1px;">${g.aportes.length} aporte${g.aportes.length === 1 ? '' : 's'}${g.nExt ? ' (' + g.nExt + ' de fuera del fondo)' : ''} · último ${_donFechaVis(g.ultima)}</div>
-                    <div style="font-size:0.68em;margin-top:2px;font-weight:700;color:${g.entregado ? '#15803d' : '#b45309'};">${g.entregado ? '✅ Retirado de la caja: ' + _donMoneda(g.entregado) : '⏳ Pendiente de retirar de la caja'}</div>
+                    <div style="font-size:0.68em;margin-top:2px;font-weight:700;color:${(hayRepetido || excede) ? '#b91c1c' : (g.entregado ? '#15803d' : '#b45309')};">${g.entregado ? (hayRepetido || excede ? '⚠️' : '✅') + ' Retirado de la caja: ' + _donMoneda(g.entregado) + (g.entregas.length > 1 ? ' (' + g.entregas.length + ' retiros)' : '') : '⏳ Pendiente de retirar de la caja'}</div>
                 </div>
                 <b style="font-size:0.95em;color:#15803d;white-space:nowrap;">${_donMoneda(g.total)}</b>
                 <span id="don-cx-${i}" style="color:#94a3b8;font-size:0.8em;">▾</span>
@@ -604,7 +648,8 @@ function don_pintarColectas() {
                     title="Sacar de la caja el dinero de esta colecta"
                     style="flex:1;min-width:120px;background:white;color:#0f766e;border:1.5px solid #0f766e;border-radius:8px;padding:7px 10px;font-size:0.76em;font-weight:700;cursor:pointer;">💵 Egreso de caja</button>
             </div>
-            <div id="don-detalle-${i}" style="display:none;">${filas}</div>
+            ${avisoEnt}
+            <div id="don-detalle-${i}" style="display:none;">${filas}${filasEnt}</div>
         </div>`;
     }).join('');
 }
@@ -629,6 +674,33 @@ async function don_borrarAporte(id, socioId, fecha) {
         globalCacheAllData = null;
         try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
         showToast('Aporte anulado', 'success');
+        await don_cargarAportes();
+    } catch(e) {
+        showToast('No se pudo anular: ' + (e.message || e), 'error');
+    } finally { toggleLoader(false); }
+}
+
+// Anular un RETIRO de caja mal registrado (por ejemplo el mismo egreso cargado
+// dos veces, que hacía que "Retirado de la caja" mostrara el doble).
+// Ojo: esto borra solo la MARCA del retiro. No devuelve billetes al arqueo ni
+// saca el monto de ANTICIPOS (Nube) — eso, si corresponde, se corrige en
+// Desglose de Anticipos y en el conteo de caja. Se dice en el propio aviso
+// para no dejar creyendo que se deshizo todo el egreso.
+async function don_borrarEntrega(id, fecha) {
+    if (!confirm('¿Anular este retiro de caja?\n\n'
+        + 'Se borra la marca del retiro y deja de sumar en "Retirado de la caja".\n\n'
+        + 'NO devuelve los billetes al arqueo ni quita el monto de ANTICIPOS (Nube):\n'
+        + 'si ese egreso también quedó duplicado ahí, corrígelo en Desglose de Anticipos.')) return;
+    toggleLoader(true, 'Anulando retiro...');
+    try {
+        const res = await callApiSocios('borrarMovimiento', { uuid: id, tipo: 'Extra', socioId: DON_SOCIO_EXT, fecha: fecha });
+        if (res && res.status === 'error') throw new Error(res.message || 'error');
+        globalCacheAllData = null;
+        try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch(e) {}
+        if (typeof sbAuditLog === 'function') sbAuditLog('Anular Retiro de Donación', {
+            idAfectado: id, detalle: 'Retiro de caja anulado (fecha ' + fecha + ')'
+        });
+        showToast('Retiro anulado', 'success');
         await don_cargarAportes();
     } catch(e) {
         showToast('No se pudo anular: ' + (e.message || e), 'error');
@@ -1166,6 +1238,21 @@ async function don_registrarEgreso() {
     if (totalBil !== monto) { showToast('El desglose no cuadra con el monto', 'error'); return; }
 
     const previas = don_entregasDe(motivo);
+    // Un retiro EXACTAMENTE igual (mismo monto y misma fecha) casi siempre es el
+    // mismo egreso cargado dos veces, no un segundo retiro de verdad. Sacar la
+    // plata en varias veces es válido, pero dos veces lo mismo el mismo día no,
+    // y es lo que dejaba "Retirado de la caja" mostrando el doble. Se bloquea:
+    // si de verdad hay que repetirlo, se cambia la fecha o se hace por partes.
+    const igual = previas.find(e => Number(e.monto) === monto && String(e.fecha).substring(0, 10) === fecha);
+    if (igual) {
+        alert('⛔ Retiro duplicado\n\n'
+            + '"' + motivo + '" ya tiene un retiro por ' + _donMoneda(monto)
+            + ' con fecha ' + fecha.split('-').reverse().join('/') + '.\n\n'
+            + 'Registrarlo de nuevo haría que "Retirado de la caja" muestre el doble.\n\n'
+            + 'Si el dinero se sacó en dos veces, cambia la fecha o el monto.\n'
+            + 'Si el anterior está mal, anúlalo primero con el 🗑 en la colecta.');
+        return;
+    }
     if (previas.length && !confirm('⚠️ "' + motivo + '" ya tiene un retiro registrado por '
         + _donMoneda(previas.reduce((t, e) => t + e.monto, 0)) + '.\n\n¿Registrar otro además de ese?')) return;
 

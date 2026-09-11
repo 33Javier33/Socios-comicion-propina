@@ -232,6 +232,27 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-11 — Donaciones: retiro de caja duplicado · Configuración en tres columnas (SW v103)
+
+**1. "Retirado de la caja" mostraba el doble (duplicidad real en los datos)**
+- En la colecta del fallecimiento de la madre del anfitrión Gonzalo Ojeda aparecía **$524.000 retirados** cuando de la caja salieron **$262.000**. Revisado contra la base: en `extras` hay **dos filas `DONACION_ENTREGA` de $262.000**, misma fecha (05-09), distinto `id`.
+- **Causa:** el egreso se registró **dos veces, con dos versiones distintas de la app**. El primero (08-09 04:41) con la lógica de la **v91**, que solo descontaba la caja y dejaba la marca del retiro — no llegaba a ANTICIPOS (Nube). El segundo (08-09 05:40) con la versión actual, que sí hace el circuito completo (anticipo + desglose + marca + recibo). Cada uno dejó su propia marca.
+- **ANTICIPOS (Nube) está bien:** hay **un solo** anticipo de $262.000 y **un solo** desglose. Lo que estaba mal era el **cartel** de "Retirado de la caja", que sumaba las dos marcas.
+- **Ojo con el arqueo:** las dos versiones descuentan los billetes del conteo, así que **la caja se descontó dos veces** ($262.000 de menos). Conviene revisarlo en el arqueo del día.
+- **Lo que se arregló en la app:**
+  - Los **retiros se listan uno por uno** al abrir la colecta, cada uno con su fecha, quién lo hizo y un **🗑 para anularlo** — antes no había forma de corregir un retiro mal cargado desde la app.
+  - **Aviso en rojo** cuando hay retiros repetidos (mismo monto y misma fecha) o cuando lo retirado supera lo juntado, con el borde de la colecta marcado. Ya no se suma en silencio.
+  - Al registrar un egreso, un retiro **idéntico** (mismo motivo, monto y fecha) queda **bloqueado**: es casi siempre el mismo cargado dos veces. Sacar la plata en varias veces sigue permitido — con otra fecha o monto.
+  - Anular un retiro borra **solo la marca**: no devuelve billetes al arqueo ni quita el monto de ANTICIPOS (Nube). Se avisa en el propio confirm para no dejar creyendo que se deshizo todo el egreso.
+
+**2. Configuración del Sistema en tres columnas**
+- Igual que Notas Admin: **menú** a la izquierda · **Seguridad** (PIN + clave de recuperación) al centro · **Responsables autorizados** a la derecha.
+- PIN y clave van juntos porque son lo mismo — cómo se entra al sistema — y Responsables, que es una lista, se lleva su propia columna.
+- Las columnas tienen **tope de ancho** (620px + 400px) y el conjunto se centra: son formularios cortos, y estirarlos a todo el monitor dejaba campos enormes para escribir un PIN de cuatro dígitos.
+- Bajo 1280px se apilan como antes. Verificado en navegador a 1440px y 390px, sin scroll horizontal.
+
+- Archivos: `js/donaciones.js`, `index.html`, `styles.css`. `js/donaciones.js?v=14`, `styles.css?v=103`, SW `fondo-admin-v103`, versión visible **v103**.
+
 #### 2026-09-11 — Notas Admin en tres columnas para computador (SW v102)
 - La sección estaba encerrada en una columna de 700px centrada: en un monitor quedaba el formulario arriba, la lista abajo y **mucho espacio vacío a los lados**.
 - Ahora en computador se reparte en **tres columnas**: **menú** a la izquierda · **✏️ Nueva Nota** al centro · **📋 Notas guardadas** a la derecha.
