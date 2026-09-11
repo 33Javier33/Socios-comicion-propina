@@ -276,6 +276,30 @@
         @media (min-width: 1700px) {
             .don-layout { grid-template-columns: minmax(0, 1fr) 460px; }
         }
+
+        /* ── Notas Admin: tres columnas en computador ─────────────────────
+           menú (barra lateral) · Nueva Nota · Notas guardadas.
+           El formulario es de alto fijo, así que se le da un ancho fijo y
+           queda acompañando al hacer scroll; la lista, que es la que crece,
+           se lleva todo el espacio que sobra. En angosto (celular/tablet)
+           vuelve a ser una sola columna, primero el formulario. */
+        .notas-wrap { max-width: 700px; margin: 0 auto; }
+        .notas-layout { display: block; }
+        @media (min-width: 1280px) {
+            .notas-wrap { max-width: none; }
+            .notas-layout { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 22px; align-items: start; }
+            /* Misma precaución que en Gestión y Arqueo: si la columna llega a
+               ser más alta que la pantalla, con su propio scroll se alcanza el
+               final (con el selector de socios abierto, el formulario crece). */
+            .notas-col-nueva {
+                position: sticky; top: 16px;
+                max-height: calc(100vh - 32px); overflow-y: auto;
+                overscroll-behavior: contain; padding-right: 4px;
+            }
+        }
+        @media (min-width: 1700px) {
+            .notas-layout { grid-template-columns: 440px minmax(0, 1fr); }
+        }
         body.dark-mode #recVistaBtn { background:#1e293b; border-color:#334155; color:#cbd5e1; }
         body.dark-mode #recVistaBtn.activo { background: var(--secondary); border-color: var(--secondary); color:#fff; }
         .date-header { background-color: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }

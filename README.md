@@ -232,6 +232,15 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-11 — Notas Admin en tres columnas para computador (SW v102)
+- La sección estaba encerrada en una columna de 700px centrada: en un monitor quedaba el formulario arriba, la lista abajo y **mucho espacio vacío a los lados**.
+- Ahora en computador se reparte en **tres columnas**: **menú** a la izquierda · **✏️ Nueva Nota** al centro · **📋 Notas guardadas** a la derecha.
+- El formulario lleva **ancho fijo** (400px, 440px en pantallas muy anchas) porque no crece, y la lista de notas se queda con **todo el espacio que sobra** — que es la que necesita el ancho.
+- La columna del formulario **acompaña al hacer scroll** (`sticky`), así se puede escribir una nota mientras se revisa la lista. Con **su propio alto máximo y scroll**, para que al abrir *⭐ Destacar para socios* se llegue igual hasta el botón Publicar (el problema que tuvo la columna de Anticipos en la v99).
+- **En celular y tablet no cambia nada:** bajo 1280px vuelve a ser una sola columna, primero el formulario y después las notas.
+- Verificado en navegador a 1440px, 1280px y 390px: tres columnas en computador, una sola en celular y **sin scroll horizontal** en ninguno.
+- Archivos: `index.html`, `styles.css`. `styles.css?v=102`, SW `fondo-admin-v102`, versión visible **v102**.
+
 #### 2026-09-11 — Saldos por período: un registro por socio · Cambistas dentro de Mesas (SW v101)
 
 **1. Saldos anteriores por período — solo el de la fecha más reciente**

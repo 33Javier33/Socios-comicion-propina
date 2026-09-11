@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/fondo-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=101">
+    <link rel="stylesheet" href="styles.css?v=102">
 </head>
 <body>
 
@@ -1882,11 +1882,16 @@
 
         <!-- PESTAÑA 5: NOTAS DE ADMINISTRACIÓN -->
         <div id="tab-notas" class="tab-content">
-            <div style="max-width:700px;margin:0 auto;">
+            <div class="notas-wrap">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
                     <h3 style="margin:0;color:var(--primary);">📝 Notas de Administración</h3>
                     <div style="position:relative;display:inline-block;"><button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('pop-notas',this)" title="Ayuda rápida">?</button><div id="pop-notas" class="ayuda-popover"><div class="ayuda-popover-titulo">📝 Notas de Administración</div><div class="ayuda-popover-texto">Espacio compartido para dejar mensajes importantes visibles para todos los administradores.</div><ol class="ayuda-popover-pasos"><li>Presiona <strong>➕ Nueva nota</strong> para crear una</li><li>Las notas se sincronizan con la nube automáticamente</li><li><strong>Mantén presionada</strong> una nota para eliminarla</li><li>Útil para avisos de turno, novedades o instrucciones</li></ol><div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">💡 Las notas son compartidas — todos los usuarios del sistema pueden verlas.</div><div class="ayuda-popover-footer"><span class="ayuda-popover-link" onclick="ayudaIrA('config')">📖 Ver ayuda completa →</span><span class="ayuda-popover-cerrar" onclick="ayudaRapida_cerrar('pop-notas')">✕</span></div></div></div>
                 </div>
+                <!-- Dos columnas en computador (más el menú lateral = 3):
+                     Nueva Nota al centro · Notas guardadas a la derecha.
+                     En pantallas angostas vuelve a quedar una debajo de otra. -->
+                <div class="notas-layout">
+                <div class="notas-col-nueva">
                 <!-- Formulario nueva nota -->
                 <div style="background:white; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border:1px solid #eee;">
                     <h3 style="margin:0 0 12px 0; color:var(--primary); font-size:1em;">✏️ Nueva Nota</h3>
@@ -1912,6 +1917,9 @@
                         <button onclick="notasPublicar()" class="btn-submit" style="padding:9px 24px;">📤 Publicar</button>
                     </div>
                 </div>
+                </div><!-- /notas-col-nueva -->
+
+                <div class="notas-col-guardadas">
                 <!-- Lista de notas -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <h3 style="margin:0; color:var(--primary); font-size:1em;">📋 Notas guardadas</h3>
@@ -1920,6 +1928,8 @@
                 <div id="notasListaContainer">
                     <div style="text-align:center; padding:30px; color:#7f8c8d;">Cargando notas...</div>
                 </div>
+                </div><!-- /notas-col-guardadas -->
+                </div><!-- /notas-layout -->
             </div>
         </div>
 
@@ -2636,7 +2646,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v101</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v102</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">
