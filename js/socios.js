@@ -731,18 +731,23 @@ function renderizarListaBusqueda() {
         return;
     }
 
-    const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasparttime': 'Mesas (Part-Time)', 'cambistas': 'Mesas (Cambistas)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'gastoscomision': 'Gastos Comisión' };
-    const coloresArea = { 'mesas': '#3498db', 'mesasparttime': '#3498db', 'cambistas': '#9b59b6', 'maquinas': '#e67e22', 'tecnicos': '#7f8c8d', 'boveda': '#27ae60', 'gastoscomision': '#607d8b' };
+    const nombresArea = { 'mesas': 'Mesas (Planta)', 'mesasparttime': 'Mesas (Part-Time)', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'gastoscomision': 'Gastos Comisión' };
+    const coloresArea = { 'mesas': '#3498db', 'mesasparttime': '#3498db', 'maquinas': '#e67e22', 'tecnicos': '#7f8c8d', 'boveda': '#27ae60', 'gastoscomision': '#607d8b' };
 
     const grupos = {};
     filtrados.forEach(s => {
         let key = (s.area || 'otros').toLowerCase().replace(/\s/g,'');
+        // Cambistas NO es un área aparte: es una sub-área de Mesas, igual que en
+        // Gestión de Socios. Va con Mesas según su contrato (Planta → Mesas
+        // Planta; Part-Time → Mesas Part-Time) y se marca con 💱 en cada socio,
+        // así se sigue viendo quién es cambista sin partir el área en dos.
+        if (key.includes('cambista')) key = 'mesas'; else if (key.includes('gastos')) key = 'gastoscomision';
         if(key === 'mesas' && s.contrato === 'Part-Time') key = 'mesasparttime';
         if(!grupos[key]) grupos[key] = [];
         grupos[key].push(s);
     });
 
-    const ordenAreas = ['mesas','mesasparttime','cambistas','maquinas','tecnicos','boveda','gastoscomision','otros'];
+    const ordenAreas = ['mesas','mesasparttime','maquinas','tecnicos','boveda','gastoscomision','otros'];
     const areasSorted = Object.keys(grupos).sort((a,b) => {
         const ia = ordenAreas.indexOf(a); const ib = ordenAreas.indexOf(b);
         return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
@@ -767,8 +772,11 @@ function renderizarListaBusqueda() {
             const badgeAnt = mov && mov.anticipos ? '<span style="background:#fff3cd;color:#856404;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:4px;">💰 ANT</span>' : '';
             const badgeAus = mov && mov.ausencias ? '<span style="background:#fde8e8;color:#9b1c1c;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">📅 AUS</span>' : '';
             const badgeEgr = (typeof egresosPorSocio !== 'undefined' && egresosPorSocio[s.id]) ? '<span style="background:#e0f2fe;color:#075985;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">💸 EGRESO</span>' : '';
+            // Cambistas van dentro de Mesas, pero se marcan para poder distinguirlos.
+            const badgeCamb = (s.area || '').toLowerCase().includes('cambista')
+                ? '<span style="background:#f3e8ff;color:#6b21a8;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">💱 CAMB</span>' : '';
 
-            div.innerHTML = `<strong>${s.nombre} ${s.apellido}</strong> <span style="font-size:0.8em;color:#7f8c8d;">${s.puntos} pts</span>${badgeAnt}${badgeAus}${badgeEgr}`;
+            div.innerHTML = `<strong>${s.nombre} ${s.apellido}</strong> <span style="font-size:0.8em;color:#7f8c8d;">${s.puntos} pts</span>${badgeCamb}${badgeAnt}${badgeAus}${badgeEgr}`;
             div.onclick = () => seleccionarSocio(s.id);
             lista.appendChild(div);
         });

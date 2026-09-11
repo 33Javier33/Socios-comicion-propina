@@ -310,6 +310,35 @@ async function verSaldosPorPeriodo() {
             map[key].items.push(r);
             const t = new Date(r.guardado_en).getTime() || 0; if (t > map[key].ts) map[key].ts = t;
         });
+        // Un socio puede tener VARIOS registros dentro del mismo período: se le
+        // guardó un saldo y después se corrigió porque había una diferencia. El
+        // que vale es el ÚLTIMO, así que por cada socio se deja solo el de la
+        // fecha más reciente y los anteriores quedan como "corregido" (no se
+        // pierden: se muestra de cuánto venía y cuántas veces se tocó).
+        Object.values(map).forEach(g => {
+            const porSocio = {};
+            g.items.forEach(r => {
+                const sid = String(r.socio_id || r.socio_nombre || '').trim().toLowerCase() || ('_' + Math.random());
+                const t = new Date(r.guardado_en).getTime() || 0;
+                const prev = porSocio[sid];
+                if (!prev) { porSocio[sid] = { row: r, ts: t, n: 1, primero: r }; return; }
+                prev.n++;
+                // Empate de fecha → gana el id más alto (el insertado después).
+                const masNuevo = t > prev.ts || (t === prev.ts && Number(r.id || 0) > Number(prev.row.id || 0));
+                if (masNuevo) prev.row = r; else prev.primero = r;
+                if (t > prev.ts) prev.ts = t;
+                if (((new Date(prev.primero.guardado_en).getTime()) || 0) > t) prev.primero = r;
+            });
+            g.items = Object.values(porSocio).map(v => {
+                const row = Object.assign({}, v.row);
+                if (v.n > 1) {
+                    row._corregido = v.n;               // cuántos registros hubo en el período
+                    row._montoInicial = Number(v.primero.monto) || 0;  // con cuánto había partido
+                }
+                return row;
+            });
+            g.omitidos = g.items.reduce((s, r) => s + ((r._corregido || 1) - 1), 0);
+        });
         _saldosPerGrupos = Object.values(map).sort((a, b) => b.ts - a.ts);
         _saldosPerRender('');
     } catch (e) {
@@ -328,16 +357,26 @@ function _saldosPerRender(filtro) {
         if (!items.length) return;
         algo = true;
         const total = items.reduce((s, r) => s + (Number(r.monto) || 0), 0);
-        const filas = items.slice().sort((a, b) => String(a.socio_nombre || '').localeCompare(String(b.socio_nombre || ''))).map(r => `
+        const corregidos = items.filter(r => r._corregido).length;
+        const filas = items.slice().sort((a, b) => String(a.socio_nombre || '').localeCompare(String(b.socio_nombre || ''))).map(r => {
+            // Si en el período se le guardó más de una vez, se muestra el último
+            // y se avisa que fue corregido (con el monto del que venía).
+            const corr = r._corregido
+                ? `<span style="font-size:0.64em;font-weight:800;color:#92400e;background:#fef3c7;border-radius:8px;padding:1px 6px;margin-left:5px;white-space:nowrap;" title="Se guardó ${r._corregido} veces en este período; se muestra el último">✏️ corregido</span>`
+                : '';
+            const antes = r._corregido
+                ? `<div style="font-size:0.66em;color:#b45309;">antes: ${fmtM(r._montoInicial)}</div>` : '';
+            return `
             <div style="display:flex;justify-content:space-between;gap:8px;padding:7px 10px;border-bottom:1px solid #f1f5f9;">
-                <div style="min-width:0;"><div style="font-weight:600;color:#0f172a;font-size:0.86em;">${_htmlEscSoc(r.socio_nombre || 'Socio')}</div><div style="font-size:0.68em;color:#94a3b8;">${_fechaCortaSaldo(r.guardado_en)}</div></div>
+                <div style="min-width:0;"><div style="font-weight:600;color:#0f172a;font-size:0.86em;">${_htmlEscSoc(r.socio_nombre || 'Socio')}${corr}</div><div style="font-size:0.68em;color:#94a3b8;">${_fechaCortaSaldo(r.guardado_en)}</div>${antes}</div>
                 <div style="font-weight:800;color:#8e44ad;white-space:nowrap;">${fmtM(r.monto)}</div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
         const abierto = !!f;
         html += `<div style="border:1px solid #e5e7eb;border-radius:10px;margin-bottom:8px;overflow:hidden;">
             <div onclick="_saldosPerToggle(${gi})" style="cursor:pointer;background:#f8fafc;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;user-select:none;">
                 <div style="font-weight:800;color:#4338ca;">📅 ${g.label}</div>
-                <div style="display:flex;gap:8px;align-items:center;"><span style="font-size:0.72em;color:#64748b;">${items.length} soc · ${fmtM(total)}</span><span id="saldosPerArrow-${gi}" style="color:#94a3b8;">${abierto ? '▾' : '▸'}</span></div>
+                <div style="display:flex;gap:8px;align-items:center;"><span style="font-size:0.72em;color:#64748b;">${items.length} soc · ${fmtM(total)}${corregidos ? ` · <span style="color:#b45309;font-weight:700;">${corregidos} corregido${corregidos !== 1 ? 's' : ''}</span>` : ''}</span><span id="saldosPerArrow-${gi}" style="color:#94a3b8;">${abierto ? '▾' : '▸'}</span></div>
             </div>
             <div id="saldosPerBody-${gi}" style="display:${abierto ? 'block' : 'none'};max-height:40vh;overflow-y:auto;">${filas}</div>
         </div>`;

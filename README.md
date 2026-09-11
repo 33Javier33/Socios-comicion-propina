@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-11 — Saldos por período: un registro por socio · Cambistas dentro de Mesas (SW v101)
+
+**1. Saldos anteriores por período — solo el de la fecha más reciente**
+- Si a un socio se le guardó el saldo **más de una vez dentro del mismo período**, la lista los mostraba todos y el total del período los sumaba a los dos, como si fueran dos socios distintos.
+- Un segundo registro no es un saldo aparte: es una **corrección** del primero, porque había una diferencia. El que vale es el **último**.
+- Ahora, por cada socio y dentro de cada período, se deja **un solo registro: el de la fecha más reciente**. El total del período y el conteo de socios pasan a ser los correctos.
+- Los anteriores **no se ocultan sin avisar**: el socio queda marcado **✏️ corregido**, con **de cuánto venía** debajo del monto, y la cabecera del período dice cuántos se corrigieron. El historial completo del socio sigue disponible en **📜 Saldos anteriores** (botón del panel del socio), que no cambia.
+- Casos contemplados: registros que llegan desordenados, **empate exacto de fecha y hora** (gana el guardado después), socios sin `socio_id` (se agrupan por nombre) y el mismo socio en **períodos distintos** (no se mezclan).
+
+**2. Cambistas va incluido en Mesas también en Anticipos y Ausencias**
+- El buscador de socios de **Anticipos y Ausencias** mostraba *Mesas (Cambistas)* como un **área aparte**, mientras que en **Gestión de Socios** —que es como corresponde— los cambistas van **dentro de Mesas**. La misma área quedaba partida en dos según dónde se mirara.
+- **Cambistas no es un área: es una sub-área de Mesas.** Ahora se agrupa igual que en Gestión de Socios: **Mesas (Planta)** o **Mesas (Part-Time)** según el contrato del socio.
+- Para no perder de vista quién es cambista, cada uno lleva la etiqueta **💱 CAMB** junto a su nombre (equivale al *💱 Cambistas* de la tarjeta en Gestión de Socios).
+- Verificado que las dos secciones agrupan **idéntico** en los 8 casos (Mesas planta y part-time, Cambistas planta y part-time, «Mesas Cambistas», Máquinas, Bóveda y Gastos Comisión).
+- El *Remanente en vivo* ya sumaba bien los cambistas dentro de Mesas (`_remAreaNorm`); esto alinea el listado con ese mismo criterio.
+
+- Archivos: `js/anticipos.js`, `js/socios.js`. `js/anticipos.js?v=54`, `js/socios.js?v=41`, SW `fondo-admin-v101`, versión visible **v101**.
+
 #### 2026-09-11 — Fix: el Remanente en vivo no coincidía con el del cierre (SW v100)
 - **Síntoma:** el **Remanente en vivo** del banner de *Anticipos y Ausencias* mostraba un total **más alto** que el que después salía al cerrar el mes.
 - **Causa:** "en vivo" tiene que responder *«cuánto quedaría si se cierra hoy»*, pero el cálculo del banner no era el mismo que el del cierre real (`cierresMes_calcularSocio`). Tenía **tres diferencias**, y las tres inflaban el total:
