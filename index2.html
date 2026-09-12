@@ -982,26 +982,56 @@ async function plLeerFoto(inp){
   cont.innerHTML = '<div class="card p-3 text-sm text-slate-300">⏳ Leyendo la foto…</div>';
   try {
     const b64 = await plComprimir(f);
-    const r = await fetch(SB_URL + '/functions/v1/leer-planilla', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + SB_KEY, 'apikey': SB_KEY },
-      body: JSON.stringify({ imagen: b64 })
-    });
+    // Si la función no está desplegada, Supabase responde 404 SIN cabeceras
+    // CORS y el navegador bloquea la respuesta antes de que la veamos: fetch
+    // revienta con TypeError "Failed to fetch" y nunca llegamos a mirar el
+    // status. Por eso el caso "no desplegada" se detecta acá, en el catch del
+    // propio fetch, y no por el código de respuesta.
+    let r;
+    try {
+      r = await fetch(SB_URL + '/functions/v1/leer-planilla', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + SB_KEY, 'apikey': SB_KEY },
+        body: JSON.stringify({ imagen: b64 })
+      });
+    } catch (eRed) {
+      throw new Error(navigator.onLine === false ? '__SIN_CONEXION__' : '__NO_DESPLEGADA__');
+    }
     if (r.status === 404) throw new Error('__NO_DESPLEGADA__');
-    const j = await r.json();
-    if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.error) {
+      // 401/403 = la función existe pero rechaza la llamada (JWT o clave).
+      if (r.status === 401 || r.status === 403) throw new Error('__NO_AUTORIZADA__');
+      throw new Error(j.error || ('El servidor respondió ' + r.status));
+    }
     if (!j.texto || !j.texto.trim()) throw new Error('No se reconoció ninguna fila en la foto');
     const ta = document.getElementById('plTexto'); if (ta) ta.value = j.texto;
     plProcesar(j.texto);
   } catch(e) {
-    cont.innerHTML = e.message === '__NO_DESPLEGADA__'
-      ? `<div class="card p-3 text-sm" style="border-color:#854d0e;background:#3f2d0a;">
-           <div class="font-bold text-amber-300 mb-1">La lectura de fotos no está activada</div>
-           <div class="text-xs text-amber-100/80">Falta desplegar la función <code>leer-planilla</code> en Supabase con su clave.
-           Mientras tanto podés abrir «…o escribir/pegar las filas» y cargar la planilla como texto: se valida igual.</div></div>`
-      : `<div class="card p-3 text-sm" style="border-color:#7f1d1d;background:#3f1212;">
-           <div class="font-bold text-red-300 mb-1">No se pudo leer la foto</div>
-           <div class="text-xs text-red-100/80">${esc(e.message)}. Probá con más luz o cargá las filas como texto.</div></div>`;
+    const aviso = (titulo, cuerpo, tono) => `
+      <div class="card p-3 text-sm" style="${tono === 'rojo'
+        ? 'border-color:#7f1d1d;background:#3f1212;' : 'border-color:#854d0e;background:#3f2d0a;'}">
+        <div class="font-bold ${tono === 'rojo' ? 'text-red-300' : 'text-amber-300'} mb-1">${titulo}</div>
+        <div class="text-xs" style="color:${tono === 'rojo' ? '#fecaca' : '#fde68a'};line-height:1.5;">${cuerpo}</div>
+      </div>`;
+    const usarTexto = 'Mientras tanto abrí <b>«…o escribir/pegar las filas»</b> acá abajo y cargá la planilla como texto: se valida igual.';
+    let html;
+    if (e.message === '__NO_DESPLEGADA__') {
+      html = aviso('La lectura de fotos todavía no está activada',
+        'No es problema de la foto. Falta desplegar la función <code>leer-planilla</code> en Supabase y cargarle su clave:'
+        + '<div style="margin:6px 0;padding:6px 8px;background:#0f172a;border-radius:6px;font-family:monospace;font-size:11px;">'
+        + 'supabase secrets set ANTHROPIC_API_KEY=…<br>supabase functions deploy leer-planilla</div>' + usarTexto);
+    } else if (e.message === '__SIN_CONEXION__') {
+      html = aviso('Sin conexión', 'El teléfono está sin internet. Reconectate y volvé a intentar.');
+    } else if (e.message === '__NO_AUTORIZADA__') {
+      html = aviso('La función rechazó la llamada',
+        'La función existe pero no aceptó la petición (401/403). Suele ser el <code>verify_jwt</code>: desplegala con '
+        + '<code>--no-verify-jwt</code>, como están <code>push-notify</code> y <code>pin-auth</code>.', 'rojo');
+    } else {
+      html = aviso('No se pudo leer la foto',
+        esc(e.message) + '. Si la foto salió muy oscura o torcida, probá de nuevo; si no, cargá las filas como texto.', 'rojo');
+    }
+    cont.innerHTML = html;
   }
 }
 
