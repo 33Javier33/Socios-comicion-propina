@@ -1194,13 +1194,16 @@ async function plEnviarFoto(b64){
       throw new Error(navigator.onLine === false ? '__SIN_CONEXION__' : '__NO_DESPLEGADA__');
     }
     if (r.status === 404) throw new Error('__NO_DESPLEGADA__');
+    // 401/403 = la función existe pero rechaza la llamada (JWT o clave anon).
+    if (r.status === 401 || r.status === 403) throw new Error('__NO_AUTORIZADA__');
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || j.error) {
-      if (j.error === 'SIN_CLAVE') throw new Error('__SIN_CLAVE__');
-      // 401/403 = la función existe pero rechaza la llamada (JWT o clave).
-      if (r.status === 401 || r.status === 403) throw new Error('__NO_AUTORIZADA__');
-      throw new Error(j.error || ('El servidor respondió ' + r.status));
+    // La función contesta siempre 200 y pone el motivo en `error`, para que la
+    // pasarela de Supabase no reemplace la respuesta y se pierda el detalle.
+    if (j.error) {
+      const codigos = { SIN_CLAVE:'__SIN_CLAVE__', CLAVE_INVALIDA:'__CLAVE_INVALIDA__', SIN_SALDO:'__SIN_SALDO__' };
+      throw new Error(codigos[j.error] || j.error);
     }
+    if (!r.ok) throw new Error('El servidor respondió ' + r.status);
     if (!j.texto || !j.texto.trim()) throw new Error('No se reconoció ninguna fila en la foto');
     const ta = document.getElementById('plTexto'); if (ta) ta.value = j.texto;
     plProcesar(j.texto);
@@ -1223,6 +1226,14 @@ async function plEnviarFoto(b64){
         'La función <code>leer-planilla</code> ya está desplegada, pero no tiene su clave. Se carga una sola vez:'
         + '<div style="margin:6px 0;padding:6px 8px;background:#0f172a;border-radius:6px;font-family:monospace;font-size:11px;">'
         + 'supabase secrets set ANTHROPIC_API_KEY=…</div>' + usarTexto);
+    } else if (e.message === '__CLAVE_INVALIDA__') {
+      html = aviso('La clave no es válida',
+        'La función llegó a usar la clave pero Anthropic la rechazó. Puede estar mal copiada, revocada, o cargada con espacios de más. '
+        + 'Creá una nueva en console.anthropic.com y volvé a guardarla como <code>ANTHROPIC_API_KEY</code>.', 'rojo');
+    } else if (e.message === '__SIN_SALDO__') {
+      html = aviso('La cuenta no tiene saldo',
+        'La clave funciona, pero la cuenta de Anthropic no tiene créditos. Cargá saldo en <b>Plans &amp; Billing</b> y volvé a intentar. '
+        + 'Cada foto cuesta centavos.', 'rojo');
     } else if (e.message === '__SIN_CONEXION__') {
       html = aviso('Sin conexión', 'El teléfono está sin internet. Reconectate y volvé a intentar.');
     } else if (e.message === '__NO_AUTORIZADA__') {

@@ -12,7 +12,7 @@
 //
 // ── Desplegar ─────────────────────────────────────────────────────────
 //   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-//   supabase functions deploy leer-planilla
+//   supabase functions deploy leer-planilla --no-verify-jwt
 // ══════════════════════════════════════════════════════════════════════
 
 const MODELO = 'claude-sonnet-5';
@@ -46,19 +46,25 @@ Deno.serve(async (req: Request) => {
   };
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
-  const json = (body: unknown, status = 200) =>
-    new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
+  // TODO lo que responde esta función sale con 200, incluidos los errores,
+  // que viajan en el campo `error`. No es capricho: con un 5xx la pasarela de
+  // Supabase sustituye la respuesta por la suya —sin cabeceras CORS—, el
+  // navegador la bloquea y el front no llega a leer el motivo. Pasó con un
+  // 503 para "falta la clave": la app terminaba diciendo que la función no
+  // estaba desplegada. El estado real va en `error`, que el front sí ve.
+  const json = (body: unknown) =>
+    new Response(JSON.stringify(body), { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } });
 
   try {
     // Código propio para que la app pueda decir exactamente qué falta en vez
     // de mostrar un error genérico de servidor.
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!apiKey) return json({ error: 'SIN_CLAVE' }, 503);
+    if (!apiKey) return json({ error: 'SIN_CLAVE' });
 
     const { imagen } = await req.json();
-    if (!imagen || typeof imagen !== 'string') return json({ error: 'Falta la imagen' }, 400);
+    if (!imagen || typeof imagen !== 'string') return json({ error: 'Falta la imagen' });
     // ~8 MB de base64. El front ya la achica a 1600px; esto es solo el tope.
-    if (imagen.length > 8_000_000) return json({ error: 'La imagen es demasiado grande' }, 413);
+    if (imagen.length > 8_000_000) return json({ error: 'La imagen es demasiado grande' });
 
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -83,7 +89,10 @@ Deno.serve(async (req: Request) => {
     if (!r.ok) {
       const detalle = await r.text();
       console.error('[leer-planilla] API', r.status, detalle);
-      return json({ error: 'El lector de imágenes respondió ' + r.status }, 502);
+      if (r.status === 401) return json({ error: 'CLAVE_INVALIDA' });
+      if (r.status === 429) return json({ error: 'Demasiadas peticiones, esperá unos segundos y probá de nuevo' });
+      if (r.status === 400 && /credit|balance/i.test(detalle)) return json({ error: 'SIN_SALDO' });
+      return json({ error: 'El lector de imágenes respondió ' + r.status });
     }
 
     const data = await r.json();
@@ -93,10 +102,10 @@ Deno.serve(async (req: Request) => {
       .join('\n')
       .trim();
 
-    if (!texto) return json({ error: 'No se reconoció ninguna fila en la foto' }, 422);
+    if (!texto) return json({ error: 'No se reconoció ninguna fila en la foto' });
     return json({ texto });
   } catch (e) {
     console.error('[leer-planilla]', e);
-    return json({ error: (e as Error).message || 'Error inesperado' }, 500);
+    return json({ error: (e as Error).message || 'Error inesperado' });
   }
 });

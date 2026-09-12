@@ -232,6 +232,15 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-12 — Fix: el 503 de la función se perdía y la app culpaba al despliegue
+
+- **Síntoma:** con la función ya desplegada, subir una foto mostraba *«La lectura de fotos todavía no está activada»*, que apunta al despliegue cuando el problema era otro.
+- **Diagnóstico por logs del servidor:** la función **arranca bien** (`booted 31ms`, sin errores) y responde **`POST → 503`**. Ese 503 era el `SIN_CLAVE` de la propia función, o sea: **el secret `ANTHROPIC_API_KEY` no estaba cargado**.
+- **Causa del mensaje equivocado:** elegí **503** para «falta la clave», que es el mismo código con el que la plataforma de Supabase señala *worker caído*. La pasarela sustituye esas respuestas por la suya, **sin cabeceras CORS**, el navegador la bloquea y `fetch` revienta con `TypeError` — que mi código interpreta como «no desplegada».
+- **Fix:** la función responde **siempre 200** y el motivo viaja en el campo `error`. Un código de estado que la pasarela pueda reinterpretar no sirve para transportar el detalle; el `error` sí llega siempre.
+- **Casos nuevos con mensaje propio:** `CLAVE_INVALIDA` (Anthropic rechazó la clave: mal copiada, revocada o con espacios) y `SIN_SALDO` (la clave sirve pero la cuenta no tiene créditos). La clave se manda con `.trim()`, que es el error de copiado más común.
+- Archivos: `index2.html`, `supabase/functions/leer-planilla/index.ts`. Desplegada la **v3** en el proyecto SOC.
+
 #### 2026-09-12 — Planilla: subir imagen desde la galería y recortarla antes de leer
 
 - Antes el campo de foto tenía `capture="environment"`, así que en el teléfono **solo dejaba abrir la cámara**. Ahora hay dos botones: **📷 Tomar foto** y **🖼️ Subir imagen** (galería, capturas, lo que sea).
