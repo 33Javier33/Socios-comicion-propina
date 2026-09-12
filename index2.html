@@ -137,6 +137,7 @@
       <div class="card p-3 mb-4">
         <label class="text-xs text-slate-400 font-semibold">Ver calendario de un socio</label>
         <select id="supVerSocio" class="fld mt-1" onchange="supRenderCal()"><option value="">— elige un socio —</option></select>
+        <button onclick="plModal()" class="btn-ghost w-full mt-2 text-sm">📸 Importar planilla del mes (foto o texto)</button>
       </div>
       <div id="supCalWrap" class="hidden">
         <div class="flex items-center justify-between mb-3">
@@ -847,6 +848,259 @@ async function importEjecutar(){
   }
   cerrarModal(); await cargarBase(); renderTurnos(); renderGrupos(); supLlenarSelectSocios(); renderAsignaciones();
   toast(`✅ ${nuevos.length} turno(s), ${perfilesImp} socio(s), ${totalDias} día(s) importados`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// IMPORTAR PLANILLA MENSUAL (foto o texto)
+//
+// La planilla del casino viene en papel, una fila por día:
+//     Jueves   3   7,5 Hrs 20:30 a 04:30
+//     Viernes  4   LIBRE
+//     Sábado  19   LXF (7,5)
+// Esto la convierte en excepciones día por día para un socio.
+//
+// NUNCA se guarda a ciegas: primero se muestra la tabla completa con el
+// turno detectado en cada día y lo dudoso marcado en rojo, y recién al
+// confirmar se escribe. Un 20:30 leído como 70:30 sería un turno mal
+// puesto todo el mes, así que la revisión no es opcional.
+// ══════════════════════════════════════════════════════════════════════
+const PL_DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+let _plFilas = null, _plSocio = '', _plPeriodo = '';
+
+function plNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+function plHHMM(h){ return String(h||'').substring(0,5); }
+
+// De una celda de la planilla al turno que le corresponde.
+// Devuelve { clave, horas } o null si no se entiende.
+function plLeerCelda(txt){
+  const t = plNorm(txt).replace(/\s+/g,' ').trim();
+  if (!t) return null;
+  if (/^libre\b/.test(t) && !/lxf/.test(t)) return { clave:'LIBRE', horas:0 };
+  // LXF (7,5): libre por feriado, pero paga horas.
+  const lxf = t.match(/lxf\s*\(?\s*([\d.,]+)?/);
+  if (lxf) return { clave:'LXF', horas: lxf[1] ? parseFloat(lxf[1].replace(',','.')) : 0 };
+  if (/vacac/.test(t)) return { clave:'VACAC', horas:0 };
+  // "7,5 Hrs 20:30 a 04:30" — las horas del principio son informativas:
+  // el turno queda definido por el rango, que es lo que la app guarda.
+  const m = t.match(/([\d.,]+)\s*hrs?\s*(\d{1,2}[:.]\d{2})\s*a\s*(\d{1,2}[:.]\d{2})/);
+  if (m) return { clave: m[2].replace('.',':') + '-' + m[3].replace('.',':'), horas: parseFloat(m[1].replace(',','.')) };
+  // Por si viene solo el rango, sin las horas adelante.
+  const r = t.match(/(\d{1,2}[:.]\d{2})\s*a\s*(\d{1,2}[:.]\d{2})/);
+  if (r) return { clave: r[1].replace('.',':') + '-' + r[2].replace('.',':'), horas: null };
+  return null;
+}
+
+// Busca el turno en los que YA existen (por horario, no por id fijo).
+function plBuscarTurno(clave){
+  if (clave === 'LIBRE') return (turnos.find(t => t.es_libre) || {}).id || null;
+  if (clave === 'LXF')   return (turnos.find(t => /lxf|librexf/.test(plNorm(t.nombre))) || {}).id || null;
+  if (clave === 'VACAC') return (turnos.find(t => /vacac/.test(plNorm(t.nombre))) || {}).id || null;
+  const [ini, fin] = clave.split('-');
+  const t = turnos.find(x => plHHMM(x.hora_inicio) === ini && plHHMM(x.hora_fin) === fin);
+  return t ? t.id : null;
+}
+
+// Texto completo de la planilla → una fila por día, ya validada.
+function plParsear(texto, anio, mes){
+  const filas = [];
+  let mesActual = mes, anioActual = anio, previo = 0;
+  String(texto||'').split(/\r?\n/).forEach(linea => {
+    const l = linea.trim();
+    if (!l) return;
+    // "Martes 1 LIBRE" — el día de la semana es opcional (puede que el OCR
+    // no lo tome), pero si viene sirve para verificar la fecha.
+    const m = l.match(/^\s*(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)?\s*[|,;\t]?\s*(\d{1,2})\s*[|,;\t]?\s+(.+)$/i);
+    if (!m) return;
+    const diaTxt = m[1] || '', num = parseInt(m[2], 10), celda = m[3];
+    if (!num || num > 31) return;
+    if (num < previo) { mesActual++; if (mesActual > 12) { mesActual = 1; anioActual++; } }
+    previo = num;
+    const d = new Date(anioActual, mesActual - 1, num);
+    const fila = {
+      fecha: `${anioActual}-${String(mesActual).padStart(2,'0')}-${String(num).padStart(2,'0')}`,
+      num, celda, otroMes: mesActual !== mes,
+      diaReal: PL_DIAS[d.getDay()], diaPlanilla: diaTxt,
+      turno_id: null, clave: '', horas: null, aviso: ''
+    };
+    // La fecha existe de verdad (un 31 de septiembre no).
+    if (d.getMonth() !== (mesActual - 1)) { fila.aviso = 'Ese día no existe en el mes'; filas.push(fila); return; }
+    // El día de la semana de la planilla tiene que calzar con el calendario.
+    // Si no calza, casi siempre es un número mal leído: es la mejor red que hay.
+    if (diaTxt && plNorm(diaTxt) !== plNorm(fila.diaReal)) {
+      fila.aviso = `La planilla dice ${diaTxt} y el ${num} cae ${fila.diaReal}`;
+    }
+    const c = plLeerCelda(celda);
+    if (!c) { fila.aviso = fila.aviso || `No se entiende "${celda}"`; filas.push(fila); return; }
+    fila.clave = c.clave; fila.horas = c.horas;
+    fila.turno_id = plBuscarTurno(c.clave);
+    if (!fila.turno_id) fila.aviso = fila.aviso || `No hay un turno creado para ${c.clave}`;
+    filas.push(fila);
+  });
+  return filas;
+}
+
+function plModal(){
+  _plFilas = null;
+  const hoy = new Date();
+  const optSoc = '<option value="">— elige un socio —</option>' +
+    sociosMesas.map(s => `<option value="${s.id}"${s.id===supSocioSel?' selected':''}>${esc(s.nombre)} ${esc(s.apellido)}</option>`).join('');
+  const optMes = MESES.map((m,i) => `<option value="${i+1}"${i===hoy.getMonth()?' selected':''}>${m}</option>`).join('');
+  abrirModal(`<h3 class="font-extrabold mb-1">📸 Importar planilla del mes</h3>
+    <p class="text-xs text-slate-400 mb-4">Saca una foto de la planilla del socio (o pega las filas como texto) y se cargan los turnos día por día.</p>
+
+    <label class="text-xs text-slate-400 font-semibold">Socio</label>
+    <select id="plSocio" class="fld mt-1 mb-3">${optSoc}</select>
+
+    <div class="flex gap-2 mb-3">
+      <div class="flex-1"><label class="text-xs text-slate-400 font-semibold">Mes de la planilla</label>
+        <select id="plMes" class="fld mt-1">${optMes}</select></div>
+      <div style="width:100px"><label class="text-xs text-slate-400 font-semibold">Año</label>
+        <input id="plAnio" type="number" class="fld mt-1" value="${hoy.getFullYear()}"></div>
+    </div>
+
+    <label class="text-xs text-slate-400 font-semibold">Foto de la planilla</label>
+    <input type="file" id="plFoto" accept="image/*" capture="environment" class="fld mt-1 mb-1" onchange="plLeerFoto(this)">
+    <p class="text-[11px] text-slate-500 mb-3">Que se lea el número del día y el horario. Recta y con buena luz.</p>
+
+    <details class="mb-3">
+      <summary class="text-xs text-slate-400 font-semibold cursor-pointer">…o escribir/pegar las filas</summary>
+      <textarea id="plTexto" class="fld mt-2" rows="5" placeholder="Martes 1 LIBRE&#10;Jueves 3 7,5 Hrs 20:30 a 04:30&#10;Sábado 19 LXF (7,5)"></textarea>
+      <button onclick="plProcesarTexto()" class="btn-ghost w-full mt-2">Leer el texto</button>
+    </details>
+
+    <div id="plResultado"></div>`);
+}
+
+// ── Foto → texto ──────────────────────────────────────────────────────
+// La lectura la hace una Edge Function en Supabase, NO el navegador: la
+// clave del modelo de visión vive en los secrets del servidor y nunca
+// baja al front. Si todavía no está desplegada, se avisa y queda la
+// opción de pegar el texto a mano.
+async function plLeerFoto(inp){
+  const f = inp.files && inp.files[0]; if (!f) return;
+  const cont = document.getElementById('plResultado');
+  cont.innerHTML = '<div class="card p-3 text-sm text-slate-300">⏳ Leyendo la foto…</div>';
+  try {
+    const b64 = await plComprimir(f);
+    const r = await fetch(SB_URL + '/functions/v1/leer-planilla', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + SB_KEY, 'apikey': SB_KEY },
+      body: JSON.stringify({ imagen: b64 })
+    });
+    if (r.status === 404) throw new Error('__NO_DESPLEGADA__');
+    const j = await r.json();
+    if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
+    if (!j.texto || !j.texto.trim()) throw new Error('No se reconoció ninguna fila en la foto');
+    const ta = document.getElementById('plTexto'); if (ta) ta.value = j.texto;
+    plProcesar(j.texto);
+  } catch(e) {
+    cont.innerHTML = e.message === '__NO_DESPLEGADA__'
+      ? `<div class="card p-3 text-sm" style="border-color:#854d0e;background:#3f2d0a;">
+           <div class="font-bold text-amber-300 mb-1">La lectura de fotos no está activada</div>
+           <div class="text-xs text-amber-100/80">Falta desplegar la función <code>leer-planilla</code> en Supabase con su clave.
+           Mientras tanto podés abrir «…o escribir/pegar las filas» y cargar la planilla como texto: se valida igual.</div></div>`
+      : `<div class="card p-3 text-sm" style="border-color:#7f1d1d;background:#3f1212;">
+           <div class="font-bold text-red-300 mb-1">No se pudo leer la foto</div>
+           <div class="text-xs text-red-100/80">${esc(e.message)}. Probá con más luz o cargá las filas como texto.</div></div>`;
+  }
+}
+
+// Achica la foto antes de mandarla: una foto de celular son varios MB y
+// para leer una tabla no hace falta tanto.
+function plComprimir(file, maxLado = 1600){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onerror = () => rej(new Error('No se pudo leer el archivo'));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => rej(new Error('El archivo no es una imagen válida'));
+      img.onload = () => {
+        const esc_ = Math.min(1, maxLado / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * esc_); c.height = Math.round(img.height * esc_);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        res(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+function plProcesarTexto(){
+  const t = (document.getElementById('plTexto').value || '').trim();
+  if (!t) return toast('Escribe o pega las filas primero', '#dc2626');
+  plProcesar(t);
+}
+
+function plProcesar(texto){
+  const socio = document.getElementById('plSocio').value;
+  const mes = parseInt(document.getElementById('plMes').value, 10);
+  const anio = parseInt(document.getElementById('plAnio').value, 10);
+  const cont = document.getElementById('plResultado');
+  if (!socio) { cont.innerHTML = '<div class="text-red-400 text-sm mt-2">Elige primero el socio.</div>'; return; }
+  if (!mes || !anio) { cont.innerHTML = '<div class="text-red-400 text-sm mt-2">Falta el mes o el año.</div>'; return; }
+
+  const filas = plParsear(texto, anio, mes);
+  if (!filas.length) { cont.innerHTML = '<div class="text-red-400 text-sm mt-2">No reconocí ninguna fila. Cada línea debe tener el día y el horario.</div>'; return; }
+  _plFilas = filas; _plSocio = socio; _plPeriodo = MESES[mes-1] + ' ' + anio;
+
+  const conAviso = filas.filter(f => f.aviso).length;
+  const listas   = filas.filter(f => f.turno_id).length;
+  const optTurno = t => turnos.map(x =>
+    `<option value="${x.id}"${x.id===t?' selected':''}>${esc(x.nombre)}</option>`).join('');
+
+  cont.innerHTML = `
+    <div class="card p-3 mb-2 text-sm">
+      📋 <b>${filas.length}</b> día(s) leídos · <b class="text-emerald-400">${listas}</b> con turno
+      ${conAviso ? ` · <b class="text-amber-400">${conAviso}</b> por revisar` : ''}
+    </div>
+    ${conAviso ? `<div class="card p-2 mb-2 text-[11px]" style="border-color:#854d0e;background:#3f2d0a;color:#fde68a;">
+      Revisa las filas marcadas antes de guardar. Podés corregir el turno en la lista de cada día.</div>` : ''}
+    <div class="space-y-1 mb-3" style="max-height:46vh;overflow-y:auto;">
+      ${filas.map((f, i) => `
+        <div class="card p-2 flex items-center gap-2" style="${f.aviso ? 'border-color:#b45309;background:#3f2d0a;' : ''}">
+          <div style="width:80px;flex-shrink:0;">
+            <div class="text-xs font-bold">${f.num} ${esc(f.diaReal.substring(0,3))}</div>
+            <div class="text-[10px] text-slate-500">${esc(f.fecha)}${f.otroMes ? ' ·otro mes' : ''}</div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[11px] text-slate-400 truncate">${esc(f.celda)}</div>
+            ${f.aviso ? `<div class="text-[10px] text-amber-300">⚠️ ${esc(f.aviso)}</div>` : ''}
+          </div>
+          <select id="plT${i}" class="fld" style="width:auto;max-width:135px;padding:5px;font-size:12px;">
+            <option value="">— omitir —</option>${optTurno(f.turno_id)}
+          </select>
+        </div>`).join('')}
+    </div>
+    <button onclick="plGuardar()" class="btn-primary w-full">Guardar ${listas} día(s) en el calendario</button>`;
+}
+
+async function plGuardar(){
+  if (!_plFilas || !_plSocio) return;
+  const rows = [];
+  _plFilas.forEach((f, i) => {
+    const tid = (document.getElementById('plT' + i) || {}).value;
+    if (tid) rows.push({ id: uid('ex'), socio_id: _plSocio, fecha: f.fecha, turno_id: tid });
+  });
+  if (!rows.length) return toast('No hay días para guardar', '#dc2626');
+  const s = sociosMesas.find(x => x.id === _plSocio);
+  if (!confirm(`Se van a cargar ${rows.length} día(s) de ${_plPeriodo} para ${s ? s.nombre + ' ' + s.apellido : 'el socio'}.\n\n`
+    + 'Los días que ya tengan turno se reemplazan.\n\n¿Confirmar?')) return;
+  toast('Guardando…');
+  try {
+    for (let j = 0; j < rows.length; j += 200) {
+      const { error } = await db.from('horarios_excepciones').upsert(rows.slice(j, j+200), { onConflict:'socio_id,fecha' });
+      if (error) throw error;
+    }
+    cerrarModal();
+    supSocioSel = _plSocio;
+    const sel = document.getElementById('supVerSocio'); if (sel) sel.value = _plSocio;
+    supRenderCal();
+    toast(`✅ ${rows.length} día(s) cargados`);
+  } catch(e) {
+    toast('No se pudo guardar: ' + (e.message || e), '#dc2626');
+  }
 }
 
 // ── Modal ──

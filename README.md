@@ -232,6 +232,22 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-12 — index2: importar la planilla mensual desde una foto o texto
+
+- Nueva opción en el **panel Calendario del supervisor**: *📸 Importar planilla del mes*. Se elige el socio, el mes, y se sube la foto de la planilla (o se pegan las filas como texto); los turnos quedan cargados **día por día** en `horarios_excepciones`.
+- **Nunca se guarda a ciegas.** Primero se muestra la tabla completa con el turno detectado en cada día, y recién al confirmar se escribe. Un `20:30` leído como `70:30` sería un turno equivocado todo el mes.
+- **Dos verificaciones automáticas**, que son las que hacen esto confiable:
+  1. **El día de la semana tiene que calzar con el calendario real.** Si la planilla dice *Lunes 20* y el 20 cae domingo, la fila se marca — casi siempre significa que el número se leyó mal.
+  2. **El turno tiene que existir.** Un horario imposible (`70:30`) no encuentra turno y queda marcado en vez de guardarse.
+  Toda fila marcada se puede corregir a mano desde una lista, o dejarse en *omitir*.
+- Los turnos se buscan **por horario contra los que ya existen** (`hora_inicio`/`hora_fin`), no por ids fijos: no se crean turnos duplicados ni hay nada que mantener a mano. `LIBRE` va al turno con `es_libre`; `LXF (7,5)` a **LibreXF**; `VACAC` al de vacaciones.
+- **El mes rueda solo:** cuando el número del día vuelve a 1 al final de la planilla, esa fila se asigna al mes siguiente (la planilla de septiembre termina en el 1 de octubre).
+- El formato tolera lo que suele variar: con o sin el día de la semana, comas o puntos decimales (`7,5` / `7.5`), y separadores de hora `:` o `.`. Las líneas que no son días (el nombre, el mes) se descartan solas.
+- **La foto se lee en el servidor, no en el navegador** (`supabase/functions/leer-planilla/index.ts`): la clave del modelo de visión vive en los secrets de Supabase y **nunca baja al front**. La función solo lee la imagen y devuelve texto — no escribe en la base. La imagen se achica a 1600px antes de subirla.
+- **Mientras la función no esté desplegada**, la app lo dice con un aviso claro y la carga por texto funciona igual. Para activarla: `supabase secrets set ANTHROPIC_API_KEY=...` y `supabase functions deploy leer-planilla`.
+- Probado con la planilla real de un socio (31 filas, septiembre 2026): las 31 se reconocen, los 6 turnos calzan con los que ya existen, y los dos casos de error inducidos (hora imposible y día de semana que no calza) se marcan como corresponde.
+- Archivos: `index2.html`, `supabase/functions/leer-planilla/index.ts` (nuevo). No toca la app principal ni su Service Worker.
+
 #### 2026-09-11 — Donaciones: retiro de caja duplicado · Configuración en tres columnas (SW v103)
 
 **1. "Retirado de la caja" mostraba el doble (duplicidad real en los datos)**
