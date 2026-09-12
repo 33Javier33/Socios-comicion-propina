@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-12 — Planilla: subir imagen desde la galería y recortarla antes de leer
+
+- Antes el campo de foto tenía `capture="environment"`, así que en el teléfono **solo dejaba abrir la cámara**. Ahora hay dos botones: **📷 Tomar foto** y **🖼️ Subir imagen** (galería, capturas, lo que sea).
+- **Recorte antes de enviar.** Al elegir la imagen aparece con un marco ajustable: se arrastran las cuatro esquinas o el marco entero para dejar solo la tabla. Recortar mejora el acierto del lector (menos mesa, menos borde de hoja) y manda menos imagen.
+- Botones **↻ Rotar** (las fotos salen de costado seguido), **⤢ Todo** (vuelve a la imagen completa) y **✕ Quitar**.
+- La rotación se **hornea en un canvas** apenas se aplica, así el recorte es siempre un rectángulo simple sobre esa imagen. Arrastrar matrices de rotación por todo el cálculo es donde estos recortadores se equivocan.
+- Se envía **solo la zona recortada**, a 1600px de lado máximo y JPEG 0.88.
+- **Tres defectos encontrados y corregidos durante la prueba en navegador:**
+  1. **Las asas de abajo quedaban fuera de la pantalla.** El lienzo se escalaba solo por el ancho y una planilla del mes es muy alta: en el teléfono no había forma de agarrar las esquinas inferiores. Ahora se escala por el lado que más apriete, para que entre entera.
+  2. **La primera medición del alto salía mal**, y el lienzo quedaba al doble de lo que debía. Se reajusta después de que el layout se asienta, y se usa `visualViewport` en vez de `innerHeight`, que miente mientras la barra de direcciones del teléfono aparece o se esconde.
+  3. **Los listeners de `window` se acumulaban** con cada foto elegida. Ahora se sueltan antes de volver a enganchar (verificado: quedan en 4 tras cuatro fotos, y en 0 al cerrar).
+- Verificado en navegador a 390×844, 360×740 y 820×1180: la planilla entra entera, las cuatro asas quedan al alcance, sin scroll horizontal, y el JPEG exportado coincide con la zona elegida (proporción 0,456 vs 0,455).
+- Archivos: `index2.html`.
+
 #### 2026-09-12 — LXF es libre completo · función de lectura desplegada
 
 - **Corrección de criterio:** `LXF (7,5)` es un **día libre completo**. Las 7,5 que trae al lado son **solo de referencia** (las horas que habría tocado), no un turno trabajado. Antes lo estaba contando como día que paga horas.

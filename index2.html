@@ -944,7 +944,7 @@ function plParsear(texto, anio, mes){
 }
 
 function plModal(){
-  _plFilas = null;
+  _plFilas = null; _plBase = null; _plBox = null;   // que no quede la foto de una importación anterior
   const hoy = new Date();
   const optSoc = '<option value="">— elige un socio —</option>' +
     sociosMesas.map(s => `<option value="${s.id}"${s.id===supSocioSel?' selected':''}>${esc(s.nombre)} ${esc(s.apellido)}</option>`).join('');
@@ -963,8 +963,14 @@ function plModal(){
     </div>
 
     <label class="text-xs text-slate-400 font-semibold">Foto de la planilla</label>
-    <input type="file" id="plFoto" accept="image/*" capture="environment" class="fld mt-1 mb-1" onchange="plLeerFoto(this)">
-    <p class="text-[11px] text-slate-500 mb-3">Que se lea el número del día y el horario. Recta y con buena luz.</p>
+    <div class="flex gap-2 mt-1 mb-1">
+      <button type="button" onclick="document.getElementById('plFotoCam').click()" class="btn-ghost text-sm" style="flex:1">📷 Tomar foto</button>
+      <button type="button" onclick="document.getElementById('plFotoGal').click()" class="btn-ghost text-sm" style="flex:1">🖼️ Subir imagen</button>
+    </div>
+    <input type="file" id="plFotoCam" accept="image/*" capture="environment" style="display:none" onchange="plArchivoElegido(this)">
+    <input type="file" id="plFotoGal" accept="image/*" style="display:none" onchange="plArchivoElegido(this)">
+    <p class="text-[11px] text-slate-500 mb-3">Después vas a poder recortar y enderezar antes de enviarla.</p>
+    <div id="plRecorte" class="mb-3" style="display:none"></div>
 
     <details class="mb-3">
       <summary class="text-xs text-slate-400 font-semibold cursor-pointer">…o escribir/pegar las filas</summary>
@@ -975,17 +981,203 @@ function plModal(){
     <div id="plResultado"></div>`);
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// AJUSTAR LA FOTO ANTES DE ENVIARLA
+//
+// Una foto de planilla sacada al vuelo trae la mesa, el borde de la hoja
+// y a veces sale de costado. Recortando solo la tabla y enderezándola, el
+// lector acierta bastante más y se manda menos imagen.
+//
+// La rotación se "hornea" en un canvas apenas se aplica (_plBase), así el
+// recorte siempre es un rectángulo simple sobre esa imagen: sin eso hay
+// que arrastrar matrices de rotación por todo el cálculo y es donde estos
+// recortadores se equivocan.
+// ══════════════════════════════════════════════════════════════════════
+let _plBase = null;   // canvas con la imagen ya rotada (resolución de trabajo)
+let _plBox = null;    // recorte en coordenadas de _plBase {x,y,w,h}
+const PL_TRABAJO = 2200;  // lado máximo con el que se trabaja
+const PL_ENVIO   = 1600;  // lado máximo de lo que se manda a leer
+
+function plArchivoElegido(inp){
+  const f = inp.files && inp.files[0];
+  inp.value = '';                       // permite volver a elegir el mismo archivo
+  if (!f) return;
+  if (!/^image\//.test(f.type)) { toast('Eso no es una imagen', '#dc2626'); return; }
+  const fr = new FileReader();
+  fr.onerror = () => toast('No se pudo abrir el archivo', '#dc2626');
+  fr.onload = () => {
+    const img = new Image();
+    img.onerror = () => toast('El archivo no es una imagen válida', '#dc2626');
+    img.onload = () => {
+      const e = Math.min(1, PL_TRABAJO / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * e); c.height = Math.round(img.height * e);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      _plBase = c;
+      _plBox = { x:0, y:0, w:c.width, h:c.height };
+      plPintarRecorte();
+    };
+    img.src = fr.result;
+  };
+  fr.readAsDataURL(f);
+}
+
+function plPintarRecorte(){
+  const cont = document.getElementById('plRecorte');
+  if (!cont || !_plBase) return;
+  cont.style.display = '';
+  cont.innerHTML = `
+    <div class="text-xs text-slate-400 font-semibold mb-1">Ajusta el recorte</div>
+    <p class="text-[11px] text-slate-500 mb-2">Arrastra las esquinas para dejar solo la tabla (el día y el horario). Cuanto menos sobre, mejor lee.</p>
+    <div style="text-align:center;background:#0b1220;border-radius:10px;padding:6px 0;">
+      <div id="plLienzoWrap" style="position:relative;display:inline-block;touch-action:none;user-select:none;line-height:0;overflow:hidden;">
+        <canvas id="plLienzo" style="display:block;"></canvas>
+        <div id="plCaja" style="position:absolute;border:2px solid #38bdf8;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);cursor:move;">
+          ${['nw','ne','sw','se'].map(p => `<div data-h="${p}" style="position:absolute;width:28px;height:28px;background:#38bdf8;border:2px solid #0b1220;border-radius:50%;
+             ${p[0]==='n'?'top:0;':'bottom:0;'}${p[1]==='w'?'left:0;':'right:0;'}touch-action:none;"></div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="flex gap-2 mt-2">
+      <button type="button" onclick="plRotar()" class="btn-ghost text-sm" style="flex:1">↻ Rotar</button>
+      <button type="button" onclick="plRecorteTodo()" class="btn-ghost text-sm" style="flex:1">⤢ Todo</button>
+      <button type="button" onclick="plCancelarRecorte()" class="btn-ghost text-sm" style="flex:1">✕ Quitar</button>
+    </div>
+    <button type="button" onclick="plConfirmarRecorte()" class="btn-primary w-full mt-2">✓ Leer esta zona</button>`;
+  plDibujar();
+  plEnganchar();
+  // La primera medición se hace con el bloque recién insertado y el navegador
+  // todavía puede dar un alto de ventana equivocado (pasa en el teléfono con
+  // la barra de direcciones). Se reajusta una vez que el layout se asentó.
+  requestAnimationFrame(() => requestAnimationFrame(plAjustarLienzo));
+}
+
+function plDibujar(){
+  const cv = document.getElementById('plLienzo'); if (!cv || !_plBase) return;
+  cv.width = _plBase.width; cv.height = _plBase.height;
+  cv.getContext('2d').drawImage(_plBase, 0, 0);
+  plAjustarLienzo();
+}
+// El lienzo tiene que entrar ENTERO en la pantalla, no solo a lo ancho: una
+// planilla del mes es muy alta y, mostrada al 100% del ancho, las asas de
+// abajo quedaban fuera de la pantalla y no había forma de agarrarlas en el
+// teléfono. Se escala por el lado que más apriete y se recalcula al girar.
+function plAjustarLienzo(){
+  const cv = document.getElementById('plLienzo'); if (!cv || !_plBase) return;
+  const wrap = cv.parentElement.parentElement;
+  const dispW = Math.max(120, (wrap.clientWidth || 320) - 12);
+  // visualViewport es el alto REAL visible en el teléfono: window.innerHeight
+  // miente mientras la barra de direcciones aparece o se esconde.
+  const altoVis = (window.visualViewport && window.visualViewport.height) || window.innerHeight || 640;
+  const dispH = Math.max(180, Math.round(altoVis * 0.52));
+  const k = Math.min(dispW / _plBase.width, dispH / _plBase.height);
+  cv.style.width  = Math.round(_plBase.width  * k) + 'px';
+  cv.style.height = Math.round(_plBase.height * k) + 'px';
+  plSituarCaja();
+}
+// De coordenadas de _plBase a píxeles en pantalla.
+function plEscala(){
+  const cv = document.getElementById('plLienzo');
+  return cv && cv.width ? cv.getBoundingClientRect().width / cv.width : 1;
+}
+function plSituarCaja(){
+  const caja = document.getElementById('plCaja'); if (!caja || !_plBox) return;
+  const k = plEscala();
+  caja.style.left = (_plBox.x * k) + 'px';   caja.style.top    = (_plBox.y * k) + 'px';
+  caja.style.width = (_plBox.w * k) + 'px';  caja.style.height = (_plBox.h * k) + 'px';
+}
+
+let _plOff = null;   // para soltar los listeners de la foto anterior
+
+function plEnganchar(){
+  const caja = document.getElementById('plCaja');
+  if (!caja) return;
+  // Elegir una segunda foto vuelve a llamar acá: sin esto los listeners de
+  // window se van apilando, uno por cada foto abierta en la sesión.
+  if (_plOff) { _plOff(); _plOff = null; }
+  let modo = null, ini = null;
+  const MIN = 40;  // el recorte no puede quedar más chico que esto (en px de _plBase)
+
+  const abajo = ev => {
+    const h = ev.target.getAttribute && ev.target.getAttribute('data-h');
+    modo = h || 'mover';
+    ini = { px: ev.clientX, py: ev.clientY, box: Object.assign({}, _plBox) };
+    ev.target.setPointerCapture && ev.target.setPointerCapture(ev.pointerId);
+    ev.preventDefault(); ev.stopPropagation();
+  };
+  const mover = ev => {
+    if (!modo || !ini) return;
+    const k = plEscala() || 1;
+    const dx = (ev.clientX - ini.px) / k, dy = (ev.clientY - ini.py) / k;
+    const b = Object.assign({}, ini.box), W = _plBase.width, H = _plBase.height;
+    if (modo === 'mover') {
+      b.x = Math.max(0, Math.min(W - b.w, b.x + dx));
+      b.y = Math.max(0, Math.min(H - b.h, b.y + dy));
+    } else {
+      // Cada esquina mueve su lado; los topes evitan que se dé vuelta o se salga.
+      if (modo[1] === 'w') { const nx = Math.max(0, Math.min(b.x + b.w - MIN, b.x + dx)); b.w += b.x - nx; b.x = nx; }
+      else                 { b.w = Math.max(MIN, Math.min(W - b.x, b.w + dx)); }
+      if (modo[0] === 'n') { const ny = Math.max(0, Math.min(b.y + b.h - MIN, b.y + dy)); b.h += b.y - ny; b.y = ny; }
+      else                 { b.h = Math.max(MIN, Math.min(H - b.y, b.h + dy)); }
+    }
+    _plBox = b; plSituarCaja();
+    ev.preventDefault();
+  };
+  const arriba = () => { modo = null; ini = null; };
+
+  caja.addEventListener('pointerdown', abajo);
+  caja.querySelectorAll('[data-h]').forEach(h => h.addEventListener('pointerdown', abajo));
+  window.addEventListener('pointermove', mover);
+  window.addEventListener('pointerup', arriba);
+  window.addEventListener('pointercancel', arriba);
+  // Si gira el teléfono cambian las medidas del lienzo y la caja quedaría corrida.
+  window.addEventListener('resize', plAjustarLienzo);
+  _plOff = () => {
+    window.removeEventListener('pointermove', mover);
+    window.removeEventListener('pointerup', arriba);
+    window.removeEventListener('pointercancel', arriba);
+    window.removeEventListener('resize', plAjustarLienzo);
+  };
+}
+
+function plRotar(){
+  if (!_plBase) return;
+  const c = document.createElement('canvas');
+  c.width = _plBase.height; c.height = _plBase.width;
+  const g = c.getContext('2d');
+  g.translate(c.width / 2, c.height / 2);
+  g.rotate(Math.PI / 2);
+  g.drawImage(_plBase, -_plBase.width / 2, -_plBase.height / 2);
+  _plBase = c;
+  _plBox = { x:0, y:0, w:c.width, h:c.height };   // rotar reinicia el recorte
+  plDibujar();
+}
+function plRecorteTodo(){ if (_plBase) { _plBox = { x:0, y:0, w:_plBase.width, h:_plBase.height }; plSituarCaja(); } }
+function plCancelarRecorte(){
+  if (_plOff) { _plOff(); _plOff = null; }
+  _plBase = null; _plBox = null;
+  const c = document.getElementById('plRecorte'); if (c) { c.style.display = 'none'; c.innerHTML = ''; }
+}
+
+function plConfirmarRecorte(){
+  if (!_plBase || !_plBox) return;
+  const b = _plBox;
+  const e = Math.min(1, PL_ENVIO / Math.max(b.w, b.h));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(b.w * e)); c.height = Math.max(1, Math.round(b.h * e));
+  c.getContext('2d').drawImage(_plBase, b.x, b.y, b.w, b.h, 0, 0, c.width, c.height);
+  plEnviarFoto(c.toDataURL('image/jpeg', 0.88).split(',')[1]);
+}
+
 // ── Foto → texto ──────────────────────────────────────────────────────
 // La lectura la hace una Edge Function en Supabase, NO el navegador: la
 // clave del modelo de visión vive en los secrets del servidor y nunca
 // baja al front. Si todavía no está desplegada, se avisa y queda la
 // opción de pegar el texto a mano.
-async function plLeerFoto(inp){
-  const f = inp.files && inp.files[0]; if (!f) return;
+async function plEnviarFoto(b64){
   const cont = document.getElementById('plResultado');
   cont.innerHTML = '<div class="card p-3 text-sm text-slate-300">⏳ Leyendo la foto…</div>';
   try {
-    const b64 = await plComprimir(f);
     // Si la función no está desplegada, Supabase responde 404 SIN cabeceras
     // CORS y el navegador bloquea la respuesta antes de que la veamos: fetch
     // revienta con TypeError "Failed to fetch" y nunca llegamos a mirar el
@@ -1043,28 +1235,6 @@ async function plLeerFoto(inp){
     }
     cont.innerHTML = html;
   }
-}
-
-// Achica la foto antes de mandarla: una foto de celular son varios MB y
-// para leer una tabla no hace falta tanto.
-function plComprimir(file, maxLado = 1600){
-  return new Promise((res, rej) => {
-    const fr = new FileReader();
-    fr.onerror = () => rej(new Error('No se pudo leer el archivo'));
-    fr.onload = () => {
-      const img = new Image();
-      img.onerror = () => rej(new Error('El archivo no es una imagen válida'));
-      img.onload = () => {
-        const esc_ = Math.min(1, maxLado / Math.max(img.width, img.height));
-        const c = document.createElement('canvas');
-        c.width = Math.round(img.width * esc_); c.height = Math.round(img.height * esc_);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        res(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
-      };
-      img.src = fr.result;
-    };
-    fr.readAsDataURL(file);
-  });
 }
 
 function plProcesarTexto(){
