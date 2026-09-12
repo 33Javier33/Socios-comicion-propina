@@ -50,8 +50,10 @@ Deno.serve(async (req: Request) => {
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
   try {
+    // Código propio para que la app pueda decir exactamente qué falta en vez
+    // de mostrar un error genérico de servidor.
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!apiKey) return json({ error: 'Falta configurar ANTHROPIC_API_KEY en los secrets' }, 500);
+    if (!apiKey) return json({ error: 'SIN_CLAVE' }, 503);
 
     const { imagen } = await req.json();
     if (!imagen || typeof imagen !== 'string') return json({ error: 'Falta la imagen' }, 400);

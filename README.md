@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-12 — LXF es libre completo · función de lectura desplegada
+
+- **Corrección de criterio:** `LXF (7,5)` es un **día libre completo**. Las 7,5 que trae al lado son **solo de referencia** (las horas que habría tocado), no un turno trabajado. Antes lo estaba contando como día que paga horas.
+  - El turno **LibreXF** pasó a `es_libre = true` en `horarios_turnos` (antes `false`). Ahora el calendario lo pinta en verde como día libre, igual que un LIBRE normal, y no aporta horas.
+  - Se mantiene como turno **aparte de LIBRE**, para poder distinguir un libre por feriado de uno de ciclo.
+  - `plBuscarTurno('LIBRE')` ahora busca el turno **por nombre** antes que por `es_libre`: con dos turnos libres, un `find()` suelto podía devolver LibreXF por error.
+  - Efecto en la planilla de septiembre de Carlos Pérez: **9 días libres y 22 trabajados (156 hrs)**, no 8 y 23 (163,5) como se había calculado antes.
+- **`leer-planilla` quedó desplegada** en el proyecto SOC (`verify_jwt: false`, igual que `push-notify` y `pin-auth`). Solo falta cargarle la clave: `supabase secrets set ANTHROPIC_API_KEY=…`. Mientras no la tenga, responde `SIN_CLAVE` y la app muestra exactamente ese aviso con el comando.
+- **Se descartó el OCR gratuito en el navegador (Tesseract.js).** Probado sobre la foto real de la planilla: convierte `04:30` en `04:40` y `4,5` en `4,2` — errores que *parecen válidos* y pasarían la revisión —, y destruye casi todas las filas en itálica gris (8 de 31 días). No es aceptable para turnos.
+- Archivos: `index2.html`, `supabase/functions/leer-planilla/index.ts`.
+
 #### 2026-09-12 — index2: importar la planilla mensual desde una foto o texto
 
 - Nueva opción en el **panel Calendario del supervisor**: *📸 Importar planilla del mes*. Se elige el socio, el mes, y se sube la foto de la planilla (o se pegan las filas como texto); los turnos quedan cargados **día por día** en `horarios_excepciones`.

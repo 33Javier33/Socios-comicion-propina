@@ -876,9 +876,10 @@ function plLeerCelda(txt){
   const t = plNorm(txt).replace(/\s+/g,' ').trim();
   if (!t) return null;
   if (/^libre\b/.test(t) && !/lxf/.test(t)) return { clave:'LIBRE', horas:0 };
-  // LXF (7,5): libre por feriado, pero paga horas.
+  // LXF (7,5) es un LIBRE COMPLETO. Las 7,5 que trae al lado son solo de
+  // referencia (las horas que habría tocado), no un turno trabajado.
   const lxf = t.match(/lxf\s*\(?\s*([\d.,]+)?/);
-  if (lxf) return { clave:'LXF', horas: lxf[1] ? parseFloat(lxf[1].replace(',','.')) : 0 };
+  if (lxf) return { clave:'LXF', horas:0, ref: lxf[1] ? parseFloat(lxf[1].replace(',','.')) : null };
   if (/vacac/.test(t)) return { clave:'VACAC', horas:0 };
   // "7,5 Hrs 20:30 a 04:30" — las horas del principio son informativas:
   // el turno queda definido por el rango, que es lo que la app guarda.
@@ -892,7 +893,10 @@ function plLeerCelda(txt){
 
 // Busca el turno en los que YA existen (por horario, no por id fijo).
 function plBuscarTurno(clave){
-  if (clave === 'LIBRE') return (turnos.find(t => t.es_libre) || {}).id || null;
+  // LIBRE busca el turno "Libre" por nombre antes que por es_libre: LibreXF
+  // también es un día libre, y un find() suelto podría devolver ese.
+  if (clave === 'LIBRE') return (turnos.find(t => plNorm(t.nombre) === 'libre')
+                              || turnos.find(t => t.es_libre) || {}).id || null;
   if (clave === 'LXF')   return (turnos.find(t => /lxf|librexf/.test(plNorm(t.nombre))) || {}).id || null;
   if (clave === 'VACAC') return (turnos.find(t => /vacac/.test(plNorm(t.nombre))) || {}).id || null;
   const [ini, fin] = clave.split('-');
@@ -1000,6 +1004,7 @@ async function plLeerFoto(inp){
     if (r.status === 404) throw new Error('__NO_DESPLEGADA__');
     const j = await r.json().catch(() => ({}));
     if (!r.ok || j.error) {
+      if (j.error === 'SIN_CLAVE') throw new Error('__SIN_CLAVE__');
       // 401/403 = la función existe pero rechaza la llamada (JWT o clave).
       if (r.status === 401 || r.status === 403) throw new Error('__NO_AUTORIZADA__');
       throw new Error(j.error || ('El servidor respondió ' + r.status));
@@ -1021,6 +1026,11 @@ async function plLeerFoto(inp){
         'No es problema de la foto. Falta desplegar la función <code>leer-planilla</code> en Supabase y cargarle su clave:'
         + '<div style="margin:6px 0;padding:6px 8px;background:#0f172a;border-radius:6px;font-family:monospace;font-size:11px;">'
         + 'supabase secrets set ANTHROPIC_API_KEY=…<br>supabase functions deploy leer-planilla</div>' + usarTexto);
+    } else if (e.message === '__SIN_CLAVE__') {
+      html = aviso('Falta cargar la clave del lector',
+        'La función <code>leer-planilla</code> ya está desplegada, pero no tiene su clave. Se carga una sola vez:'
+        + '<div style="margin:6px 0;padding:6px 8px;background:#0f172a;border-radius:6px;font-family:monospace;font-size:11px;">'
+        + 'supabase secrets set ANTHROPIC_API_KEY=…</div>' + usarTexto);
     } else if (e.message === '__SIN_CONEXION__') {
       html = aviso('Sin conexión', 'El teléfono está sin internet. Reconectate y volvé a intentar.');
     } else if (e.message === '__NO_AUTORIZADA__') {
