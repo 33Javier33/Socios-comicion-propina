@@ -232,6 +232,23 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-13 — index2: se retira la lectura por foto · calendario legible
+
+**1. Retirada la importación por foto**
+- Se quitan los botones de cámara y galería, el recortador y la llamada a la Edge Function. La lectura de la planilla por imagen no llegó a un resultado utilizable y se descarta.
+- **Se conserva la importación por texto**, que funciona, no cuesta nada y valida igual (día de la semana contra el calendario, turno contra los existentes, mes que rueda solo). Ahora es la vista principal del diálogo, no una sección plegada.
+- El archivo `supabase/functions/leer-planilla/index.ts` queda en el repo, y la función sigue desplegada en Supabase pero **ya no se llama desde ninguna parte**. Sin la clave no puede gastar nada; se puede borrar cuando se quiera.
+
+**2. Calendario: el horario ahora se lee**
+- **Causa de la ilegibilidad:** el nombre del turno *es* el rango (`18:30-23:30`), y once caracteres a 9px en una celda de 47px se partían en dos líneas apretadas.
+- **La celda se parte a propósito:** la **entrada** grande (12px, en el color del turno) y la salida debajo, más chica y atenuada. La entrada es el dato que uno busca — *«¿a qué hora entro el jueves?»*. La celda deja de ser cuadrada y crece a 62px de alto.
+- **Franja de color arriba** de cada día: identifica el turno de un vistazo, sin leer.
+- **Leyenda del mes** debajo del calendario (antes solo la veía el socio, no el supervisor): únicamente los turnos que ese socio hace ese mes, con el rango completo, un punto de color y **cuántos días** cae cada uno, más el total de **trabajados y libres**. Antes listaba todos los turnos del sistema, incluidos los que el socio no hace.
+- **Vista lista** (botón 📋/🗓, se recuerda la elección): una fila por día — `14 LU · 20:30 a 04:30` — con el fin de semana sombreado y el día de hoy marcado. En un teléfono se revisa el mes de corrido mucho mejor que en la grilla.
+- **Fix:** los días libres se veían todos iguales. `LibreXF` (libre por feriado) mostraba **LIBRE**, idéntico a un libre de ciclo, y en la leyenda salían dos chips «LIBRE» indistinguibles. Ahora cada libre muestra su nombre; las etiquetas largas achican la letra en vez de desbordar la celda.
+- Verificado en navegador con el mes real de un socio a 390px y 360px: ninguna celda con texto desbordado y sin scroll horizontal.
+- Archivos: `index2.html`.
+
 #### 2026-09-12 — Fix: el 503 de la función se perdía y la app culpaba al despliegue
 
 - **Síntoma:** con la función ya desplegada, subir una foto mostraba *«La lectura de fotos todavía no está activada»*, que apunta al despliegue cuando el problema era otro.
