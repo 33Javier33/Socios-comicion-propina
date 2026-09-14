@@ -598,7 +598,10 @@ function pintarHoySocio(cont, socioId, excepciones){
   // arrancó de noche y todavía no termina.
   const tAyer=turnoDeSocioEnFecha(socioId, ayer, excepciones);
   const enHoy=_dentroDelTurno(tHoy, hoy, ahora);
-  const enAyer=_dentroDelTurno(tAyer, ayer, ahora);
+  // Solo cuenta como "de ayer" si NO está también dentro del de hoy: si los
+  // dos dieran verdad, el que manda es el de hoy y decir "empezó anoche"
+  // sería mentira.
+  const enAyer=!enHoy && _dentroDelTurno(tAyer, ayer, ahora);
   const enTurno=enHoy||enAyer;
   const tActivo=enHoy?tHoy:(enAyer?tAyer:null);
   const pActivo=_turnoPartes(tActivo);
@@ -606,20 +609,34 @@ function pintarHoySocio(cont, socioId, excepciones){
   const color = enTurno ? pActivo.color : (p?p.color:'#475569');
   const fecha = `${DIAS[hoy.getDay()]} ${hoy.getDate()} de ${MESES[hoy.getMonth()].toLowerCase()}`;
 
-  let titulo, detalle='', pie='';
+  // El encabezado tiene que describir lo que muestra el número grande. Si el
+  // turno en curso arrancó AYER, poner "HOY · Lunes 14" arriba y el horario
+  // de ayer abajo se lee como un error: el encabezado dice un día y el dato
+  // es de otro. En ese caso el encabezado habla del turno, no del día.
+  // UNA sola cadena: el turno en curso manda sobre todo lo demás. Partirla en
+  // dos hacía que los ramos de abajo pisaran lo que había calculado el de
+  // arriba, y terminaba mostrando el turno de hoy con el rótulo de ayer.
+  let encabezado, titulo, detalle='', pie='';
   if(enTurno){
     const h=_horasTurno(tActivo);
+    encabezado = enAyer
+      ? `EN TURNO · empezó el ${DIAS[ayer.getDay()].toLowerCase()} ${ayer.getDate()}`
+      : `EN TURNO · empezó hoy a las ${pActivo.ini}`;
     titulo=`${pActivo.ini} a ${pActivo.fin}`;
-    detalle=(h?h+' Hrs · ':'')+(enAyer?'turno que empezó anoche':'en curso');
+    detalle=(h?h+' Hrs':'')+(enAyer?` · termina a las ${pActivo.fin}`:' · en curso');
   } else if(!p){
+    encabezado=`HOY · ${fecha}`;
     titulo='Sin turno asignado';
     detalle='Pídele al supervisor que te asigne el turno de hoy.';
   } else if(p.libre){
+    encabezado=`HOY · ${fecha}`;
     titulo=p.etqLargo||p.etq;                    // LIBRE · LXF (7,5)
     detalle='Hoy no trabajas';
   } else if(p.etq){
+    encabezado=`HOY · ${fecha}`;
     titulo=p.etq;                                // VACAC
   } else {
+    encabezado=`HOY · ${fecha}`;
     const h=_horasTurno(tHoy);
     titulo=`${p.ini} a ${p.fin}`;
     // Antes o después del turno, se dice cuál de las dos cosas es.
@@ -627,15 +644,20 @@ function pintarHoySocio(cont, socioId, excepciones){
     detalle=(h?h+' Hrs · ':'') + (ahoraMin<iniMin ? 'entras a las '+p.ini : 'turno terminado');
   }
 
-  // Mañana, en chico: sirve para saber de noche si al otro día se entra.
-  const tMan=turnoDeSocioEnFecha(socioId, manana, excepciones);
-  const pMan=_turnoPartes(tMan);
-  if(pMan){
-    const txtMan = pMan.libre||pMan.etq ? (pMan.etqLargo||pMan.etq) : `${pMan.ini} a ${pMan.fin}`;
-    pie=`<div style="margin-top:10px;padding-top:9px;border-top:1px solid #ffffff14;display:flex;justify-content:space-between;align-items:center;gap:8px;">
-           <span style="font-size:11px;color:#94a3b8;font-weight:700;">MAÑANA · ${DIAS[manana.getDay()]}</span>
-           <span style="font-size:12.5px;font-weight:800;color:${pMan.color};">${esc(txtMan)}</span>
-         </div>`;
+  // Renglón de abajo. Si el turno en curso arrancó AYER, lo que hace falta
+  // saber es qué toca HOY cuando se termine; si no, lo útil es mañana.
+  const _txt = q => q.libre||q.etq ? (q.etqLargo||q.etq) : `${q.ini} a ${q.fin}`;
+  const _pie = (rot, q) => `<div style="margin-top:10px;padding-top:9px;border-top:1px solid #ffffff14;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+       <span style="font-size:11px;color:#94a3b8;font-weight:700;">${esc(rot)}</span>
+       <span style="font-size:12.5px;font-weight:800;color:${q.color};">${esc(_txt(q))}</span>
+     </div>`;
+  if(enAyer){
+    pie = p ? _pie(`HOY · ${DIAS[hoy.getDay()]} ${hoy.getDate()}`, p)
+            : `<div style="margin-top:10px;padding-top:9px;border-top:1px solid #ffffff14;font-size:11px;color:#94a3b8;">
+                 HOY · ${DIAS[hoy.getDay()]} ${hoy.getDate()} — sin turno cargado</div>`;
+  } else {
+    const pMan=_turnoPartes(turnoDeSocioEnFecha(socioId, manana, excepciones));
+    if(pMan) pie=_pie(`MAÑANA · ${DIAS[manana.getDay()]}`, pMan);
   }
 
   cont.innerHTML=`
@@ -643,7 +665,7 @@ function pintarHoySocio(cont, socioId, excepciones){
                 border:1px solid ${color}66;position:relative;overflow:hidden;">
       <span style="position:absolute;top:0;left:0;right:0;height:4px;background:${color};"></span>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
-        <span style="font-size:11px;font-weight:800;letter-spacing:.09em;color:#94a3b8;">HOY · ${esc(fecha)}</span>
+        <span style="font-size:11px;font-weight:800;letter-spacing:.09em;color:#94a3b8;">${esc(encabezado)}</span>
         ${enTurno?`<span style="font-size:10px;font-weight:900;color:#052a3d;background:${color};border-radius:999px;padding:2px 9px;white-space:nowrap;">EN TURNO</span>`:''}
       </div>
       <div style="font-size:26px;font-weight:900;color:${color};line-height:1.15;letter-spacing:-0.5px;">${esc(titulo)}</div>

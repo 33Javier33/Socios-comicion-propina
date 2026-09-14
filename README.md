@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Fix: la tarjeta de hoy mostraba el turno de ayer bajo el rótulo «HOY»
+
+- **Reporte:** la tarjeta decía *«HOY · Lunes 14»* pero el horario grande era el del día anterior.
+- **Qué pasaba:** mirando la app de madrugada del lunes, todavía dentro del turno que arrancó el **domingo 13 a las 19:30**, la tarjeta mostraba —bien— el turno en curso, pero con el encabezado *«HOY · Lunes 14»*. El número grande decía un día y el encabezado otro. Que el renglón chico aclarara *«turno que empezó anoche»* no alcanzaba: nadie lee la letra chica cuando arriba hay un número enorme. **El dato era correcto; el rótulo, no.**
+- **Fix:** el encabezado describe ahora lo que muestra el número grande. Con un turno en curso dice **«EN TURNO · empezó el domingo 13»** (o «empezó hoy a las 20:30»), y el renglón de abajo pasa a mostrar **qué toca HOY** cuando ese turno termine — que es lo que hace falta saber a esa hora — en lugar de «mañana».
+- **Tres defectos más, encontrados al probar el arreglo:**
+  1. La cadena de condiciones había quedado partida en dos, y los ramos de abajo **pisaban** lo que calculaba el de arriba: con un turno de ayer en curso, el número grande terminaba mostrando el turno de **hoy** con el rótulo de ayer. Ahora es una sola cadena y el turno en curso manda.
+  2. Con un turno en curso y **sin turno cargado para hoy**, la tarjeta **se caía** (`Cannot read properties of null`).
+  3. Si el momento actual caía dentro del turno de ayer **y** del de hoy, se mostraba el de hoy pero con el texto «empezó anoche». Ahora el de hoy tiene prioridad y el rótulo coincide.
+- Probado con el reloj congelado en seis escenarios, incluido el reportado: madrugada dentro del turno de ayer con hoy trabajado, con hoy LIBRE, con hoy sin cargar, turnos solapados, fuera de turno y en turno del propio día.
+- Archivos: `index2.html`.
+
 #### 2026-09-14 — Buscador de socio en el calendario del supervisor
 
 - **«Ver calendario de un socio»** dejó de ser una lista desplegable. Con 33 socios de Mesas, en el teléfono había que rodar el selector hasta dar con el nombre.
