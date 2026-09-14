@@ -123,7 +123,8 @@
     <h2 id="pinTitulo" class="text-xl font-extrabold mb-1">Ingresa tu PIN</h2>
     <p id="pinSub" class="text-sm text-slate-400 mb-6">4 dígitos</p>
     <div class="flex justify-center gap-3 mb-2"><span class="pin-dot" id="pd0"></span><span class="pin-dot" id="pd1"></span><span class="pin-dot" id="pd2"></span><span class="pin-dot" id="pd3"></span></div>
-    <p id="pinError" class="text-sm text-red-400 h-5 mb-4"></p>
+    <p id="pinError" class="text-sm text-red-400 h-5 mb-2"></p>
+    <button id="pinOlvide" onclick="pinOlvideClave()" style="display:none;background:none;border:none;color:#7dd3fc;font-size:12.5px;font-weight:700;text-decoration:underline;cursor:pointer;margin-bottom:10px;">¿Olvidaste la clave?</button>
     <div class="grid grid-cols-3 gap-3 max-w-[280px] mx-auto">
       <button class="keypad-btn" onclick="pinTecla('1')">1</button>
       <button class="keypad-btn" onclick="pinTecla('2')">2</button>
@@ -263,6 +264,17 @@
       <div class="flex items-center justify-between mb-3">
         <h3 class="font-extrabold">Accesos</h3>
         <button onclick="accRender()" class="btn-ghost text-xs">🔄 Actualizar</button>
+      </div>
+      <!-- Clave del supervisor: cambiarla desde adentro -->
+      <div class="card p-3 mb-4">
+        <div class="flex items-center gap-3">
+          <span style="font-size:1.2em">🛡️</span>
+          <div style="flex:1;min-width:0">
+            <div class="font-bold text-sm">Clave de supervisor</div>
+            <div id="accClaveInfo" class="text-[11px] text-slate-400">…</div>
+          </div>
+          <button onclick="supCambiarClave()" class="btn-ghost text-xs" style="flex-shrink:0">Cambiar</button>
+        </div>
       </div>
       <div id="accUltimos" class="mb-4"></div>
       <div id="accPins"></div>
@@ -453,7 +465,7 @@ async function socioElegido(id){
       onOk:()=>entrarSocio(s)});
   } else {
     abrirPin({modo:'create', titulo:'Crea tu PIN', sub:'Será tu clave para entrar', avatar:(s.nombre||'?').charAt(0),
-      onOk:async(pin)=>{ await db.from('horarios_pins').upsert({usuario:id,pin}); entrarSocio(s); }});
+      onOk:async(pin)=>{ await db.from('horarios_pins').upsert({usuario:id,pin,pin_inicial:pin}); entrarSocio(s); }});
   }
 }
 // Deja constancia de QUIÉN entró y cuándo. Nunca se guarda el PIN ni nada
@@ -469,12 +481,22 @@ function entrarSocio(s){ sesion={rol:'socio',id:s.id,nombre:`${s.nombre} ${s.ape
 
 async function irSupervisor(){
   await cargarBase();
-  const {data}=await db.from('horarios_pins').select('pin').eq('usuario','SUPERVISOR').maybeSingle();
+  // Dos consultas a propósito: la clave de recuperación NO se trae acá. Solo
+  // se pregunta si existe, para saber si mostrar "¿Olvidaste la clave?". Su
+  // valor recién se consulta cuando la persona dice que la olvidó.
+  const [{data}, {data:rec}] = await Promise.all([
+    db.from('horarios_pins').select('pin').eq('usuario','SUPERVISOR').maybeSingle(),
+    db.from('horarios_pins').select('usuario').eq('usuario','SUPERVISOR').not('pin_inicial','is',null).maybeSingle()
+  ]);
   if(data && data.pin){
-    abrirPin({modo:'verify', titulo:'PIN de Supervisor', sub:'Acceso de gestión', avatar:'🛡️', pinReal:data.pin, onOk:entrarSuper});
+    abrirPin({modo:'verify', titulo:'PIN de Supervisor', sub:'Acceso de gestión', avatar:'🛡️', pinReal:data.pin,
+      recuperable: !!rec, onOk:entrarSuper});
   } else {
-    abrirPin({modo:'create', titulo:'Crea el PIN de Supervisor', sub:'Guárdalo bien: da acceso a la gestión', avatar:'🛡️',
-      onOk:async(pin)=>{ await db.from('horarios_pins').upsert({usuario:'SUPERVISOR',pin}); entrarSuper(); }});
+    // La PRIMERA clave queda guardada aparte como clave de recuperación y no
+    // se sobrescribe nunca: es la que permite volver a entrar si se olvidan
+    // las claves posteriores.
+    abrirPin({modo:'create', titulo:'Crea el PIN de Supervisor', sub:'Guárdalo bien: será también tu clave de recuperación', avatar:'🛡️',
+      onOk:async(pin)=>{ await db.from('horarios_pins').upsert({usuario:'SUPERVISOR',pin,pin_inicial:pin}); entrarSuper(); }});
   }
 }
 function entrarSuper(){ sesion={rol:'super'}; supViewDate=new Date(); registrarAcceso('super', null, 'Supervisor'); arrancarInactividad(); renderSuper(); show('appSuper'); }
@@ -528,17 +550,94 @@ function pararInactividad(){
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && sesion) _inactTick(); });
 
 // ══════════ PIN ══════════
-function abrirPin(ctx){ pinCtx=ctx; pinBuffer=''; document.getElementById('pinTitulo').textContent=ctx.titulo; document.getElementById('pinSub').textContent=ctx.sub||''; document.getElementById('pinAvatar').textContent=ctx.avatar||'?'; document.getElementById('pinError').textContent=''; pinPintar(); show('scrPin'); }
+function abrirPin(ctx){
+  pinCtx=ctx; pinBuffer='';
+  document.getElementById('pinTitulo').textContent=ctx.titulo;
+  document.getElementById('pinSub').textContent=ctx.sub||'';
+  document.getElementById('pinAvatar').textContent=ctx.avatar||'?';
+  document.getElementById('pinError').textContent='';
+  const ol=document.getElementById('pinOlvide');
+  if(ol) ol.style.display = ctx.recuperable ? 'inline-block' : 'none';
+  pinPintar(); show('scrPin');
+}
 function pinPintar(){ for(let i=0;i<4;i++){ document.getElementById('pd'+i).classList.toggle('on', i<pinBuffer.length); } }
 function pinTecla(n){ if(pinBuffer.length>=4) return; pinBuffer+=n; pinPintar(); if(pinBuffer.length===4) setTimeout(pinValidar,120); }
 function pinBorrar(){ pinBuffer=pinBuffer.slice(0,-1); pinPintar(); document.getElementById('pinError').textContent=''; }
-function pinCancelar(){ if(sesion) return; if(pinCtx && pinCtx.avatar==='🛡️') show('scrRole'); else show('scrSocioPick'); }
+function pinCancelar(){
+  // Con sesión abierta se está cambiando la clave desde adentro: volver tiene
+  // que devolver a la app. Antes no hacía nada y la pantalla quedaba trabada.
+  if(sesion){ show(sesion.rol==='super'?'appSuper':'appSocio'); return; }
+  if(pinCtx && (pinCtx.avatar==='🛡️' || pinCtx.avatar==='🔑')) show('scrRole');
+  else show('scrSocioPick');
+}
 function pinValidar(){
   if(pinCtx.modo==='verify'){
     if(pinBuffer===String(pinCtx.pinReal)){ pinCtx.onOk(pinBuffer); }
     else { document.getElementById('pinError').textContent='PIN incorrecto'; pinBuffer=''; pinPintar(); }
   } else { // create
     const pin=pinBuffer; pinCtx.onOk(pin); }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CLAVE DEL SUPERVISOR: cambiarla y recuperarla
+//
+// La PRIMERA clave que se creó queda guardada aparte (`pin_inicial`) y no
+// se sobrescribe nunca. Es la clave de recuperación: si se olvidan las
+// claves puestas después, con esa se vuelve a entrar y se define una nueva.
+//
+// Nota honesta sobre esto: las claves de esta app se guardan en texto
+// plano en `horarios_pins`, como estaban desde el principio. Sirven para
+// separar roles en un teléfono compartido, no para proteger datos
+// sensibles — las plata y los saldos viven en la app principal, no acá.
+// ══════════════════════════════════════════════════════════════════════
+
+// Paso 1 de la recuperación: pedir la clave de recuperación.
+async function pinOlvideClave(){
+  const {data}=await db.from('horarios_pins').select('pin_inicial').eq('usuario','SUPERVISOR').maybeSingle();
+  if(!data || !data.pin_inicial){
+    document.getElementById('pinError').textContent='No hay clave de recuperación guardada';
+    return;
+  }
+  abrirPin({ modo:'verify', titulo:'Clave de recuperación', avatar:'🔑',
+    sub:'Es la PRIMERA clave que creaste', pinReal:data.pin_inicial,
+    onOk:()=>{
+      // Con la de recuperación validada, se define una clave nueva.
+      abrirPin({ modo:'create', titulo:'Nueva clave de supervisor', avatar:'🛡️',
+        sub:'4 dígitos — la de recuperación no cambia',
+        onOk:async(pin)=>{
+          const {error}=await db.from('horarios_pins').update({pin}).eq('usuario','SUPERVISOR');
+          if(error){ toast('No se pudo guardar: '+error.message,'#dc2626'); return; }
+          toast('✅ Clave cambiada'); entrarSuper();
+        }});
+    }});
+}
+
+// Cambio de clave desde adentro: pide la ACTUAL antes de aceptar la nueva.
+async function supCambiarClave(){
+  const {data}=await db.from('horarios_pins').select('pin').eq('usuario','SUPERVISOR').maybeSingle();
+  if(!data || !data.pin){ toast('Todavía no hay clave creada','#dc2626'); return; }
+  abrirPin({ modo:'verify', titulo:'Clave actual', sub:'Confirma con la clave que usas hoy', avatar:'🛡️',
+    pinReal:data.pin,
+    onOk:()=>{
+      abrirPin({ modo:'create', titulo:'Nueva clave', sub:'4 dígitos', avatar:'🆕',
+        onOk:(pin1)=>{
+          abrirPin({ modo:'create', titulo:'Repite la nueva clave', sub:'Para confirmar que no hubo un dedazo', avatar:'🔁',
+            onOk:async(pin2)=>{
+              if(pin1!==pin2){
+                toast('Las claves no coinciden','#dc2626');
+                supTab('Accesos'); show('appSuper'); return;
+              }
+              if(pin1===String(data.pin)){
+                toast('Esa es la clave que ya tenías','#dc2626');
+                supTab('Accesos'); show('appSuper'); return;
+              }
+              const {error}=await db.from('horarios_pins').update({pin:pin1}).eq('usuario','SUPERVISOR');
+              if(error){ toast('No se pudo guardar: '+error.message,'#dc2626'); }
+              else toast('✅ Clave cambiada');
+              show('appSuper'); supTab('Accesos');
+            }});
+        }});
+    }});
 }
 
 // ══════════ Cálculo del turno de un día ══════════
@@ -1004,12 +1103,24 @@ async function accRender(){
   up.innerHTML='<div class="text-slate-500 text-xs text-center py-4">Cargando…</div>'; pp.innerHTML='';
 
   // OJO: se pide `usuario`, no `pin`. El valor del PIN no sale de la base.
-  const [accRes, pinRes] = await Promise.all([
+  const [accRes, pinRes, recRes] = await Promise.all([
     db.from('horarios_accesos').select('socio_id,nombre,rol,created_at').order('created_at',{ascending:false}).limit(300),
-    db.from('horarios_pins').select('usuario')
+    // Dos consultas que traen SOLO la columna `usuario`: una con todos los que
+    // tienen clave y otra filtrada por los que además tienen recuperación. Así
+    // se sabe si existe sin que el valor salga nunca de la base — pedir
+    // `pin_inicial` habría traído la clave de recuperación al navegador.
+    db.from('horarios_pins').select('usuario'),
+    db.from('horarios_pins').select('usuario').not('pin_inicial','is',null)
   ]);
   const accesos=accRes.data||[];
   const conPin=new Set((pinRes.data||[]).map(r=>String(r.usuario)));
+  const conRec=new Set((recRes.data||[]).map(r=>String(r.usuario)));
+  const info=document.getElementById('accClaveInfo');
+  if(info) info.innerHTML = !conPin.has('SUPERVISOR')
+    ? '<span style="color:#fcd34d">Todavía no se ha creado</span>'
+    : (conRec.has('SUPERVISOR')
+        ? 'Creada · 🔑 tiene clave de recuperación'
+        : '<span style="color:#fcd34d">Creada · sin clave de recuperación</span>');
 
   // ── Últimos que entraron (tope de 6, ampliable) ──
   const TOPE=6;

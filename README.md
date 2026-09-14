@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Clave del supervisor: se puede cambiar, y la primera queda como recuperación
+
+- Antes la clave de supervisor **se creaba una vez y no había forma de cambiarla**. Ahora, en la pestaña **🔐 Accesos**, la tarjeta *«Clave de supervisor»* tiene un botón **Cambiar**: pide la **clave actual**, después la nueva y la repite para confirmar.
+- **Clave de recuperación:** la **primera** clave que se creó queda guardada aparte (`pin_inicial`) y **no se sobrescribe nunca**. En el login de supervisor aparece **«¿Olvidaste la clave?»**: con esa primera clave se entra y se define una nueva. Sirve tantas veces como haga falta.
+- **Migración aplicada** en `horarios_pins`: columna `pin_inicial`, y como hasta hoy la clave no se podía cambiar, la que estaba guardada **es** la primera — se copió como clave de recuperación en las 7 filas existentes. Revertir: `alter table public.horarios_pins drop column pin_inicial`.
+- **El valor de la clave de recuperación no se trae al navegador salvo cuando hace falta compararlo.** En el login solo se pregunta *si existe* (consulta filtrada que devuelve `usuario`, no el valor) para decidir si mostrar el enlace; el valor recién se consulta cuando la persona dice que la olvidó. Lo mismo en el panel: la lista de quién tiene clave usa dos consultas que traen **solo `usuario`**.
+- **Fix de paso:** el botón «‹ Volver» de la pantalla del PIN **no hacía nada si había sesión abierta** (`if(sesion) return;`). Al cambiar la clave desde adentro eso dejaba la pantalla trabada; ahora devuelve a la app.
+- **Sobre el almacenamiento:** las claves de esta app siguen guardándose en texto plano en `horarios_pins`, como estaban desde el principio — esto no lo empeora, pero tampoco lo arregla. Sirven para separar roles en un teléfono compartido, no para proteger datos sensibles; la plata y los saldos viven en la app principal. Pasarlas a hash es un trabajo aparte.
+- Probado con una base simulada: cambio correcto, clave actual equivocada (no cambia nada), claves nuevas que no coinciden (no cambia nada), recuperación con la primera clave, y que la clave de recuperación siga intacta después de dos cambios.
+- Archivos: `index2.html`.
+
 #### 2026-09-14 — index2: pestaña Accesos (quién entró, quién creó su PIN) y cierre por inactividad
 
 **Nueva pestaña 🔐 Accesos en el supervisor**
