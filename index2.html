@@ -174,6 +174,26 @@
   <div class="flex-1 overflow-y-auto p-4 pb-24">
     <!-- PANEL: CALENDARIO -->
     <div id="panCalendario" class="sup-panel active">
+      <!-- Quién tiene turnos y a quién le faltan, para el mes elegido -->
+      <div class="card mb-4" style="overflow:hidden">
+        <button onclick="covToggle()" style="width:100%;display:flex;align-items:center;gap:9px;padding:11px 13px;background:none;border:none;cursor:pointer;text-align:left;color:inherit;font-family:inherit;">
+          <span style="font-size:1.05em">📊</span>
+          <div style="flex:1;min-width:0">
+            <div class="font-bold text-sm">Quién tiene turnos</div>
+            <div id="covResumen" class="text-[11px] text-slate-400" style="margin-top:1px">…</div>
+          </div>
+          <span id="covIcono" class="text-slate-500 text-xs">▾</span>
+        </button>
+        <div id="covCuerpo" style="display:none;border-top:1px solid #293449;padding:11px 13px">
+          <div class="flex items-center justify-between mb-3">
+            <button onclick="covMes(-1)" class="btn-ghost text-xs">‹</button>
+            <div id="covMesLabel" class="font-bold text-sm"></div>
+            <button onclick="covMes(1)" class="btn-ghost text-xs">›</button>
+          </div>
+          <div id="covLista"></div>
+        </div>
+      </div>
+
       <div class="card p-3 mb-4">
         <label class="text-xs text-slate-400 font-semibold">Ver calendario de un socio</label>
         <select id="supVerSocio" class="fld mt-1" onchange="supRenderCal()"><option value="">— elige un socio —</option></select>
@@ -253,6 +273,7 @@ let socioViewDate = new Date();
 let supViewDate = new Date();
 let supSocioSel = '';
 let supVista = (()=>{ try{ return localStorage.getItem('hor_vista')||'mes'; }catch(e){ return 'mes'; } })();
+let covDate = new Date(), covAbierto = false;
 let pinBuffer = '', pinCtx = null; // { modo:'create'|'verify', titulo, sub, avatar, onOk(pin) }
 
 function uid(p){ return (p||'') + Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36); }
@@ -678,7 +699,7 @@ function socioMes(delta){ socioViewDate=new Date(socioViewDate.getFullYear(), so
 function socioIrHoy(){ socioViewDate=new Date(); renderSocioApp(); }
 
 // ══════════ App Supervisor ══════════
-function renderSuper(){ supTab('Calendario'); supLlenarSelectSocios(); renderTurnos(); renderGrupos(); renderAsignaciones(); }
+function renderSuper(){ supTab('Calendario'); supLlenarSelectSocios(); renderTurnos(); renderGrupos(); renderAsignaciones(); covRender(); }
 function supTab(pan){
   document.querySelectorAll('#appSuper .tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.pan===pan));
   document.querySelectorAll('#appSuper .sup-panel').forEach(p=>p.classList.remove('active'));
@@ -717,6 +738,111 @@ function supToggleVista(){
   try{ localStorage.setItem('hor_vista', supVista); }catch(e){}
   supRenderCal();
 }
+// ══════════════════════════════════════════════════════════════════════
+// COBERTURA DEL MES — quién tiene turnos y a quién le faltan
+//
+// Un socio puede tener turnos por dos caminos: porque está en un GRUPO
+// (el ciclo le cubre todos los días) o porque se le cargaron EXCEPCIONES
+// día por día (lo que deja la importación de la planilla). Los que no
+// tienen ninguno de los dos quedan sin turno, y hasta ahora no había
+// forma de verlo salvo abriendo socio por socio.
+//
+// Se listan primero los que faltan, que es sobre lo que hay que actuar.
+// ══════════════════════════════════════════════════════════════════════
+function covToggle(){
+  covAbierto=!covAbierto;
+  document.getElementById('covCuerpo').style.display = covAbierto?'block':'none';
+  document.getElementById('covIcono').textContent = covAbierto?'▴':'▾';
+  if(covAbierto) covRender();
+}
+function covMes(delta){ covDate=new Date(covDate.getFullYear(), covDate.getMonth()+delta, 1); covRender(); }
+
+async function covRender(){
+  const cont=document.getElementById('covLista');
+  const lbl=document.getElementById('covMesLabel');
+  if(lbl) lbl.textContent=MESES[covDate.getMonth()]+' '+covDate.getFullYear();
+  if(cont) cont.innerHTML='<div class="text-slate-500 text-xs text-center py-4">Calculando…</div>';
+
+  const dias=celdasMes(covDate).filter(Boolean);
+  const y=covDate.getFullYear(), m=covDate.getMonth();
+  const desde=fechaISO(new Date(y,m,1)), hasta=fechaISO(new Date(y,m+1,0));
+
+  // Una sola consulta para todos los socios, no una por cabeza.
+  let excPorSocio={};
+  if(sociosMesas.length){
+    const {data}=await db.from('horarios_excepciones').select('socio_id,fecha')
+      .in('socio_id', sociosMesas.map(s=>s.id)).gte('fecha',desde).lte('fecha',hasta);
+    (data||[]).forEach(e=>{ (excPorSocio[e.socio_id]=excPorSocio[e.socio_id]||{})[e.fecha.substring(0,10)]=1; });
+  }
+
+  const conTurno=[], incompletos=[], sinTurno=[];
+  sociosMesas.forEach(s=>{
+    const exc=excPorSocio[s.id]||{};
+    const gid=asignaciones[s.id];
+    const faltan=dias.filter(d=>!exc[fechaISO(d)]).map(d=>d.getDate());
+    const nombre=`${s.nombre} ${s.apellido}`.trim();
+    if(gid){
+      // Con grupo el ciclo cubre todos los días; las excepciones solo lo pisan.
+      conTurno.push({ s, nombre, via:'Grupo: '+((gruposMap[gid]||{}).nombre||'—') });
+    } else if(!faltan.length && dias.length){
+      conTurno.push({ s, nombre, via:'Cargado día por día' });
+    } else if(faltan.length < dias.length){
+      incompletos.push({ s, nombre, faltan });
+    } else {
+      sinTurno.push({ s, nombre });
+    }
+  });
+  const ordenar=a=>a.sort((x,y)=>x.nombre.localeCompare(y.nombre));
+  ordenar(conTurno); ordenar(incompletos); ordenar(sinTurno);
+
+  const res=document.getElementById('covResumen');
+  if(res) res.innerHTML=
+      `<b class="text-emerald-300">${conTurno.length}</b> con turnos`
+    + (incompletos.length?` · <b class="text-amber-300">${incompletos.length}</b> incompletos`:'')
+    + (sinTurno.length?` · <b class="text-red-300">${sinTurno.length}</b> sin turnos`:'')
+    + ` · ${MESES[covDate.getMonth()]}`;
+  if(!cont) return;
+
+  const fila=(o, color, extra)=>`
+    <div onclick="covIrA('${o.s.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;
+         background:#0f172a;border-left:3px solid ${color};margin-bottom:4px;cursor:pointer;">
+      <div style="flex:1;min-width:0">
+        <div class="text-sm font-bold" style="color:#e2e8f0">${esc(o.nombre)}</div>
+        <div class="text-[11px]" style="color:${color}">${extra}</div>
+      </div>
+      <span class="text-slate-600 text-xs">›</span>
+    </div>`;
+
+  const bloque=(titulo, color, arr, fn)=> !arr.length ? '' :
+    `<div style="margin-bottom:12px">
+       <div class="text-[11px] font-bold uppercase tracking-wide mb-1.5" style="color:${color}">${titulo} (${arr.length})</div>
+       ${arr.map(fn).join('')}
+     </div>`;
+
+  if(!sociosMesas.length){ cont.innerHTML='<div class="text-slate-500 text-xs text-center py-4">No hay socios de Mesas cargados.</div>'; return; }
+
+  cont.innerHTML =
+      bloque('Sin turnos', '#f87171', sinTurno, o=>fila(o,'#f87171','Ningún día del mes · sin grupo'))
+    + bloque('Incompletos', '#fbbf24', incompletos, o=>{
+        const l=o.faltan;
+        const txt = l.length>10 ? l.slice(0,10).join(', ')+' y '+(l.length-10)+' más' : l.join(', ');
+        return fila(o,'#fbbf24',`Faltan ${l.length} día${l.length===1?'':'s'}: ${txt}`);
+      })
+    + bloque('Con turnos', '#34d399', conTurno, o=>fila(o,'#34d399',esc(o.via)))
+    + (incompletos.length||sinTurno.length
+        ? '<p class="text-[11px] text-slate-500 mt-1">💡 Toca un socio para abrir su calendario y cargarle los turnos.</p>' : '');
+}
+
+// Al tocar un socio de la lista se abre su calendario, que es lo que sigue.
+function covIrA(socioId){
+  const sel=document.getElementById('supVerSocio');
+  if(sel){ sel.value=socioId; }
+  supViewDate=new Date(covDate.getFullYear(), covDate.getMonth(), 1);
+  supRenderCal();
+  const wrap=document.getElementById('supCalWrap');
+  if(wrap) wrap.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
 function supMes(delta){ supViewDate=new Date(supViewDate.getFullYear(), supViewDate.getMonth()+delta, 1); supRenderCal(); }
 function supIrHoy(){ supViewDate=new Date(); supRenderCal(); }
 function supDiaClick(iso){

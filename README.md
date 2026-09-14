@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — index2: quién tiene turnos y a quién le faltan
+
+- Tarjeta nueva arriba del panel **Calendario** del supervisor: **«Quién tiene turnos»**, con el resumen siempre a la vista (*«12 con turnos · 3 incompletos · 5 sin turnos»*) y el detalle al desplegarla. Antes no había forma de saberlo salvo abriendo socio por socio.
+- **Tres estados, según cómo llega el turno en esta app:**
+  - **Con turnos** — está en un **grupo** (el ciclo le cubre todos los días) o tiene el mes **cargado día por día**. Se indica cuál de los dos.
+  - **Incompletos** — tiene algunos días pero no todos, que es lo que queda si una importación de planilla se cortó. **Se listan los días que faltan** (los diez primeros y cuántos más), que es lo accionable.
+  - **Sin turnos** — ni grupo ni excepciones.
+- **Los que faltan van primero**, porque son sobre lo que hay que actuar; los que ya están, al final.
+- **Tocar un socio abre su calendario** en el mes que se estaba revisando y baja hasta él, para cargarle los turnos sin buscarlo de nuevo en el selector.
+- Tiene su **propio navegador de mes**, independiente del calendario de abajo: sirve para revisar la cobertura del mes que viene antes de que empiece.
+- **Una sola consulta para todos los socios** (`.in('socio_id', …)` acotada al mes), no una por cabeza.
+- Probado en navegador con los tres estados a la vez: socios con grupo, uno con el mes completo día por día, dos incompletos (uno al que le faltan 8 días y otro 28) y uno sin nada.
+- Archivos: `index2.html`.
+
 #### 2026-09-14 — Importar planilla: se aceptan más formatos y se explica cuál usar
 
 - **Medición previa (por qué no se vuelve al OCR):** se probó Tesseract con la imagen **preprocesada** (ampliada 2,6×, gris, umbral Otsu y umbral local adaptativo) y además emparejando cada línea contra el vocabulario cerrado de 6 turnos posibles. Mejor resultado: **9 de 30 filas correctas**, con solo 13 de 30 detectadas. Peor aún, el vocabulario cerrado **empeora el fallo**: convirtió `"2,5 Hrs 20 30 a04. 30"` en `7,5 Hrs 20:30 a 04:30` para un día que es **LIBRE** — un error que parece válido y pasaría la revisión. Queda descartado con datos.
