@@ -248,3 +248,81 @@ function notificarAdmin(titulo, cuerpo, tipo) {
         }
     } catch (e) {}
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// COMPARTIR LOS ENLACES DE LAS OTRAS APPS
+//
+// Desde la app de administración casi nunca se entra a la App de Socios:
+// lo que se necesita es MANDARLE el enlace a alguien. Antes el botón solo
+// la abría, así que había que ir a la barra del navegador y copiar la URL
+// a mano.
+//
+// Si el teléfono lo permite se abre el menú nativo de compartir (WhatsApp,
+// mensajes, correo). Si no, se copia al portapapeles. Y si el portapapeles
+// está bloqueado —pasa fuera de HTTPS— se selecciona el texto para que se
+// pueda copiar a mano: nunca se queda sin salida.
+// ══════════════════════════════════════════════════════════════════════
+const APPS_ENLACES = [
+    { id: 'socios',  icono: '📱', nombre: 'App de Socios',
+      desc: 'Para los socios: sus anticipos, saldo y solicitudes',
+      url: 'https://propi-solicitada.vercel.app/', color: '#6366f1' },
+    { id: 'diario',  icono: '📔', nombre: 'Diario de Recaudación',
+      desc: 'Carga diaria de recaudaciones',
+      url: 'https://diario-propi.vercel.app/', color: '#0e7490' }
+];
+
+function abrirCompartirApps() {
+    const cont = document.getElementById('compartirAppsLista');
+    if (cont) {
+        cont.innerHTML = APPS_ENLACES.map(a => `
+            <div style="border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+                <div style="display:flex; align-items:center; gap:9px; margin-bottom:8px;">
+                    <span style="font-size:1.2em;">${a.icono}</span>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight:800; color:${a.color};">${a.nombre}</div>
+                        <div style="font-size:0.76em; color:#7f8c8d;">${a.desc}</div>
+                    </div>
+                </div>
+                <input readonly value="${a.url}" id="url-${a.id}" onclick="this.select()"
+                    style="width:100%; box-sizing:border-box; border:1px solid var(--border); border-radius:8px;
+                           padding:8px 10px; font-size:0.8em; color:#334155; background:var(--surface); margin-bottom:9px;">
+                <div style="display:flex; gap:7px; flex-wrap:wrap;">
+                    <button onclick="compartirEnlace('${a.id}')" style="flex:1; min-width:110px; background:${a.color}; color:white; border:none; border-radius:8px; padding:9px 12px; font-size:0.8em; font-weight:700; cursor:pointer;">📤 Compartir</button>
+                    <button onclick="copiarEnlace('${a.id}')" style="flex:1; min-width:96px; background:var(--surface); color:var(--text-color); border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-size:0.8em; font-weight:700; cursor:pointer;">📋 Copiar</button>
+                    <a href="${a.url}" target="_blank" rel="noopener" style="flex:1; min-width:86px; text-align:center; background:var(--surface); color:var(--text-color); border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-size:0.8em; font-weight:700; cursor:pointer; text-decoration:none;">↗ Abrir</a>
+                </div>
+            </div>`).join('');
+    }
+    const m = document.getElementById('modalCompartirApps');
+    if (m) m.style.display = 'block';
+}
+
+function _appPorId(id) { return APPS_ENLACES.find(a => a.id === id); }
+
+async function copiarEnlace(id) {
+    const a = _appPorId(id); if (!a) return;
+    try {
+        await navigator.clipboard.writeText(a.url);
+        showToast('📋 Enlace copiado', 'success');
+    } catch (e) {
+        // Sin portapapeles (contexto no seguro o permiso denegado): se
+        // selecciona el texto para que se pueda copiar con el teclado.
+        const inp = document.getElementById('url-' + id);
+        if (inp) { inp.focus(); inp.select(); inp.setSelectionRange(0, 99999); }
+        showToast('Copia el enlace seleccionado', 'warning');
+    }
+}
+
+async function compartirEnlace(id) {
+    const a = _appPorId(id); if (!a) return;
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: a.nombre, text: a.nombre + ' — Fondo Solidario', url: a.url });
+            return;
+        } catch (e) {
+            // Cancelar el menú de compartir NO es un error: se sale callado.
+            if (e && e.name === 'AbortError') return;
+        }
+    }
+    copiarEnlace(id);   // el teléfono no sabe compartir → al menos se copia
+}

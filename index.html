@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/fondo-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=108">
+    <link rel="stylesheet" href="styles.css?v=109">
 </head>
 <body>
 
@@ -85,7 +85,10 @@
                 <button onclick="toggleDarkMode()" id="darkModeBtn" style="background:var(--card-bg);color:var(--text-color);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:0.85em;cursor:pointer;transition:0.2s;" title="Modo oscuro">🌙</button>
                 <!-- Enlaces a las otras apps (editar URLs aquí si cambian) -->
                 <a href="https://diario-propi.vercel.app/" target="_blank" rel="noopener" title="Abrir Diario de Recaudación" style="background:#0e7490; color:white; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; text-decoration:none; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">📔 Diario</a>
-                <a href="https://propi-solicitada.vercel.app/" target="_blank" rel="noopener" title="Abrir App de Socios" style="background:#6366f1; color:white; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; text-decoration:none; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">📱 App Socios</a>
+                <!-- La App de Socios casi nunca se abre desde acá: lo que se
+                     necesita es MANDARLE el enlace a un socio. Por eso el botón
+                     abre el panel para compartir, con la opción de abrirla igual. -->
+                <button onclick="abrirCompartirApps()" title="Compartir el enlace de la App de Socios" style="background:#6366f1; color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">📱 App Socios</button>
                 <button onclick="toggleAbout(true)" style="background:#2c3e50; color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">ℹ️ Acerca de</button>
                 <button onclick="cerrarSesion()" style="background:var(--danger); color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔒 Cerrar sesión</button>
             </div>
@@ -1112,6 +1115,20 @@
 
 
         <!-- MODAL: REINICIAR DÍAS PART-TIME -->
+        <!-- COMPARTIR ENLACES DE LAS APPS -->
+        <div id="modalCompartirApps" class="modal">
+            <div class="modal-content" style="max-width:460px;">
+                <div class="modal-header" style="background:linear-gradient(135deg,#4f46e5,#6366f1);">
+                    <h2 style="color:white; margin:0; display:flex; align-items:center; gap:8px;">🔗 Compartir enlaces</h2>
+                    <span class="close-modal" onclick="document.getElementById('modalCompartirApps').style.display='none'" style="color:white;">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p style="margin:0 0 14px; font-size:0.85em; color:#7f8c8d;">Copia el enlace y mándaselo al socio, o compártelo directo por WhatsApp.</p>
+                    <div id="compartirAppsLista"></div>
+                </div>
+            </div>
+        </div>
+
         <div id="modalReiniciarDiasPT" class="modal">
             <div class="modal-content" style="max-width:520px;">
                 <div class="modal-header" style="background:linear-gradient(135deg,#e74c3c,#c0392b);">
@@ -2223,7 +2240,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/constants.js?v=32"></script>
-    <script src="js/utils.js?v=32"></script>
+    <script src="js/utils.js?v=33"></script>
     <script src="js/cache.js?v=32"></script>
     <script src="js/auth.js?v=32"></script>
     <script src="js/config.js?v=99"></script>
@@ -2660,7 +2677,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v108</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v109</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

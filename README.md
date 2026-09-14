@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Compartir el enlace de la App de Socios (SW v109)
+
+- Desde la app de administración **casi nunca se entra** a la App de Socios: lo que se necesita es **mandarle el enlace a alguien**. El botón solo la abría, así que había que ir a la barra del navegador y copiar la URL a mano.
+- **📱 App Socios** ahora abre un panel **🔗 Compartir enlaces** con la URL a la vista y tres acciones: **Compartir**, **Copiar** y **Abrir**.
+- **📔 Diario se deja como estaba** — abre directo, que es como se usa —, pero su enlace también aparece en el panel por si hay que pasarlo.
+- **Compartir usa el menú nativo del teléfono** (`navigator.share`), así que sale directo a WhatsApp o mensajes. Si el navegador no lo soporta, **cae en copiar**; y si el portapapeles está bloqueado —pasa fuera de HTTPS— **selecciona el texto** para poder copiarlo a mano. Nunca se queda sin salida.
+- Cancelar el menú de compartir **no se trata como error**: se sale sin mensaje, en vez de mostrar una falla que no ocurrió.
+- Las URLs viven en una sola constante (`APPS_ENLACES` en `utils.js`): si cambia un dominio, se edita en un lugar.
+- Verificado en navegador a 390px y 1440px: el panel abre, muestra las dos URLs, **copiar deja el enlace en el portapapeles** (comprobado leyéndolo de vuelta), compartir cae en copiar cuando no hay `navigator.share`, y el botón Diario del encabezado sigue abriendo en pestaña nueva.
+- `utils.js?v=33`, `styles.css?v=109`, SW `fondo-admin-v109`, visible **v109**.
+
 #### 2026-09-14 — El Historial del socio se salía de la tarjeta (SW v108)
 
 - **Esto era lo que deformaba la página**, y en la v107 no lo había encontrado: la tabla de **Historial** se desbordaba de la tarjeta blanca y los montos y los ✏️ se pintaban **afuera**, sobre el fondo gris.
