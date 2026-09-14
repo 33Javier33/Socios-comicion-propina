@@ -232,6 +232,19 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Marca Carlos P. Nauto Interactive en la app de Horarios
+
+- Se agrega la marca al **pie del login** de `index2.html`: el logotipo completo y la línea *«Sistema de Gestión de Horarios · 2026»*, separados por un divisor.
+- **Va en el login y no en las pantallas de trabajo** a propósito: se ve al entrar, sin quitarle lugar a los turnos, que es para lo que la gente abre la app.
+- **Assets nuevos en `img/marca/`**, preparados desde la imagen original (768×1376, logo centrado sobre negro):
+  - `cpn-lockup.png` — logotipo completo, recortado al contenido y con **fondo transparente** (560×371, 117 KB). Sin quitar el negro habría quedado un rectángulo negro sobre el azul oscuro de la app.
+  - `cpn-iso-512.png` / `cpn-iso-192.png` — solo el escudo, centrado en un cuadrado con margen, listo para usar como ícono.
+  - La transparencia se calcula por brillo, no por corte duro, así los bordes del logo quedan suaves en vez de dentados.
+- **Los íconos de la app (`horarios-192/512`) no se tocaron**: identifican a *esta* app en el teléfono. Si las tres apps llevaran el mismo logo de marca como ícono, se volverían indistinguibles en la pantalla de inicio. La marca dice **quién la hizo**, el ícono dice **qué app es**.
+- `sw2.js` pasa a `horarios-mesas-v3` y cachea el logotipo.
+- Verificado en navegador a 390×844: el logo se ve, ocupa 158×105 px y no agrega scroll a la pantalla de inicio.
+- Archivos: `index2.html`, `sw2.js`, `img/marca/` (nuevo).
+
 #### 2026-09-14 — Clave del supervisor: se puede cambiar, y la primera queda como recuperación
 
 - Antes la clave de supervisor **se creaba una vez y no había forma de cambiarla**. Ahora, en la pestaña **🔐 Accesos**, la tarjeta *«Clave de supervisor»* tiene un botón **Cambiar**: pide la **clave actual**, después la nueva y la repite para confirmar.
