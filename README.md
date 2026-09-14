@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — El Historial del socio se salía de la tarjeta (SW v108)
+
+- **Esto era lo que deformaba la página**, y en la v107 no lo había encontrado: la tabla de **Historial** se desbordaba de la tarjeta blanca y los montos y los ✏️ se pintaban **afuera**, sobre el fondo gris.
+- **Dos causas juntas:**
+  1. La última celda trae `white-space: nowrap` **como estilo en línea** desde el JS, así que `−$100.000 ✏️` no podía partirse nunca.
+  2. El Detalle de una donación es un párrafo entero («Donación: CON MOTIVO DEL SENSIBLE FALLECIMIENTO…»), que empuja el ancho mínimo de la tabla.
+  Entre las dos, cuatro columnas no entraban en 390px y la tabla se salía.
+- **Arreglo: en ≤640px cada fila pasa a ser una ficha** — fecha y tipo arriba con el monto a la derecha, y el detalle debajo ocupando todo el ancho. **No se achica nada ni queda scroll lateral: se acomoda a la pantalla.** En escritorio sigue siendo una tabla normal (`display: table` a 1440px, verificado).
+- El `!important` en esa celda es necesario y está comentado: un estilo en línea le gana siempre a la hoja de estilos.
+- **Revertido de la v107:** el tope de `46vh` en la lista de socios. Achicar la lista no correspondía — el problema no era su alto.
+- Verificado con filas reales (anticipo, donación de motivo largo y ausencia) a 390, 360, 320 y 1440px: la tabla queda **dentro** del panel en las cuatro y no hay scroll horizontal.
+- Regresión: 17/17 pestañas y 27/27 modales limpios.
+- `styles.css?v=108`, SW `fondo-admin-v108`, visible **v108**.
+
 #### 2026-09-14 — Anticipos y Ausencias: la ficha del socio deformaba la página en celular (SW v107)
 
 - **Síntoma:** al seleccionar un socio, la ficha «agranda» la página y el layout se deforma.

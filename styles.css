@@ -1210,9 +1210,40 @@
        en 299px y sacaba 11px de scroll horizontal. Con min-width:0 se deja
        achicar hasta donde haga falta. */
     .gestion-layout > * { min-width: 0; }
-    /* La lista de socios ocupaba hasta 420px, media pantalla, y empujaba la
-       ficha fuera de la vista. Se acota a algo proporcional al teléfono. */
-    .search-results { max-height: 46vh; }
+    /* ── Historial del socio: la tabla se convierte en fichas ──
+       Cuatro columnas (fecha, tipo, detalle, monto+✏️) no entran en un
+       teléfono: la última celda trae white-space:nowrap EN LÍNEA, así que
+       "−$100.000 ✏️" no podía partirse, y el detalle de una donación es un
+       párrafo entero. Entre las dos empujaban la tabla más allá de la
+       tarjeta blanca y el contenido se pintaba fuera, sobre el fondo.
+
+       En vez de achicar la letra o dejar scroll lateral, cada fila pasa a
+       ser una ficha: fecha y tipo arriba con el monto a la derecha, y el
+       detalle debajo ocupando todo el ancho. Entra en cualquier pantalla. */
+    .history-table thead { display: none; }
+    .history-table, .history-table tbody { display: block; width: 100%; }
+    .history-table tr {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        grid-template-areas: "fec tip mon" "det det det";
+        gap: 2px 8px; align-items: center;
+        border: 1px solid var(--border); border-radius: 10px;
+        padding: 9px 11px; margin-bottom: 7px; background: var(--card-bg);
+    }
+    .history-table td { border: none !important; padding: 0 !important; min-width: 0; }
+    .history-table td:nth-child(1) { grid-area: fec; font-weight: 700; font-size: 0.95em; }
+    .history-table td:nth-child(2) { grid-area: tip; }
+    .history-table td:nth-child(3) {
+        grid-area: det; color: #7f8c8d; line-height: 1.4;
+        overflow-wrap: anywhere; margin-top: 3px;
+    }
+    /* !important porque el nowrap viene como estilo en línea desde el JS y
+       un estilo en línea le gana siempre a la hoja de estilos. */
+    .history-table td:nth-child(4) {
+        grid-area: mon; text-align: right;
+        white-space: normal !important; overflow-wrap: anywhere;
+        display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+    }
 
     /* ── Tablas anchas: que el scroll propio se note ── */
     .tabla-scroll, [style*="overflow-x:auto"], [style*="overflow-x: auto"] {
