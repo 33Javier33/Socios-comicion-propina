@@ -45,6 +45,22 @@
   /* Franja de color arriba: identifica el turno de un vistazo, sin leer. */
   .cal-cell .franja{ position:absolute; top:0; left:0; right:0; height:3px; }
   @media (max-width:360px){ .cal-cell{ min-height:56px; } .cal-cell .ini{ font-size:11px; } }
+
+  /* Vista lista con la forma de la planilla de papel: tres columnas
+     (día de la semana · número · turno) para poder cotejar renglón por
+     renglón contra la hoja impresa. */
+  .pl-tabla{ border:1px solid #293449; border-radius:10px; overflow:hidden; }
+  .pl-fila{ display:grid; grid-template-columns:78px 26px 1fr auto; align-items:center;
+            gap:6px; padding:7px 9px; border-bottom:1px solid #1e293b; }
+  .pl-tabla .pl-fila:last-child{ border-bottom:none; }
+  .pl-sem{ font-size:12px; font-weight:600; }
+  .pl-num{ font-size:13px; font-weight:800; text-align:right; }
+  .pl-tur{ font-size:12.5px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pl-hoy{ font-size:9px; font-weight:800; color:#38bdf8; background:#0c4a6e; border-radius:6px; padding:2px 6px; }
+  @media (max-width:360px){
+    .pl-fila{ grid-template-columns:66px 22px 1fr auto; gap:4px; padding:6px 7px; }
+    .pl-sem{ font-size:11px; } .pl-tur{ font-size:11.5px; }
+  }
   .pin-dot{ width:16px; height:16px; border-radius:50%; border:2px solid #475569; transition:all .15s; }
   .pin-dot.on{ background:#38bdf8; border-color:#38bdf8; }
   .keypad-btn{ height:64px; border-radius:16px; background:#1e293b; border:1px solid #334155; font-size:24px; font-weight:700; color:#e2e8f0; cursor:pointer; transition:.1s; }
@@ -376,7 +392,13 @@ function _turnoPartes(t){
   if(t.es_libre){
     const n=String(t.nombre||'').trim();
     const esLlano=/^libre$/i.test(n) || !n;
-    return { etq: esLlano ? 'LIBRE' : n.toUpperCase().substring(0,8),
+    // Dos etiquetas: la CORTA para la celda del calendario (47px de ancho) y
+    // la LARGA para la lista, que tiene espacio y busca parecerse al papel.
+    // Para la corta se recorta un paréntesis final —"LXF (7,5)" → "LXF"—
+    // antes de truncar, que queda mucho mejor que cortar a la mitad.
+    const largo = esLlano ? 'LIBRE' : n.toUpperCase();
+    const corto = esLlano ? 'LIBRE' : largo.replace(/\s*\(.*$/,'').trim().substring(0,8);
+    return { etq: corto, etqLargo: largo,
              color: esLlano ? '#34d399' : (t.color||'#34d399'), libre:true };
   }
   if(t.id==='t_vac15'||t.id==='t_vac6'||/vacac/i.test(t.nombre||'')) return { etq:'VACAC', color:t.color||'#a78bfa' };
@@ -460,7 +482,7 @@ function leyendaMes(cont, date, socioId, excepciones){
      <div class="flex flex-wrap gap-1.5">`
     + lista.map(({t,n})=>{
         const p=_turnoPartes(t);
-        const txt = p.etq ? p.etq : `${p.ini} – ${p.fin}`;
+        const txt = p.etq ? (p.etqLargo||p.etq) : `${p.ini} – ${p.fin}`;   // la leyenda tiene espacio
         return `<span class="chip" style="background:${p.color}1f;color:${p.color};display:inline-flex;align-items:center;gap:5px;">
           <span style="width:8px;height:8px;border-radius:50%;background:${p.color};flex-shrink:0;"></span>
           ${esc(txt)} <b style="opacity:.75">· ${n}d</b></span>`;
@@ -468,34 +490,59 @@ function leyendaMes(cont, date, socioId, excepciones){
     + '</div>';
 }
 
-// Vista lista: un día por fila. En un teléfono se lee mucho mejor que la
-// grilla, sobre todo para revisar el mes entero de corrido.
+// Las horas que muestra la planilla de papel ("7,5 Hrs") NO están en la
+// base: son la duración del turno MENOS media hora de colación. Comprobado
+// contra la planilla en los cuatro turnos que se usan:
+//   20:30→04:30 = 8h → 7,5   ·   22:30→06:30 = 8h → 7,5
+//   19:30→03:30 = 8h → 7,5   ·   18:30→23:30 = 5h → 4,5
+// Si algún turno tuviera otra colación, este es el único lugar a cambiar.
+const PL_COLACION_HRS = 0.5;
+function _horasTurno(t){
+  if(!t || !t.hora_inicio || !t.hora_fin) return null;
+  const [hi,mi]=String(t.hora_inicio).split(':').map(Number);
+  const [hf,mf]=String(t.hora_fin).split(':').map(Number);
+  if([hi,mi,hf,mf].some(n=>isNaN(n))) return null;
+  let mins=(hf*60+mf)-(hi*60+mi);
+  if(mins<=0) mins+=1440;                       // el turno cruza la medianoche
+  const h=(mins/60)-PL_COLACION_HRS;
+  if(h<=0) return null;
+  return String(Math.round(h*100)/100).replace('.',',');
+}
+
+// Vista lista: se arma como la planilla de papel — día de la semana, número
+// y el turno escrito igual que allá ("7,5 Hrs 20:30 a 04:30"). Así el
+// supervisor puede cotejar la pantalla contra la hoja renglón por renglón
+// sin traducir nada de cabeza.
 function pintarListaMes(cont, date, socioId, excepciones, onDayClick){
   if(!cont) return;
   const hoyISO=fechaISO(new Date());
-  const DIAS=['DO','LU','MA','MI','JU','VI','SÁ'];
+  const DIAS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   const filas=celdasMes(date).filter(Boolean).map(d=>{
     const t=turnoDeSocioEnFecha(socioId,d,excepciones);
     const p=_turnoPartes(t);
     const iso=fechaISO(d), esHoy=iso===hoyISO;
-    const finde=(d.getDay()===0||d.getDay()===6);
-    const dcho = !p ? '<span class="text-slate-600 text-xs">— sin turno —</span>'
-      : p.etq ? `<span style="color:${p.color};font-weight:800;font-size:13px;">${esc(p.etq)}</span>`
-      : `<span style="color:${p.color};font-weight:800;font-size:14px;">${p.ini}</span>
-         <span style="color:#94a3b8;font-size:12px;"> a ${p.fin}</span>`;
-    const clk=onDayClick?`onclick="${onDayClick}('${iso}')" style="cursor:pointer;"`:'';
-    return `<div ${clk} style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;
-        background:${esHoy?'#0c4a6e40':(finde?'#1e293b80':'transparent')};
-        border-left:3px solid ${p?p.color:'#334155'};margin-bottom:3px;">
-      <div style="width:52px;flex-shrink:0;">
-        <span style="font-size:15px;font-weight:800;color:${esHoy?'#7dd3fc':'#e2e8f0'};">${d.getDate()}</span>
-        <span style="font-size:10px;color:#64748b;font-weight:700;"> ${DIAS[d.getDay()]}</span>
-      </div>
-      <div style="flex:1;min-width:0;">${dcho}</div>
-      ${esHoy?'<span style="font-size:9px;font-weight:800;color:#38bdf8;background:#0c4a6e;border-radius:6px;padding:2px 6px;">HOY</span>':''}
+    const libre=p&&p.libre;
+
+    let txt, colTxt=p?p.color:'#475569', peso=600;
+    if(!p){ txt='—'; }
+    else if(libre){ txt=p.etqLargo||p.etq; peso=800; }           // acá va el nombre completo
+    else if(p.etq){ txt=p.etq; peso=800; }                       // VACAC u otro sin horario
+    else {
+      const h=_horasTurno(t);
+      txt=(h?h+' Hrs ':'')+p.ini+' a '+p.fin; peso=700;          // 7,5 Hrs 20:30 a 04:30
+    }
+
+    // Los libres van en bloque oscuro y centrados, como en la hoja impresa.
+    const fondo = libre ? '#0b1220' : (esHoy ? '#0c4a6e33' : (d.getDate()%2 ? '#151e2e' : '#111a28'));
+    const clk=onDayClick?`onclick="${onDayClick}('${iso}')" style="cursor:pointer"`:'';
+    return `<div ${clk} class="pl-fila" style="background:${fondo};border-left:3px solid ${p?p.color:'#334155'};">
+      <div class="pl-sem" style="color:${esHoy?'#7dd3fc':'#cbd5e1'}">${DIAS[d.getDay()]}</div>
+      <div class="pl-num" style="color:${esHoy?'#7dd3fc':'#e2e8f0'}">${d.getDate()}</div>
+      <div class="pl-tur" style="color:${colTxt};font-weight:${peso};${libre?'letter-spacing:.06em;':''}">${esc(txt)}</div>
+      ${esHoy?'<span class="pl-hoy">HOY</span>':''}
     </div>`;
   }).join('');
-  cont.innerHTML=filas;
+  cont.innerHTML=`<div class="pl-tabla">${filas}</div>`;
 }
 
 // ══════════ App Socio ══════════

@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Vista lista con el formato de la planilla de papel
+
+- La lista pasa a leerse **igual que la hoja impresa**: tres columnas — **día de la semana completo · número · turno** — y el turno escrito tal cual: `7,5 Hrs 20:30 a 04:30`. Antes decía `14 LU · 20:30 a 04:30`, que obligaba a traducir de cabeza al cotejar contra el papel.
+- **Las horas ("7,5 Hrs") no están en la base**: se calculan como la **duración del turno menos media hora de colación**. Comprobado contra la planilla en los cuatro turnos en uso: 20:30→04:30, 22:30→06:30 y 19:30→03:30 dan 8 h brutas → **7,5**; 18:30→23:30 da 5 h → **4,5**. Los cuatro calzan. Si algún turno tuviera otra colación, se cambia en un solo lugar: la constante `PL_COLACION_HRS`.
+- El cálculo contempla los turnos que **cruzan la medianoche** (20:30 → 04:30 son 8 horas, no −16).
+- Los días libres van en **bloque oscuro**, como en la hoja, y las filas alternan tono para seguir el renglón con la vista.
+- **Etiqueta corta y larga por turno:** la celda del calendario tiene 47px y necesita la corta (`LXF`); la lista y la leyenda tienen espacio y usan la completa (`LXF (7,5)`). Para la corta se recorta el paréntesis final antes de truncar — cortar «LXF (7,5)» a la mitad quedaba peor que quitarle el paréntesis.
+- El turno `LibreXF` se renombró a **`LXF (7,5)`** en `horarios_turnos`, que es como figura en la planilla. Para revertir: `update horarios_turnos set nombre='LibreXF' where id='tmrcib4eu1klx'`.
+- **Verificado renglón por renglón contra la foto de la planilla de un socio: 30 de 30 idénticos.** Sin texto cortado a 390px ni a 360px, y sin desbordes en la grilla.
+- Archivos: `index2.html`.
+
 #### 2026-09-14 — index2: el día de hoy queda claro sin tapar el turno
 
 - **Defecto que había:** el día de hoy **reemplazaba** el borde de color del turno por uno celeste (`esHoy ? '2px solid #38bdf8' : borde del turno`). Justo el día que más se mira era el único sin su pista de color, y el borde pasaba de 1px a 2px, distinto del resto.
