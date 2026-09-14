@@ -85,6 +85,9 @@
     <div class="w-20 h-20 rounded-3xl bg-sky-500/15 border border-sky-500/30 mx-auto mb-5 flex items-center justify-center text-4xl">🗓️</div>
     <h1 class="text-2xl font-extrabold mb-1">Horarios Mesas</h1>
     <p class="text-sm text-slate-400 mb-8">Turnos del equipo de Mesas — Comisión Propina</p>
+    <!-- Acceso directo al socio marcado con ⭐ en la lista. Lleva derecho al
+         PIN: es un atajo al usuario, NO a la clave. -->
+    <div id="accesoDirecto" style="display:none" class="mb-3"></div>
     <button onclick="irSocioPick()" class="w-full card p-4 flex items-center gap-3 mb-3 text-left hover:border-sky-500 transition-colors">
       <div class="w-11 h-11 rounded-xl bg-sky-500/15 flex items-center justify-center text-xl">👤</div>
       <div class="flex-1"><div class="font-bold">Soy Socio</div><div class="text-xs text-slate-400">Ver mis turnos</div></div>
@@ -338,17 +341,89 @@ async function cargarBase(){
 }
 
 // ══════════ Login ══════════
-function volverRol(){ show('scrRole'); }
+function volverRol(){ pintarAccesoDirecto(); show('scrRole'); }
 async function irSocioPick(){ await cargarBase(); renderSocioLista(); show('scrSocioPick'); }
+// ══════════════════════════════════════════════════════════════════════
+// ACCESO DIRECTO
+//
+// El socio marca su nombre con ⭐ en la lista y queda guardado EN ESTE
+// teléfono. La próxima vez entra directo al PIN, sin buscarse entre 33
+// nombres. Se guarda también el nombre para poder pintar el botón antes
+// de que responda la base — si no, el atajo tardaría igual que la lista.
+//
+// El PIN se sigue pidiendo siempre: esto acorta el camino al usuario, no
+// la autenticación. El teléfono es personal pero puede prestarse.
+// ══════════════════════════════════════════════════════════════════════
+const ACCESO_KEY='hor_acceso';
+function accesoLeer(){ try{ return JSON.parse(localStorage.getItem(ACCESO_KEY)||'null'); }catch(e){ return null; } }
+function accesoGuardar(id,nombre){ try{ localStorage.setItem(ACCESO_KEY, JSON.stringify({id,nombre})); }catch(e){} }
+function accesoBorrar(){ try{ localStorage.removeItem(ACCESO_KEY); }catch(e){} }
+
+function accesoAlternar(id, ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }   // no dispara el login
+  const a=accesoLeer();
+  if(a && a.id===id){ accesoBorrar(); toast('Acceso directo quitado'); }
+  else {
+    const s=sociosMesas.find(x=>x.id===id); if(!s) return;
+    accesoGuardar(id, `${s.nombre} ${s.apellido}`.trim());
+    toast('⭐ Listo: al abrir la app entrarás directo');
+  }
+  renderSocioLista(); pintarAccesoDirecto();
+}
+
+function pintarAccesoDirecto(){
+  const cont=document.getElementById('accesoDirecto'); if(!cont) return;
+  const a=accesoLeer();
+  if(!a || !a.id){ cont.style.display='none'; cont.innerHTML=''; return; }
+  const ini=(a.nombre||'?').charAt(0).toUpperCase();
+  cont.style.display='block';
+  cont.innerHTML=`
+    <div class="card p-4 flex items-center gap-3" style="border-color:#38bdf866;background:#0c4a6e26;">
+      <button onclick="accesoEntrar()" style="flex:1;display:flex;align-items:center;gap:12px;background:none;border:none;cursor:pointer;text-align:left;padding:0;color:inherit;font-family:inherit;">
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center text-lg font-extrabold"
+             style="background:#38bdf8;color:#062a3d;flex-shrink:0">${esc(ini)}</div>
+        <div style="flex:1;min-width:0">
+          <div class="text-[11px] font-bold" style="color:#7dd3fc;letter-spacing:.06em">⭐ ACCESO DIRECTO</div>
+          <div class="font-bold truncate">${esc(a.nombre||'Mi usuario')}</div>
+        </div>
+      </button>
+      <button onclick="accesoQuitarDesdeInicio()" title="Quitar el acceso directo"
+              style="background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:8px;
+                     width:28px;height:28px;font-size:12px;cursor:pointer;flex-shrink:0">✕</button>
+    </div>`;
+}
+function accesoQuitarDesdeInicio(){ accesoBorrar(); pintarAccesoDirecto(); toast('Acceso directo quitado'); }
+async function accesoEntrar(){
+  const a=accesoLeer(); if(!a || !a.id) return;
+  await cargarBase();
+  if(!sociosMesas.some(s=>s.id===a.id)){
+    // El socio ya no está (se borró o cambió de área): se limpia y se manda
+    // a la lista, en vez de dejar un botón que no lleva a ninguna parte.
+    accesoBorrar(); pintarAccesoDirecto();
+    toast('Ese socio ya no está en la lista', '#dc2626');
+    renderSocioLista(); show('scrSocioPick'); return;
+  }
+  socioElegido(a.id);
+}
+
 function renderSocioLista(){
   const term=(document.getElementById('socioBuscar').value||'').toLowerCase();
   const cont=document.getElementById('socioLista');
   const list=sociosMesas.filter(s=>`${s.nombre} ${s.apellido}`.toLowerCase().includes(term));
   if(!list.length){ cont.innerHTML='<div class="text-center text-slate-500 text-sm py-6">Sin resultados</div>'; return; }
-  cont.innerHTML=list.map(s=>`<button onclick="socioElegido('${s.id}')" class="w-full card p-3 flex items-center gap-3 text-left hover:border-sky-500 transition-colors">
-    <div class="w-9 h-9 rounded-full bg-sky-500/15 text-sky-300 flex items-center justify-center font-bold text-sm">${esc((s.nombre||'?').charAt(0))}</div>
-    <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(s.nombre)} ${esc(s.apellido)}</div><div class="text-[11px] text-slate-400">${esc(s.area)}</div></div>
-  </button>`).join('');
+  const acc=accesoLeer();
+  cont.innerHTML=list.map(s=>{
+    const esAcc = acc && acc.id===s.id;
+    return `<div class="card p-3 flex items-center gap-3 ${esAcc?'':'hover:border-sky-500'} transition-colors" style="${esAcc?'border-color:#38bdf866;background:#0c4a6e1f;':''}">
+      <button onclick="socioElegido('${s.id}')" style="flex:1;display:flex;align-items:center;gap:12px;background:none;border:none;cursor:pointer;text-align:left;padding:0;color:inherit;font-family:inherit;min-width:0">
+        <div class="w-9 h-9 rounded-full bg-sky-500/15 text-sky-300 flex items-center justify-center font-bold text-sm" style="flex-shrink:0">${esc((s.nombre||'?').charAt(0))}</div>
+        <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(s.nombre)} ${esc(s.apellido)}</div><div class="text-[11px] text-slate-400">${esc(s.area)}</div></div>
+      </button>
+      <button onclick="accesoAlternar('${s.id}', event)" title="${esAcc?'Quitar acceso directo':'Dejar como acceso directo en este teléfono'}"
+              style="background:none;border:none;cursor:pointer;font-size:19px;line-height:1;padding:4px;flex-shrink:0;
+                     filter:${esAcc?'none':'grayscale(1)'};opacity:${esAcc?'1':'0.45'};">⭐</button>
+    </div>`;
+  }).join('');
 }
 
 async function socioElegido(id){
@@ -377,7 +452,7 @@ async function irSupervisor(){
 }
 function entrarSuper(){ sesion={rol:'super'}; supViewDate=new Date(); renderSuper(); show('appSuper'); }
 
-function logout(){ sesion=null; pinBuffer=''; show('scrRole'); }
+function logout(){ sesion=null; pinBuffer=''; pintarAccesoDirecto(); show('scrRole'); }
 
 // ══════════ PIN ══════════
 function abrirPin(ctx){ pinCtx=ctx; pinBuffer=''; document.getElementById('pinTitulo').textContent=ctx.titulo; document.getElementById('pinSub').textContent=ctx.sub||''; document.getElementById('pinAvatar').textContent=ctx.avatar||'?'; document.getElementById('pinError').textContent=''; pinPintar(); show('scrPin'); }
@@ -1645,6 +1720,7 @@ let _deferredPrompt=null;
 function _estaInstalada(){ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
 function _mostrarBtnInstalar(v){ const b=document.getElementById('btnInstalar'); if(b) b.style.display = (v && !_estaInstalada()) ? 'block' : 'none'; }
 window.addEventListener('DOMContentLoaded', ()=>{
+  pintarAccesoDirecto();   // se pinta al toque: el nombre está guardado, no se espera a la base
   if(_estaInstalada()){ _mostrarBtnInstalar(false); return; }
   // iOS no dispara beforeinstallprompt: mostramos el botón con instrucciones si aún no está en modo app
   if(/iphone|ipad|ipod/i.test(navigator.userAgent)) _mostrarBtnInstalar(true);

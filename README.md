@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Acceso directo al usuario en el login
+
+- En la lista de **«¿Quién eres?»** cada socio tiene ahora una **⭐**. Al marcarla, ese socio queda guardado **en ese teléfono** y la próxima vez aparece un botón grande **⭐ ACCESO DIRECTO** en la pantalla de inicio, que lleva derecho a su PIN sin buscarse entre 33 nombres.
+- **El PIN se sigue pidiendo siempre.** El atajo acorta el camino al usuario, no la autenticación: un teléfono es personal pero puede prestarse.
+- Se guarda **también el nombre**, no solo el id, para poder pintar el botón apenas abre la app sin esperar a que responda la base — si no, el atajo tardaría lo mismo que la lista.
+- Se quita desde la **✕** del botón o volviendo a tocar la ⭐ del socio en la lista.
+- **Si ese socio ya no está** (se borró o cambió de área), el botón no queda muerto: avisa, limpia el atajo y manda a la lista.
+- **Detalle de implementación:** la ⭐ va dentro de la fila pero es un botón aparte con `stopPropagation`, porque tocarla no debe abrir el PIN de ese socio. Verificado.
+- Probado en navegador en ocho pasos: sin acceso, marcar, que sobreviva a cerrar y reabrir, entrar por el atajo, reemplazarlo por otro socio, que la ⭐ no dispare el login, quitarlo con la ✕, y el caso del socio inexistente.
+- Archivos: `index2.html`.
+
 #### 2026-09-14 — Fix: la tarjeta de hoy mostraba el turno de ayer bajo el rótulo «HOY»
 
 - **Reporte:** la tarjeta decía *«HOY · Lunes 14»* pero el horario grande era el del día anterior.
