@@ -232,6 +232,19 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Anticipos y Ausencias: la ficha del socio deformaba la página en celular (SW v107)
+
+- **Síntoma:** al seleccionar un socio, la ficha «agranda» la página y el layout se deforma.
+- **Causa:** en celular la ficha aparece **debajo** del buscador. Al tocar un socio, la pantalla seguía mostrando la lista de 33 nombres y había que **rodar a ciegas** hasta encontrar la ficha, que quedaba a más de 1.000px de scroll. La página pasaba a ser larguísima sin que nada indicara adónde ir.
+- **Tres arreglos:**
+  1. **La pantalla salta a la ficha** al seleccionar el socio (solo en ≤768px; en pantalla ancha la ficha está al lado y ya se ve, así que no se toca).
+  2. **`min-width: 0` en los hijos de `.gestion-layout`.** Los hijos de un grid traen `min-width:auto` y no bajan de su ancho mínimo de contenido: en pantallas de **320px la ficha se plantaba en 299px y sacaba 11px de scroll horizontal**. Ahora baja a 256px y entra.
+  3. **La lista de socios se acota a 46vh** en celular (antes 420px fijos, media pantalla), para que no empuje tanto la ficha.
+- Verificado: a 390px la ficha queda **arriba de todo** tras seleccionar; a 320px desaparece el scroll horizontal; y en 1440px **el escritorio no cambia** — sigue en dos columnas (280px + 1068px) y no hace ningún salto.
+- **Falsa alarma descartada:** en la prueba aparecía *«Selecciona un socio para gestionar»* debajo de la ficha, pero era un artefacto del banco de pruebas — `seleccionarSocio()` ya lo oculta (`anticipos.js:2311`).
+- Regresión: 17/17 pestañas y 27/27 modales siguen limpios a 390, 360 y 320px.
+- `styles.css?v=107`, `anticipos.js?v=55`, SW `fondo-admin-v107`, visible **v107**.
+
 #### 2026-09-14 — Ajustes reales para teléfono (SW v106)
 
 - **Corrección de la nota anterior:** la auditoría de la v105 midió **solo desborde horizontal y tamaño de toques**. Eso verifica que nada se sale de la pantalla, pero **no** que el diseño esté pensado para un teléfono — y no lo estaba: era el layout de escritorio a escala 1:1. Declararla «responsiva» con esa evidencia fue una conclusión más amplia que la medición.

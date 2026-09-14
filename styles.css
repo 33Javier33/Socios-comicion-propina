@@ -1204,6 +1204,16 @@
     }
     .search-panel > div:first-of-type > button { min-height: 40px; }
 
+    /* ── Ficha del socio en Anticipos y Ausencias ──
+       Los hijos de un grid traen min-width:auto, o sea que no bajan de su
+       ancho mínimo de contenido: en pantallas de 320px la ficha se plantaba
+       en 299px y sacaba 11px de scroll horizontal. Con min-width:0 se deja
+       achicar hasta donde haga falta. */
+    .gestion-layout > * { min-width: 0; }
+    /* La lista de socios ocupaba hasta 420px, media pantalla, y empujaba la
+       ficha fuera de la vista. Se acota a algo proporcional al teléfono. */
+    .search-results { max-height: 46vh; }
+
     /* ── Tablas anchas: que el scroll propio se note ── */
     .tabla-scroll, [style*="overflow-x:auto"], [style*="overflow-x: auto"] {
         -webkit-overflow-scrolling: touch;

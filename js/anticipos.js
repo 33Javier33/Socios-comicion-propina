@@ -2309,6 +2309,16 @@ function seleccionarSocio(id) {
     // inline style, que siempre le gana al CSS.
     document.getElementById('panelDetalle').classList.add('visible');
     document.getElementById('mensajeSeleccion').style.display = 'none';
+    // En el teléfono la ficha aparece DEBAJO del buscador, así que al tocar un
+    // socio la pantalla seguía mostrando la lista y había que rodar a ciegas
+    // para encontrar la ficha. En pantalla ancha no hace falta: ahí la ficha
+    // está al lado y ya se ve.
+    if (window.matchMedia('(max-width: 768px)').matches) {
+        requestAnimationFrame(() => {
+            const el = document.getElementById('panelDetalle');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
     document.getElementById('gestionSocioId').value = socio.id;
     document.getElementById('gestionSocioNombre').value = `${socio.nombre} ${socio.apellido}`;
     document.getElementById('gestionSocioPuntos').value = socio.puntos;
