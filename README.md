@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — «Con turnos» podía esconder días sin horario («Trabaja»)
+
+- **Consulta:** algunos socios figuraban como si tuvieran turnos cuando en realidad no los tenían.
+- **Causa, revisada contra la base:** **cuatro de los cinco grupos usan el turno genérico «Trabaja»**, que **no tiene horario cargado** (`hora_inicio` y `hora_fin` en `NULL`). El ciclo marca esos días como ocupados, pero sin decir a qué hora se entra. Son **12 de los 16 socios** asignados a un grupo:
+  | Grupo | Ciclo | Socios |
+  |---|---|---|
+  | AlexandraM, IvanM | Libre, Libre, **Trabaja ×6** | 2 |
+  | Isaac, Marcela, Andres | Libre, Libre, **Trabaja ×6** | 2 |
+  | Laura, Adrian, Darwin | Libre, Libre, **Trabaja ×6** | 4 |
+  | PART-TIME | Libre ×4, **Trabaja ×3** | 4 |
+  | CarlosP, MarioR, Carlos G | Libre, Libre, 18:30-23:30 ×6 | 4 |
+- Los datos están **sanos**: se verificó que no hay grupos sin ciclo, ni ciclos apuntando a turnos borrados, ni asignaciones huérfanas. El problema es que la tarjeta de cobertura los contaba como «Con turnos» sin distinguir.
+- **Ahora se avisa** en la tarjeta: *«⚠️ El ciclo tiene 6 pasos «Trabaja» sin horario: esos días marcan que trabaja, pero no a qué hora»*, y el resumen los cuenta como **«a medias»**. Solo se marca cuando quedan días que resuelve el ciclo — si el mes está cargado día por día, el ciclo no se usa y no hay nada que avisar.
+- **También en la vista del socio:** al tocar un día sin horario, el modal ya no muestra la palabra sola; dice en ámbar *«Trabajas este día, pero todavía no hay horario cargado. Consúltalo con el supervisor»*.
+- **Cómo se arregla de fondo:** editar el ciclo de cada grupo y reemplazar los pasos «Trabaja» por el turno con horario que corresponda (Turnos → el grupo → ciclo).
+- Probado en navegador con los ciclos reales: un grupo con «Trabaja» y otro con horario real, más carga parcial encima.
+- Archivos: `index2.html`.
+
 #### 2026-09-14 — Marca nueva en toda la app: Carlos P. Nauto Interactive
 
 - Se reemplaza el logotipo (`img/carlospn-logo.png`) por el nuevo, y **«CarlosPN Interactive» pasa a «Carlos P. Nauto Interactive»** en las 2 menciones de `index.html` (modal *Acerca de* y la línea de derechos reservados).
