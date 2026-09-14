@@ -196,7 +196,21 @@
 
       <div class="card p-3 mb-4">
         <label class="text-xs text-slate-400 font-semibold">Ver calendario de un socio</label>
-        <select id="supVerSocio" class="fld mt-1" onchange="supRenderCal()"><option value="">— elige un socio —</option></select>
+        <!-- El id del socio elegido vive en un campo oculto; arriba va el
+             buscador. Con 33 socios, una lista desplegable en el teléfono
+             obliga a rodar hasta encontrar el nombre. -->
+        <input type="hidden" id="supVerSocio">
+        <div style="position:relative">
+          <input id="supBuscaSocio" class="fld mt-1" style="padding-right:34px" autocomplete="off"
+                 placeholder="🔍 Escribe el nombre del socio…"
+                 oninput="supFiltrarSocios()" onfocus="supFiltrarSocios()">
+          <button id="supBuscaX" onclick="supLimpiarSocio()" title="Limpiar"
+                  style="display:none;position:absolute;right:6px;top:calc(50% + 2px);transform:translateY(-50%);
+                         background:#334155;color:#cbd5e1;border:none;border-radius:50%;width:22px;height:22px;
+                         font-size:12px;line-height:1;cursor:pointer;">✕</button>
+        </div>
+        <div id="supSugerencias" style="display:none;margin-top:6px;max-height:230px;overflow-y:auto;
+             border:1px solid #293449;border-radius:10px;background:#0f172a;"></div>
         <button onclick="plModal()" class="btn-ghost w-full mt-2 text-sm">📸 Importar planilla del mes (foto o texto)</button>
       </div>
       <div id="supCalWrap" class="hidden">
@@ -705,10 +719,77 @@ function supTab(pan){
   document.querySelectorAll('#appSuper .sup-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('pan'+pan).classList.add('active');
 }
+// ── Buscador de socio (reemplaza la lista desplegable) ────────────────
+// Se filtra por nombre O apellido, sin importar tildes ni mayúsculas, y
+// también sirve escribir las dos cosas en cualquier orden ("perez carlos").
+function _sbNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+
 function supLlenarSelectSocios(){
-  document.getElementById('supVerSocio').innerHTML='<option value="">— elige un socio —</option>'+
-    sociosMesas.map(s=>`<option value="${s.id}">${esc(s.nombre)} ${esc(s.apellido)}${asignaciones[s.id]?'':' (sin grupo)'}</option>`).join('');
+  // Si el socio elegido dejó de existir (se borró o cambió de área), se limpia.
+  const id=(document.getElementById('supVerSocio')||{}).value;
+  if(id && !sociosMesas.some(s=>s.id===id)) supLimpiarSocio();
+  else if(id) supPintarElegido(id);
 }
+function supPintarElegido(id){
+  const s=sociosMesas.find(x=>x.id===id); if(!s) return;
+  const inp=document.getElementById('supBuscaSocio');
+  if(inp) inp.value=`${s.nombre} ${s.apellido}`.trim();
+  const x=document.getElementById('supBuscaX'); if(x) x.style.display='block';
+}
+function supFiltrarSocios(){
+  const inp=document.getElementById('supBuscaSocio'), cont=document.getElementById('supSugerencias');
+  if(!inp||!cont) return;
+  const q=_sbNorm(inp.value).trim();
+  const x=document.getElementById('supBuscaX'); if(x) x.style.display=inp.value?'block':'none';
+  // Cada palabra escrita tiene que aparecer en el nombre completo: así
+  // "perez carlos" encuentra a Carlos Perez igual que "carlos perez".
+  const partes=q.split(/\s+/).filter(Boolean);
+  let lista=sociosMesas;
+  if(partes.length) lista=sociosMesas.filter(s=>{
+    const n=_sbNorm(`${s.nombre} ${s.apellido}`);
+    return partes.every(p=>n.includes(p));
+  });
+  if(!lista.length){
+    cont.style.display='block';
+    cont.innerHTML='<div style="padding:11px;text-align:center;color:#64748b;font-size:12px;">Ningún socio con ese nombre.</div>';
+    return;
+  }
+  const TOPE=12, mostrar=lista.slice(0,TOPE);
+  cont.style.display='block';
+  cont.innerHTML=mostrar.map(s=>{
+    const nom=`${s.nombre} ${s.apellido}`.trim();
+    const sinGrupo=!asignaciones[s.id];
+    return `<div onclick="supElegirSocio('${s.id}')" style="padding:9px 11px;border-bottom:1px solid #1e293b;cursor:pointer;display:flex;align-items:center;gap:8px;">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:#e2e8f0;">${esc(nom)}</div>
+        ${sinGrupo?'<div style="font-size:10.5px;color:#94a3b8">sin grupo</div>':''}
+      </div>
+      <span style="color:#475569;font-size:12px">›</span>
+    </div>`;
+  }).join('')
+  + (lista.length>TOPE?`<div style="padding:8px 11px;font-size:11px;color:#64748b;text-align:center;">y ${lista.length-TOPE} más — sigue escribiendo</div>`:'');
+}
+function supElegirSocio(id){
+  document.getElementById('supVerSocio').value=id;
+  supPintarElegido(id);
+  const c=document.getElementById('supSugerencias'); if(c) c.style.display='none';
+  const inp=document.getElementById('supBuscaSocio'); if(inp) inp.blur();
+  supRenderCal();
+}
+function supLimpiarSocio(){
+  document.getElementById('supVerSocio').value='';
+  const inp=document.getElementById('supBuscaSocio'); if(inp){ inp.value=''; inp.focus(); }
+  const x=document.getElementById('supBuscaX'); if(x) x.style.display='none';
+  const c=document.getElementById('supSugerencias'); if(c) c.style.display='none';
+  supRenderCal();
+}
+// Tocar fuera cierra la lista, para que no tape el calendario.
+document.addEventListener('click', e=>{
+  const c=document.getElementById('supSugerencias');
+  if(!c || c.style.display==='none') return;
+  if(e.target.closest('#supSugerencias') || e.target.closest('#supBuscaSocio')) return;
+  c.style.display='none';
+});
 async function supRenderCal(){
   supSocioSel=document.getElementById('supVerSocio').value;
   const wrap=document.getElementById('supCalWrap');
@@ -850,8 +931,8 @@ async function covRender(){
 
 // Al tocar un socio de la lista se abre su calendario, que es lo que sigue.
 function covIrA(socioId){
-  const sel=document.getElementById('supVerSocio');
-  if(sel){ sel.value=socioId; }
+  document.getElementById('supVerSocio').value=socioId;
+  supPintarElegido(socioId);                      // que el buscador muestre el nombre
   supViewDate=new Date(covDate.getFullYear(), covDate.getMonth(), 1);
   supRenderCal();
   const wrap=document.getElementById('supCalWrap');
@@ -1516,7 +1597,8 @@ async function plGuardar(){
     }
     cerrarModal();
     supSocioSel = _plSocio;
-    const sel = document.getElementById('supVerSocio'); if (sel) sel.value = _plSocio;
+    document.getElementById('supVerSocio').value = _plSocio;
+    if (typeof supPintarElegido === 'function') supPintarElegido(_plSocio);
     supRenderCal();
     toast(`✅ ${rows.length} día(s) cargados`);
   } catch(e) {

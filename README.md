@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Buscador de socio en el calendario del supervisor
+
+- **«Ver calendario de un socio»** dejó de ser una lista desplegable. Con 33 socios de Mesas, en el teléfono había que rodar el selector hasta dar con el nombre.
+- Ahora es un **campo de búsqueda que filtra mientras se escribe**, con la lista de resultados debajo y un **✕** para limpiar.
+- **Filtra por nombre o apellido, en cualquier orden:** cada palabra escrita debe aparecer en el nombre completo, así que `perez carlos` encuentra a Carlos Perez igual que `carlos perez`. Sin distinguir mayúsculas ni tildes — `gonzalez` encuentra a *González*.
+- Marca **«sin grupo»** en cada resultado, que es la señal de que a ese socio hay que cargarle los turnos.
+- Con el campo vacío muestra los primeros 12 y avisa cuántos quedan; tocar fuera cierra la lista para que no tape el calendario.
+- **El id del socio elegido vive en un campo oculto con el mismo `id` de antes** (`supVerSocio`), así todo lo que ya leía ese valor —el calendario, la importación de planilla, la tarjeta de cobertura— sigue funcionando sin tocarse. Los dos puntos que además escribían el nombre visible ahora llaman a `supPintarElegido()`.
+- Si el socio elegido deja de existir (se borró o cambió de área), la selección se limpia sola.
+- Probado en navegador con los 33 socios reales: nombre parcial, apellido, apellido+nombre invertido, sin tilde, con ñ y mayúsculas, prefijo que coincide con dos, y sin resultados. También elegir, limpiar y que el calendario se recalcule.
+- Archivos: `index2.html`.
+
 #### 2026-09-14 — Cobertura: se avisa cuando el ciclo está tapando una carga a medias
 
 - **Consulta que originó esto:** un socio aparecía como *«Faltan 6 días: 25…30»*. Revisado contra la base, **la tarjeta tenía razón**: sus días 1–24 se cargaron a las 03:22 y los 25–30 en dos tandas posteriores (04:41 y 05:17). La captura es de antes de esas cargas. No había error.
