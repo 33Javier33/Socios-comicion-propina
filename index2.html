@@ -803,9 +803,92 @@ async function renderSocioApp(){
   const sinGrupo=document.getElementById('socioSinGrupo');
   if(!gid && !hasExc){ sinGrupo.classList.remove('hidden'); document.getElementById('socioCal').innerHTML=''; document.getElementById('socioLeyenda').innerHTML=''; return; }
   sinGrupo.classList.add('hidden');
-  pintarCalendario(document.getElementById('socioCal'), socioViewDate, sesion.id, exc, null);
+  _socioExc=exc;   // lo usa el modal del día, para no volver a consultar
+  pintarCalendario(document.getElementById('socioCal'), socioViewDate, sesion.id, exc, 'socioDiaClick');
   leyendaMes(document.getElementById('socioLeyenda'), socioViewDate, sesion.id, exc);
 }
+// ══════════════════════════════════════════════════════════════════════
+// DETALLE DEL DÍA (socio) — solo lectura
+//
+// El socio no puede cambiar su turno, así que el modal informa y nada más.
+// La grilla, por espacio, muestra la entrada grande y la salida chica; acá
+// hay lugar para decirlo completo, incluida la parte que la grilla no
+// puede: que un turno de noche TERMINA AL DÍA SIGUIENTE.
+// ══════════════════════════════════════════════════════════════════════
+let _socioExc={};
+const _DIAS_L=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
+function socioDiaClick(iso){
+  const [y,m,d]=iso.split('-').map(Number);
+  const dia=new Date(y,m-1,d);
+  const t=turnoDeSocioEnFecha(sesion.id, dia, _socioExc);
+  const p=_turnoPartes(t);
+  const hoyISO=fechaISO(new Date());
+  const esHoy=iso===hoyISO;
+  const color=p?p.color:'#475569';
+
+  // ¿Se puede caminar al día anterior/siguiente sin salir del mes cargado?
+  const ultimo=new Date(y,m,0).getDate();
+  const prev=d>1 ? `${y}-${String(m).padStart(2,'0')}-${String(d-1).padStart(2,'0')}` : null;
+  const next=d<ultimo ? `${y}-${String(m).padStart(2,'0')}-${String(d+1).padStart(2,'0')}` : null;
+  const flecha=(destino,glifo)=> destino
+    ? `<button onclick="socioDiaClick('${destino}')" style="background:#1e293b;border:1px solid #334155;color:#cbd5e1;border-radius:9px;width:32px;height:32px;font-size:15px;cursor:pointer;">${glifo}</button>`
+    : `<span style="width:32px;height:32px;display:inline-block"></span>`;
+
+  let cuerpo;
+  if(!p){
+    cuerpo=`<div style="text-align:center;padding:18px 0;">
+      <div style="font-size:20px;font-weight:800;color:#64748b;">Sin turno asignado</div>
+      <div style="font-size:12.5px;color:#94a3b8;margin-top:5px;">Este día todavía no tiene turno cargado.</div>
+    </div>`;
+  } else if(p.libre || p.etq){
+    const esVac=/vacac/i.test(p.etq||'');
+    cuerpo=`<div style="text-align:center;padding:18px 0;">
+      <div style="font-size:30px;font-weight:900;color:${color};letter-spacing:-0.5px;">${esc(p.etqLargo||p.etq)}</div>
+      <div style="font-size:12.5px;color:#94a3b8;margin-top:5px;">${esVac?'Día de vacaciones':'No trabajas este día'}</div>
+    </div>`;
+  } else {
+    const h=_horasTurno(t);
+    // Si la salida es menor o igual que la entrada, el turno cruza la
+    // medianoche: se nombra el día en que realmente termina.
+    const cruza=_minutosDe(t.hora_fin)<=_minutosDe(t.hora_inicio);
+    const sig=new Date(y,m-1,d+1);
+    cuerpo=`
+      <div style="display:flex;align-items:stretch;gap:10px;padding:14px 0 4px;">
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:10.5px;font-weight:800;color:#94a3b8;letter-spacing:.08em;">ENTRADA</div>
+          <div style="font-size:27px;font-weight:900;color:${color};letter-spacing:-0.5px;line-height:1.2;">${p.ini}</div>
+          <div style="font-size:10.5px;color:#64748b;">${esc(_DIAS_L[dia.getDay()])} ${d}</div>
+        </div>
+        <div style="display:flex;align-items:center;color:#475569;font-size:17px;">→</div>
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:10.5px;font-weight:800;color:#94a3b8;letter-spacing:.08em;">SALIDA</div>
+          <div style="font-size:27px;font-weight:900;color:${color};letter-spacing:-0.5px;line-height:1.2;">${p.fin}</div>
+          <div style="font-size:10.5px;color:${cruza?'#fbbf24':'#64748b'};">${cruza?_DIAS_L[sig.getDay()]+' '+sig.getDate():_DIAS_L[dia.getDay()]+' '+d}</div>
+        </div>
+      </div>
+      ${h?`<div style="text-align:center;margin-top:10px;">
+            <span style="background:${color}1f;color:${color};border-radius:999px;padding:4px 13px;font-size:12.5px;font-weight:800;">${h} Hrs</span>
+          </div>`:''}
+      ${cruza?`<div style="text-align:center;font-size:11.5px;color:#fbbf24;margin-top:9px;">🌙 Termina el ${esc(_DIAS_L[sig.getDay()])} ${sig.getDate()}, al día siguiente</div>`:''}`;
+  }
+
+  abrirModal(`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px;">
+      ${flecha(prev,'‹')}
+      <div style="flex:1;text-align:center;min-width:0;">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;color:#94a3b8;text-transform:uppercase;">
+          ${esc(_DIAS_L[dia.getDay()])}${esHoy?' · <span style="color:#38bdf8">HOY</span>':''}
+        </div>
+        <div style="font-size:16px;font-weight:800;color:#e2e8f0;">${d} de ${esc(MESES[m-1].toLowerCase())}</div>
+      </div>
+      ${flecha(next,'›')}
+    </div>
+    <div style="height:3px;border-radius:2px;background:${color};margin:10px 0 2px;"></div>
+    ${cuerpo}
+    <button onclick="cerrarModal()" class="btn-ghost w-full mt-4">Cerrar</button>`);
+}
+
 function socioMes(delta){ socioViewDate=new Date(socioViewDate.getFullYear(), socioViewDate.getMonth()+delta, 1); renderSocioApp(); }
 function socioIrHoy(){ socioViewDate=new Date(); renderSocioApp(); }
 

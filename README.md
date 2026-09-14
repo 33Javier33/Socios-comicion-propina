@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Vista del socio: detalle del día al tocar el calendario
+
+- En **Soy Socio** los días del calendario no eran clicables (`pintarCalendario` recibía `null` como manejador). Ahora al tocar un día se abre una hoja inferior con el detalle, con el mismo estilo del resto de la app.
+- **Es solo lectura**: el socio no puede cambiar su turno, así que el modal informa y nada más. Muestra **ENTRADA → SALIDA** en grande, con las horas del turno en una píldora del color correspondiente.
+- **Lo que la grilla no puede decir por falta de espacio:** que un turno de noche **termina al día siguiente**. Bajo la salida va el día real (*«viernes 4»*, no *«jueves 3»*) y se agrega **🌙 Termina el viernes 4, al día siguiente**. En una celda de 47px eso no cabía; acá sí, y para un turno 20:30→04:30 es justo lo que se necesita saber.
+- Los días libres muestran su nombre en grande (**LIBRE**, **LXF (7,5)**), vacaciones dice *«Día de vacaciones»*, y un día sin turno lo dice en vez de quedar vacío.
+- **Flechas ‹ › para moverse entre días** sin cerrar el modal, limitadas al mes cargado — fuera de él las excepciones no están en memoria y el dato podría salir incompleto. En el día 1 y en el último, la flecha que sobra desaparece.
+- Marca **HOY** cuando corresponde.
+- Probado en navegador con los ocho tipos de día del mes real de un socio: turno que cruza medianoche, turno que no cruza, LIBRE, LXF, VACAC, sin turno, hoy, y el último día del mes; más la navegación con flechas y los bordes del mes.
+- Archivos: `index2.html`.
+
 #### 2026-09-14 — Acceso directo al usuario en el login
 
 - En la lista de **«¿Quién eres?»** cada socio tiene ahora una **⭐**. Al marcarla, ese socio queda guardado **en ese teléfono** y la próxima vez aparece un botón grande **⭐ ACCESO DIRECTO** en la pantalla de inicio, que lleva derecho a su PIN sin buscarse entre 33 nombres.
