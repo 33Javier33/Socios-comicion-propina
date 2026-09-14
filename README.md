@@ -232,6 +232,26 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Ajustes reales para teléfono (SW v106)
+
+- **Corrección de la nota anterior:** la auditoría de la v105 midió **solo desborde horizontal y tamaño de toques**. Eso verifica que nada se sale de la pantalla, pero **no** que el diseño esté pensado para un teléfono — y no lo estaba: era el layout de escritorio a escala 1:1. Declararla «responsiva» con esa evidencia fue una conclusión más amplia que la medición.
+- **Lo que sí estaba mal, medido a 390px con datos reales:**
+
+| | Antes | Después |
+|---|---|---|
+| Alto del encabezado | 189px | **144px** |
+| Espacio antes del primer dato | 300px | **246px** |
+| Resumen de Cierre de Mes | **se cortaba** (`$10.244.00…`) | completo |
+
+- **El monto cortado era lo más grave**: el resumen venía en una sola línea con `ellipsis` y el total de anticipos terminaba en `…`. Un número a medias engaña más que una línea de más; ahora envuelve.
+- **Encabezado compactado**: título y botones más chicos, fecha abreviada en celular (`lun, 14 sept` en vez de `lunes, 14 de septiembre de 2026`), que era lo que empujaba los botones a una tercera fila.
+- **Se descartó una alternativa tras medirla:** poner los botones del encabezado en una sola fila deslizable bajaba a 75px, pero dejaba **tres botones fuera de la vista** —entre ellos «Cerrar sesión»—. Se prefirió que envuelvan compactos: 144px, pero todo visible de entrada.
+- **Tarjetas más apretadas** en ≤640px (padding 14px), y los contadores del Estado de Cobros dejan de partirse dentro de la píldora.
+- **Bug encontrado de paso: había DOS ojos superpuestos en el login.** El del HTML (`#pinEye`) y otro que `config.js` inyectaba en todo `input[type=password]`. El inyectado medía 31×25 y quedaba encima, interceptando el toque del bueno. Ahora no se duplica, y todos los ojos inyectados pasan a 44×44 de zona tocable.
+- Regresión verificada: **17/17 pestañas y 27/27 modales** siguen sin desborde a 390, 360 y 320px.
+- **Alcance honesto:** esto es un pase de ajustes medidos, no un rediseño móvil. El layout sigue siendo el de escritorio adaptado.
+- `styles.css?v=106`, `config.js?v=99`, `app-init.js?v=99`, SW `fondo-admin-v106`, visible **v106**.
+
 #### 2026-09-14 — Auditoría de responsividad en celular (SW v105)
 
 - Se midió la app **en navegador**, elemento por elemento, a **390px (iPhone), 360px (Android) y 320px (pantalla chica)**: las 17 pestañas, los 27 modales y el login.

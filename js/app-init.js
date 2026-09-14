@@ -24,7 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function iniciarApp() {
     const hoy = new Date();
-    const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    // En el teléfono la fecha larga ("lunes, 14 de septiembre de 2026") ocupa
+    // una línea entera del encabezado y empuja los botones a una tercera fila.
+    // Abreviada dice lo mismo en la mitad del espacio.
+    const _angosto = window.matchMedia('(max-width: 640px)').matches;
+    const opciones = _angosto
+        ? { weekday: 'short', day: 'numeric', month: 'short' }
+        : { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     document.getElementById('fechaHoyBadge').textContent = hoy.toLocaleDateString('es-ES', opciones);
     const todayISO = hoy.toISOString().split('T')[0];
     document.getElementById('fechaAnticipo').value = todayISO;

@@ -462,6 +462,10 @@ function responsables_poblarLoginSelector() {
 
 function cfg_ponerOjo(inp) {
     if (!inp || inp.dataset.ojo === '1' || inp.type !== 'password') return;
+    // El PIN del login YA trae su propio ojo (#pinEye) puesto en el HTML.
+    // Sin esta guarda quedaban dos ojos encimados, y el de abajo era una
+    // zona tocable de 31x25 que interceptaba el toque del bueno.
+    if (inp.id === 'pinInput' || (inp.parentNode && inp.parentNode.querySelector('.pin-eye'))) return;
     inp.dataset.ojo = '1';
 
     const cont = document.createElement('div');
@@ -479,9 +483,12 @@ function cfg_ponerOjo(inp) {
     btn.textContent = '👁';
     btn.title = 'Ver';
     btn.setAttribute('aria-label', 'Mostrar u ocultar');
-    btn.style.cssText = 'position:absolute;right:4px;top:50%;transform:translateY(-50%);'
+    // 44x44 de zona tocable: el ícono se ve igual, pero en un teléfono se
+    // acierta. Con padding 4px 7px quedaba en 31x25, muy chico para el dedo.
+    btn.style.cssText = 'position:absolute;right:0;top:50%;transform:translateY(-50%);'
         + 'background:none;border:none;cursor:pointer;font-size:1.05em;line-height:1;'
-        + 'padding:4px 7px;opacity:0.55;';
+        + 'min-width:44px;min-height:44px;display:inline-flex;align-items:center;'
+        + 'justify-content:center;opacity:0.55;-webkit-tap-highlight-color:transparent;';
     btn.onclick = () => {
         const mostrar = inp.type === 'password';
         inp.type = mostrar ? 'text' : 'password';

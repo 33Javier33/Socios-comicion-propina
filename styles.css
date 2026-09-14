@@ -1141,3 +1141,71 @@
         body.dark-mode #mobileDrawerHeader { background: #1e293b; border-color: #334155; color: #e2e8f0; }
         body.dark-mode #mobileDrawerClose { background: #334155; color: #e2e8f0; }
         body.dark-mode #mobileDrawerNav .nav-btn.active { background: rgba(147,197,253,0.15); color: #93c5fd; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   TELÉFONO (≤ 640px)
+   
+   Que nada se desborde no alcanza: el layout seguía siendo el de
+   escritorio a escala 1:1. En un teléfono el encabezado se comía el 31%
+   de la primera pantalla antes de mostrar un solo dato, y los resúmenes
+   con plata se cortaban con "…".
+   
+   Acá se aprieta el cromo y se le devuelve el espacio al contenido.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+
+    /* ── Encabezado: de tres filas a dos, y más bajo ── */
+    .container { padding-left: 12px; padding-right: 12px; }
+    .header-section { margin-bottom: 14px; gap: 8px; }
+    h1 { font-size: 1.15em; }
+    h1 small { display: block; font-size: 0.62em; margin-top: 1px; }
+    .header-section > div[style*="display:flex"] { gap: 6px !important; }
+    .fecha-badge { padding: 5px 10px; font-size: 0.74em; }
+    .header-section button {
+        padding: 8px 10px !important; font-size: 0.76em !important;
+        white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;
+    }
+    /* Los botones del encabezado quedaban en tres filas y se comían un cuarto
+       de la pantalla. Se probó ponerlos en una sola fila deslizable: bajaba a
+       75px, pero tres botones —entre ellos «Cerrar sesión»— quedaban fuera de
+       la vista y había que adivinarlos. Se prefiere que envuelvan compactos:
+       un poco más alto, pero TODO a la vista de entrada. */
+    .header-section > div[style*="display:flex"] { width: 100%; justify-content: flex-start; }
+
+    /* ── Tarjetas: menos aire, más datos por pantalla ── */
+    .card, .arqueo-card, .search-panel { padding: 14px !important; }
+    .detail-panel { padding: 16px !important; }
+
+    /* ── Resúmenes con plata: que NUNCA se corten ──
+       En el banner de Cierre de Mes el resumen venía en una sola línea con
+       ellipsis, y el monto de anticipos terminaba en "$10.244.00…". Un
+       número a medias es peor que dos líneas. */
+    #cierreMesCardResumen {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        line-height: 1.45;
+    }
+
+    /* ── Contadores del Estado de Cobros ──
+       El badge envolvía partido en dos líneas dentro de la píldora roja.
+       Se deja que respire y se alinea a la derecha. */
+    #cierreMesBadge {
+        white-space: normal; text-align: right; line-height: 1.35;
+        padding: 4px 9px; font-size: 0.7em;
+    }
+
+    /* ── Filtros de Buscar Socio ──
+       Cinco botones en una fila no entran: se reparten en dos columnas
+       parejas en vez de amontonarse con anchos distintos. */
+    #filtroGestionTodos, #filtroGestionAnticipos, #filtroGestionAusencias {
+        flex: 1 1 30% !important; min-width: 0 !important;
+        padding: 9px 4px !important; font-size: 0.72em !important;
+    }
+    .search-panel > div:first-of-type > button { min-height: 40px; }
+
+    /* ── Tablas anchas: que el scroll propio se note ── */
+    .tabla-scroll, [style*="overflow-x:auto"], [style*="overflow-x: auto"] {
+        -webkit-overflow-scrolling: touch;
+    }
+}
