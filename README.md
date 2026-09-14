@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — index2: pestaña Accesos (quién entró, quién creó su PIN) y cierre por inactividad
+
+**Nueva pestaña 🔐 Accesos en el supervisor**
+
+- **Quién ya creó su PIN**, sin ver el PIN. La consulta pide **solo la columna `usuario`**, nunca `pin`: el valor no sale de la base ni llega al navegador del supervisor. Se muestra únicamente **si existe** o no, con los que faltan primero y el total («2 sí · 3 todavía no»), más una línea aparte para el supervisor.
+- **Historial de ingresos.** Se muestran los **últimos 6** —el tope pedido— con quién, hace cuánto, la fecha exacta, si entró como socio o supervisor, y **cuántas veces ha entrado en total**. Un botón despliega el historial completo.
+- **Tabla nueva `horarios_accesos`** en Supabase (`id, socio_id, nombre, rol, created_at`), con índices por fecha y por socio, RLS activada y la misma política `anon` que el resto de las tablas `horarios_*`. **Guarda quién entró y cuándo; nunca el PIN ni nada derivado de él.** Para revertir: `drop table public.horarios_accesos`.
+- El registro se escribe **sin `await`**: si falla, la persona entra igual. Un log de auditoría no debe poder dejar a nadie afuera.
+
+**Cierre automático por inactividad (15 min)**
+
+- Igual que en socios-comicion y propi.solicitada. Aviso en los **últimos 2 minutos** con la cuenta regresiva, y al cerrar avisa el motivo.
+- El tiempo restante se calcula con la **hora real de la última actividad**, no restando un segundo por tick. Si el teléfono suspende la pestaña, un contador que resta de a uno se congela y la sesión quedaría abierta indefinidamente; así, al volver, el primer tick ya refleja el tiempo transcurrido de verdad y cierra si corresponde. Además se revisa al volver de segundo plano, sin esperar al próximo tick.
+- Cualquier señal de que la persona sigue ahí (toque, tecla, scroll) reinicia la cuenta.
+- Las pestañas del supervisor pasan de cuatro a cinco: se bajó el tamaño de letra para que entren en un teléfono angosto.
+- Probado en navegador: el temporizador a los 5, 12,5, 13,5, 14,9 y 15,01 minutos (aviso, cierre y reinicio por actividad), y el panel con ocho accesos de ejemplo (tope de 6, despliegue completo, conteo por socio y el estado de los PIN).
+- Archivos: `index2.html`.
+
 #### 2026-09-14 — Vista del socio: detalle del día al tocar el calendario
 
 - En **Soy Socio** los días del calendario no eran clicables (`pintarCalendario` recibía `null` como manejador). Ahora al tocar un día se abre una hoja inferior con el detalle, con el mismo estilo del resto de la app.

@@ -65,7 +65,9 @@
   .pin-dot.on{ background:#38bdf8; border-color:#38bdf8; }
   .keypad-btn{ height:64px; border-radius:16px; background:#1e293b; border:1px solid #334155; font-size:24px; font-weight:700; color:#e2e8f0; cursor:pointer; transition:.1s; }
   .keypad-btn:active{ transform:scale(0.95); background:#334155; }
-  .tab-btn{ flex:1; padding:10px; font-size:12px; font-weight:700; color:#94a3b8; border:none; background:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  /* Con cinco pestañas el texto ya no entra a 12px en un teléfono angosto. */
+  .tab-btn{ flex:1; min-width:0; padding:10px 2px; font-size:11px; font-weight:700; color:#94a3b8; border:none; background:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  @media (max-width:360px){ .tab-btn{ font-size:10px; } }
   .tab-btn.active{ color:#38bdf8; }
   .sup-panel{ display:none; }
   .sup-panel.active{ display:block; }
@@ -255,6 +257,16 @@
       <input id="asigBuscar" oninput="renderAsignaciones()" placeholder="🔍 Buscar socio..." class="fld mb-3">
       <div id="asigLista" class="space-y-2"></div>
     </div>
+
+    <!-- PANEL: ACCESOS -->
+    <div id="panAccesos" class="sup-panel">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-extrabold">Accesos</h3>
+        <button onclick="accRender()" class="btn-ghost text-xs">🔄 Actualizar</button>
+      </div>
+      <div id="accUltimos" class="mb-4"></div>
+      <div id="accPins"></div>
+    </div>
   </div>
 
   <!-- Nav supervisor -->
@@ -263,6 +275,7 @@
     <button class="tab-btn" data-pan="Turnos" onclick="supTab('Turnos')"><span>⏰</span>Turnos</button>
     <button class="tab-btn" data-pan="Grupos" onclick="supTab('Grupos')"><span>👥</span>Grupos</button>
     <button class="tab-btn" data-pan="Socios" onclick="supTab('Socios')"><span>🧩</span>Asignar</button>
+    <button class="tab-btn" data-pan="Accesos" onclick="supTab('Accesos')"><span>🔐</span>Accesos</button>
   </div>
 </div>
 
@@ -272,6 +285,11 @@
     <div id="modalContent"></div>
   </div>
 </div>
+
+<!-- Aviso de cierre próximo por inactividad -->
+<div id="inactBadge" style="display:none;position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:70;
+     background:#7f1d1d;color:#fecaca;border:1px solid #b91c1c;border-radius:999px;padding:5px 13px;
+     font-size:12px;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,.4);"></div>
 
 <!-- ══════════ TOAST ══════════ -->
 <div id="toast" class="fixed left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow-lg transition-all" style="bottom:-80px;background:#0284c7;"></div>
@@ -438,7 +456,16 @@ async function socioElegido(id){
       onOk:async(pin)=>{ await db.from('horarios_pins').upsert({usuario:id,pin}); entrarSocio(s); }});
   }
 }
-function entrarSocio(s){ sesion={rol:'socio',id:s.id,nombre:`${s.nombre} ${s.apellido}`,contrato:s.contrato}; socioViewDate=new Date(); renderSocioApp(); show('appSocio'); }
+// Deja constancia de QUIÉN entró y cuándo. Nunca se guarda el PIN ni nada
+// derivado de él. Va sin await: si falla el registro, la persona entra igual.
+function registrarAcceso(rol, id, nombre){
+  try{
+    db.from('horarios_accesos').insert({ id:uid('acc'), socio_id:id||null, nombre:nombre||null, rol })
+      .then(({error})=>{ if(error) console.warn('[acceso]', error.message); });
+  }catch(e){ console.warn('[acceso]', e); }
+}
+
+function entrarSocio(s){ sesion={rol:'socio',id:s.id,nombre:`${s.nombre} ${s.apellido}`,contrato:s.contrato}; socioViewDate=new Date(); registrarAcceso('socio', s.id, `${s.nombre} ${s.apellido}`.trim()); arrancarInactividad(); renderSocioApp(); show('appSocio'); }
 
 async function irSupervisor(){
   await cargarBase();
@@ -450,9 +477,55 @@ async function irSupervisor(){
       onOk:async(pin)=>{ await db.from('horarios_pins').upsert({usuario:'SUPERVISOR',pin}); entrarSuper(); }});
   }
 }
-function entrarSuper(){ sesion={rol:'super'}; supViewDate=new Date(); renderSuper(); show('appSuper'); }
+function entrarSuper(){ sesion={rol:'super'}; supViewDate=new Date(); registrarAcceso('super', null, 'Supervisor'); arrancarInactividad(); renderSuper(); show('appSuper'); }
 
-function logout(){ sesion=null; pinBuffer=''; pintarAccesoDirecto(); show('scrRole'); }
+function logout(inactividad){
+  sesion=null; pinBuffer=''; pararInactividad();
+  pintarAccesoDirecto(); show('scrRole');
+  if(inactividad===true) toast('Sesión cerrada por inactividad (15 min)', '#dc2626');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CIERRE POR INACTIVIDAD (15 min), igual que en socios-comicion
+//
+// El tiempo restante se calcula con la hora REAL de la última actividad, no
+// restando un segundo por tick: si el teléfono suspende la pestaña, al
+// volver el primer tick ya refleja el tiempo transcurrido de verdad y cierra
+// si corresponde. Un contador que resta de a uno se congela con la pestaña y
+// la sesión quedaría abierta indefinidamente.
+// ══════════════════════════════════════════════════════════════════════
+const INACT_MS = 15 * 60 * 1000;
+const INACT_AVISO_MS = 2 * 60 * 1000;      // el aviso aparece en los últimos 2 min
+let _inactUlt = Date.now(), _inactInt = null;
+
+function _inactTick(){
+  if(!sesion) return pararInactividad();
+  const resta = INACT_MS - (Date.now() - _inactUlt);
+  const badge = document.getElementById('inactBadge');
+  if(resta <= 0){ pararInactividad(); logout(true); return; }
+  if(badge){
+    if(resta <= INACT_AVISO_MS){
+      const m = Math.floor(resta/60000), sg = Math.floor((resta%60000)/1000);
+      badge.textContent = `⏳ Se cerrará en ${m}:${String(sg).padStart(2,'0')}`;
+      badge.style.display = 'block';
+    } else badge.style.display = 'none';
+  }
+}
+function arrancarInactividad(){
+  _inactUlt = Date.now();
+  if(_inactInt) clearInterval(_inactInt);
+  _inactInt = setInterval(_inactTick, 1000);
+}
+function pararInactividad(){
+  if(_inactInt){ clearInterval(_inactInt); _inactInt=null; }
+  const b=document.getElementById('inactBadge'); if(b) b.style.display='none';
+}
+// Cualquier señal de que la persona sigue ahí reinicia la cuenta.
+['click','keydown','touchstart','pointerdown','scroll'].forEach(ev=>{
+  window.addEventListener(ev, ()=>{ if(sesion) _inactUlt = Date.now(); }, {passive:true});
+});
+// Al volver de segundo plano se revisa enseguida, sin esperar al próximo tick.
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && sesion) _inactTick(); });
 
 // ══════════ PIN ══════════
 function abrirPin(ctx){ pinCtx=ctx; pinBuffer=''; document.getElementById('pinTitulo').textContent=ctx.titulo; document.getElementById('pinSub').textContent=ctx.sub||''; document.getElementById('pinAvatar').textContent=ctx.avatar||'?'; document.getElementById('pinError').textContent=''; pinPintar(); show('scrPin'); }
@@ -898,6 +971,103 @@ function supTab(pan){
   document.querySelectorAll('#appSuper .tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.pan===pan));
   document.querySelectorAll('#appSuper .sup-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('pan'+pan).classList.add('active');
+  if(pan==='Accesos') accRender();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ACCESOS — quién entró y quién ya creó su PIN
+//
+// Del PIN solo se consulta el ID del socio, NUNCA el valor: la columna
+// `pin` no se pide en el select, así que el PIN no llega ni siquiera al
+// navegador del supervisor. Lo único que se muestra es si existe o no.
+// ══════════════════════════════════════════════════════════════════════
+let _accTodos=false;
+function _accHace(iso){
+  const t=new Date(iso), min=Math.floor((Date.now()-t)/60000);
+  if(min<1) return 'recién';
+  if(min<60) return 'hace '+min+' min';
+  const hs=Math.floor(min/60);
+  if(hs<24) return 'hace '+hs+' h';
+  const d=Math.floor(hs/24);
+  if(d===1) return 'ayer';
+  if(d<30) return 'hace '+d+' días';
+  return t.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function _accFechaLarga(iso){
+  try{ return new Date(iso).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}); }
+  catch(e){ return ''; }
+}
+
+async function accRender(){
+  const up=document.getElementById('accUltimos'), pp=document.getElementById('accPins');
+  if(!up||!pp) return;
+  up.innerHTML='<div class="text-slate-500 text-xs text-center py-4">Cargando…</div>'; pp.innerHTML='';
+
+  // OJO: se pide `usuario`, no `pin`. El valor del PIN no sale de la base.
+  const [accRes, pinRes] = await Promise.all([
+    db.from('horarios_accesos').select('socio_id,nombre,rol,created_at').order('created_at',{ascending:false}).limit(300),
+    db.from('horarios_pins').select('usuario')
+  ]);
+  const accesos=accRes.data||[];
+  const conPin=new Set((pinRes.data||[]).map(r=>String(r.usuario)));
+
+  // ── Últimos que entraron (tope de 6, ampliable) ──
+  const TOPE=6;
+  const lista=_accTodos?accesos.slice(0,60):accesos.slice(0,TOPE);
+  // Cuántas veces entró cada uno, sobre todo lo que se trajo.
+  const veces={}; accesos.forEach(a=>{ const k=a.socio_id||a.rol; veces[k]=(veces[k]||0)+1; });
+
+  up.innerHTML =
+    `<div class="text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-2">Últimos accesos</div>`
+    + (!accesos.length
+      ? '<div class="card p-4 text-center text-slate-500 text-xs">Todavía nadie ha entrado desde que se activó el registro.</div>'
+      : lista.map(a=>{
+          const sup=a.rol==='super';
+          const col=sup?'#818cf8':'#38bdf8';
+          const ini=(a.nombre||'?').charAt(0).toUpperCase();
+          const n=veces[a.socio_id||a.rol]||1;
+          return `<div class="card p-2.5 flex items-center gap-3 mb-1.5">
+            <div style="width:34px;height:34px;border-radius:50%;background:${col}26;color:${col};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">${sup?'🛡️':esc(ini)}</div>
+            <div style="flex:1;min-width:0">
+              <div class="text-sm font-bold truncate">${esc(a.nombre||'—')}</div>
+              <div class="text-[11px] text-slate-400">${esc(_accHace(a.created_at))} · ${esc(_accFechaLarga(a.created_at))}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div class="text-[11px] font-bold" style="color:${col}">${sup?'SUPERVISOR':'socio'}</div>
+              <div class="text-[10px] text-slate-500">${n} ingreso${n===1?'':'s'}</div>
+            </div>
+          </div>`;
+        }).join('')
+        + (accesos.length>TOPE
+            ? `<button onclick="_accTodos=!_accTodos;accRender()" class="btn-ghost w-full text-xs mt-1">${_accTodos?'▴ Ver solo los últimos 6':'▾ Ver el historial completo ('+accesos.length+')'}</button>`
+            : ''));
+
+  // ── Quién ya creó su PIN ──
+  const conP=[], sinP=[];
+  sociosMesas.forEach(s=>{
+    const nom=`${s.nombre} ${s.apellido}`.trim();
+    (conPin.has(String(s.id))?conP:sinP).push({s,nom});
+  });
+  const ord=a=>a.sort((x,y)=>x.nom.localeCompare(y.nom));
+  ord(conP); ord(sinP);
+  const chip=(o,color,txt)=>`<div class="flex items-center gap-2 py-1.5" style="border-bottom:1px solid #1e293b">
+      <span style="width:7px;height:7px;border-radius:50%;background:${color};flex-shrink:0"></span>
+      <span class="text-sm" style="flex:1;min-width:0;color:#e2e8f0">${esc(o.nom)}</span>
+      <span class="text-[11px]" style="color:${color}">${txt}</span>
+    </div>`;
+
+  pp.innerHTML=
+    `<div class="flex items-center justify-between mb-2">
+       <div class="text-[11px] font-bold uppercase tracking-wide text-slate-400">PIN creado</div>
+       <div class="text-[11px] text-slate-400"><b class="text-emerald-300">${conP.length}</b> sí · <b class="text-slate-300">${sinP.length}</b> todavía no</div>
+     </div>
+     <div class="card p-3">
+       <p class="text-[11px] text-slate-500 mb-2">Solo se muestra <b>si existe</b> el PIN. El valor no se consulta ni sale de la base.</p>
+       ${sinP.map(o=>chip(o,'#64748b','sin PIN')).join('')}
+       ${conP.map(o=>chip(o,'#34d399','creado')).join('')}
+       ${(!conP.length&&!sinP.length)?'<div class="text-slate-500 text-xs text-center py-2">Sin socios cargados.</div>':''}
+     </div>
+     ${conPin.has('SUPERVISOR')?'<div class="text-[11px] text-slate-500 mt-2">🛡️ El supervisor tiene su PIN creado.</div>':'<div class="text-[11px] text-amber-300 mt-2">🛡️ El supervisor todavía no tiene PIN.</div>'}`;
 }
 // ── Buscador de socio (reemplaza la lista desplegable) ────────────────
 // Se filtra por nombre O apellido, sin importar tildes ni mayúsculas, y
