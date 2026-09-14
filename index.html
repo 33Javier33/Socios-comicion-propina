@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/fondo-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=104">
+    <link rel="stylesheet" href="styles.css?v=105">
 </head>
 <body>
 
@@ -2040,7 +2040,11 @@
             </div>
 
             <!-- Stats -->
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+            <!-- auto-fit con un mínimo real: con repeat(4,1fr) fijo, en un teléfono cada
+                 tarjeta quedaba en 71px y etiquetas como "Eliminaciones" no entraban,
+                 así que empujaban la fila y sacaban scroll horizontal a toda la página.
+                 Ahora se acomodan solas: 2 columnas en celular, 4 en pantalla ancha. -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;">
                 <div style="background:white;border-radius:12px;padding:14px;text-align:center;border:1px solid var(--border);box-shadow:0 2px 6px rgba(0,0,0,0.04);">
                     <div style="font-size:1.6em;font-weight:900;color:var(--secondary);" id="aud-stat-total">—</div>
                     <div style="font-size:0.72em;color:#7f8c8d;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Total eventos</div>
@@ -2656,7 +2660,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v104</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v105</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

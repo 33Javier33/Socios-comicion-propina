@@ -232,6 +232,23 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Auditoría de responsividad en celular (SW v105)
+
+- Se midió la app **en navegador**, elemento por elemento, a **390px (iPhone), 360px (Android) y 320px (pantalla chica)**: las 17 pestañas, los 27 modales y el login.
+- **Resultado: 2 problemas reales, ambos corregidos.** El resto pasa limpio — 17/17 pestañas y 27/27 modales sin scroll horizontal en las tres anchuras.
+
+**1. Auditoría sacaba scroll horizontal a toda la página**
+- Las cuatro tarjetas de estadísticas usaban `grid-template-columns: repeat(4,1fr)` **fijo**. En un teléfono cada tarjeta quedaba en 71px y etiquetas como *«Eliminaciones»* o *«Usuarios activos»* no entraban, así que empujaban la fila. Desbordaba **54px a 390px, 84px a 360px y 124px a 320px** — peor cuanto más chica la pantalla.
+- Ahora es `repeat(auto-fit, minmax(140px,1fr))`: se acomodan solas, **2 columnas en celular y 4 en pantalla ancha**.
+
+**2. El 👁 del PIN era muy chico para el dedo**
+- Medía **31×25px**; lo recomendado es 44×44. Se agrandó el **área tocable** a 44×44 sin cambiar el tamaño del ícono: se ve igual, se acierta mucho mejor. Verificado que sigue dentro del campo y que al tocarlo el PIN se revela.
+
+**Falso positivo descartado:** la tabla de Auditoría mide 405px en un contenedor de 348px, pero vive dentro de un `overflow-x:auto` — ese scroll es **a propósito**, una tabla de 5 columnas no cabe en un teléfono. Se ajustó el script de auditoría para no marcar lo que está dentro de un contenedor con scroll propio.
+
+- `styles.css?v=105`, SW `fondo-admin-v105`, versión visible **v105**.
+- Archivos: `index.html`, `styles.css`.
+
 #### 2026-09-14 — «Con turnos» podía esconder días sin horario («Trabaja»)
 
 - **Consulta:** algunos socios figuraban como si tuvieran turnos cuando en realidad no los tenían.
