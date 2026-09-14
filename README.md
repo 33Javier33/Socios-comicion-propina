@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Cobertura: se avisa cuando el ciclo está tapando una carga a medias
+
+- **Consulta que originó esto:** un socio aparecía como *«Faltan 6 días: 25…30»*. Revisado contra la base, **la tarjeta tenía razón**: sus días 1–24 se cargaron a las 03:22 y los 25–30 en dos tandas posteriores (04:41 y 05:17). La captura es de antes de esas cargas. No había error.
+- **Pero revisando el resto apareció algo que la tarjeta sí escondía.** Cuatro socios tienen el mes a medias — Camila Oyarzun y Carlos Perez 20/30, Carlos Gomez 28/30, Adrián González 29/30 — y **los cuatro están en un grupo**, así que salían listados como *«Con turnos»* sin más.
+- **Por qué importa:** con grupo, el ciclo tapa cualquier hueco y nunca queda un día «sin turno». Si una importación de planilla quedó por la mitad, **los días que faltan los rellena el ciclo** y pueden no coincidir con la hoja. Es exactamente lo que se había notado antes en el calendario de un socio, con días que mostraban un turno distinto al de su planilla.
+- **Ahora se avisa:** un socio con grupo y carga parcial aparece en ámbar con *«20 días cargados · los otros 10 los pone el ciclo: 1, 2, 9, 10…»*, y el resumen los cuenta aparte (**«a medias»**). Los que tienen grupo y nada cargado, o grupo y el mes completo, se distinguen también en el texto.
+- No se los marca como error: grupo + excepciones puntuales es un uso legítimo. Lo que se hace es **mostrar la mezcla**, que antes era invisible.
+- Probado en navegador con los cinco casos: sin turnos, incompleto sin grupo, con grupo y carga parcial, con grupo y mes completo, y cargado día por día sin grupo.
+- Archivos: `index2.html`.
+
 #### 2026-09-14 — index2: quién tiene turnos y a quién le faltan
 
 - Tarjeta nueva arriba del panel **Calendario** del supervisor: **«Quién tiene turnos»**, con el resumen siempre a la vista (*«12 con turnos · 3 incompletos · 5 sin turnos»*) y el detalle al desplegarla. Antes no había forma de saberlo salvo abriendo socio por socio.

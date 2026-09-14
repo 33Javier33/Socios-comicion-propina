@@ -780,10 +780,17 @@ async function covRender(){
     const exc=excPorSocio[s.id]||{};
     const gid=asignaciones[s.id];
     const faltan=dias.filter(d=>!exc[fechaISO(d)]).map(d=>d.getDate());
+    const cargados=dias.length-faltan.length;
     const nombre=`${s.nombre} ${s.apellido}`.trim();
     if(gid){
-      // Con grupo el ciclo cubre todos los días; las excepciones solo lo pisan.
-      conTurno.push({ s, nombre, via:'Grupo: '+((gruposMap[gid]||{}).nombre||'—') });
+      const gnom='Grupo: '+((gruposMap[gid]||{}).nombre||'—');
+      // Con grupo, el ciclo tapa cualquier hueco, así que nunca queda un día
+      // "sin turno". Pero eso ESCONDE una carga a medias: si se importó la
+      // planilla y quedó por la mitad, los días que faltan los inventa el
+      // ciclo y pueden no ser los de la hoja. Se avisa en vez de callarlo.
+      if(cargados===0)            conTurno.push({ s, nombre, via:gnom });
+      else if(!faltan.length)     conTurno.push({ s, nombre, via:'Cargado día por día · '+gnom });
+      else                        conTurno.push({ s, nombre, via:gnom, mixto:{cargados, faltan} });
     } else if(!faltan.length && dias.length){
       conTurno.push({ s, nombre, via:'Cargado día por día' });
     } else if(faltan.length < dias.length){
@@ -795,9 +802,11 @@ async function covRender(){
   const ordenar=a=>a.sort((x,y)=>x.nombre.localeCompare(y.nombre));
   ordenar(conTurno); ordenar(incompletos); ordenar(sinTurno);
 
+  const nMixtos=conTurno.filter(o=>o.mixto).length;
   const res=document.getElementById('covResumen');
   if(res) res.innerHTML=
-      `<b class="text-emerald-300">${conTurno.length}</b> con turnos`
+      `<b class="text-emerald-300">${conTurno.length-nMixtos}</b> con turnos`
+    + (nMixtos?` · <b class="text-amber-300">${nMixtos}</b> a medias`:'')
     + (incompletos.length?` · <b class="text-amber-300">${incompletos.length}</b> incompletos`:'')
     + (sinTurno.length?` · <b class="text-red-300">${sinTurno.length}</b> sin turnos`:'')
     + ` · ${MESES[covDate.getMonth()]}`;
@@ -828,7 +837,13 @@ async function covRender(){
         const txt = l.length>10 ? l.slice(0,10).join(', ')+' y '+(l.length-10)+' más' : l.join(', ');
         return fila(o,'#fbbf24',`Faltan ${l.length} día${l.length===1?'':'s'}: ${txt}`);
       })
-    + bloque('Con turnos', '#34d399', conTurno, o=>fila(o,'#34d399',esc(o.via)))
+    + bloque('Con turnos', '#34d399', conTurno, o=>{
+        if(!o.mixto) return fila(o,'#34d399',esc(o.via));
+        const l=o.mixto.faltan;
+        const txt = l.length>10 ? l.slice(0,10).join(', ')+' y '+(l.length-10)+' más' : l.join(', ');
+        return fila(o,'#fbbf24',
+          `${esc(o.via)}<br><span style="color:#fcd34d">⚠️ ${o.mixto.cargados} días cargados · los otros ${l.length} los pone el ciclo: ${txt}</span>`);
+      })
     + (incompletos.length||sinTurno.length
         ? '<p class="text-[11px] text-slate-500 mt-1">💡 Toca un socio para abrir su calendario y cargarle los turnos.</p>' : '');
 }
