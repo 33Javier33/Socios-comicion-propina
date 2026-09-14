@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Importar planilla: se aceptan más formatos y se explica cuál usar
+
+- **Medición previa (por qué no se vuelve al OCR):** se probó Tesseract con la imagen **preprocesada** (ampliada 2,6×, gris, umbral Otsu y umbral local adaptativo) y además emparejando cada línea contra el vocabulario cerrado de 6 turnos posibles. Mejor resultado: **9 de 30 filas correctas**, con solo 13 de 30 detectadas. Peor aún, el vocabulario cerrado **empeora el fallo**: convirtió `"2,5 Hrs 20 30 a04. 30"` en `7,5 Hrs 20:30 a 04:30` para un día que es **LIBRE** — un error que parece válido y pasaría la revisión. Queda descartado con datos.
+- **El pegado desde Excel ya funcionaba y ahora está documentado.** Es el camino rápido: seleccionar las tres columnas del socio en la planilla original, copiar y pegar. El tabulador ya venía soportado; los datos entran exactos y sin escribir nada.
+- **Dos formatos que fallaban y ahora entran:**
+  - **CSV con `;`** (el separador que usa Excel en Chile, justo porque la coma es el decimal). Antes se descartaba: el patrón exigía un espacio después del separador.
+  - **Guion en vez de «a»** en el rango — `20:30 - 04:30`, también con guion largo. Se acepta además `hasta`.
+- **La coma sigue sin ser separador, a propósito:** en `7,5 Hrs` es el decimal, y tomarla partiría el turno por la mitad. Verificado que `7,5` queda intacto.
+- **Ayuda desplegable en el propio diálogo** («¿Cómo tengo que ordenar los datos?») con el orden de las columnas, los separadores válidos, los turnos que entiende y el atajo de Excel.
+- Verificado con 18 formatos de entrada distintos: los 18 se interpretan bien (papel, Excel con y sin día de la semana, celdas con espacios, CSV, barra vertical, guion corto y largo, minúsculas sin tildes, punto decimal, LIBRE, LXF, VACAC, y encabezados que se descartan solos).
+- Archivos: `index2.html`.
+
 #### 2026-09-14 — Tarjeta de HOY en la vista del socio
 
 - Al abrir la app, **lo primero que se ve es qué toca hoy**. Antes había que buscar el día dentro de la grilla del mes, que es justo lo que uno no quiere hacer a las seis de la mañana para saber si entra o no.

@@ -1198,10 +1198,13 @@ function plLeerCelda(txt){
   if (/vacac/.test(t)) return { clave:'VACAC', horas:0 };
   // "7,5 Hrs 20:30 a 04:30" — las horas del principio son informativas:
   // el turno queda definido por el rango, que es lo que la app guarda.
-  const m = t.match(/([\d.,]+)\s*hrs?\s*(\d{1,2}[:.]\d{2})\s*a\s*(\d{1,2}[:.]\d{2})/);
+  // El separador entre entrada y salida puede ser "a" o un guion: la hoja
+  // usa "20:30 a 04:30" pero al copiar de una planilla suele venir con "-".
+  const SEP = '(?:a|-|–|—|hasta)';
+  const m = t.match(new RegExp('([\\d.,]+)\\s*hrs?\\s*(\\d{1,2}[:.]\\d{2})\\s*'+SEP+'\\s*(\\d{1,2}[:.]\\d{2})'));
   if (m) return { clave: m[2].replace('.',':') + '-' + m[3].replace('.',':'), horas: parseFloat(m[1].replace(',','.')) };
   // Por si viene solo el rango, sin las horas adelante.
-  const r = t.match(/(\d{1,2}[:.]\d{2})\s*a\s*(\d{1,2}[:.]\d{2})/);
+  const r = t.match(new RegExp('(\\d{1,2}[:.]\\d{2})\\s*'+SEP+'\\s*(\\d{1,2}[:.]\\d{2})'));
   if (r) return { clave: r[1].replace('.',':') + '-' + r[2].replace('.',':'), horas: null };
   return null;
 }
@@ -1228,7 +1231,10 @@ function plParsear(texto, anio, mes){
     if (!l) return;
     // "Martes 1 LIBRE" — el día de la semana es opcional (puede que el OCR
     // no lo tome), pero si viene sirve para verificar la fecha.
-    const m = l.match(/^\s*(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)?\s*[|,;\t]?\s*(\d{1,2})\s*[|,;\t]?\s+(.+)$/i);
+    // Separador entre columnas: espacios, tabulador (pegado de Excel), "|" o
+    // ";" (CSV chileno). La coma NO sirve de separador: en "7,5 Hrs" es el
+    // decimal, y tomarla partiría el turno por la mitad.
+    const m = l.match(/^\s*(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)?\s*(?:[|;\t]\s*|\s*)(\d{1,2})\s*(?:[|;\t]\s*|\s+)(.+)$/i);
     if (!m) return;
     const diaTxt = m[1] || '', num = parseInt(m[2], 10), celda = m[3];
     if (!num || num > 31) return;
@@ -1279,7 +1285,23 @@ function plModal(){
 
     <label class="text-xs text-slate-400 font-semibold">Filas de la planilla</label>
     <textarea id="plTexto" class="fld mt-1" rows="6" placeholder="Martes 1 LIBRE&#10;Jueves 3 7,5 Hrs 20:30 a 04:30&#10;Sábado 19 LXF (7,5)"></textarea>
-    <p class="text-[11px] text-slate-500 mt-1 mb-3">Una línea por día. El día de la semana es opcional; sirve para verificar que la fecha calce.</p>
+    <p class="text-[11px] text-slate-500 mt-1 mb-2">Una línea por día. El día de la semana es opcional; si lo pones, se verifica que la fecha calce.</p>
+    <details class="mb-3">
+      <summary class="text-[11px] text-sky-400 font-semibold cursor-pointer">¿Cómo tengo que ordenar los datos?</summary>
+      <div class="text-[11px] text-slate-400 mt-2 leading-relaxed" style="background:#0f172a;border:1px solid #293449;border-radius:9px;padding:10px;">
+        <b class="text-slate-200">Orden:</b> día de la semana · número · turno.<br>
+        El separador puede ser espacios, <b>tabulador</b>, <code>;</code> o <code>|</code>.<br><br>
+        <b class="text-emerald-300">Lo más rápido:</b> si la planilla está en <b>Excel</b>, selecciona las tres
+        columnas del socio, copia y pega acá. El tabulador ya viene puesto y los datos entran exactos,
+        sin escribir nada.<br><br>
+        <b class="text-slate-200">Turnos que entiende:</b><br>
+        <code>7,5 Hrs 20:30 a 04:30</code> · <code>20:30 a 04:30</code> · <code>20:30 - 04:30</code><br>
+        <code>LIBRE</code> · <code>LXF (7,5)</code> · <code>VACAC</code><br><br>
+        Da igual mayúsculas, tildes, o si escribes <code>7.5</code> y <code>20.30</code> con punto.
+        Las líneas que no son días (el nombre, el mes) se descartan solas.<br>
+        Cuando el número vuelve a 1 al final, esa fila se toma como del <b>mes siguiente</b>.
+      </div>
+    </details>
     <button onclick="plProcesarTexto()" class="btn-primary w-full mb-3">Leer las filas</button>
 
     <div id="plResultado"></div>`);
