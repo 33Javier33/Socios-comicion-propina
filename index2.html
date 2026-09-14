@@ -145,6 +145,9 @@
     </div>
   </div>
   <div class="p-4 flex-1 overflow-y-auto pb-8">
+    <!-- Lo primero que se ve al abrir: qué toca HOY. Antes había que buscar
+         el día dentro de la grilla del mes. -->
+    <div id="socioHoy" class="mb-4"></div>
     <div class="flex items-center justify-between mb-3">
       <button onclick="socioMes(-1)" class="btn-ghost">‹</button>
       <div id="socioMesLabel" class="font-extrabold text-base"></div>
@@ -422,6 +425,14 @@ function etiquetaMes(el, date, fnHoy){
          border-radius:999px;padding:2px 9px;font-size:11px;font-weight:800;cursor:pointer;vertical-align:middle;">Hoy</button>`;
 }
 
+// Excepciones entre dos fechas sueltas (la tarjeta de hoy necesita ayer,
+// hoy y mañana, que pueden caer en meses distintos).
+async function excepcionesEntre(socioId, desde, hasta){
+  const {data}=await db.from('horarios_excepciones').select('fecha,turno_id')
+    .eq('socio_id',socioId).gte('fecha',fechaISO(desde)).lte('fecha',fechaISO(hasta));
+  const map={}; (data||[]).forEach(e=>map[e.fecha.substring(0,10)]=e.turno_id); return map;
+}
+
 function pintarCalendario(cont, date, socioId, excepciones, onDayClick){
   const hoyISO=fechaISO(new Date());
   cont.innerHTML=celdasMes(date).map(d=>{
@@ -509,6 +520,103 @@ function _horasTurno(t){
   return String(Math.round(h*100)/100).replace('.',',');
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// TARJETA DE HOY (vista del socio)
+//
+// Lo primero que se ve al abrir la app: qué toca hoy. Antes había que
+// buscar el día dentro de la grilla del mes, que es justo lo que uno no
+// quiere hacer a las seis de la mañana para saber si entra o no.
+//
+// Detalle que importa en un casino: los turnos cruzan la medianoche. A las
+// 02:00 el día YA cambió, pero la persona sigue dentro del turno que
+// arrancó ayer a las 22:30. Por eso se mira también el turno de ayer antes
+// de decidir si está trabajando en este momento.
+// ══════════════════════════════════════════════════════════════════════
+function _minutosDe(hhmm){
+  const [h,m]=String(hhmm||'').split(':').map(Number);
+  return (isNaN(h)||isNaN(m)) ? null : h*60+m;
+}
+// ¿El instante `ahora` cae dentro del turno `t` que empezó el día `dia`?
+function _dentroDelTurno(t, dia, ahora){
+  if(!t || t.es_libre || !t.hora_inicio || !t.hora_fin) return false;
+  const ini=_minutosDe(t.hora_inicio), fin=_minutosDe(t.hora_fin);
+  if(ini==null||fin==null) return false;
+  const arranque=new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), 0, 0, 0);
+  const t0=new Date(arranque.getTime()+ini*60000);
+  let dur=fin-ini; if(dur<=0) dur+=1440;              // cruza la medianoche
+  const t1=new Date(t0.getTime()+dur*60000);
+  return ahora>=t0 && ahora<t1;
+}
+
+function pintarHoySocio(cont, socioId, excepciones){
+  if(!cont) return;
+  const ahora=new Date();
+  const hoy=new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  const ayer=new Date(hoy.getTime()-86400000);
+  const manana=new Date(hoy.getTime()+86400000);
+  const DIAS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+  const tHoy=turnoDeSocioEnFecha(socioId, hoy, excepciones);
+  const p=_turnoPartes(tHoy);
+
+  // ¿Está trabajando ahora mismo? Puede ser el turno de hoy o el de ayer si
+  // arrancó de noche y todavía no termina.
+  const tAyer=turnoDeSocioEnFecha(socioId, ayer, excepciones);
+  const enHoy=_dentroDelTurno(tHoy, hoy, ahora);
+  const enAyer=_dentroDelTurno(tAyer, ayer, ahora);
+  const enTurno=enHoy||enAyer;
+  const tActivo=enHoy?tHoy:(enAyer?tAyer:null);
+  const pActivo=_turnoPartes(tActivo);
+
+  const color = enTurno ? pActivo.color : (p?p.color:'#475569');
+  const fecha = `${DIAS[hoy.getDay()]} ${hoy.getDate()} de ${MESES[hoy.getMonth()].toLowerCase()}`;
+
+  let titulo, detalle='', pie='';
+  if(enTurno){
+    const h=_horasTurno(tActivo);
+    titulo=`${pActivo.ini} a ${pActivo.fin}`;
+    detalle=(h?h+' Hrs · ':'')+(enAyer?'turno que empezó anoche':'en curso');
+  } else if(!p){
+    titulo='Sin turno asignado';
+    detalle='Pídele al supervisor que te asigne el turno de hoy.';
+  } else if(p.libre){
+    titulo=p.etqLargo||p.etq;                    // LIBRE · LXF (7,5)
+    detalle='Hoy no trabajas';
+  } else if(p.etq){
+    titulo=p.etq;                                // VACAC
+  } else {
+    const h=_horasTurno(tHoy);
+    titulo=`${p.ini} a ${p.fin}`;
+    // Antes o después del turno, se dice cuál de las dos cosas es.
+    const iniMin=_minutosDe(tHoy.hora_inicio), ahoraMin=ahora.getHours()*60+ahora.getMinutes();
+    detalle=(h?h+' Hrs · ':'') + (ahoraMin<iniMin ? 'entras a las '+p.ini : 'turno terminado');
+  }
+
+  // Mañana, en chico: sirve para saber de noche si al otro día se entra.
+  const tMan=turnoDeSocioEnFecha(socioId, manana, excepciones);
+  const pMan=_turnoPartes(tMan);
+  if(pMan){
+    const txtMan = pMan.libre||pMan.etq ? (pMan.etqLargo||pMan.etq) : `${pMan.ini} a ${pMan.fin}`;
+    pie=`<div style="margin-top:10px;padding-top:9px;border-top:1px solid #ffffff14;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+           <span style="font-size:11px;color:#94a3b8;font-weight:700;">MAÑANA · ${DIAS[manana.getDay()]}</span>
+           <span style="font-size:12.5px;font-weight:800;color:${pMan.color};">${esc(txtMan)}</span>
+         </div>`;
+  }
+
+  cont.innerHTML=`
+    <div style="border-radius:16px;padding:15px 16px;background:linear-gradient(135deg,${color}26,${color}0f);
+                border:1px solid ${color}66;position:relative;overflow:hidden;">
+      <span style="position:absolute;top:0;left:0;right:0;height:4px;background:${color};"></span>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+        <span style="font-size:11px;font-weight:800;letter-spacing:.09em;color:#94a3b8;">HOY · ${esc(fecha)}</span>
+        ${enTurno?`<span style="font-size:10px;font-weight:900;color:#052a3d;background:${color};border-radius:999px;padding:2px 9px;white-space:nowrap;">EN TURNO</span>`:''}
+      </div>
+      <div style="font-size:26px;font-weight:900;color:${color};line-height:1.15;letter-spacing:-0.5px;">${esc(titulo)}</div>
+      ${detalle?`<div style="font-size:12.5px;color:#cbd5e1;margin-top:3px;">${esc(detalle)}</div>`:''}
+      ${pie}
+    </div>`;
+}
+
 // Vista lista: se arma como la planilla de papel — día de la semana, número
 // y el turno escrito igual que allá ("7,5 Hrs 20:30 a 04:30"). Así el
 // supervisor puede cotejar la pantalla contra la hoja renglón por renglón
@@ -554,6 +662,12 @@ async function renderSocioApp(){
   const hasExc=Object.keys(exc).length>0;
   const _cont = esPartTime(sesion) ? 'Part-Time' : 'Planta';
   document.getElementById('socioGrupoHdr').textContent = (g?('Grupo: '+g.nombre):(hasExc?'Turnos asignados por día':'Sin grupo asignado')) + ' · ' + _cont;
+  // La tarjeta de hoy se pinta SIEMPRE y con su propia consulta: tiene que
+  // seguir mostrando el día de hoy aunque se esté mirando otro mes, y
+  // "mañana" puede caer en el mes siguiente.
+  const _h=new Date();
+  const excHoy=await excepcionesEntre(sesion.id, new Date(_h.getTime()-86400000), new Date(_h.getTime()+86400000));
+  pintarHoySocio(document.getElementById('socioHoy'), sesion.id, excHoy);
   const sinGrupo=document.getElementById('socioSinGrupo');
   if(!gid && !hasExc){ sinGrupo.classList.remove('hidden'); document.getElementById('socioCal').innerHTML=''; document.getElementById('socioLeyenda').innerHTML=''; return; }
   sinGrupo.classList.add('hidden');

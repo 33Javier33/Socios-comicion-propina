@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Tarjeta de HOY en la vista del socio
+
+- Al abrir la app, **lo primero que se ve es qué toca hoy**. Antes había que buscar el día dentro de la grilla del mes, que es justo lo que uno no quiere hacer a las seis de la mañana para saber si entra o no.
+- Muestra en grande el **horario del día** (`20:30 a 04:30` con sus `7,5 Hrs`), o **LIBRE**, o **LXF (7,5)**, con el color del turno y una franja arriba.
+- **Distingue el momento del día:** *«entras a las 20:30»* antes del turno, **EN TURNO** mientras está en curso, y *«turno terminado»* después.
+- **Los turnos que cruzan la medianoche están contemplados.** A las 02:00 el día ya cambió, pero la persona sigue dentro del turno que arrancó ayer a las 22:30: la tarjeta mira también el turno de ayer y en ese caso muestra **EN TURNO · «turno que empezó anoche»** con el horario correcto. Sin esto, a esa hora la app habría mostrado el turno del día nuevo, que todavía no empezó.
+- Segunda línea con **MAÑANA**, para saber de noche si al otro día se entra y a qué hora.
+- Si no hay turno cargado lo dice y remite al supervisor, en vez de quedar en blanco.
+- **La tarjeta usa su propia consulta** (ayer, hoy y mañana): tiene que seguir mostrando el día de hoy aunque se esté navegando por otro mes, y «mañana» puede caer en el mes siguiente.
+- Probado en navegador con el reloj congelado en 12 escenarios: libre, LXF, antes de entrar, en turno, en turno desde anoche, turno terminado, justo al entrar y justo al salir, madrugada, sin turno y sin mañana cargado.
+- Archivos: `index2.html`.
+
 #### 2026-09-14 — Vista lista con el formato de la planilla de papel
 
 - La lista pasa a leerse **igual que la hoja impresa**: tres columnas — **día de la semana completo · número · turno** — y el turno escrito tal cual: `7,5 Hrs 20:30 a 04:30`. Antes decía `14 LU · 20:30 a 04:30`, que obligaba a traducir de cabeza al cotejar contra el papel.
