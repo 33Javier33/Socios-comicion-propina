@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — Marca nueva en toda la app: Carlos P. Nauto Interactive
+
+- Se reemplaza el logotipo (`img/carlospn-logo.png`) por el nuevo, y **«CarlosPN Interactive» pasa a «Carlos P. Nauto Interactive»** en las 2 menciones de `index.html` (modal *Acerca de* y la línea de derechos reservados).
+- El archivo mantiene el **mismo nombre**, así que todas las referencias existentes siguen sirviendo; se sube el cache-bust a `?v=2026` para que los dispositivos tomen el nuevo.
+- **El logotipo nuevo es transparente** (el anterior tenía fondo blanco, 1408×768 sin alpha). El tratamiento por tema que ya existía —`mix-blend-mode: multiply` en claro, `invert(1) hue-rotate(180deg)` + `screen` en oscuro— **sigue funcionando igual** con un PNG transparente, así que no hubo que tocar CSS.
+- **Fix en la app de Horarios:** el logotipo estaba puesto sin filtro sobre el fondo oscuro y el texto «Carlos P. Nauto», que es azul oscuro, quedaba con muy poco contraste. Ahora usa el mismo `invert + hue-rotate` que las otras apps.
+- Verificado en navegador en los cinco contextos donde aparece: *Acerca de* de socios-comicion (claro), propi.solicitada en tema claro y oscuro, y diario.propi en el login (claro), el sidebar (siempre oscuro) y el pie.
+- `styles.css?v=104`, SW `fondo-admin-v104`, versión visible **v104**.
+- Archivos: `index.html`, `index2.html`, `sw.js`, `sw2.js`, `img/carlospn-logo.png`.
+
 #### 2026-09-14 — Marca Carlos P. Nauto Interactive en la app de Horarios
 
 - Se agrega la marca al **pie del login** de `index2.html`: el logotipo completo y la línea *«Sistema de Gestión de Horarios · 2026»*, separados por un divisor.
