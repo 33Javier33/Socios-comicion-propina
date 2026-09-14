@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-14 — index2: el día de hoy queda claro sin tapar el turno
+
+- **Defecto que había:** el día de hoy **reemplazaba** el borde de color del turno por uno celeste (`esHoy ? '2px solid #38bdf8' : borde del turno`). Justo el día que más se mira era el único sin su pista de color, y el borde pasaba de 1px a 2px, distinto del resto.
+- **Ahora el número de hoy va en una píldora celeste maciza.** Se ve de inmediato, ocupa la misma línea (no empuja nada) y **el borde sigue siendo el del turno**, así que no se pierde información.
+- El contorno de la celda usa `outline` en vez de `border`: outline **no ocupa espacio**, así la celda de hoy mide exactamente igual que las demás. Verificado: 47×62 px, idéntica al resto.
+- **Botón «Hoy» en la cabecera del mes**, que aparece **solo cuando se está mirando un mes que no es el actual**. Navegando hacia atrás o adelante es fácil perder de vista dónde uno está parado y creer que el calendario muestra la semana en curso. En el mes actual no aparece, para no agregar ruido.
+- En la **vista lista** el día de hoy ya venía marcado (fondo, borde y etiqueta HOY); se verificó que sigue funcionando.
+- Vale para las dos apps: el supervisor y la del socio comparten `pintarCalendario` y la etiqueta del mes.
+- Archivos: `index2.html`.
+
 #### 2026-09-13 — index2: se retira la lectura por foto · calendario legible
 
 **1. Retirada la importación por foto**

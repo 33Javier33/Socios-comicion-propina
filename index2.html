@@ -30,6 +30,15 @@
   .cal-cell{ min-height:62px; border-radius:11px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
              padding:4px 1px 3px; font-weight:600; position:relative; overflow:hidden; }
   .cal-cell .dia{ font-size:12px; line-height:1.1; }
+  /* HOY: el número va en una píldora celeste maciza — se ve de inmediato y
+     ocupa la misma línea, así que no empuja nada. El contorno va con
+     `outline`, no con `border`, porque outline no ocupa espacio: si se
+     engrosara el borde, el día de hoy quedaría de otro tamaño que el resto.
+     Y el borde sigue siendo el del turno: antes hoy lo pisaba de celeste y
+     justo ese día se perdía la pista de color. */
+  .cal-cell.hoy{ outline:2px solid #38bdf8; outline-offset:-2px; }
+  .cal-cell .dia.hoy{ background:#38bdf8; color:#062a3d; font-weight:900; border-radius:999px;
+                      padding:0 6px; min-width:21px; text-align:center; }
   .cal-cell .ini{ font-size:12px; font-weight:800; line-height:1.15; margin-top:2px; letter-spacing:-0.3px; }
   .cal-cell .fin{ font-size:9.5px; font-weight:600; line-height:1.1; opacity:0.72; letter-spacing:-0.2px; }
   .cal-cell .etq{ font-size:10px; font-weight:800; line-height:1.1; margin-top:3px; }
@@ -378,6 +387,19 @@ function _turnoPartes(t){
   return { etq:(n.length>7?n.substring(0,7):n)||'—', color:t.color||'#38bdf8' };
 }
 
+// Etiqueta del mes. Si se está mirando un mes que NO es el actual, aparece
+// un botón "Hoy" para volver: navegando hacia atrás o adelante es fácil
+// perder de vista en qué mes se está parado y creer que el calendario
+// muestra la semana en curso cuando no.
+function _mismoMes(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth(); }
+function etiquetaMes(el, date, fnHoy){
+  if(!el) return;
+  const txt=MESES[date.getMonth()]+' '+date.getFullYear();
+  el.innerHTML = _mismoMes(date, new Date()) ? esc(txt)
+    : `${esc(txt)} <button onclick="${fnHoy}()" style="margin-left:7px;background:#0c4a6e;color:#7dd3fc;border:1px solid #38bdf855;
+         border-radius:999px;padding:2px 9px;font-size:11px;font-weight:800;cursor:pointer;vertical-align:middle;">Hoy</button>`;
+}
+
 function pintarCalendario(cont, date, socioId, excepciones, onDayClick){
   const hoyISO=fechaISO(new Date());
   cont.innerHTML=celdasMes(date).map(d=>{
@@ -386,10 +408,10 @@ function pintarCalendario(cont, date, socioId, excepciones, onDayClick){
     const p=_turnoPartes(t);
     const iso=fechaISO(d), esHoy=iso===hoyISO;
     let bg='#161f2f', colDia='#64748b', cuerpo='', franja='';
-    let border=esHoy?'2px solid #38bdf8':'1px solid #293449';
+    let border='1px solid #293449';
     if(p){
       franja=`<span class="franja" style="background:${p.color}"></span>`;
-      border=esHoy?'2px solid #38bdf8':`1px solid ${p.color}55`;
+      border=`1px solid ${p.color}55`;
       // Una etiqueta larga ("LIBREXF") no entra a 10px en una celda de 47px:
       // se achica la letra en vez de dejar que desborde o se parta.
       const fz = p.etq ? (p.etq.length>6 ? '8px' : p.etq.length>5 ? '9px' : '10px') : '';
@@ -406,8 +428,8 @@ function pintarCalendario(cont, date, socioId, excepciones, onDayClick){
       }
     }
     const clk=onDayClick?`onclick="${onDayClick}('${iso}')" style="cursor:pointer;"`:'';
-    return `<div class="cal-cell" ${clk} style="background:${bg};border:${border};">${franja}`
-         + `<span class="dia" style="color:${colDia}">${d.getDate()}</span>${cuerpo}</div>`;
+    return `<div class="cal-cell${esHoy?' hoy':''}" ${clk} style="background:${bg};border:${border};">${franja}`
+         + `<span class="dia${esHoy?' hoy':''}"${esHoy?'':` style="color:${colDia}"`}>${d.getDate()}</span>${cuerpo}</div>`;
   }).join('');
 }
 
@@ -480,7 +502,7 @@ function pintarListaMes(cont, date, socioId, excepciones, onDayClick){
 async function renderSocioApp(){
   document.getElementById('socioNombreHdr').textContent=sesion.nombre;
   const gid=asignaciones[sesion.id]; const g=gid?gruposMap[gid]:null;
-  document.getElementById('socioMesLabel').textContent=MESES[socioViewDate.getMonth()]+' '+socioViewDate.getFullYear();
+  etiquetaMes(document.getElementById('socioMesLabel'), socioViewDate, 'socioIrHoy');
   const exc=await excepcionesDe(sesion.id, socioViewDate);
   const hasExc=Object.keys(exc).length>0;
   const _cont = esPartTime(sesion) ? 'Part-Time' : 'Planta';
@@ -492,6 +514,7 @@ async function renderSocioApp(){
   leyendaMes(document.getElementById('socioLeyenda'), socioViewDate, sesion.id, exc);
 }
 function socioMes(delta){ socioViewDate=new Date(socioViewDate.getFullYear(), socioViewDate.getMonth()+delta, 1); renderSocioApp(); }
+function socioIrHoy(){ socioViewDate=new Date(); renderSocioApp(); }
 
 // ══════════ App Supervisor ══════════
 function renderSuper(){ supTab('Calendario'); supLlenarSelectSocios(); renderTurnos(); renderGrupos(); renderAsignaciones(); }
@@ -509,7 +532,7 @@ async function supRenderCal(){
   const wrap=document.getElementById('supCalWrap');
   if(!supSocioSel){ wrap.classList.add('hidden'); return; }
   wrap.classList.remove('hidden');
-  document.getElementById('supMesLabel').textContent=MESES[supViewDate.getMonth()]+' '+supViewDate.getFullYear();
+  etiquetaMes(document.getElementById('supMesLabel'), supViewDate, 'supIrHoy');
   const exc=await excepcionesDe(supSocioSel, supViewDate);
   window._supExc=exc;
   const grid=document.getElementById('supCal'), lista=document.getElementById('supLista');
@@ -534,6 +557,7 @@ function supToggleVista(){
   supRenderCal();
 }
 function supMes(delta){ supViewDate=new Date(supViewDate.getFullYear(), supViewDate.getMonth()+delta, 1); supRenderCal(); }
+function supIrHoy(){ supViewDate=new Date(); supRenderCal(); }
 function supDiaClick(iso){
   if(!supSocioSel) return;
   const actual=(window._supExc&&window._supExc[iso]!==undefined)?window._supExc[iso]:'';
