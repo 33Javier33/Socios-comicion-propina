@@ -1195,7 +1195,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     dbSoc.from('saldos_anteriores_hist').insert({
                         id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('SAH-' + Date.now()),
                         socio_id: id, socio_nombre: nombre, monto,
-                        monto_anterior: _prevSaldo, origen: 'manual',
+                        monto_anterior: _prevSaldo,
+                        // 'restaurado' cuando se reutiliza un saldo del propio
+                        // historial: así en la lista se distingue de un monto
+                        // escrito a mano.
+                        origen: body.origen || 'manual',
                         responsable: body.responsable || null
                     }).then(() => {}, () => {});
                     _sbAudit('Registrar Saldo Anterior', {

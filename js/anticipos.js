@@ -240,6 +240,55 @@ async function guardarSaldoAnterior() {
     } catch(e) { showToast('Error al guardar saldo', 'error'); } finally { toggleLoader(false); }
 }
 
+// Contexto del historial abierto: de quién es y qué filas se están mostrando.
+// Hace falta para el botón "Usar": si entremedio se cambia de socio, aplicar el
+// saldo al que quedó seleccionado sería un desastre silencioso.
+let _saldosHistCtx = null;
+
+// Reutiliza un saldo del historial: lo vuelve a dejar como saldo anterior del
+// socio. Sirve para deshacer un cierre mal hecho sin tener que escribir el
+// monto a mano (y sin equivocarse al tipearlo).
+async function saldoHist_usar(i) {
+    if (!_saldosHistCtx) return;
+    const r = _saldosHistCtx.lista[i];
+    if (!r) return;
+
+    const idActual = document.getElementById('gestionSocioId').value;
+    if (String(idActual) !== String(_saldosHistCtx.id)) {
+        showToast('Cambió el socio seleccionado. Vuelve a abrir el historial.', 'error');
+        return;
+    }
+
+    const fmtM = v => formatearMoneda(Math.round(Number(v) || 0));
+    const monto = Math.round(Number(r.monto) || 0);
+    const vigente = Math.round(Number(document.getElementById('gestionSocioSaldoAnt').value) || 0);
+    if (monto === vigente) { showToast('Ese ya es el saldo anterior vigente', 'info'); return; }
+
+    const cuando = (() => { try {
+        return new Date(r.guardado_en).toLocaleString('es-CL', { timeZone: 'America/Santiago',
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+    } catch (e) { return ''; } })();
+
+    if (!confirm('¿Usar este saldo para ' + _saldosHistCtx.nombre + '?\n\n'
+        + '  Saldo anterior vigente: ' + fmtM(vigente) + '\n'
+        + '  Pasa a ser:             ' + fmtM(monto) + (cuando ? '   (guardado el ' + cuando + ')' : '')
+        + '\n\nEl historial no se borra: este cambio queda como un registro más.')) return;
+
+    toggleLoader(true, 'Aplicando saldo...');
+    try {
+        await callApiSocios('registrarSaldoAnterior', {
+            id: _saldosHistCtx.id, nombre: _saldosHistCtx.nombre, monto, origen: 'restaurado'
+        });
+        document.getElementById('gestionSocioSaldoAnt').value = monto;
+        showToast('Saldo anterior: ' + fmtM(monto), 'success');
+        cargarHistorialSocio(_saldosHistCtx.id);
+        await verSaldosAnterioresSocio();          // repinta con el registro nuevo
+        if (typeof gestion_cargarRemanenteVivo === 'function') gestion_cargarRemanenteVivo();
+    } catch (e) {
+        showToast('No se pudo aplicar: ' + (e.message || e), 'error');
+    } finally { toggleLoader(false); }
+}
+
 // Historial de saldos anteriores del socio (append-only, cada guardado con su fecha)
 async function verSaldosAnterioresSocio() {
     const idSocio = document.getElementById('gestionSocioId').value;
@@ -254,27 +303,46 @@ async function verSaldosAnterioresSocio() {
     try {
         const res = await callApiSocios('getSaldosAnterioresHist', { socioId: idSocio });
         const lista = (res && res.data) || [];
+        _saldosHistCtx = { id: idSocio, nombre: nombreSocio, lista };
         if (!lista.length) {
             cont.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;font-size:0.9em;">Aún no hay saldos guardados.<br><small>Se irán registrando desde este cierre en adelante.</small></div>';
             return;
         }
         const fmtM = v => formatearMoneda(Math.round(Number(v) || 0));
         const _fecha = ts => { try { return new Date(ts).toLocaleString('es-CL', { timeZone: 'America/Santiago', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { return ''; } };
-        const _origen = o => ({ manual: '✍️ Manual', cierre_socio: '🔒 Cierre socio', cierre_masivo: '🔒 Cierre mensual', cierre: '🔒 Cierre' }[o] || (o || ''));
-        const filas = lista.map(r => {
+        const _origen = o => ({ manual: '✍️ Manual', cierre_socio: '🔒 Cierre socio', cierre_masivo: '🔒 Cierre mensual', cierre: '🔒 Cierre', restaurado: '↩️ Restaurado' }[o] || (o || ''));
+        const vigente = Math.round(Number(document.getElementById('gestionSocioSaldoAnt').value) || 0);
+        // La lista viene de la más nueva a la más vieja. El monto vigente puede
+        // repetirse (se restauró uno de antes), así que "Vigente" se marca solo
+        // en la primera coincidencia: esa es la que dejó puesto el valor actual.
+        let yaMarcado = false;
+        const filas = lista.map((r, i) => {
             const cambio = (r.monto_anterior != null && Number(r.monto_anterior) !== Number(r.monto))
                 ? `<div style="font-size:0.72em;color:#94a3b8;">antes: ${fmtM(r.monto_anterior)}</div>` : '';
+            // El que ya está puesto no ofrece botón: no hay nada que aplicar.
+            const mismoMonto = Math.round(Number(r.monto) || 0) === vigente;
+            const esVigente = mismoMonto && !yaMarcado;
+            if (esVigente) yaMarcado = true;
+            // Sin botón cuando el monto ya es el que está puesto: no hay nada
+            // que aplicar. Solo la fila más nueva lleva el distintivo.
+            const accion = esVigente
+                ? `<span style="flex-shrink:0;font-size:0.66em;font-weight:800;color:#15803d;background:#dcfce7;border-radius:10px;padding:4px 9px;">● Vigente</span>`
+                : mismoMonto
+                ? `<span style="flex-shrink:0;font-size:0.66em;font-weight:700;color:#94a3b8;">= mismo monto</span>`
+                : `<button onclick="saldoHist_usar(${i})" title="Dejar este monto como saldo anterior del socio"
+                     style="flex-shrink:0;background:#7c3aed;color:white;border:none;border-radius:9px;padding:6px 12px;font-size:0.72em;font-weight:800;cursor:pointer;">↩️ Usar</button>`;
             return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:6px;background:#fff;">
                 <div style="min-width:0;">
                     <div style="font-weight:800;color:#0f172a;font-size:0.95em;">${fmtM(r.monto)}</div>
                     <div style="font-size:0.72em;color:#64748b;">${_fecha(r.guardado_en)}${r.periodo ? ' · ' + _htmlEscSoc(r.periodo) : ''}</div>
                     ${cambio}
+                    <div style="font-size:0.66em;font-weight:700;color:#4338ca;margin-top:3px;">${_origen(r.origen)}</div>
                 </div>
-                <span style="flex-shrink:0;font-size:0.68em;font-weight:700;color:#4338ca;background:#eef2ff;border-radius:10px;padding:3px 8px;">${_origen(r.origen)}</span>
+                ${accion}
             </div>`;
         }).join('');
         cont.innerHTML = `<div style="max-height:52vh;overflow-y:auto;">${filas}</div>
-            <div style="margin-top:8px;font-size:0.74em;color:#94a3b8;text-align:center;">${lista.length} registro(s)</div>`;
+            <div style="margin-top:8px;font-size:0.74em;color:#94a3b8;text-align:center;">${lista.length} registro(s) · «Usar» vuelve a dejar ese monto como saldo anterior</div>`;
     } catch (e) {
         cont.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;">Error al cargar el historial.</div>';
     }

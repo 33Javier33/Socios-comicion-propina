@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-15 — Reutilizar un saldo del historial con un botón (SW v120)
+
+- En **Saldo Mes Anterior → «📜 Ver historial de saldos guardados»**, cada registro tiene ahora un botón **«↩️ Usar»** que lo vuelve a dejar como saldo anterior del socio. Antes el historial solo se podía mirar: para deshacer un cierre mal hecho había que leer el monto y volver a escribirlo a mano, con el riesgo de tipearlo mal.
+- El registro que **ya está puesto** se marca **● Vigente** y no ofrece botón. Si el mismo monto aparece más de una vez —porque se restauró uno antiguo—, solo la fila más nueva lleva el distintivo; las otras dicen *«= mismo monto»*, también sin botón.
+- **La confirmación muestra los dos montos** antes de aplicar: el vigente, el que quedaría y cuándo se había guardado. Nada se borra: el cambio entra como un registro más del historial, con origen **↩️ Restaurado** para distinguirlo de un monto escrito a mano. Para eso `registrarSaldoAnterior` ahora acepta un `origen` en vez de grabar siempre `manual`.
+- **Guarda contra el socio equivocado:** si se cambia de socio con el modal abierto, el botón no aplica nada y avisa. Aplicar un saldo al socio que quedó seleccionado por accidente sería un error silencioso.
+- Al aplicar se refresca el panel del socio y el remanente en vivo.
+- **Verificado** en navegador con el caso real de Andrés Bórquez (cierre bueno $205 → cierre malo −$9.795): al abrir, el −9.795 sale como Vigente sin botón y los otros dos con «Usar»; usar el vigente **no guarda nada**; cancelar la confirmación **no guarda nada**; aplicar el $205 guarda con `origen: restaurado`, deja el campo en 205 y repinta la lista correctamente; y con otro socio seleccionado **no ejecuta nada** y avisa.
+- Archivos: `js/anticipos.js` (`saldoHist_usar`, `verSaldosAnterioresSocio`), `js/supabase-config.js`. `anticipos.js?v=58`, `supabase-config.js?v=61`, SW `fondo-admin-v120`, versión visible **v120**.
+
 #### 2026-09-15 — Archivar donaciones: deja el período sin donaciones (SW v119)
 
 - **Botón nuevo «📦 Archivar donaciones»** en Donaciones, junto al total juntado. Cierra las colectas del período y **deja a los socios sin donaciones**, que es lo que faltaba: hasta ahora los aportes solo se iban al reiniciar *ausencias*, y si quedaban vivos volvían a descontar en el período siguiente.
