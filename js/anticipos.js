@@ -1799,8 +1799,18 @@ async function cierresMes_calcularSocio(socio) {
                 let f = e.fecha; if (f.includes('T')) f = f.split('T')[0]; fechasAusencia.add(f);
             }
             // Las donaciones descuentan del saldo igual que un anticipo,
-            // así que también entran en lo pedido al cerrar el mes.
-            else if (typeof don_esDonacion === 'function' && don_esDonacion(e.tipo)) {
+            // así que también entran en lo pedido al cerrar el mes — pero SOLO
+            // las de este período.
+            //
+            // Los anticipos viven en su propia tabla y se borran al reiniciar el
+            // período, así que nunca se cuentan dos veces. Las donaciones, en
+            // cambio, viven en `extras` y ahí quedan: sin este filtro, una
+            // colecta de agosto seguía descontando en septiembre, octubre y para
+            // siempre. Pasó: tras reiniciar los anticipos, un segundo cierre
+            // volvió a descontar los $262.000 de la colecta de agosto y dejó a
+            // 40 socios con saldo negativo.
+            else if (typeof don_esDonacion === 'function' && don_esDonacion(e.tipo)
+                     && _donEsDeEstePeriodo(e.fecha)) {
                 sumaPedido += Number(e.monto || 0);
             }
         });
@@ -2191,6 +2201,28 @@ function _esGastoComision(areaRaw) {
     return a.includes('gasto') || a.includes('comision') || a.includes('comisión');
 }
 
+// ¿La fecha de una donación cae dentro del período que se está cursando?
+//
+// Existe porque las donaciones NO se borran al reiniciar los anticipos: viven
+// en `extras`, que solo se limpia al reiniciar ausencias. Sin este filtro una
+// colecta vieja sigue descontando período tras período.
+//
+// Ante la duda se cuenta (devuelve true si no hay fecha legible o si no se
+// puede saber el período): es preferible descontar de más y que se note, a
+// perder silenciosamente un descuento real del mes en curso.
+function _donEsDeEstePeriodo(fechaRaw) {
+    let f = fechaRaw || '';
+    if (typeof f !== 'string') { try { f = new Date(f).toISOString(); } catch (e) { return true; } }
+    if (f.includes('T')) f = f.split('T')[0];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(f)) return true;
+    if (typeof aq_calcularPeriodoActual !== 'function') return true;
+    try {
+        const { inicio, fin } = aq_calcularPeriodoActual();
+        if (!inicio || !fin) return true;
+        return f >= inicio && f <= fin;
+    } catch (e) { return true; }
+}
+
 function _remAreaNorm(areaRaw) {
     const a = (areaRaw || '').trim().toLowerCase();
     if (a.includes('gasto') || a.includes('comision') || a.includes('comisión')) return { excl: true };
@@ -2252,7 +2284,9 @@ async function calcularRemanenteVivo() {
             // Las donaciones descuentan del saldo igual que un anticipo. Sin
             // esto el remanente en vivo salía MÁS ALTO que el del cierre, por
             // el total de lo aportado a colectas.
-            else if (typeof don_esDonacion === 'function' && don_esDonacion(e.tipo)) {
+            // Solo las de ESTE período: ver la nota en cierresMes_calcularSocio.
+            else if (typeof don_esDonacion === 'function' && don_esDonacion(e.tipo)
+                     && _donEsDeEstePeriodo(e.fecha)) {
                 sumaAnt += Number(e.monto || 0);
             }
         });

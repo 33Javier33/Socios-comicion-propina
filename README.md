@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-15 — Las donaciones seguían descontando después de cerrar el mes (SW v118)
+
+- **Qué pasó.** Tras reiniciar los anticipos, un segundo cierre volvió a descontar **$262.000** de la colecta de agosto y dejó a **40 socios con saldo negativo**. El total de `saldos_socio` pasó de **+$32.193** a **−$229.807**.
+- **Causa.** Una donación **descuenta del saldo igual que un anticipo**, pero no vive en la tabla `anticipos` sino en `extras`. «Reiniciar Anticipos» borra `anticipos` y **no toca `extras`** (eso solo lo hace «Reiniciar Ausencias»). Los 41 aportes de la colecta del 31 ago – 6 sep quedaron vivos, y el cierre siguiente los sumó otra vez como si fueran del período nuevo: `alcance 0 + saldo anterior − donación` = negativo.
+- **Fix 1 — una donación solo descuenta dentro de su período.** `cierresMes_calcularSocio()` y `calcularRemanenteVivo()` ahora comprueban la fecha del aporte contra el período en curso (`_donEsDeEstePeriodo`). Aunque quede una fila olvidada, no puede volver a descontar. Ante una fecha ilegible o ausente **se cuenta igual**: es preferible descontar de más y que se note, a perder en silencio un descuento real.
+- **Fix 2 — el reinicio de anticipos cierra las donaciones del período.** Marca `extras.periodo` de los aportes anteriores al período nuevo, igual que ya hacía con el desglose. **No las borra**: el detalle de la colecta se conserva y queda claro a qué período pertenece.
+- **Verificado** en navegador: el filtro de fechas acierta en los bordes (14 sep fuera, 15 sep dentro, 14 oct dentro, 15 oct fuera) y tolera fechas con hora, vacías o ilegibles. Con tres socios de prueba y montos no redondos —para que el redondeo a miles no tape el resultado—: con el arreglo el remanente da **−7.500**; sin él habría dado **−16.500**, porque la colecta vieja seguiría descontando.
+- **Los datos quedan por reparar.** El remanente correcto de cada socio está guardado en `cierres_mes.saldo_anterior` (suma **$32.193**, exactamente lo que había antes del cierre malo). Restaurar `saldos_socio.monto` desde ahí deja todo como estaba. **No se tocó nada en Supabase:** falta el respaldo.
+- Archivos: `js/anticipos.js`, `js/supabase-config.js`, `index.html`. `anticipos.js?v=57`, `supabase-config.js?v=60`, SW `fondo-admin-v118`, versión visible **v118**.
+
 #### 2026-09-15 — El informe de Montos Diarios mostraba el remanente en vivo, no el guardado (SW v117)
 
 - **Pedido:** en la impresión de **Montos Diarios**, el bloque «Remanente por área» tiene que mostrar el **remanente guardado**, no el que estaba saliendo.

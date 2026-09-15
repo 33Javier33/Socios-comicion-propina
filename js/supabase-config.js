@@ -814,6 +814,40 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     if (_dsgErr) console.warn('[sb] desglose archive error:', _dsgErr.message);
                 }
             }
+            // 4b. Cerrar las donaciones del período que se está reiniciando.
+            //
+            // Las donaciones descuentan del saldo igual que un anticipo, pero no
+            // viven en `anticipos` sino en `extras`, que este reinicio no toca
+            // (solo lo limpia "Reiniciar Ausencias"). Quedaban vivas y volvían a
+            // descontar en el período siguiente: así 40 socios terminaron con
+            // saldo negativo tras un segundo cierre.
+            //
+            // No se borran —el detalle de la colecta se conserva—: se marcan con
+            // su período, igual que el desglose. El cálculo ya ignora las que no
+            // son del período en curso, así que marcarlas es lo que cierra el
+            // círculo y además deja claro a cuál pertenecen.
+            const { data: donToArc } = await dbSoc.from('extras')
+                .select('id,fecha,tipo').is('periodo', null).ilike('tipo', '%donacion%')
+                .lt('fecha', periodoActualInicioR);
+            if (donToArc && donToArc.length > 0) {
+                const byPD = {};
+                donToArc.forEach(r => {
+                    const fd = new Date((r.fecha || '') + 'T12:00:00');
+                    if (isNaN(fd.getTime())) return;
+                    const fy = fd.getFullYear(), fm = fd.getMonth(), fdia = fd.getDate();
+                    const k = (fdia >= 15 ? new Date(fy, fm, 15) : new Date(fy, fm - 1, 15))
+                        .toISOString().split('T')[0];
+                    (byPD[k] = byPD[k] || []).push(r.id);
+                });
+                for (const [k, ids] of Object.entries(byPD)) {
+                    const { error: _donErr } = await dbSoc.from('extras').update({ periodo: k }).in('id', ids);
+                    if (_donErr) console.warn('[sb] cerrar donaciones:', _donErr.message);
+                }
+                _sbAudit('Cerrar donaciones del período', {
+                    detalle: `${donToArc.length} aporte(s) de colecta marcados con su período al reiniciar anticipos`,
+                    datos: { cantidad: donToArc.length }
+                });
+            }
             // 5. Llamar al GAS (archiva a Sheets y limpia la hoja)
             _invalidarTodosLosDatos(); // reinicio de anticipos afecta a todos los socios
             const gasRes = await _origFetch(url, options);
