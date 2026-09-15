@@ -232,16 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
-#### 2026-09-15 — Logotipo redibujado en vectores, fondo transparente (SW v112 / Horarios v5)
+#### 2026-09-15 — Logotipo original recortado y recoloreado (SW v113 / Horarios v6)
 
-- El logotipo sobre placa negra que se publicó esta mañana **se retira**: el recuadro oscuro sobre las tarjetas blancas no se veía profesional.
-- **El archivo que existía era una foto de una maqueta**, no un archivo de logotipo: el escudo estaba fotografiado sobre una pared de metal cepillado con degradado. No se puede recortar ese fondo (se probó, quedan restos de los brillos del metal) ni cambiarle los colores. Para tenerlo con fondo transparente **hubo que redibujarlo**.
-- **Ahora es un SVG dibujado en curvas**: mismo escudo hexagonal con el circuito, los símbolos `{ }` y `[ ]`, la flecha de crecimiento y el monograma CPN, más la marca denominativa debajo.
-- **Fondo transparente**, así que el fondo que se ve es el de la app y se adapta a cualquier tema.
-- **Colores nuevos**, elegidos para tener contraste sobre fondo claro: degradado **celeste → azul → violeta** (`#0891B2 → #2563EB → #7C3AED` en el escudo, un punto más oscuro en el texto). Sobre fondo oscuro esos tonos quedan algo apagados: en la app de Horarios, que es oscura, el logotipo lleva `filter: brightness(1.35) saturate(1.05)`.
-- **La marca denominativa va convertida a curvas** (Montserrat 800/700/500 pasada a trazados), así que el SVG **no depende de ninguna tipografía instalada** y se ve idéntico en cualquier dispositivo.
-- **Archivos:** `img/marca/cpn-marca.svg` (15 KB) e `img/marca/cpn-iso.svg` (4 KB, solo el escudo). Se borra `cpn-marca.jpg`. Los íconos `cpn-iso-192/512.png` se regeneran desde el vector.
-- Verificado en navegador a 190 px, 120 px y 64 px sobre blanco, gris claro y azul oscuro: legible en los tres, y la imagen carga en las páginas reales.
+- **Se revierte el redibujo.** El pedido era cambiar el color, no el dibujo, y el logotipo vectorial que hice antes no era el logotipo de la marca. Vuelve **el arte original, con su forma exacta**, y lo único que cambia es el color.
+- **Cómo se recortó el fondo.** El archivo de origen es una foto de una maqueta: el escudo sobre una pared de metal cepillado con degradado. Los dos primeros intentos fallaron —quitar un color de fondo no sirve porque el fondo no es plano, y filtrar por brillo deja los reflejos del metal—. Lo que sí funcionó fue un **top-hat**: se estima el fondo como el **mínimo local** en una ventana más ancha que el trazo más grueso del logo, y se conserva lo que sobresale de ese fondo. El arte siempre es más claro que lo que lo rodea; la textura del metal, no.
+- **Tres correcciones sobre ese método,** cada una medida antes de aplicarla:
+  - Se usa **croma absoluto** (`max-min`) y no saturación relativa (`(max-min)/max`): en los píxeles oscuros del metal la relativa da valores altos solo por ruido, y eso dejaba un halo gris alrededor de todo el logo.
+  - El umbral de luminancia no puede ser alto: el texto plateado «Carlos» **no es tan claro como parece** (p90 = 116) y quedaba semitransparente. El discriminante real es el relieve sobre el fondo local —el texto da ~88 y el metal junto a la sombra proyectada ~30—.
+  - Los reflejos pegados al borde del escudo entran con alfa baja pero **nunca llegan a ser opacos**: se conserva solo lo que está a menos de 4 px de un píxel opaco.
+- **El color:** se conservan los mismos tonos del original (el arcoíris rosa → cian → verde → amarillo) pero **más saturados y menos claros**, porque el neón original se lava sobre fondo blanco. Lo que era plata pasa a un gris azulado oscuro, que sobre blanco sí se lee.
+- **Archivos:** `img/marca/cpn-marca.png` (520×480, 219 KB, fondo transparente) e `img/marca/cpn-iso-192/512.png` (solo el escudo). Se borran los SVG del intento anterior.
+- Verificado a 200 px y 118 px sobre blanco, gris claro y azul oscuro.
 - Archivos: `index.html`, `index2.html`, `sw.js`, `sw2.js`, `img/marca/`.
 #### 2026-09-15 — El Desglose de Anticipos quedaba vacío el día 15 (SW v110)
 
