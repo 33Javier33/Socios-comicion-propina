@@ -17,9 +17,29 @@ function _dsgCalcPeriodoInicio() {
     return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-15';
 }
 
-// Rango completo del período: del 15 al 14 del mes siguiente.
-// El informe y el listado se mueven SIEMPRE dentro de estas fechas.
+// Rango del período que se está viendo. SOLO para mostrarlo como rótulo:
+// el recorte real lo hace la consulta, que para el período activo trae
+// únicamente los registros sin archivar (`periodo is null`).
+//
+// Para el período ACTIVO el rango sale de los propios registros, no del
+// calendario. Es la diferencia que rompía el listado: el 15 de septiembre el
+// calendario ya marca el período nuevo, pero si el mes NO se cerró los
+// anticipos siguen siendo los de agosto-septiembre y tienen que verse igual.
 function _dsgRangoPeriodo() {
+    if (!_dsgPeriodoSeleccionado && _dsgRegistros.length) {
+        const fechas = _dsgRegistros.map(_dsgFechaISO).filter(Boolean).sort();
+        if (fechas.length) {
+            const [y, mo, d] = fechas[0].split('-').map(Number);
+            // El 15 que abre el período al que pertenece el registro más antiguo
+            const ini = (d >= 15) ? new Date(y, mo - 1, 15) : new Date(y, mo - 2, 15);
+            const fin = new Date(ini.getFullYear(), ini.getMonth() + 1, 14);
+            const iso = x => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+            // Si quedaron registros de más de un período sin cerrar, el rótulo
+            // se estira hasta el último, para no decir una fecha que miente.
+            const ultimo = fechas[fechas.length - 1];
+            return { inicio: iso(ini), fin: (ultimo > iso(fin) ? ultimo : iso(fin)) };
+        }
+    }
     const inicioISO = _dsgPeriodoSeleccionado || _dsgCalcPeriodoInicio();
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(inicioISO));
     if (!m) return { inicio: inicioISO, fin: '9999-12-31' };
@@ -233,18 +253,15 @@ function dsg_filtrar() {
     const desde  = document.getElementById('dsg-filtro-desde')?.value || '';
     const hasta  = document.getElementById('dsg-filtro-hasta')?.value || '';
 
-    // El período manda: primero se acota del 15 al 14, y recién ahí se aplican
-    // los filtros que haya puesto el usuario. Antes la lista traía registros de
-    // períodos anteriores mezclados con los del actual y el informe salía con
-    // fechas de más de un mes.
-    const { inicio: pIni, fin: pFin } = _dsgRangoPeriodo();
-
+    // NO se filtra por fechas del período. El recorte ya lo hizo la consulta:
+    // para el período activo trae solo lo que no está archivado, y para uno
+    // archivado solo el de ese `periodo`. Filtrar además por el 15→14 del
+    // calendario hacía que el día 15, con el mes sin cerrar, TODOS los
+    // anticipos guardados desaparecieran de golpe. Acá solo se aplican los
+    // filtros que puso el usuario.
     _dsgFiltrados = _dsgRegistros.filter(r => {
         if (nombre && !(r.socio_nombre || '').toLowerCase().includes(nombre)) return false;
         const fechaReg = _dsgFechaISO(r);
-        // Si un registro no tiene fecha utilizable no se descarta: se muestra
-        // igual para que se pueda corregir, en vez de desaparecer sin aviso.
-        if (fechaReg && (fechaReg < pIni || fechaReg > pFin)) return false;
         if (desde && fechaReg && fechaReg < desde) return false;
         if (hasta && fechaReg && fechaReg > hasta) return false;
         return true;

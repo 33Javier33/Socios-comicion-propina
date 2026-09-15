@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-15 — El Desglose de Anticipos quedaba vacío el día 15 (SW v110)
+
+- **Síntoma:** el 15 de septiembre el Desglose apareció **sin ningún anticipo**, con el mes todavía sin cerrar.
+- **Causa — error que introduje yo en la v95.** Agregué un filtro que acotaba el listado al período **15→14 según el calendario**. El día 15 el calendario ya marca el período nuevo (15 sep – 14 oct), pero los **94 registros guardados** van del **17 de agosto al 14 de septiembre**: quedaron todos fuera del rango y desaparecieron de golpe.
+- **El filtro nunca hizo falta.** La consulta ya recorta sola: para el período activo trae **solo lo no archivado** (`periodo is null`), y para uno archivado solo el de ese `periodo`. Mi filtro encima era redundante, y el día 15 pasó de redundante a dañino.
+- **Además había leído mal el pedido original.** Era *«cuando genero el informe **no aparecen todos**»* — o sea que **faltaban** registros, por el tope de 300. Ese tope ya se había subido a 5000 y con eso alcanzaba; el filtro de período fue de más.
+- **Arreglo:** se quita el recorte por fechas. Siguen funcionando los filtros que pone el usuario (nombre, desde, hasta).
+- **El rótulo del período ahora sale de los datos, no del calendario:** con el mes abierto dice *«15-08-2026 al 14-09-2026»*, que es el período que realmente se está viendo. Si quedaran registros sin cerrar de más de un mes, el rótulo se estira hasta el último en vez de mostrar una fecha que miente.
+- Probado con los 94 registros reales en seis escenarios: el día 15 sin cerrar, más adelante sin cerrar, recién cerrado, con anticipos del período nuevo, un período archivado y dos meses sin cerrar. **En ninguno se oculta un registro.**
+- `desglose-anticipos.js?v=36`, `styles.css?v=110`, SW `fondo-admin-v110`, visible **v110**.
+
 #### 2026-09-14 — Compartir el enlace de la App de Socios (SW v109)
 
 - Desde la app de administración **casi nunca se entra** a la App de Socios: lo que se necesita es **mandarle el enlace a alguien**. El botón solo la abría, así que había que ir a la barra del navegador y copiar la URL a mano.
