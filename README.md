@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-15 — Logotipo nuevo: neón sobre placa oscura (SW v111 / Horarios v4)
+
+- Se reemplaza el logotipo por el nuevo de **Carlos P. Nauto Interactive**: escudo CPN en degradado neón sobre una **placa de metal oscuro**.
+- **El logotipo viene con su placa y así se usa.** Los colores neón solo tienen contraste sobre fondo oscuro: si se recorta el fondo, sobre las tarjetas claras el logotipo se vuelve ilegible. La placa, redondeada y con una sombra suave, se muestra como una chapa.
+- **Se eliminó el tratamiento por tema, que con este logotipo estaba al revés.** El anterior era azul oscuro sobre blanco y se fundía con `mix-blend-mode: multiply` en claro e `invert(1) hue-rotate(180deg)` + `screen` en oscuro. Probado con el nuevo, ese filtro **deja la placa blanca y lava el neón** — se comprobó en las seis combinaciones antes de reemplazar nada.
+- **Archivo nuevo:** `img/marca/cpn-marca.jpg` (640×584, 68 KB). Es **JPG y no PNG** a propósito: la placa es opaca, no necesita transparencia, y en PNG el mismo recorte pesaba **502 KB** por la textura del metal. Se borran `img/carlospn-logo.png` y `img/marca/cpn-lockup.png`, que ya no se usan.
+- **Íconos `cpn-iso-192/512.png` regenerados** con el escudo nuevo.
+- En la app de **Horarios** (`index2.html`) el logotipo del pie del login pierde el `filter: invert(...)` que necesitaba el anterior.
+- Verificado en navegador que la imagen carga (640×584), que no queda ningún filtro ni `mix-blend-mode`, y que la sombra aparece solo en los temas claros.
+- Archivos: `index.html`, `index2.html`, `sw.js`, `sw2.js`, `img/marca/`.
+
 #### 2026-09-15 — El Desglose de Anticipos quedaba vacío el día 15 (SW v110)
 
 - **Síntoma:** el 15 de septiembre el Desglose apareció **sin ningún anticipo**, con el mes todavía sin cerrar.
