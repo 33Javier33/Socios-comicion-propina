@@ -5,8 +5,9 @@
 let _dsgRegistros = [];             // registros cargados desde Supabase
 let _dsgFiltrados = [];             // registros tras aplicar filtros
 let _dsgCargando = false;
-let _dsgPeriodoSeleccionado = null; // null = activo, 'YYYY-MM-DD' = archivado
-let _dsgPeriodos = [];              // períodos archivados disponibles
+let _dsgPeriodoSeleccionado = null; // null = período actual, 'YYYY-MM-DD' = otro
+let _dsgPeriodos = [];              // períodos anteriores con movimientos
+let _dsgAutoElegido = false;        // ya se decidió qué período abrir al entrar
 
 // Retorna la fecha ISO del inicio del período actual (el 15 correspondiente)
 function _dsgCalcPeriodoInicio() {
@@ -17,29 +18,10 @@ function _dsgCalcPeriodoInicio() {
     return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-15';
 }
 
-// Rango del período que se está viendo. SOLO para mostrarlo como rótulo:
-// el recorte real lo hace la consulta, que para el período activo trae
-// únicamente los registros sin archivar (`periodo is null`).
-//
-// Para el período ACTIVO el rango sale de los propios registros, no del
-// calendario. Es la diferencia que rompía el listado: el 15 de septiembre el
-// calendario ya marca el período nuevo, pero si el mes NO se cerró los
-// anticipos siguen siendo los de agosto-septiembre y tienen que verse igual.
+// Rango 15→14 del período que se está viendo. Ahora manda la consulta: los
+// registros se piden por este rango de fechas, así que el rótulo y lo que se
+// lista no pueden contradecirse.
 function _dsgRangoPeriodo() {
-    if (!_dsgPeriodoSeleccionado && _dsgRegistros.length) {
-        const fechas = _dsgRegistros.map(_dsgFechaISO).filter(Boolean).sort();
-        if (fechas.length) {
-            const [y, mo, d] = fechas[0].split('-').map(Number);
-            // El 15 que abre el período al que pertenece el registro más antiguo
-            const ini = (d >= 15) ? new Date(y, mo - 1, 15) : new Date(y, mo - 2, 15);
-            const fin = new Date(ini.getFullYear(), ini.getMonth() + 1, 14);
-            const iso = x => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
-            // Si quedaron registros de más de un período sin cerrar, el rótulo
-            // se estira hasta el último, para no decir una fecha que miente.
-            const ultimo = fechas[fechas.length - 1];
-            return { inicio: iso(ini), fin: (ultimo > iso(fin) ? ultimo : iso(fin)) };
-        }
-    }
     const inicioISO = _dsgPeriodoSeleccionado || _dsgCalcPeriodoInicio();
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(inicioISO));
     if (!m) return { inicio: inicioISO, fin: '9999-12-31' };
@@ -206,14 +188,31 @@ async function dsg_cargarHistorial(forzar = false) {
             body: JSON.stringify({ action: 'getDesglosesPeriodos' })
         });
         const jsonPer = await resPer.json();
-        _dsgPeriodos = (jsonPer.status === 'success' && Array.isArray(jsonPer.data)) ? jsonPer.data : [];
+        const todos = (jsonPer.status === 'success' && Array.isArray(jsonPer.data)) ? jsonPer.data : [];
+        // El período actual se muestra con su propio botón, no repetido en la lista
+        const actual = _dsgCalcPeriodoInicio();
+        _dsgPeriodos = todos.filter(p => p !== actual);
+
+        // Si el período actual todavía no tiene movimientos —el día 15 recién
+        // empezado, por ejemplo— se abre el último período que sí los tiene, en
+        // vez de dejar la pantalla en blanco.
+        if (!_dsgPeriodoSeleccionado && !_dsgAutoElegido && !todos.includes(actual) && _dsgPeriodos.length) {
+            _dsgPeriodoSeleccionado = _dsgPeriodos[0];
+        }
+        _dsgAutoElegido = true;
         _dsgRenderPeriodSelector();
 
-        // Cargar registros del período seleccionado
-        // Antes el tope era 300 y podía cortar registros del período. El período
-        // completo tiene que venir entero, si no el informe sale incompleto.
-        const body = { action: 'getRetirosAnticipos', limit: 5000 };
-        if (_dsgPeriodoSeleccionado) body.periodo = _dsgPeriodoSeleccionado;
+        // Cargar registros del período seleccionado, POR RANGO DE FECHAS.
+        // Pedirlos por la columna `periodo` mostraba el período partido: esa
+        // columna se escribe socio por socio al marcar "cobrado", así que los
+        // socios ya cobrados quedaban en el período archivado y el resto en el
+        // actual, y ninguna de las dos vistas mostraba el período entero.
+        // Antes el tope era 300 y además cortaba registros; con 5000 entra completo.
+        const rango = _dsgRangoPeriodo();
+        const body = {
+            action: 'getRetirosAnticipos', limit: 5000,
+            desde: rango.inicio, hasta: rango.fin
+        };
 
         const res = await fetch(AQ_URL_POST, {
             method: 'POST',
@@ -223,19 +222,20 @@ async function dsg_cargarHistorial(forzar = false) {
         _dsgRegistros = (json.status === 'success' && Array.isArray(json.data)) ? json.data : [];
         _dsgAsignarOrdenCreacion();
 
-        // Mostrar aviso si hay registros de períodos anteriores sin archivar
+        // Aviso de período a medio cerrar. Ya no hay registros "que no se listan"
+        // —el rango de fechas los trae todos—, pero sí importa saber si el
+        // período está cerrado: la columna `periodo` se llena socio por socio al
+        // marcar "cobrado", así que un período puede quedar a medias.
         const notice = document.getElementById('dsg-archivo-notice');
         if (notice) {
-            if (_dsgPeriodoSeleccionado === null) {
-                const periodoInicio = _dsgCalcPeriodoInicio();
-                const viejos = _dsgRegistros.filter(r => r.fecha && r.fecha < periodoInicio).length;
-                notice.style.display = viejos ? 'flex' : 'none';
-                const det = notice.querySelector('[data-dsg-viejos]');
-                if (det) det.textContent = viejos + ' registro(s) de períodos anteriores no se listan acá, '
-                    + 'porque esta sección solo muestra el período ' + _dsgRangoVis() + '. Archívalos para dejarlos guardados.';
-            } else {
-                notice.style.display = 'none';
-            }
+            const abiertos = _dsgRegistros.filter(r => !r.periodo).length;
+            const cerrados = _dsgRegistros.length - abiertos;
+            const mostrar = abiertos > 0 && cerrados > 0 && _dsgPeriodoSeleccionado !== null;
+            notice.style.display = mostrar ? 'flex' : 'none';
+            const det = notice.querySelector('[data-dsg-viejos]');
+            if (det && mostrar) det.textContent = 'De los ' + _dsgRegistros.length
+                + ' anticipos de este período, ' + cerrados + ' ya están cerrados y ' + abiertos
+                + ' todavía no. Se listan todos igual; archívalos para dejar el período cerrado.';
         }
     } catch(e) {
         console.warn('[DSG] Error cargando historial:', e.message);

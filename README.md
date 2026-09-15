@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-15 — El informe de anticipos mostraba el período partido en dos (SW v115)
+
+- **Síntoma:** el informe del período **15 ago – 14 sep** no traía todos los anticipos. En la base había **94 ($13.047.000)**, pero el «Período Actual» mostraba **20** y el período archivado «15 Ago» mostraba **74**: ninguna de las dos vistas mostraba el período entero.
+- **Causa.** El desglose decidía a qué período pertenece un anticipo mirando la columna `periodo`, y esa columna **no se llena de una vez al cerrar el mes, sino socio por socio** al marcar «cobrado» (`archivarAnticiposSocio`, que además no filtra por fecha). Resultado: los socios ya cobrados quedaban con `periodo = '2026-08-15'` y el resto en `null`, o sea el mismo período repartido entre dos vistas. Se verificó contra la base: 74 con `periodo` puesto y 20 sin él, todos con fecha entre el 17 de agosto y el 14 de septiembre.
+- **Fix — el período lo define la FECHA, no la etiqueta de archivado.** Esa etiqueta ahora solo indica si el anticipo ya se cerró.
+  - `getRetirosAnticipos` acepta `desde`/`hasta` y filtra por rango de fechas.
+  - `getDesglosesPeriodos` deduce los períodos de la fecha de **todos** los registros, no solo de los archivados: así un período a medio cerrar no puede faltar en el selector.
+  - El desglose pide siempre el rango 15→14 del período que se está viendo, esté cerrado o no.
+- **Si el período nuevo todavía no tiene movimientos** —el día 15 recién empezado, por ejemplo— la sección **abre el último período que sí los tiene**, en vez de quedar en blanco. Esto reemplaza al parche anterior, que estiraba el rótulo del período actual para que calzara con los datos.
+- **El aviso amarillo cambia de sentido:** ya no dice «hay registros que no se listan» (ahora se listan todos), sino cuántos anticipos del período ya están cerrados y cuántos no.
+- **Verificado** en navegador con los datos reales de la base, período por período: actual **0**, 15 ago – 14 sep **94 · $13.047.000**, 15 jul – 14 ago **5 · $830.000** — los tres coinciden exactamente con lo que devuelve SQL. El informe impreso sale con **94 filas y total $13.047.000**.
+- **Queda pendiente en los datos:** esos 20 anticipos siguen marcados como no cerrados. Ya se ven en el informe, pero para dejar el período cerrado del todo hay que usar el botón **Archivar**.
+- Archivos: `js/desglose-anticipos.js`, `js/supabase-config.js`, `index.html`. `desglose-anticipos.js?v=37`, `supabase-config.js?v=59`, SW `fondo-admin-v115`, versión visible **v115**.
+
 #### 2026-09-15 — Logotipo original recortado y recoloreado (SW v114 / Horarios v7)
 
 - **Se revierte el redibujo.** El pedido era cambiar el color, no el dibujo, y el logotipo vectorial que hice antes no era el logotipo de la marca. Vuelve **el arte original, con su forma exacta**, y lo único que cambia es el color.

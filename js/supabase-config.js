@@ -1967,7 +1967,17 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     .order('created_at', { ascending: false })
                     .range(offset, offset + limit - 1);
                 if (aqBody?.socio_id) q = q.eq('socio_id', aqBody.socio_id);
-                if (aqBody?.periodo) {
+                // El período al que pertenece un anticipo lo define su FECHA, no la
+                // columna `periodo`. Esa columna solo marca si ya se cerró, y se
+                // escribe socio por socio al marcar "cobrado": por eso un mismo
+                // período quedaba partido en dos (los socios ya cobrados con
+                // `periodo` puesto y el resto en null) y ninguna vista lo mostraba
+                // entero. Con `desde`/`hasta` se pide por rango de fechas y el
+                // período sale completo, esté cerrado o no.
+                if (aqBody?.desde || aqBody?.hasta) {
+                    if (aqBody.desde) q = q.gte('fecha', aqBody.desde);
+                    if (aqBody.hasta) q = q.lte('fecha', aqBody.hasta);
+                } else if (aqBody?.periodo) {
                     q = q.eq('periodo', aqBody.periodo);
                 } else {
                     q = q.is('periodo', null);
@@ -1979,11 +1989,20 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
 
             // GET getDesglosesPeriodos — períodos archivados disponibles
             if (aqAction === 'getDesglosesPeriodos') {
+                // Los períodos se deducen de la FECHA de cada registro, no de la
+                // columna `periodo`. Si se listaran solo los ya archivados, un
+                // período a medio cerrar no aparecería en el selector y sus
+                // registros quedarían sin ninguna vista que los muestre enteros.
                 const { data, error } = await dbSoc.from('retiros_anticipos')
-                    .select('periodo').not('periodo', 'is', null)
-                    .order('periodo', { ascending: false });
+                    .select('fecha').limit(10000);
                 if (error) return _mockOk({ status: 'success', data: [] });
-                const periodos = [...new Set((data || []).map(r => r.periodo))];
+                const periodos = [...new Set((data || []).map(r => {
+                    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(r.fecha || ''));
+                    if (!m) return null;
+                    const y = +m[1], mo = +m[2] - 1, d = +m[3];
+                    const ini = (d >= 15) ? new Date(y, mo, 15) : new Date(y, mo - 1, 15);
+                    return ini.getFullYear() + '-' + String(ini.getMonth() + 1).padStart(2, '0') + '-15';
+                }).filter(Boolean))].sort().reverse();
                 return _mockOk({ status: 'success', data: periodos });
             }
 
