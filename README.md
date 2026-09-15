@@ -232,6 +232,15 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-15 — El informe de anticipos desperdiciaba la hoja (SW v116)
+
+- **Síntoma:** con 94 anticipos el informe imprimía 86 en la primera hoja —usada hasta un tercio— y mandaba los **8 restantes solos a una segunda hoja**.
+- **Causa:** el corte estaba fijo en **43 filas por columna (86 por hoja)**, un número que no correspondía a lo que cabe de verdad en una A4 con esta hoja de estilos.
+- **Se midió cuánto entra.** Con la impresión emulada en el navegador: fila **3,17 mm**, cabecera **16,4 mm**, total y pie **12,4 mm**. El tope real son **84 filas por columna**; a 86 recién salta de página. Se deja en **80** para tener holgura con los márgenes de cada impresora → **160 anticipos por hoja**, casi el doble que antes.
+- **Reparto parejo:** si la hoja no va llena, las dos columnas se dividen por igual en vez de llenar la izquierda hasta el tope y dejar la derecha casi vacía. Los 94 anticipos quedan **47 y 47 en una sola hoja**.
+- **Verificado** imprimiendo a PDF en A4: 94 → 1 hoja, 160 → 1 hoja, 200 → 2 hojas, 7 → 1 hoja, con la numeración corrida y sin saltos en los cuatro casos.
+- Archivos: `js/desglose-anticipos.js`, `index.html`. `desglose-anticipos.js?v=38`, SW `fondo-admin-v116`, versión visible **v116**.
+
 #### 2026-09-15 — El informe de anticipos mostraba el período partido en dos (SW v115)
 
 - **Síntoma:** el informe del período **15 ago – 14 sep** no traía todos los anticipos. En la base había **94 ($13.047.000)**, pero el «Período Actual» mostraba **20** y el período archivado «15 Ago» mostraba **74**: ninguna de las dos vistas mostraba el período entero.

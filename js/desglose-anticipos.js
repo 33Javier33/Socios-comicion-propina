@@ -589,8 +589,15 @@ function dsg_informe() {
     const hoy = new Date();
     const fechaHoyVis = hoy.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    // Layout de 2 columnas: 43 filas por columna → 86 por hoja, numeración secuencial
-    const ROWS_PER_COL = 43;
+    // Layout de 2 columnas, numeración secuencial.
+    //
+    // Antes eran 43 filas por columna (86 por hoja) y la hoja quedaba usada a un
+    // tercio: con 94 anticipos se imprimían 86 en la primera y los 8 restantes
+    // se iban solos a una segunda hoja. Se midió cuánto entra de verdad en una
+    // A4 con esta hoja de estilos (fila = 3,17 mm; cabecera 16,4 mm; total y pie
+    // 12,4 mm): el tope está en 84 filas por columna, a 86 ya salta de página.
+    // Se deja 80 para tener holgura con los márgenes de cada impresora.
+    const ROWS_PER_COL = 80;
     const PER_PAGE = ROWS_PER_COL * 2;
 
     const filaHtml = (r, nGlobal) => {
@@ -620,13 +627,16 @@ function dsg_informe() {
     let pagesHtml = '';
     for (let p = 0; p < registros.length; p += PER_PAGE) {
         const pageRows = registros.slice(p, p + PER_PAGE);
-        const left  = pageRows.slice(0, ROWS_PER_COL);
-        const right = pageRows.slice(ROWS_PER_COL);
+        // Si la hoja no va llena, las dos columnas se reparten parejo en vez de
+        // dejar la izquierda hasta el tope y la derecha casi vacía.
+        const nIzq  = Math.min(ROWS_PER_COL, Math.ceil(pageRows.length / 2));
+        const left  = pageRows.slice(0, nIzq);
+        const right = pageRows.slice(nIzq);
         const isLast = (p + PER_PAGE) >= registros.length;
         pagesHtml += '<table class="dos-cols"' + (isLast ? '' : ' style="page-break-after:always;"') + '><tr>'
             + '<td class="col-cell" style="padding-right:3px;">' + buildCol(left, p) + '</td>'
             + '<td style="width:1%;"></td>'
-            + '<td class="col-cell" style="padding-left:3px;">' + buildCol(right, p + ROWS_PER_COL) + '</td>'
+            + '<td class="col-cell" style="padding-left:3px;">' + buildCol(right, p + nIzq) + '</td>'
             + '</tr></table>';
     }
 
