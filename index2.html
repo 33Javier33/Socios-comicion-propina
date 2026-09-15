@@ -105,12 +105,12 @@
     <!-- Marca de autoría. Va al pie del login y no en las pantallas de
          trabajo: se ve al entrar, sin robarle lugar a los turnos. -->
     <div style="margin-top:34px;padding-top:20px;border-top:1px solid #1e293b;">
-      <!-- El logotipo es neón sobre una placa de metal oscuro: se muestra tal
-           cual, sin filtros. (El anterior tenía el texto en azul oscuro y había
-           que invertirlo; este ya está pensado para fondo oscuro.) -->
-      <img src="img/marca/cpn-marca.jpg?v=2026b" alt="Carlos P. Nauto Interactive"
+      <!-- SVG de fondo transparente: se apoya sobre el azul oscuro del login.
+           Sus colores están pensados para fondo claro, así que aquí se avivan
+           con un brillo (mismo criterio que en las otras apps en tema oscuro). -->
+      <img src="img/marca/cpn-marca.svg?v=2026c" alt="Carlos P. Nauto Interactive"
            style="width:100%;max-width:158px;height:auto;display:block;margin:0 auto;
-                  border-radius:10px;opacity:.92;">
+                  filter:brightness(1.35) saturate(1.05);">
       <div style="font-size:9.5px;font-weight:700;color:#475569;letter-spacing:.14em;text-transform:uppercase;margin-top:9px;">
         Sistema de Gestión de Horarios · 2026
       </div>

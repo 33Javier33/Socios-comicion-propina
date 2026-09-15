@@ -232,17 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
-#### 2026-09-15 — Logotipo nuevo: neón sobre placa oscura (SW v111 / Horarios v4)
+#### 2026-09-15 — Logotipo redibujado en vectores, fondo transparente (SW v112 / Horarios v5)
 
-- Se reemplaza el logotipo por el nuevo de **Carlos P. Nauto Interactive**: escudo CPN en degradado neón sobre una **placa de metal oscuro**.
-- **El logotipo viene con su placa y así se usa.** Los colores neón solo tienen contraste sobre fondo oscuro: si se recorta el fondo, sobre las tarjetas claras el logotipo se vuelve ilegible. La placa, redondeada y con una sombra suave, se muestra como una chapa.
-- **Se eliminó el tratamiento por tema, que con este logotipo estaba al revés.** El anterior era azul oscuro sobre blanco y se fundía con `mix-blend-mode: multiply` en claro e `invert(1) hue-rotate(180deg)` + `screen` en oscuro. Probado con el nuevo, ese filtro **deja la placa blanca y lava el neón** — se comprobó en las seis combinaciones antes de reemplazar nada.
-- **Archivo nuevo:** `img/marca/cpn-marca.jpg` (640×584, 68 KB). Es **JPG y no PNG** a propósito: la placa es opaca, no necesita transparencia, y en PNG el mismo recorte pesaba **502 KB** por la textura del metal. Se borran `img/carlospn-logo.png` y `img/marca/cpn-lockup.png`, que ya no se usan.
-- **Íconos `cpn-iso-192/512.png` regenerados** con el escudo nuevo.
-- En la app de **Horarios** (`index2.html`) el logotipo del pie del login pierde el `filter: invert(...)` que necesitaba el anterior.
-- Verificado en navegador que la imagen carga (640×584), que no queda ningún filtro ni `mix-blend-mode`, y que la sombra aparece solo en los temas claros.
+- El logotipo sobre placa negra que se publicó esta mañana **se retira**: el recuadro oscuro sobre las tarjetas blancas no se veía profesional.
+- **El archivo que existía era una foto de una maqueta**, no un archivo de logotipo: el escudo estaba fotografiado sobre una pared de metal cepillado con degradado. No se puede recortar ese fondo (se probó, quedan restos de los brillos del metal) ni cambiarle los colores. Para tenerlo con fondo transparente **hubo que redibujarlo**.
+- **Ahora es un SVG dibujado en curvas**: mismo escudo hexagonal con el circuito, los símbolos `{ }` y `[ ]`, la flecha de crecimiento y el monograma CPN, más la marca denominativa debajo.
+- **Fondo transparente**, así que el fondo que se ve es el de la app y se adapta a cualquier tema.
+- **Colores nuevos**, elegidos para tener contraste sobre fondo claro: degradado **celeste → azul → violeta** (`#0891B2 → #2563EB → #7C3AED` en el escudo, un punto más oscuro en el texto). Sobre fondo oscuro esos tonos quedan algo apagados: en la app de Horarios, que es oscura, el logotipo lleva `filter: brightness(1.35) saturate(1.05)`.
+- **La marca denominativa va convertida a curvas** (Montserrat 800/700/500 pasada a trazados), así que el SVG **no depende de ninguna tipografía instalada** y se ve idéntico en cualquier dispositivo.
+- **Archivos:** `img/marca/cpn-marca.svg` (15 KB) e `img/marca/cpn-iso.svg` (4 KB, solo el escudo). Se borra `cpn-marca.jpg`. Los íconos `cpn-iso-192/512.png` se regeneran desde el vector.
+- Verificado en navegador a 190 px, 120 px y 64 px sobre blanco, gris claro y azul oscuro: legible en los tres, y la imagen carga en las páginas reales.
 - Archivos: `index.html`, `index2.html`, `sw.js`, `sw2.js`, `img/marca/`.
-
 #### 2026-09-15 — El Desglose de Anticipos quedaba vacío el día 15 (SW v110)
 
 - **Síntoma:** el 15 de septiembre el Desglose apareció **sin ningún anticipo**, con el mes todavía sin cerrar.
