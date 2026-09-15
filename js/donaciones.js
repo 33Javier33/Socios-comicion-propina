@@ -1069,6 +1069,118 @@ async function don_guardarCopia(motivo) {
     } finally { toggleLoader(false); }
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// ARCHIVAR DONACIONES — cerrar las colectas del período
+//
+// Una donación descuenta del saldo igual que un anticipo, pero no vive en la
+// tabla `anticipos` sino en `extras`, así que "Reiniciar Anticipos" no la
+// toca. Si queda viva, el cierre del período siguiente la vuelve a descontar.
+// Esto es lo que dejó a 40 socios con saldo negativo el 15/09/2026.
+//
+// Esta acción deja el período **sin donaciones**: marca cada fila con su
+// período (por si algo falla a mitad de camino, ya no descuenta) y después la
+// borra. Es IRREVERSIBLE en la base, por eso exige que cada colecta tenga su
+// copia guardada en Documentación antes de dejar borrar nada.
+// ══════════════════════════════════════════════════════════════════════
+
+// Clave del período (el 15 que lo abre) al que pertenece una fecha.
+function _donClavePeriodo(fechaISO) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fechaISO || ''));
+    if (!m) return null;
+    const y = +m[1], mo = +m[2] - 1, d = +m[3];
+    const ini = (d >= 15) ? new Date(y, mo, 15) : new Date(y, mo - 1, 15);
+    return ini.getFullYear() + '-' + String(ini.getMonth() + 1).padStart(2, '0') + '-15';
+}
+
+async function don_archivarDonaciones() {
+    if (!_donAportes.length) await don_cargarAportes();
+
+    // Todo lo que cuelga de una colecta: aportes de socios, aportes externos y
+    // los retiros de caja. Si se borraran solo los de socios, quedarían colectas
+    // a medias con externos y entregas huérfanos.
+    const filas = _donAportes.slice();
+    if (!filas.length) { showToast('No hay donaciones que archivar', 'info'); return; }
+
+    const deSocios = filas.filter(a => don_esDonacion(a.tipo));
+    const externos = filas.filter(a => don_esExterna(a.tipo));
+    const entregas = filas.filter(a => don_esEntrega(a.tipo));
+    const totalSocios = deSocios.reduce((s, a) => s + (Number(a.monto) || 0), 0);
+    const nSocios = new Set(deSocios.map(a => String(a.socio_id))).size;
+    const motivos = [...new Set(filas.map(a => don_motivoDe(a.detalle)))];
+
+    // Guarda de seguridad: sin copia guardada, borrar es perder la colecta.
+    toggleLoader(true, 'Revisando copias...');
+    let sinCopia = [];
+    try { sinCopia = await don_colectasSinCopia(); } catch (e) { sinCopia = []; }
+    toggleLoader(false);
+    if (sinCopia.length) {
+        alert('No se puede archivar todavía.\n\n'
+            + 'Estas colectas no tienen copia guardada en Documentación:\n'
+            + sinCopia.map(m => '  · ' + m).join('\n')
+            + '\n\nAbre cada una y usa "Guardar copia". Una vez archivadas, los aportes\n'
+            + 'se borran de la base y la copia es lo único que queda.');
+        return;
+    }
+
+    const det = [
+        deSocios.length + ' aporte(s) de socios · ' + _donMoneda(totalSocios) + ' · ' + nSocios + ' socio(s)',
+        externos.length ? externos.length + ' aporte(s) externo(s)' : null,
+        entregas.length ? entregas.length + ' retiro(s) de caja' : null
+    ].filter(Boolean).join('\n  ');
+
+    if (!confirm('¿Archivar las donaciones del período?\n\n  ' + det
+        + '\n\nColectas: ' + motivos.join(', ')
+        + '\n\nLos socios quedan SIN donaciones: los aportes se borran de la base\n'
+        + 'y dejan de descontar. Las copias en Documentación no se tocan.\n\n'
+        + 'Esto no se puede deshacer.')) return;
+
+    toggleLoader(true, 'Archivando donaciones...');
+    let marcadas = 0, borradas = 0;
+    try {
+        // 1. Marcar con su período ANTES de borrar. Si el borrado se corta a la
+        //    mitad, lo que quede ya no descuenta (el cálculo ignora lo que no es
+        //    del período en curso).
+        const porPeriodo = {};
+        filas.forEach(a => {
+            const k = _donClavePeriodo(a.fecha) || 'SIN-FECHA';
+            (porPeriodo[k] = porPeriodo[k] || []).push(a.id);
+        });
+        for (const [k, ids] of Object.entries(porPeriodo)) {
+            if (k === 'SIN-FECHA') continue;
+            const { error } = await dbSoc.from('extras').update({ periodo: k }).in('id', ids);
+            if (error) throw error;
+            marcadas += ids.length;
+        }
+
+        // 2. Borrar. De a 200 para no armar una URL gigante con 500 ids.
+        const ids = filas.map(a => a.id);
+        for (let i = 0; i < ids.length; i += 200) {
+            const lote = ids.slice(i, i + 200);
+            const { error } = await dbSoc.from('extras').delete().in('id', lote);
+            if (error) throw error;
+            borradas += lote.length;
+        }
+
+        // 3. El saldo de los socios cambia, así que la caché queda vieja.
+        globalCacheAllData = null;
+        try { localStorage.removeItem(CACHE_KEY_ALL_DATA); } catch (e) {}
+        if (typeof _invalidarTodosLosDatos === 'function') _invalidarTodosLosDatos();
+
+        if (typeof sbAuditLog === 'function') sbAuditLog('Archivar Donaciones', {
+            detalle: borradas + ' fila(s) de colecta archivadas y borradas — '
+                   + deSocios.length + ' aportes de socios por ' + _donMoneda(totalSocios),
+            datos: { borradas, marcadas, aportesSocios: deSocios.length, totalSocios, motivos }
+        });
+        showToast('✅ ' + borradas + ' donación(es) archivadas · los socios quedan sin donaciones', 'success');
+        await don_cargarAportes();
+        if (typeof gestion_cargarRemanenteVivo === 'function') gestion_cargarRemanenteVivo();
+    } catch (e) {
+        showToast('No se pudo archivar: ' + (e.message || e) + ' — se marcaron ' + marcadas
+                + ' y se borraron ' + borradas, 'error');
+        await don_cargarAportes();
+    } finally { toggleLoader(false); }
+}
+
 // ¿Hay aportes registrados sin copia guardada? Lo usa el aviso antes de
 // reiniciar ausencias, que borra la tabla `extras` y con ella los aportes.
 async function don_colectasSinCopia() {

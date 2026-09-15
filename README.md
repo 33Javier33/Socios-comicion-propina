@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-15 — Archivar donaciones: deja el período sin donaciones (SW v119)
+
+- **Botón nuevo «📦 Archivar donaciones»** en Donaciones, junto al total juntado. Cierra las colectas del período y **deja a los socios sin donaciones**, que es lo que faltaba: hasta ahora los aportes solo se iban al reiniciar *ausencias*, y si quedaban vivos volvían a descontar en el período siguiente.
+- **Qué archiva:** toda la colecta — aportes de socios, aportes externos y los retiros de caja. Borrar solo los de socios dejaría colectas a medias, con externos y entregas huérfanos.
+- **No deja borrar sin respaldo.** Antes de tocar nada revisa que **cada colecta tenga su copia guardada en Documentación**. Si falta alguna, no archiva: la nombra y pide guardarla primero. Una vez archivados, los aportes se borran de la base y esa copia es lo único que queda.
+- **Marca antes de borrar.** Primero escribe el `periodo` de cada fila y después borra. Si el borrado se corta a la mitad, lo que quede ya está marcado y **no descuenta** (el cálculo ignora las donaciones que no son del período en curso, desde la v118). El borrado va de a 200 filas para no armar una URL gigante.
+- La confirmación **detalla exactamente qué se va**: cuántos aportes de socios y por cuánto, cuántos externos, cuántos retiros y de qué colectas. Al terminar se invalida la caché de saldos y se refresca el remanente en vivo. Queda registro en Auditoría.
+- **Verificado** en navegador con los textos reales de la base (la colecta de Gonzalo Ojeda: 41 aportes de socios por $262.000, 2 externos, 2 retiros) en cuatro casos: sin copia guardada **bloquea y no toca nada**; con copia marca y borra las 45 filas con `periodo 2026-08-15`; al cancelar la confirmación no ejecuta nada; y sin donaciones avisa en vez de fallar.
+- Archivos: `js/donaciones.js` (`don_archivarDonaciones`, `_donClavePeriodo`), `index.html`. `donaciones.js?v=41`, SW `fondo-admin-v119`, versión visible **v119**.
+
 #### 2026-09-15 — Las donaciones seguían descontando después de cerrar el mes (SW v118)
 
 - **Qué pasó.** Tras reiniciar los anticipos, un segundo cierre volvió a descontar **$262.000** de la colecta de agosto y dejó a **40 socios con saldo negativo**. El total de `saldos_socio` pasó de **+$32.193** a **−$229.807**.
