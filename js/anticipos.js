@@ -2279,6 +2279,45 @@ async function calcularRemanenteVivo() {
     return { total, porArea, inicio, fin };
 }
 
+// Remanente GUARDADO (total + desglose por área). Es el que quedó registrado al
+// cerrar el mes de cada socio y que viaja al mes siguiente como saldo anterior
+// (`saldos_socio.monto`, lo que escribe `registrarSaldoAnterior`).
+//
+// No es lo mismo que el remanente EN VIVO de arriba: ese proyecta cuánto
+// quedaría si se cerrara hoy y cambia día a día con las recaudaciones. Este es
+// un dato ya cerrado y no se mueve hasta el próximo cierre.
+//
+// Se agrupa igual que el otro —mismas áreas, Part-Time aparte y GastosComisión
+// fuera— para que las dos cifras sean comparables.
+// Devuelve { total, porArea:[{label,total}], socios, actualizado }.
+async function calcularRemanenteGuardado() {
+    const res = (typeof dbSoc !== 'undefined')
+        ? await dbSoc.from('saldos_socio').select('id, monto, updated_at')
+        : { data: [] };
+    const guardado = {};
+    let actualizado = null;
+    (res.data || []).forEach(r => {
+        guardado[r.id] = Number(r.monto || 0);
+        if (r.updated_at && (!actualizado || r.updated_at > actualizado)) actualizado = r.updated_at;
+    });
+
+    let total = 0, socios = 0;
+    const porAreaMap = {};
+    (cacheSocios || []).forEach(socio => {
+        const _area = _remAreaNorm(socio.area);
+        if (_area.excl) return;
+        if (!(socio.id in guardado)) return;   // socio sin remanente registrado aún
+        const rem = guardado[socio.id];
+        total += rem; socios++;
+        const gk = (socio.contrato === 'Part-Time') ? { key: 'parttime', label: 'Part-Time' } : _area;
+        if (!porAreaMap[gk.key]) porAreaMap[gk.key] = { label: gk.label, total: 0 };
+        porAreaMap[gk.key].total += rem;
+    });
+
+    const porArea = Object.values(porAreaMap).sort((a, b) => b.total - a.total);
+    return { total, porArea, socios, actualizado };
+}
+
 // Remanente EN VIVO en el banner de Gestión (usa el cálculo puro de arriba).
 async function gestion_cargarRemanenteVivo() {
     const el = document.getElementById('gestionRemanenteVivo');

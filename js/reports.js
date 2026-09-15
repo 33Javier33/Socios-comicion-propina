@@ -274,19 +274,26 @@ async function informeMontosDiarios() {
         const promedio = sumTotal / diasArr.length;
         const periodoVis = inicio.split('-').reverse().join('/') + " AL " + fin.split('-').reverse().join('/');
 
-        // ── Remanente EN VIVO por área (proyectado si se cierra hoy) ──
+        // ── Remanente GUARDADO por área ──
+        // Antes acá iba el remanente EN VIVO (lo que quedaría si se cerrara hoy),
+        // que cambia día a día con las recaudaciones. Lo que va en este informe
+        // es el remanente ya registrado al cerrar el mes de cada socio, que es
+        // el que viaja al mes siguiente como saldo anterior.
         let remHtml = '';
         try {
-            if (typeof calcularRemanenteVivo === 'function') {
-                const remData = await calcularRemanenteVivo();
+            if (typeof calcularRemanenteGuardado === 'function') {
+                const remData = await calcularRemanenteGuardado();
                 const filasRem = remData.porArea.map(a =>
                     `<tr><td style="border:1px solid #000; padding:4px;">${a.label}</td>
                          <td style="border:1px solid #000; padding:4px; text-align:right; font-weight:bold;">${fmt(a.total)}</td></tr>`
                 ).join('');
+                const actVis = remData.actualizado
+                    ? new Date(remData.actualizado).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    : null;
                 remHtml = `
                 <div style="margin-top:22px; page-break-inside:avoid;">
                     <h3 style="text-align:center; font-size:14px; font-weight:bold; letter-spacing:1px; margin:0 0 6px;">
-                        REMANENTE POR ÁREA <span style="font-weight:normal; font-size:10px;">(en vivo — proyectado si se cierra hoy · ${periodoVis})</span>
+                        REMANENTE POR ÁREA <span style="font-weight:normal; font-size:10px;">(guardado en el último cierre${actVis ? ' · ' + actVis : ''})</span>
                     </h3>
                     <table style="width:60%; margin:0 auto; border-collapse:collapse;">
                         <thead><tr>
@@ -299,7 +306,7 @@ async function informeMontosDiarios() {
                             <td style="border:1px solid #000; padding:4px; text-align:right;">${fmt(remData.total)}</td>
                         </tr></tfoot>
                     </table>
-                    <p style="text-align:center; font-size:8px; color:#555; margin-top:4px;">Los Part-Time se muestran aparte; GastosComisión no lleva remanente. Cambia día a día con las recaudaciones.</p>
+                    <p style="text-align:center; font-size:8px; color:#555; margin-top:4px;">Remanente registrado al cerrar el mes (${remData.socios} socios), el que pasa como saldo anterior. Los Part-Time se muestran aparte; GastosComisión no lleva remanente.</p>
                 </div>`;
             }
         } catch (eRem) { console.warn('[informe] remanente:', eRem); }

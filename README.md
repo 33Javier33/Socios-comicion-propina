@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-15 — El informe de Montos Diarios mostraba el remanente en vivo, no el guardado (SW v117)
+
+- **Pedido:** en la impresión de **Montos Diarios**, el bloque «Remanente por área» tiene que mostrar el **remanente guardado**, no el que estaba saliendo.
+- **Qué mostraba antes:** el remanente **en vivo** (`calcularRemanenteVivo`), o sea la proyección de cuánto quedaría *si se cerrara hoy*. Ese número **cambia día a día** con cada recaudación que se carga, así que dos copias del mismo informe impresas con un día de diferencia no coincidían.
+- **Qué muestra ahora:** el remanente **ya registrado al cerrar el mes** de cada socio — el que viaja al mes siguiente como saldo anterior (`saldos_socio.monto`, lo que escribe `registrarSaldoAnterior`). Es un dato cerrado: no se mueve hasta el próximo cierre.
+- Se agregó `calcularRemanenteGuardado()` en `js/anticipos.js`, al lado del cálculo en vivo. **Agrupa igual** que el otro —mismas áreas, Part-Time aparte y GastosComisión fuera, que retira completo— para que las dos cifras sean comparables. Solo cambia de dónde sale el número.
+- La cabecera del bloque lo dice: *«guardado en el último cierre · DD-MM-AAAA»*, con la fecha del último saldo registrado, y el pie indica sobre cuántos socios se calculó.
+- **Verificado** en el navegador con los datos reales de la base: Máquinas **$12.410**, Mesas **$11.659**, Bóveda **$6.611**, Part-Time **$1.313**, total **$31.993** sobre 63 socios — idéntico a lo que devuelve SQL, y coincide con la suma de `remanente` en `cierres_mes`. Se comprobó además que en el informe ya no queda ninguna mención a «en vivo» ni «proyectado».
+- Archivos: `js/anticipos.js`, `js/reports.js`, `index.html`. `anticipos.js?v=56`, `reports.js?v=44`, SW `fondo-admin-v117`, versión visible **v117**.
+
 #### 2026-09-15 — El informe de anticipos desperdiciaba la hoja (SW v116)
 
 - **Síntoma:** con 94 anticipos el informe imprimía 86 en la primera hoja —usada hasta un tercio— y mandaba los **8 restantes solos a una segunda hoja**.
