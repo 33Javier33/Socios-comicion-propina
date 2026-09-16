@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-16 — Reparación de datos: período septiembre 2026
+
+- Se reescribieron las **67 filas de SEPTIEMBRE 2026** en `cierres_mes_historial`, que eran las del cierre fallido, y se corrigió la foto `SEPTIEMBRE_2026` de `saldos_cierre_mes`. Se guardó copia del estado previo antes de tocar nada.
+- **De dónde salió cada cifra.** La recaudación del período ya no está en la base, pero **sí en Carpetas** (`periodos_archivados`, 15/08–14/09): con sus 31 días y divisores se reconstruyó el valor punto y dio **$41.612** con **$33.855.300** recaudados — exactamente lo que dice el archivo, así que el método quedó validado antes de usarlo. El resto: `saldo_anterior` = remanente de agosto, `anticipos_total` = anticipos del período + la donación de cada socio (que el propio cierre fallido había dejado registrada), `remanente` = el saldo real ya reparado, y `a_pagar` como residuo para que cada fila cuadre.
+- **Antes / después:**
+
+  | | Cierre fallido | Reparado |
+  |---|---|---|
+  | Alcance | $0 | **$33.855.940** |
+  | Saldo anterior | $32.193 | **$41.202** |
+  | Anticipos | $262.000 | **$13.047.000** |
+  | A pagar | $0 | **$20.818.149** |
+  | Remanente | −$229.807 | **$31.993** |
+
+- **Comprobado tras escribir:** las 67 filas cumplen `alcance + saldo anterior − anticipos = a pagar + remanente`, ninguna quedó con «a pagar» negativo, y el remanente de agosto ($41.202) encadena con el saldo anterior de septiembre.
+- Las filas quedan marcadas con `reconstruido = true`, así que la vista de detalle muestra el aviso de que son cifras reconstruidas. Se repobló además el detalle de anticipos, que el cierre fallido había dejado vacío (35 socios con movimientos).
+- **Un socio no se pudo reproducir al peso:** Florencia Vargas (Part-Time) — sus días PT cambiaron después del cierre, así que su alcance quedó ajustado en $638 para que la fila cuadre con su remanente real. En los demás la diferencia es de $1 por redondeo o cero.
+
 #### 2026-09-16 — «Período ant.» mostraba la foto del cierre fallido (SW v121)
 
 - **Síntoma:** el banner de Gestión decía *«Período ant. (septiembre 2026): −$229.807»* cuando el cierre de agosto-septiembre fue **+$31.993**.
