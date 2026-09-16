@@ -4,6 +4,13 @@
 
 function notasFormatearMensaje(texto) {
     if (!texto) return '';
+    // Las notas nuevas traen formato (negrita, cursiva, alineación, listas).
+    // Se muestran tal cual, pero SANEADAS: solo sobreviven las etiquetas y
+    // estilos permitidos. Las viejas son texto plano y siguen por el camino
+    // de siempre: escapar y convertir las URLs en enlaces.
+    if (typeof notasEsHTML === 'function' && notasEsHTML(texto)) {
+        return notasSanearHTML(texto);
+    }
     // Escapar HTML primero para seguridad
     const escaped = texto.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     // Detectar URLs (http, https, ftp) y convertirlas en enlaces
@@ -118,6 +125,7 @@ function notasRenderizar(notas) {
 }
 
 async function notasCargar() {
+    if (typeof notasEditorInit === 'function') notasEditorInit();
     const cont = document.getElementById('notasListaContainer');
     const cached = leerCache(CACHE_KEY_NOTAS);
     if (cached) {
@@ -142,7 +150,10 @@ async function notasCargar() {
 }
 
 async function notasPublicar() {
-    const msg = document.getElementById('notaInputMsg').value.trim();
+    // El contenido sale del editor con formato, ya saneado. El textarea queda
+    // como respaldo por si el editor no llegó a montarse.
+    const msg = (typeof notasEditorContenido === 'function' ? notasEditorContenido() : '')
+             || document.getElementById('notaInputMsg').value.trim();
     if (!msg && !_notaFotoFile) return showToast('Escribe algo o adjunta una foto','error');
     const btnPub = document.querySelector('#tab-notas .btn-submit');
     if (btnPub) { btnPub.disabled=true; btnPub.textContent='Publicando...'; }
@@ -160,6 +171,7 @@ async function notasPublicar() {
         const destacados = [..._notaDestacados].join(',');
         await fetch(URL_RECAUDACIONES,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'addNote',autor:'Admin',mensaje:msg,foto_url,destacados})});
         document.getElementById('notaInputMsg').value='';
+        if (typeof notasEditorLimpiar === 'function') notasEditorLimpiar();
         showToast('Nota publicada','success');
         const cont = document.getElementById('notasListaContainer');
         if (cont.querySelector('div[style*="padding:30px"]')) cont.innerHTML='';
@@ -306,3 +318,134 @@ window._notaReaccion = async (id, emoji) => {
     // Persistir en Supabase
     fetch(URL_RECAUDACIONES, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'toggleReaction', id, emoji, user: meId, add: adding }) }).catch(()=>{});
 };
+
+// ══════════════════════════════════════════════════════════════════════
+// EDITOR DE NOTAS CON FORMATO (negrita, cursiva, alineación, listas)
+//
+// La nota se escribe en un `contenteditable` y se guarda como HTML, pero
+// NUNCA el HTML crudo del navegador: antes de guardar y antes de mostrar
+// se pasa por `notasSanearHTML`, que deja solo un puñado de etiquetas y
+// estilos. Sin eso, cualquier cosa pegada desde otra página (o un script)
+// entraría tal cual en las apps de los socios.
+//
+// Las notas viejas son texto plano y siguen funcionando: `notasEsHTML`
+// distingue unas de otras y cada una se muestra como corresponde.
+// ══════════════════════════════════════════════════════════════════════
+
+const NOTA_TAGS_OK   = ['B','STRONG','I','EM','U','BR','P','DIV','SPAN','UL','OL','LI','A'];
+const NOTA_ESTILOS_OK = ['text-align','font-weight','font-style','text-decoration'];
+
+function notasSanearHTML(html) {
+    if (!html) return '';
+    let doc;
+    try { doc = new DOMParser().parseFromString('<div id="raiz">' + html + '</div>', 'text/html'); }
+    catch (e) { return ''; }
+    const raiz = doc.getElementById('raiz');
+    if (!raiz) return '';
+
+    (function limpiar(nodo) {
+        [...nodo.childNodes].forEach(hijo => {
+            if (hijo.nodeType === 3) return;                       // texto: se deja
+            if (hijo.nodeType !== 1) { hijo.remove(); return; }    // comentarios y demás: fuera
+
+            if (!NOTA_TAGS_OK.includes(hijo.tagName)) {
+                // Etiqueta no permitida: se conserva su texto, no la etiqueta.
+                limpiar(hijo);
+                while (hijo.firstChild) nodo.insertBefore(hijo.firstChild, hijo);
+                hijo.remove();
+                return;
+            }
+
+            // Atributos: solo estilo acotado y href en los enlaces.
+            [...hijo.attributes].forEach(a => {
+                const n = a.name.toLowerCase();
+                if (n === 'style') return;
+                if (n === 'href' && hijo.tagName === 'A') return;
+                hijo.removeAttribute(a.name);
+            });
+
+            if (hijo.hasAttribute('style')) {
+                const conservar = NOTA_ESTILOS_OK
+                    .map(p => { const v = hijo.style.getPropertyValue(p); return v ? p + ':' + v : ''; })
+                    .filter(Boolean).join(';');
+                if (conservar) hijo.setAttribute('style', conservar);
+                else hijo.removeAttribute('style');
+            }
+
+            if (hijo.tagName === 'A') {
+                const href = (hijo.getAttribute('href') || '').trim();
+                // Solo http/https: `javascript:` y `data:` quedan fuera.
+                if (!/^https?:\/\//i.test(href)) {
+                    while (hijo.firstChild) nodo.insertBefore(hijo.firstChild, hijo);
+                    hijo.remove();
+                    return;
+                }
+                hijo.setAttribute('target', '_blank');
+                hijo.setAttribute('rel', 'noopener noreferrer');
+            }
+            limpiar(hijo);
+        });
+    })(raiz);
+
+    return raiz.innerHTML.trim();
+}
+
+// ¿La nota trae formato o es de las viejas, en texto plano?
+function notasEsHTML(txt) {
+    return /<(b|strong|i|em|u|br|p|div|span|ul|ol|li|a)\b[^>]*>/i.test(String(txt || ''));
+}
+
+// ── Editor ──
+function notasEditorInit() {
+    const ed = document.getElementById('notaEditor');
+    const barra = document.querySelector('.nota-toolbar');
+    if (!ed || !barra || ed._listo) return;
+    ed._listo = true;
+
+    barra.querySelectorAll('button[data-cmd]').forEach(btn => {
+        // mousedown y no click: si no, el editor pierde la selección antes de aplicar.
+        btn.addEventListener('mousedown', e => {
+            e.preventDefault();
+            ed.focus();
+            try { document.execCommand(btn.dataset.cmd, false, null); } catch (err) {}
+            notasEditorMarcarActivos();
+        });
+    });
+
+    // Pegar SIEMPRE como texto plano: así no entra el formato ajeno de Word
+    // o de una página web, que es de donde vienen los desórdenes.
+    ed.addEventListener('paste', e => {
+        e.preventDefault();
+        const t = (e.clipboardData || window.clipboardData).getData('text/plain');
+        document.execCommand('insertText', false, t);
+    });
+
+    ['keyup', 'mouseup', 'focus'].forEach(ev => ed.addEventListener(ev, notasEditorMarcarActivos));
+}
+
+function notasEditorMarcarActivos() {
+    const barra = document.querySelector('.nota-toolbar');
+    if (!barra) return;
+    barra.querySelectorAll('button[data-cmd]').forEach(b => {
+        let on = false;
+        try { on = document.queryCommandState(b.dataset.cmd); } catch (e) {}
+        b.classList.toggle('activo', !!on);
+    });
+}
+
+// Contenido de la nota listo para guardar. Devuelve '' si está vacía, para
+// que la validación de "escribe algo o adjunta una foto" siga sirviendo.
+function notasEditorContenido() {
+    const ed = document.getElementById('notaEditor');
+    if (!ed) return '';
+    const limpio = notasSanearHTML(ed.innerHTML);
+    // Solo espacios, <br> o párrafos vacíos = nota vacía.
+    const soloTexto = limpio.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+    return soloTexto ? limpio : '';
+}
+
+function notasEditorLimpiar() {
+    const ed = document.getElementById('notaEditor');
+    if (ed) ed.innerHTML = '';
+    notasEditorMarcarActivos();
+}

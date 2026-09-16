@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-16 — Notas de administrador con formato, como en Word (SW v126)
+
+- **Editor nuevo** en «Nueva Nota»: **negrita**, *cursiva*, subrayado, alinear a la izquierda / centro / derecha, listas con viñetas y numeradas, y quitar formato. Los botones se **marcan activos** según dónde esté el cursor. Funcionan también los atajos Ctrl+B / Ctrl+I / Ctrl+U.
+- **El formato llega igual a las apps de los socios.** `propi.solicitada` escapaba todo el HTML, así que una nota con formato se habría visto con las etiquetas a la vista. Ahora la interpreta, y **una nota centrada se ve centrada**: el contenedor no impone su propia alineación, la manda la nota.
+- **Nada de HTML crudo.** El contenido pasa por un saneador —en las dos apps, al guardar y al mostrar— que deja solo `b, strong, i, em, u, br, p, div, span, ul, ol, li, a` y los estilos `text-align, font-weight, font-style, text-decoration`. Todo lo demás se convierte en texto.
+- **Pegar es siempre texto plano.** Copiar desde Word o desde una página traía estilos ajenos que descuadraban la nota; ahora entra limpio y se le da formato acá.
+- **Las notas antiguas siguen igual.** Se detecta si la nota trae formato o es texto plano y cada una se muestra como corresponde, sin migrar nada.
+- **Verificado** con el viaje completo: se escribe en el editor real (centrar + negrita + cursiva), se guarda, y se pinta con el saneador de `propi.solicitada` — el resultado llega idéntico y la primera línea conserva `text-align: center`. Además se probó el saneador con diez entradas, seis de ellas maliciosas: `<script>`, `onclick`, enlaces `javascript:`, `<iframe>`, `<img onerror>` y estilos no permitidos (`position`, `color`) — **ninguna sobrevive**, y el texto legítimo se conserva entero.
+- Archivos: `js/notas.js`, `styles.css`, `index.html`. `notas.js?v=33`, `styles.css?v=111`, SW `fondo-admin-v126`, versión visible **v126**.
+
 #### 2026-09-16 — No se podía borrar un socio: alta, edición y baja nunca llegaban a Supabase (SW v125)
 
 - **Causa.** `deleteSocio`, `addSocio` y `updateSocio` **no tenían handler**: se iban derecho a la planilla (GAS). Pero la lista de socios se **lee de Supabase**, y el sync de vuelta (`_seedSociosToSupabase`) es un **upsert que solo agrega y actualiza — nunca borra**. Por eso borrar un socio no se veía jamás, y editar nombre, área o contrato solo aparecía cuando el sync lo traía de vuelta. De `updateSocio` únicamente el campo **Puntos** tenía camino propio a Supabase.

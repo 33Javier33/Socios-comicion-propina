@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/fondo-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=110">
+    <link rel="stylesheet" href="styles.css?v=111">
 </head>
 <body>
 
@@ -1929,7 +1929,28 @@
                 <!-- Formulario nueva nota -->
                 <div style="background:white; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border:1px solid #eee;">
                     <h3 style="margin:0 0 12px 0; color:var(--primary); font-size:1em;">✏️ Nueva Nota</h3>
-                    <textarea id="notaInputMsg" rows="3" placeholder="Escribe una nota para el equipo..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:0.95em; resize:vertical; box-sizing:border-box; font-family:inherit;"></textarea>
+                    <!-- Editor con formato. El textarea sigue existiendo pero
+                         oculto: guarda el HTML y así no hay que tocar el resto
+                         del flujo de publicación ni la foto ni los destacados. -->
+                    <div class="nota-editor">
+                        <div class="nota-toolbar" role="toolbar" aria-label="Formato de la nota">
+                            <button type="button" data-cmd="bold"          title="Negrita (Ctrl+B)"><b>B</b></button>
+                            <button type="button" data-cmd="italic"        title="Cursiva (Ctrl+I)"><i>I</i></button>
+                            <button type="button" data-cmd="underline"     title="Subrayado (Ctrl+U)"><u>U</u></button>
+                            <span class="nota-sep"></span>
+                            <button type="button" data-cmd="justifyLeft"   title="Alinear a la izquierda">⯇</button>
+                            <button type="button" data-cmd="justifyCenter" title="Centrar">≡</button>
+                            <button type="button" data-cmd="justifyRight"  title="Alinear a la derecha">⯈</button>
+                            <span class="nota-sep"></span>
+                            <button type="button" data-cmd="insertUnorderedList" title="Lista con viñetas">•—</button>
+                            <button type="button" data-cmd="insertOrderedList"   title="Lista numerada">1.</button>
+                            <span class="nota-sep"></span>
+                            <button type="button" data-cmd="removeFormat"  title="Quitar formato">✕</button>
+                        </div>
+                        <div id="notaEditor" contenteditable="true" role="textbox" aria-multiline="true"
+                             data-placeholder="Escribe una nota para el equipo…"></div>
+                    </div>
+                    <textarea id="notaInputMsg" rows="3" style="display:none;"></textarea>
                     <!-- Destacar la nota para socios específicos (es para todos, pero resaltada para ellos) -->
                     <div style="margin-top:10px;">
                         <button type="button" id="notaDestacarBtn" onclick="notaDestacarToggle()" style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:7px;padding:6px 11px;font-size:0.82em;font-weight:700;cursor:pointer;">⭐ Destacar para socios</button>
@@ -2272,7 +2293,7 @@
     <script src="js/recaudacion.js?v=51"></script>
     <script src="js/arqueo.js?v=33"></script>
     <script src="js/canje.js?v=32"></script>
-    <script src="js/notas.js?v=32"></script>
+    <script src="js/notas.js?v=33"></script>
     <script src="js/reports.js?v=44"></script>
     <script src="js/help.js?v=38"></script>
     <script src="js/auditoria.js?v=34"></script>
@@ -2696,7 +2717,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v125</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v126</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">
