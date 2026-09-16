@@ -1081,6 +1081,43 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 return _mockOk({ status: 'success', data: Object.values(byP) });
             } catch (e) { return _mockOk({ status: 'error', message: e.message, data: [] }); }
         }
+        // ── getSobresPendientes → quién no ha retirado su sobre ──
+        //
+        // Se lee del HISTORIAL, no de `cierres_mes`: esa tabla se vacía al
+        // reiniciar el período, así que apenas se cierra el mes se perdía de
+        // vista quién tenía plata sin retirar. El historial no se vacía.
+        if (action === 'getSobresPendientes') {
+            try {
+                const { data, error } = await dbSoc.from('cierres_mes_historial')
+                    .select('periodo, socio_id, socio_nombre, a_pagar, remanente, fecha_cierre, estado_cobro')
+                    .eq('estado_cobro', 'en_sobre')
+                    .order('fecha_cierre', { ascending: false });
+                if (error) throw error;
+                // Un sobre de $0 no es un sobre: no hay nada que retirar.
+                const filas = (data || []).filter(r => Number(r.a_pagar || 0) > 0);
+                return _mockOk({ status: 'success', data: filas });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message, data: [] }); }
+        }
+
+        // ── marcarSobreRetirado → el socio vino a buscar su sobre ──
+        if (action === 'marcarSobreRetirado') {
+            const sid = String(body.socioId || '');
+            const per = String(body.periodo || '');
+            if (!sid || !per) return _mockOk({ status: 'error', message: 'faltan datos' });
+            try {
+                const { error } = await dbSoc.from('cierres_mes_historial')
+                    .update({ estado_cobro: body.deshacer ? 'en_sobre' : 'cobrado' })
+                    .eq('socio_id', sid).eq('periodo', per);
+                if (error) throw error;
+                _sbAudit(body.deshacer ? 'Sobre vuelve a pendiente' : 'Sobre retirado', {
+                    idAfectado: sid,
+                    detalle: `${body.nombre || sid} — ${per}`,
+                    datos: { socio_id: sid, periodo: per, deshacer: !!body.deshacer }
+                });
+                return _mockOk({ status: 'success' });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message }); }
+        }
+
         // Detalle de todos los socios de un período
         if (action === 'getMesAnteriorDetalle') {
             const periodo = String(body.periodo || '').trim();

@@ -54,6 +54,9 @@ async function mesesAnt_init() {
     if (!cont || _mesesAntCargando) return;
     _mesesAntCargando = true;
     cont.innerHTML = '<div style="color:#94a3b8;font-size:0.85em;padding:6px;">Cargando períodos…</div>';
+    // Los sobres sin retirar se cargan aparte: es lo primero que hay que ver al
+    // entrar, y no debe quedarse esperando a que carguen los períodos.
+    if (typeof sobres_cargar === 'function') sobres_cargar();
     try {
         const res = await callApiSocios('getMesesAnteriores', {});
         _mesesAntPeriodos = (res && res.status === 'success' && Array.isArray(res.data)) ? res.data : [];
@@ -284,4 +287,83 @@ function _mesesAnt_toggle(id) {
 function mesesAnt_filtrar() {
     // El nombre + el área se combinan en _mesesAnt_aplicarFiltros.
     _mesesAnt_aplicarFiltros();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SOBRES SIN RETIRAR
+//
+// Al cerrar el mes cada socio queda "cobrado" (se llevó la plata) o
+// "en sobre" (quedó guardada acá). Ese estado vivía solo en `cierres_mes`,
+// que se vacía al reiniciar el período: apenas se cerraba el mes se perdía
+// de vista quién tenía plata sin retirar. Esto lo lee del HISTORIAL, que no
+// se vacía, así que el sobre sigue a la vista hasta que alguien lo retire.
+// ══════════════════════════════════════════════════════════════════════
+
+let _sobresLista = [];
+
+async function sobres_cargar() {
+    const panel = document.getElementById('sobres-panel');
+    const cont  = document.getElementById('sobres-lista');
+    const badge = document.getElementById('sobres-badge');
+    if (!panel || !cont) return;
+    cont.innerHTML = '<div style="color:#92400e;font-size:0.82em;padding:6px;">Cargando…</div>';
+    panel.style.display = '';
+    try {
+        const res = await callApiSocios('getSobresPendientes', {});
+        _sobresLista = (res && res.status === 'success' && Array.isArray(res.data)) ? res.data : [];
+    } catch (e) { _sobresLista = []; }
+
+    if (!_sobresLista.length) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    const total = _sobresLista.reduce((s, r) => s + Number(r.a_pagar || 0), 0);
+    if (badge) badge.textContent = _sobresLista.length + ' · ' + _maFmt(total);
+
+    // Agrupados por período: lo normal es que sean del último cierre, pero si
+    // quedó alguno de meses atrás conviene que salte a la vista.
+    const porPeriodo = {};
+    _sobresLista.forEach(r => {
+        const p = r.periodo || 'Sin período';
+        (porPeriodo[p] = porPeriodo[p] || []).push(r);
+    });
+
+    cont.innerHTML = Object.entries(porPeriodo).map(([per, filas]) => {
+        const sub = filas.reduce((s, r) => s + Number(r.a_pagar || 0), 0);
+        const items = filas
+            .sort((a, b) => Number(b.a_pagar || 0) - Number(a.a_pagar || 0))
+            .map(r => `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#fff;border:1px solid #fde68a;border-radius:9px;margin-bottom:5px;">
+                <div style="min-width:0;">
+                    <div style="font-weight:700;color:#0f172a;font-size:0.88em;">${_maEsc(r.socio_nombre || r.socio_id)}</div>
+                    <div style="font-size:0.72em;color:#92400e;">${_maFmt(r.a_pagar)}</div>
+                </div>
+                <button onclick="sobres_retirar('${_maEsc(String(r.socio_id))}','${_maEsc(per)}')"
+                    style="flex-shrink:0;background:#15803d;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:0.74em;font-weight:800;cursor:pointer;">
+                    💵 Retiró
+                </button>
+            </div>`).join('');
+        return `<div style="margin-bottom:10px;">
+            <div style="font-size:0.76em;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">
+                ${_maEsc(_maLabel(per))} · ${filas.length} sobre${filas.length !== 1 ? 's' : ''} · ${_maFmt(sub)}
+            </div>${items}</div>`;
+    }).join('');
+}
+
+async function sobres_retirar(socioId, periodo) {
+    const r = _sobresLista.find(x => String(x.socio_id) === String(socioId) && String(x.periodo) === String(periodo));
+    const nombre = r ? (r.socio_nombre || socioId) : socioId;
+    if (!confirm(`¿${nombre} retiró su sobre?\n\n${r ? _maFmt(r.a_pagar) : ''} · ${_maLabel(periodo)}\n\nPasa a "cobrado" y sale de esta lista.`)) return;
+    toggleLoader(true, 'Registrando…');
+    try {
+        const res = await callApiSocios('marcarSobreRetirado', { socioId, periodo, nombre });
+        if (res && res.status === 'error') throw new Error(res.message || 'error');
+        showToast('Sobre retirado — ' + nombre, 'success');
+        await sobres_cargar();
+        // Si hay un período abierto, se repinta para que cambie el estado del socio
+        if (_mesesAntPeriodoSel && typeof mesesAnt_seleccionar === "function") mesesAnt_seleccionar(_mesesAntPeriodoSel);
+    } catch (e) {
+        showToast('No se pudo registrar: ' + (e.message || e), 'error');
+    } finally { toggleLoader(false); }
 }

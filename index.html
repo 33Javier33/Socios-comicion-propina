@@ -1226,6 +1226,17 @@
                 <h3 style="margin:0;font-size:1.05em;">🗓️ Meses Anteriores</h3>
                 <p style="margin:4px 0 0;font-size:0.8em;opacity:0.85;">Detalle de cada socio en los meses cerrados: anticipos, alcance, saldo anterior, remanente y lo pagado.</p>
             </div>
+            <!-- Sobres sin retirar. Va acá y no en el Cierre de Mes porque se
+                 lee del historial: el cierre se vacía al reiniciar el período y
+                 con él se perdía de vista quién tenía plata sin retirar. -->
+            <div id="sobres-panel" style="display:none;background:#fffbeb;border:1px solid #fcd34d;border-radius:14px;padding:14px 16px;margin-bottom:14px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                    <div style="font-weight:800;color:#92400e;font-size:0.95em;">📩 Sobres sin retirar <span id="sobres-badge" style="background:#f59e0b;color:#fff;border-radius:10px;padding:2px 9px;font-size:0.78em;margin-left:4px;"></span></div>
+                    <button onclick="sobres_cargar()" style="background:#fff;color:#92400e;border:1px solid #fcd34d;border-radius:8px;padding:6px 12px;font-size:0.78em;font-weight:700;cursor:pointer;">↻ Actualizar</button>
+                </div>
+                <div id="sobres-lista"></div>
+            </div>
+
             <div id="mesesant-periodos" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
             <div id="mesesant-resumen" style="display:none;margin-bottom:12px;"></div>
             <div id="mesesant-buscador" style="display:none;position:relative;margin-bottom:10px;">
@@ -2250,13 +2261,13 @@
     <script src="js/cache.js?v=32"></script>
     <script src="js/auth.js?v=32"></script>
     <script src="js/config.js?v=99"></script>
-    <script src="js/supabase-config.js?v=62"></script>
+    <script src="js/supabase-config.js?v=63"></script>
     <script src="js/api.js?v=36"></script>
     <script src="js/socios.js?v=41"></script>
     <script src="js/puntos.js?v=32"></script>
     <script src="js/anticipos.js?v=58"></script>
     <script src="js/desglose-anticipos.js?v=38"></script>
-    <script src="js/meses-anteriores.js?v=32"></script>
+    <script src="js/meses-anteriores.js?v=33"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
     <script src="js/recaudacion.js?v=51"></script>
     <script src="js/arqueo.js?v=33"></script>
@@ -2685,7 +2696,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v121</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v122</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

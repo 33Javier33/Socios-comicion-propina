@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-16 — Sobres sin retirar: quién tiene plata guardada acá (SW v122)
+
+- **El problema:** al cerrar el mes cada socio queda *cobrado* (se llevó la plata) o *en sobre* (quedó guardada). Ese estado vivía solo en `cierres_mes`, **que se vacía al reiniciar el período** — así que apenas se cerraba el mes se perdía de vista quién tenía plata sin retirar.
+- **Panel nuevo «📩 Sobres sin retirar»** arriba de Meses Anteriores. Lee del **historial**, que no se vacía, así que el sobre sigue a la vista hasta que alguien lo retire. Muestra el total, agrupa por período —si queda uno de meses atrás, salta a la vista— y cada socio trae un botón **💵 Retiró** que lo pasa a cobrado. Los sobres de $0 no se listan: no hay nada que retirar. Queda registro en Auditoría.
+- **Se recuperó quién quedó en sobre en septiembre.** El cierre fallido había dejado a los 67 socios como «en sobre». La respuesta estaba en la **auditoría**: la acción *«Cobrado — Archivar anticipos del socio»* se registra cada vez que alguien cobra, y entre las 16:26 y las 19:20 hay **49**. Con eso se restauró el estado real: **49 cobrados ($17.095.693) y 18 en sobre ($3.722.456)**, que suman los $20.818.149 de «a pagar» del período.
+- **Verificado** en navegador con los 18 sobres reales: el panel los lista agrupados por período con su subtotal, marcar uno lo saca de la lista y actualiza el total, y cancelar la confirmación no ejecuta nada.
+- Archivos: `js/meses-anteriores.js` (`sobres_cargar`, `sobres_retirar`), `js/supabase-config.js` (`getSobresPendientes`, `marcarSobreRetirado`), `index.html`. `meses-anteriores.js?v=33`, `supabase-config.js?v=63`, SW `fondo-admin-v122`, versión visible **v122**.
+
 #### 2026-09-16 — Reparación de datos: período septiembre 2026
 
 - Se reescribieron las **67 filas de SEPTIEMBRE 2026** en `cierres_mes_historial`, que eran las del cierre fallido, y se corrigió la foto `SEPTIEMBRE_2026` de `saldos_cierre_mes`. Se guardó copia del estado previo antes de tocar nada.
