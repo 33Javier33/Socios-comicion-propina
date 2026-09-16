@@ -777,6 +777,10 @@ async function cargarHistorialSocio(id) {
                     // Las donaciones sí llevan monto porque DESCUENTAN del saldo del socio.
                     const esAus = e.tipo && e.tipo.toLowerCase().includes('ausencia');
                     const esDon = typeof don_esDonacion === 'function' && don_esDonacion(e.tipo);
+                    // Una donación de un período YA CERRADO no se muestra: ese
+                    // descuento se aplicó y se cerró en su mes. Si igual apareciera
+                    // acá, parecería un descuento vigente del período en curso.
+                    if (esDon && typeof _donEsDeEstePeriodo === 'function' && !_donEsDeEstePeriodo(e.fecha)) return;
                     procesarEntrada(e.fecha, (e.tipo || 'Extra').toUpperCase(), e.detalle, (esAus || esDon) ? (parseFloat(e.monto)||0) : 0, e.uuid);
                 });
             }

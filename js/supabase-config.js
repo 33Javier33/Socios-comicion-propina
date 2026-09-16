@@ -485,14 +485,32 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     antRows.push({ socio_id: String(socioId), fecha, monto, responsable: a.responsable || '', autor: a.responsable || 'MIGRACIÓN' });
                 });
             });
+            // Inicio del período en curso: lo que sea anterior ya está cerrado.
+            let _iniPeriodo = '';
+            try {
+                const _h = new Date();
+                const _d = (_h.getDate() >= 15)
+                    ? new Date(_h.getFullYear(), _h.getMonth(), 15)
+                    : new Date(_h.getFullYear(), _h.getMonth() - 1, 15);
+                _iniPeriodo = _d.getFullYear() + '-' + String(_d.getMonth() + 1).padStart(2, '0') + '-15';
+            } catch (e) { _iniPeriodo = ''; }
+
             const extRows = [];
+            let _donOmitidas = 0;
             Object.entries(rawExt).forEach(([socioId, lista]) => {
                 (Array.isArray(lista) ? lista : []).forEach(e => {
                     const fecha = String(e.fecha || '').substring(0, 10);
                     if (!fecha || !e.tipo) return;
+                    // Las donaciones de períodos ya cerrados NO se traen de vuelta.
+                    // La colecta se archiva a propósito (queda su copia en
+                    // Documentación); si la migración la reinserta, reaparece en el
+                    // historial del socio como si el descuento siguiera vivo.
+                    const _esDon = /donacion/i.test(String(e.tipo).normalize('NFD').replace(/[̀-ͯ]/g, ''));
+                    if (_esDon && _iniPeriodo && fecha < _iniPeriodo) { _donOmitidas++; return; }
                     extRows.push({ socio_id: String(socioId), fecha, tipo: e.tipo, monto: Number(e.monto || 0), detalle: e.detalle || '', autor: e.responsable || 'MIGRACIÓN' });
                 });
             });
+            if (_donOmitidas) console.log('[SB-MIGR]', _donOmitidas, 'donación(es) de períodos cerrados NO se re-migran');
             if (antRows.length === 0 && extRows.length === 0) {
                 // GAS sin anticipos en el período actual (inicio de período limpio)
                 // NO marcar el flag: el startup check lo confirmará en el siguiente reload
@@ -1600,9 +1618,20 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     let modoSb = _antModoSupabase;
                     if (!modoSb) {
                         try {
-                            const { data: mk } = await dbSoc.from('config_sistema').select('valor').eq('clave', 'anticipos_modo_supabase').maybeSingle();
+                            const { data: mk, error: mkErr } = await dbSoc.from('config_sistema').select('valor').eq('clave', 'anticipos_modo_supabase').maybeSingle();
+                            if (mkErr) throw mkErr;
                             if (mk && mk.valor === '1') { modoSb = true; _antModoSupabase = true; try { localStorage.setItem('_ant_modo_sb', '1'); } catch(e) {} }
-                        } catch(e) {}
+                        } catch(e) {
+                            // Si NO se pudo leer la marca, se asume que sí estamos en
+                            // modo Supabase. Antes se asumía lo contrario y se
+                            // re-migraba todo desde Sheets: el 16/09 eso resucitó las
+                            // 43 donaciones ya archivadas y 23 ausencias, al iniciar
+                            // sesión. Equivocarse hacia "no migrar" no rompe nada —los
+                            // datos se leen igual del GAS esa sesión—; equivocarse
+                            // hacia "migrar" revive lo que se archivó a propósito.
+                            console.warn('[SB] no se pudo leer el modo Supabase → NO se re-migra:', e.message);
+                            modoSb = true;
+                        }
                     }
                     if (modoSb) {
                         // Vacío real (archivado): no resucitar desde Sheets.

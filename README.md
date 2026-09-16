@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-16 — Las donaciones archivadas revivían solas desde Sheets (SW v129)
+
+- **Síntoma:** las donaciones de la colecta de agosto, ya archivadas, **volvieron a aparecer** en el historial de anticipos y ausencias del socio. Y volvieron **más**: 43 aportes en vez de los 41 originales, más los 2 externos y los 2 retiros de caja — **47 filas, $812.000**, todas recreadas de golpe hoy a las 10:00, justo al iniciar sesión.
+- **Causa.** La app tiene una migración automática Sheets → Supabase que corre cuando Supabase aparece vacío. Para que los anticipos archivados no resuciten, consulta una marca (`anticipos_modo_supabase`). Esa marca **estaba puesta**, pero si la consulta falla —red, proyecto reanudando— el `catch` la daba por ausente y **migraba igual**. Equivocarse hacia «migrar» revive todo lo que se archivó a propósito; equivocarse hacia «no migrar» no rompe nada, porque esa sesión lee del GAS. Ahora falla hacia el lado seguro.
+- **Segunda protección:** aunque la migración corra legítimamente, **nunca vuelve a traer donaciones de períodos ya cerrados**. Una colecta se archiva a propósito y su copia queda en Documentación; reinsertarla la hace ver como un descuento vigente.
+- **Tercera:** el historial del socio **ya no muestra donaciones de períodos cerrados**, aunque alguna quedara suelta. Desde la v118 ya no descontaban, pero seguían a la vista y parecían un descuento del mes en curso.
+- **Datos limpiados:** se borraron las 47 filas resucitadas (todas del 31 ago – 6 sep, ninguna del período en curso). La tabla `extras` queda solo con las 45 ausencias.
+- **Verificado:** con la lógica nueva, de seis filas de prueba se omiten las 3 donaciones de períodos cerrados y sí se migran la colecta del período en curso y las dos ausencias; y ante un fallo de lectura de la marca, la decisión pasa de «migrar» a «no migrar».
+- Archivos: `js/supabase-config.js` (`_migrarGasASupabase`, guarda de modo), `js/anticipos.js` (historial del socio). `supabase-config.js?v=68`, `anticipos.js?v=59`, SW `fondo-admin-v129`, versión visible **v129**.
+
 #### 2026-09-16 — Notas de admin: foto y nombre COMPLETO de quien la escribió (SW v128)
 
 - **El problema era real y grave para una auditoría.** Una nota escrita desde `propi.solicitada` llegaba con **solo el nombre de pila** y sin foto. Hay **seis pares de socios que comparten nombre**: Carlos Perez / Carlos Gomez, Sergio Bachmann / Sergio Duran, Yessica Araya / Yessica Vargas, Patricia Miralles / Patricia Cardenas, Camila Poffald / Camila Oyarzun y los dos de Comisión. Con «Carlos» no había manera de saber quién escribió.
