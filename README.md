@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-16 — Notas de admin: foto y nombre COMPLETO de quien la escribió (SW v128)
+
+- **El problema era real y grave para una auditoría.** Una nota escrita desde `propi.solicitada` llegaba con **solo el nombre de pila** y sin foto. Hay **seis pares de socios que comparten nombre**: Carlos Perez / Carlos Gomez, Sergio Bachmann / Sergio Duran, Yessica Araya / Yessica Vargas, Patricia Miralles / Patricia Cardenas, Camila Poffald / Camila Oyarzun y los dos de Comisión. Con «Carlos» no había manera de saber quién escribió.
+- **Causa de fondo:** la tabla `notas_recaudacion` **no guardaba el ID del socio**. La app lo enviaba (`socId`), pero no existía la columna donde ponerlo, y `autor` recibía solo `currentUser.Nombre`.
+- **Arreglo en el origen:** se agregó la columna `socio_id` a `notas_recaudacion` (nueva, opcional, sin tocar ninguna fila existente) y ahora la nota guarda **el ID y el nombre completo**.
+- **En pantalla:** cada nota muestra la **foto del socio (o su inicial) y su nombre y apellido**, más su área. Las notas de la Administración llevan su propio distintivo 🛡️.
+- **Con las notas antiguas no se inventa nada.** Las que quedaron con solo el nombre de pila y lo comparten varios socios se muestran como *«CARLOS · sin identificar: Carlos Perez o Carlos Gomez»*, con un avatar «?». Atribuirle la nota a uno al azar sería peor que decir que no se sabe. Si el nombre es único, se resuelve igual.
+- **Verificado** en navegador con los cuatro casos: nota nueva de un socio con foto, otra del socio que comparte nombre (sale su inicial y su apellido correcto), nota antigua ambigua y nota de la Administración.
+- Archivos: `js/notas.js` (`_notaSocioDe`, `_notaAutorHTML`), `js/supabase-config.js` (`getNotes`, `addNote`). `notas.js?v=34`, `supabase-config.js?v=67`, SW `fondo-admin-v128`, versión visible **v128**.
+
 #### 2026-09-16 — La foto del socio también donde salía solo la inicial (SW v127 / Horarios v8)
 
 - **Buscador de IDs** (Ayuda → Buscar ID de socio): mostraba siempre la inicial, aunque el socio tuviera foto. Ahora usa `avatarHTML`, el mismo helper que ya usaban Gestión de Socios y Mensajes.

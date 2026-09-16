@@ -2628,6 +2628,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     originalIndex: m.id,
                     fecha: m.created_at,
                     autor: m.autor || 'Admin',
+                    socId: m.socio_id || '',
                     mensaje: m.mensaje || '',
                     pinned: m.pinned || false,
                     reactions: m.reactions || {},
@@ -2644,6 +2645,7 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 await dbRec.from('notas_recaudacion').insert({
                     id: crypto.randomUUID(),
                     autor: body.autor || 'Admin',
+                    socio_id: body.socId || null,
                     mensaje: body.mensaje || '',
                     foto_url: body.foto_url || null,
                     destacados: body.destacados || null

@@ -33,6 +33,71 @@ function notasFormatearMensaje(texto) {
     });
 }
 
+
+// ── Quién escribió la nota: foto + nombre y apellido ──────────────────
+//
+// La nota guardaba solo el nombre de pila del socio. Con seis pares que lo
+// comparten —Carlos Perez / Carlos Gomez, Sergio Bachmann / Sergio Duran,
+// Yessica Araya / Yessica Vargas…— no había forma de saber quién la escribió.
+// Ahora se identifica por el `socio_id` que viaja con la nota; para las notas
+// antiguas, que no lo traen, se busca por nombre (hoy los nombres completos
+// son únicos, así que la mayoría se resuelve igual).
+function _notaSocioDe(n) {
+    const socios = (typeof cacheSocios !== 'undefined' && Array.isArray(cacheSocios)) ? cacheSocios : [];
+    if (n.socId) {
+        const porId = socios.find(s => String(s.id) === String(n.socId));
+        if (porId) return porId;
+    }
+    const autor = String(n.autor || '').trim().toLowerCase();
+    if (!autor || autor === 'admin' || autor === 'administración' || autor === 'administracion') return null;
+
+    // Nombre completo: coincide con uno solo, se resuelve.
+    const porCompleto = socios.find(s =>
+        ((s.nombre || '') + ' ' + (s.apellido || '')).trim().toLowerCase() === autor);
+    if (porCompleto) return porCompleto;
+
+    // Solo el nombre de pila (notas antiguas). Si más de un socio lo comparte,
+    // NO se elige uno: adivinar es peor que decir que no se sabe. Se devuelve
+    // la marca de ambigüedad para que la nota lo muestre.
+    const porPila = socios.filter(s => (s.nombre || '').trim().toLowerCase() === autor);
+    if (porPila.length === 1) return porPila[0];
+    if (porPila.length > 1) return { _ambiguo: true, _candidatos: porPila };
+    return null;
+}
+
+function _notaAutorHTML(n) {
+    const s = _notaSocioDe(n);
+
+    // Nota antigua cuyo nombre lo comparten varios socios: se dice quiénes
+    // podrían ser, en vez de atribuírsela a uno al azar.
+    if (s && s._ambiguo) {
+        const quienes = s._candidatos
+            .map(c => ((c.nombre || '') + ' ' + (c.apellido || '')).trim()).join(' o ');
+        return `<div style="display:flex;align-items:center;gap:6px;" title="La nota guardó solo el nombre de pila">
+            <div style="width:26px;height:26px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:13px;font-weight:800;flex-shrink:0;">?</div>
+            <span style="font-size:0.78em;color:#334155;font-weight:800;">${_htmlEscSoc(String(n.autor || '').toUpperCase())}</span>
+            <span style="font-size:0.68em;color:#b45309;font-weight:600;">· sin identificar: ${_htmlEscSoc(quienes)}</span>
+        </div>`;
+    }
+
+    if (!s) {
+        // Nota de la Administración: su propio distintivo, sin socio.
+        return `<div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#1e3a5f,#2980b9);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;flex-shrink:0;">🛡️</div>
+            <span style="font-size:0.78em;color:#334155;font-weight:800;">${_htmlEscSoc((n.autor || 'Administración').toUpperCase())}</span>
+        </div>`;
+    }
+    const completo = ((s.nombre || '') + ' ' + (s.apellido || '')).trim();
+    const avatar = (typeof avatarHTML === 'function')
+        ? avatarHTML(s.fotoUrl, s.nombre, 26)
+        : '';
+    return `<div style="display:flex;align-items:center;gap:6px;">
+        ${avatar}
+        <span style="font-size:0.78em;color:#334155;font-weight:800;">${_htmlEscSoc(completo.toUpperCase())}</span>
+        ${s.area ? `<span style="font-size:0.68em;color:#94a3b8;font-weight:600;">· ${_htmlEscSoc(s.area)}</span>` : ''}
+    </div>`;
+}
+
 function notasCrearElemento(n, idx) {
     const lastSeen = parseInt(localStorage.getItem('_rec_last_seen')) || 0;
     const isNew = lastSeen > 0 && new Date(n.fecha).getTime() > lastSeen;
@@ -77,7 +142,8 @@ function notasCrearElemento(n, idx) {
             <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
                 ${n.pinned?'<span style="background:#f59e0b;color:#fff;font-size:0.68em;font-weight:700;padding:1px 7px;border-radius:20px">📌 FIJADA</span>':''}
                 ${isNew?'<span style="background:#3b82f6;color:#fff;font-size:0.68em;font-weight:700;padding:1px 7px;border-radius:20px">NUEVO</span>':''}
-                <div style="font-size:0.75em;color:#7f8c8d;font-weight:600">${(n.autor||'Admin').toUpperCase()} &middot; ${new Date(n.fecha).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+                ${_notaAutorHTML(n)}
+                <div style="font-size:0.75em;color:#7f8c8d;font-weight:600">${new Date(n.fecha).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
             </div>
             <div style="display:flex;gap:4px;flex-shrink:0">
                 <button onclick="_notaPin('${rowIndex}',${!n.pinned})" style="background:none;border:1px solid #e2e8f0;border-radius:6px;padding:2px 7px;cursor:pointer;font-size:0.85em" title="${n.pinned?'Desfijar':'Fijar'}">${n.pinned?'📌':'📍'}</button>
