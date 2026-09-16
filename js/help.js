@@ -768,14 +768,17 @@ function ids_buscar(q) {
         return;
     }
     cont.innerHTML = matches.map(s => {
-        const inicial = (s.nombre || '?').charAt(0).toUpperCase();
+        // Foto del socio si la tiene; si no, su inicial (lo resuelve avatarHTML)
+        const avatar  = (typeof avatarHTML === 'function')
+            ? avatarHTML(s.fotoUrl, s.nombre, 38)
+            : '<div class="id-card-avatar">' + (s.nombre || '?').charAt(0).toUpperCase() + '</div>';
         const nombre  = (s.nombre + ' ' + s.apellido).trim();
         const area    = s.area || '';
         const id      = s.id || 'Sin ID';
         return (
             '<div class="id-card">'
             + '<div class="id-card-info">'
-            + '<div class="id-card-avatar">' + inicial + '</div>'
+            + avatar
             + '<div style="overflow:hidden;">'
             + '<div class="id-card-nombre">' + nombre + '</div>'
             + '<div class="id-card-area">' + area + '</div>'

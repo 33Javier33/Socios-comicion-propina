@@ -372,7 +372,7 @@ function calcVacacion(tipo, inicioISO){
 // ══════════ Carga de datos ══════════
 async function cargarBase(){
   const [rs, rt, rg, ra] = await Promise.all([
-    db.from('socios').select('id,nombre,apellido,area,contrato').eq('activo',true),
+    db.from('socios').select('id,nombre,apellido,area,contrato,foto_url').eq('activo',true),
     db.from('horarios_turnos').select('*').order('orden'),
     db.from('horarios_grupos').select('*').order('created_at'),
     db.from('horarios_socio_grupo').select('*')
@@ -419,6 +419,17 @@ function pintarAccesoDirecto(){
   const cont=document.getElementById('accesoDirecto'); if(!cont) return;
   const a=accesoLeer();
   if(!a || !a.id){ cont.style.display='none'; cont.innerHTML=''; return; }
+  // Avatar del socio: su foto si la subió, su inicial si no.
+  function _avatarSocio(s, px){
+    const n = (s && s.nombre) || '?';
+    const f = String((s && s.foto_url) || '').trim();
+    if (f) return `<div style="width:${px}px;height:${px}px;border-radius:9999px;flex-shrink:0;`
+      + `background-image:url('${f.replace(/'/g,'%27')}');background-size:cover;background-position:center;`
+      + `border:1px solid rgba(255,255,255,.15)"></div>`;
+    return `<div class="rounded-full bg-sky-500/15 text-sky-300 flex items-center justify-center font-bold"`
+      + ` style="width:${px}px;height:${px}px;flex-shrink:0;font-size:${Math.round(px*0.42)}px">`
+      + esc(n.charAt(0).toUpperCase()) + `</div>`;
+  }
   const ini=(a.nombre||'?').charAt(0).toUpperCase();
   cont.style.display='block';
   cont.innerHTML=`
@@ -460,7 +471,7 @@ function renderSocioLista(){
     const esAcc = acc && acc.id===s.id;
     return `<div class="card p-3 flex items-center gap-3 ${esAcc?'':'hover:border-sky-500'} transition-colors" style="${esAcc?'border-color:#38bdf866;background:#0c4a6e1f;':''}">
       <button onclick="socioElegido('${s.id}')" style="flex:1;display:flex;align-items:center;gap:12px;background:none;border:none;cursor:pointer;text-align:left;padding:0;color:inherit;font-family:inherit;min-width:0">
-        <div class="w-9 h-9 rounded-full bg-sky-500/15 text-sky-300 flex items-center justify-center font-bold text-sm" style="flex-shrink:0">${esc((s.nombre||'?').charAt(0))}</div>
+        ${_avatarSocio(s, 36)}
         <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(s.nombre)} ${esc(s.apellido)}</div><div class="text-[11px] text-slate-400">${esc(s.area)}</div></div>
       </button>
       <button onclick="accesoAlternar('${s.id}', event)" title="${esAcc?'Quitar acceso directo':'Dejar como acceso directo en este teléfono'}"

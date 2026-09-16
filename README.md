@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-16 — La foto del socio también donde salía solo la inicial (SW v127 / Horarios v8)
+
+- **Buscador de IDs** (Ayuda → Buscar ID de socio): mostraba siempre la inicial, aunque el socio tuviera foto. Ahora usa `avatarHTML`, el mismo helper que ya usaban Gestión de Socios y Mensajes.
+- **App de Horarios** (`index2.html`): en la lista donde el socio elige su nombre para entrar salía solo la inicial. Ahora sale su foto si la tiene. La consulta de socios pasa a traer `foto_url`, que antes ni se pedía.
+- **Si no hay foto, no cambia nada**: queda la inicial de color de siempre. Hoy solo **3 de 67** socios tienen foto, así que ese es el caso normal.
+- Archivos: `js/help.js`, `index2.html`. `help.js?v=39`, SW `fondo-admin-v127` y `horarios-mesas-v8`, versión visible **v127**.
+
 #### 2026-09-16 — Notas de administrador con formato, como en Word (SW v126)
 
 - **Editor nuevo** en «Nueva Nota»: **negrita**, *cursiva*, subrayado, alinear a la izquierda / centro / derecha, listas con viñetas y numeradas, y quitar formato. Los botones se **marcan activos** según dónde esté el cursor. Funcionan también los atajos Ctrl+B / Ctrl+I / Ctrl+U.
