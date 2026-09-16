@@ -232,6 +232,15 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-16 — Auditoría: el filtro de acción no filtraba de verdad (SW v123)
+
+- **Síntoma:** elegir «Registrar Anticipo» no mostraba nada, y lo mismo con otras acciones.
+- **Causa — el filtro era de mentira.** `getAuditoria` trae las **últimas 1000 filas** y el menú filtraba sobre ese trozo, en el navegador. Con **4.571 filas** en la tabla eso solo alcanza hasta el 7 de septiembre: «Registrar Anticipo» mostraba **29 de 182**, y acotando por fecha a un mes anterior daba **cero**, aunque los registros estuvieran ahí. Ahora, si hay acción, usuario o rango de fechas, **la consulta se hace en la base** (`getAuditoriaFiltrada`) y devuelve todo el historial, no el trozo cargado.
+- **Causa — el menú estaba escrito a mano y no calzaba.** Tenía opciones que **no ocurren nunca** —«Editar Anticipo», «Agregar Socio», «Editar Socio», «Eliminar Socio», «Actualizar Saldo Anterior», «Cierre de Mes», «Agregar Batch Días PT»—, que siempre iban a mostrar cero. Y le **faltaban acciones reales y frecuentes**: «Cobrado — Archivar anticipos del socio» (112), «Sobre retirado» (74), «Registrar Extra» (36), «Registrar RUT» (27), «Registrar Correo» (25), «Eliminar Recaudación» (18), «Subir Documento» (16) y una docena más, que no se podían filtrar. Ahora el menú **se arma con las acciones que existen en la tabla**, cada una con su cantidad (`getAuditoriaAcciones`). Si la consulta falla, queda la lista fija como respaldo.
+- **El detalle ahora dice a quién y quién.** «Registrar Anticipo» guardaba como detalle solo *«1 anticipo(s) — Total: $80.000»*: el nombre del socio estaba en el registro pero no se mostraba. Ahora cada fila lista **👤 socio · monto · fecha** —los tres si el registro trae varios— y **🧾 Responsable**, que es quien hizo el movimiento. Sirve para cualquier acción que involucre socios, no solo anticipos, porque unifica las tres formas en que se guarda el socio (`socios[]`, `nombre`, `socio_nombre`).
+- **Verificado** en navegador: el menú se arma con las acciones reales y sus conteos; filtrar «Registrar Anticipo» encuentra los que **no estaban en el trozo cargado**; y acotando al 15 jul – 14 ago —el rango que antes daba cero— aparecen los registros con el socio, el monto y el responsable de cada uno.
+- Archivos: `js/auditoria.js`, `js/supabase-config.js`, `index.html`. `auditoria.js?v=33`, `supabase-config.js?v=64`, SW `fondo-admin-v123`, versión visible **v123**.
+
 #### 2026-09-16 — Sobres sin retirar: quién tiene plata guardada acá (SW v122)
 
 - **El problema:** al cerrar el mes cada socio queda *cobrado* (se llevó la plata) o *en sobre* (quedó guardada). Ese estado vivía solo en `cierres_mes`, **que se vacía al reiniciar el período** — así que apenas se cerraba el mes se perdía de vista quién tenía plata sin retirar.

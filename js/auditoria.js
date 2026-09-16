@@ -34,6 +34,8 @@ async function auditoria_cargar() {
         auditoria_actualizarStats();
         auditoria_renderizar(auditoria_filtrarDatos());
         toggleLoader(false);
+        // El menú de acciones se arma con las que existen de verdad en la tabla
+        auditoria_cargarAcciones();
 
         // Cargar materiales desde GAS en background y fusionar cuando lleguen
         callApiSocios('getAllMaterialesDesdeSheets').then(resMat => {
@@ -63,6 +65,63 @@ async function auditoria_cargar() {
     } catch(e) {
         showToast('Error de conexión', 'error');
         toggleLoader(false);
+    }
+}
+
+// ── El menú de acciones se arma con las que EXISTEN de verdad ──
+//
+// Antes era una lista fija escrita a mano: tenía opciones que nunca ocurren
+// ("Editar Anticipo", "Agregar Socio", "Cierre de Mes"…) —que siempre mostraban
+// cero— y le faltaban acciones reales y frecuentes, como "Cobrado — Archivar
+// anticipos del socio" (112) o "Sobre retirado" (74), que no se podían filtrar.
+async function auditoria_cargarAcciones() {
+    const sel = document.getElementById('aud-filtro-accion');
+    if (!sel) return;
+    try {
+        const res = await callApiSocios('getAuditoriaAcciones', {});
+        const lista = (res && res.status === 'success' && Array.isArray(res.data)) ? res.data : [];
+        if (!lista.length) return;                       // sin datos, se deja el menú como está
+        const actual = sel.value;
+        sel.innerHTML = '<option value="">— Todas —</option>'
+            + lista.map(a => `<option value="${_audEsc(a.accion)}">${_audEsc(a.accion)} (${a.n})</option>`).join('');
+        if (actual && lista.some(a => a.accion === actual)) sel.value = actual;
+    } catch (e) { /* si falla, queda el menú fijo */ }
+}
+
+function _audEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// ¿Los filtros puestos exigen ir a buscar a la base?
+//
+// La pantalla arranca con las últimas 1000 filas. Con 4.571 en la tabla, eso
+// alcanza para lo reciente pero no para buscar: filtrar "Registrar Anticipo"
+// sobre ese trozo daba 29 de 182, y acotando por fecha a un mes anterior daba
+// CERO aunque los registros existieran. Si hay acción o rango de fechas, se
+// consulta la base en vez de filtrar el trozo cargado.
+function _audNecesitaBase() {
+    return !!(audFiltroAccion || audFiltroDesde || audFiltroHasta || audFiltroUsuario);
+}
+
+async function auditoria_buscarEnBase() {
+    const tbody = document.getElementById('auditoria-tabla-body');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#94a3b8;font-size:0.9em;">Buscando en todo el historial…</td></tr>';
+    try {
+        const res = await callApiSocios('getAuditoriaFiltrada', {
+            accion: audFiltroAccion || undefined,
+            usuario: audFiltroUsuario || undefined,
+            desde: audFiltroDesde || undefined,
+            hasta: audFiltroHasta || undefined
+        });
+        let filas = (res && res.status === 'success' && Array.isArray(res.data)) ? res.data : [];
+        // El filtro de texto libre sí se aplica acá: busca dentro de la fila.
+        if (audFiltroTexto) {
+            const t = audFiltroTexto.toLowerCase();
+            filas = filas.filter(r => JSON.stringify(r).toLowerCase().includes(t));
+        }
+        auditoria_renderizar(filas);
+    } catch (e) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#dc2626;font-size:0.9em;">No se pudo buscar en el historial.</td></tr>';
     }
 }
 
@@ -232,10 +291,22 @@ function auditoria_renderizar(datos) {
             const bits = [];
             if (met)    bits.push('🔑 ' + met);
             if (r.area) bits.push('📍 Área ' + r.area);
-            if (bits.length) {
-                detalleHtml = (r.detalle || '') +
-                    `<div style="font-size:0.74em;color:#94a3b8;margin-top:3px;">${bits.join(' &nbsp;·&nbsp; ')}</div>`;
-            }
+
+            // Un anticipo tiene que decir A QUIÉN y QUIÉN lo hizo. El detalle
+            // guardado de "Registrar Anticipo" dice solo «1 anticipo(s) — Total:
+            // $80.000»: el nombre del socio está en `_extra.socios` y no se
+            // mostraba. El responsable es el usuario de la sesión que lo registró.
+            const socios = _audSociosDe(ex);
+            const extraHtml = socios.length
+                ? `<div style="font-size:0.8em;color:#0f172a;margin-top:2px;">${socios.map(s =>
+                        `<div>👤 <b>${_audEsc(s.nombre)}</b>${s.monto != null ? ' · ' + _audMonto(s.monto) : ''}${s.fecha ? ' · ' + _audEsc(s.fecha) : ''}</div>`
+                    ).join('')}</div>`
+                : '';
+            const respHtml = r.usuario
+                ? `<div style="font-size:0.74em;color:#64748b;margin-top:2px;">🧾 Responsable: <b>${_audEsc(r.usuario)}</b></div>` : '';
+
+            detalleHtml = (r.detalle || '') + extraHtml + respHtml
+                + (bits.length ? `<div style="font-size:0.74em;color:#94a3b8;margin-top:3px;">${bits.join(' &nbsp;·&nbsp; ')}</div>` : '');
         }
 
         return `<tr class="aud-row">
@@ -269,7 +340,10 @@ function auditoria_aplicarFiltros() {
     audFiltroDesde   = document.getElementById('aud-filtro-desde')?.value   || '';
     audFiltroHasta   = document.getElementById('aud-filtro-hasta')?.value   || '';
     audFiltroTexto   = (document.getElementById('aud-filtro-texto')?.value  || '').trim();
-    auditoria_renderizar(auditoria_filtrarDatos());
+    // Con acción, usuario o fechas se busca en TODA la tabla; sin filtros, se
+    // muestra lo ya cargado (lo reciente), que es instantáneo.
+    if (_audNecesitaBase()) auditoria_buscarEnBase();
+    else auditoria_renderizar(auditoria_filtrarDatos());
 }
 
 function auditoria_limpiarFiltros() {
@@ -627,4 +701,29 @@ function auditoria_reimprimirCanje(folio) {
         + '</div></body></html>';
 
     printHTML(contenido, fileName);
+}
+
+// ── Socios involucrados en una acción, sea cual sea la forma del registro ──
+//
+// Cada acción guarda el socio a su manera: "Registrar Anticipo" trae un array
+// `socios`, "Retiro Anticipo" trae `nombre` suelto, otras traen `socio_nombre`.
+// Esto las unifica para poder mostrar siempre a quién corresponde el movimiento.
+function _audSociosDe(ex) {
+    if (!ex || typeof ex !== 'object') return [];
+    if (Array.isArray(ex.socios) && ex.socios.length) {
+        return ex.socios.map(s => ({
+            nombre: s.nombre || s.socio_nombre || s.id || '—',
+            monto: (s.monto != null ? s.monto : null),
+            fecha: s.fecha || ''
+        }));
+    }
+    const nombre = ex.nombre || ex.socio_nombre || ex.socioNombre || '';
+    if (nombre) return [{ nombre, monto: (ex.monto != null ? ex.monto : null), fecha: ex.fecha || '' }];
+    return [];
+}
+
+function _audMonto(v) {
+    const n = Number(v);
+    if (!isFinite(n)) return '';
+    return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(n);
 }

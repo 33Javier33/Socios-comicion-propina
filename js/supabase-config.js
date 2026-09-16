@@ -1081,6 +1081,62 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 return _mockOk({ status: 'success', data: Object.values(byP) });
             } catch (e) { return _mockOk({ status: 'error', message: e.message, data: [] }); }
         }
+        // ── AUDITORÍA: lista real de acciones y filtrado EN LA BASE ──
+        //
+        // El filtro de acción era de mentira: `getAuditoria` trae las últimas
+        // 1000 filas y el select filtraba sobre esas. Con 4.571 filas en la
+        // tabla, elegir "Registrar Anticipo" mostraba 29 de 182 — y si además
+        // se acotaba por fecha a un mes anterior, no mostraba NADA, aunque los
+        // registros existieran. Ahora el filtro se aplica en la consulta.
+        //
+        // Normaliza una fila de `auditoria` al formato que espera la pantalla.
+        const _audNorm = r => ({
+            fecha: r.created_at,
+            usuario: r.usuario || '',
+            accion: r.accion || '',
+            detalle: (r.datos_extra && r.datos_extra.detalle) || '',
+            idAfectado: (r.datos_extra && r.datos_extra.id_afectado) || r.folio || '',
+            _fuente: 'supabase',
+            _extra: r.datos_extra || {},
+            _antes: r.snapshot_antes,
+            _despues: r.snapshot_despues,
+            area: r.area || ''
+        });
+
+        if (action === 'getAuditoriaAcciones') {
+            try {
+                // Supabase corta en 1000 por consulta: se pagina hasta el final.
+                const cuenta = {};
+                for (let desde = 0; ; desde += 1000) {
+                    const { data, error } = await dbSoc.from('auditoria')
+                        .select('accion').range(desde, desde + 999);
+                    if (error) throw error;
+                    (data || []).forEach(r => { const a = r.accion || ''; if (a) cuenta[a] = (cuenta[a] || 0) + 1; });
+                    if (!data || data.length < 1000) break;
+                }
+                const lista = Object.entries(cuenta)
+                    .map(([accion, n]) => ({ accion, n }))
+                    .sort((a, b) => a.accion.localeCompare(b.accion, 'es'));
+                return _mockOk({ status: 'success', data: lista });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message, data: [] }); }
+        }
+
+        if (action === 'getAuditoriaFiltrada') {
+            try {
+                let q = dbSoc.from('auditoria')
+                    .select('id, usuario, accion, area, folio, snapshot_antes, snapshot_despues, datos_extra, created_at')
+                    .order('created_at', { ascending: false })
+                    .limit(Math.min(parseInt(body?.limit || 0) || 3000, 5000));
+                if (body?.accion)  q = q.eq('accion', body.accion);
+                if (body?.usuario) q = q.ilike('usuario', '%' + body.usuario + '%');
+                if (body?.desde)   q = q.gte('created_at', body.desde + 'T00:00:00');
+                if (body?.hasta)   q = q.lte('created_at', body.hasta + 'T23:59:59.999');
+                const { data, error } = await q;
+                if (error) throw error;
+                return _mockOk({ status: 'success', data: (data || []).map(_audNorm) });
+            } catch (e) { return _mockOk({ status: 'error', message: e.message, data: [] }); }
+        }
+
         // ── getSobresPendientes → quién no ha retirado su sobre ──
         //
         // Se lee del HISTORIAL, no de `cierres_mes`: esa tabla se vacía al
