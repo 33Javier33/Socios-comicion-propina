@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-16 — «Período ant.» mostraba la foto del cierre fallido (SW v121)
+
+- **Síntoma:** el banner de Gestión decía *«Período ant. (septiembre 2026): −$229.807»* cuando el cierre de agosto-septiembre fue **+$31.993**.
+- **De dónde sale ese número:** de `saldos_cierre_mes`, una foto del total de saldos que toma **«Reiniciar Anticipos»**. No la calcula el cierre: es una lectura de `saldos_socio` en el momento del reinicio.
+- **Causa 1 — la foto se pisaba.** El guardado era un `upsert` con `onConflict: 'periodo'`. Al reiniciar los anticipos **una segunda vez**, la foto buena (**+$32.193**, guardada a las 20:39) quedó reemplazada por la del cierre fallido (−$229.807). Ahora **no se pisa una foto existente**: si el período ya tiene la suya, se conserva y queda anotado en Auditoría.
+- **Causa 2 — comparaba peras con manzanas.** La foto sumaba **todos** los saldos, incluido Gastos Comisión, mientras que el total en vivo que va justo al lado **sí lo excluye** (`getTotalRemanentes`, porque retira completo y no lleva remanente). Ahora la foto también lo excluye: para septiembre son **$31.993 sobre 63 socios**, no $32.193 sobre 67.
+- El guardado dejó de ser «lanzar y olvidar»: ahora se espera el resultado y los errores se ven.
+- **Verificado** reproduciendo la lógica con los datos reales: la foto del cierre bueno da **31.993 / 63 socios**, y un segundo reinicio del mismo período **no la sobrescribe**.
+- **Falta reparar el dato ya guardado:** la fila `SEPTIEMBRE_2026` sigue con −$229.807 y hay que dejarla en $31.993 / 63. No se tocó la base.
+- Archivos: `js/supabase-config.js`, `index.html`. `supabase-config.js?v=62`, SW `fondo-admin-v121`, versión visible **v121**.
+
 #### 2026-09-15 — Reutilizar un saldo del historial con un botón (SW v120)
 
 - En **Saldo Mes Anterior → «📜 Ver historial de saldos guardados»**, cada registro tiene ahora un botón **«↩️ Usar»** que lo vuelve a dejar como saldo anterior del socio. Antes el historial solo se podía mirar: para deshacer un cierre mal hecho había que leer el monto y volver a escribirlo a mano, con el riesgo de tipearlo mal.

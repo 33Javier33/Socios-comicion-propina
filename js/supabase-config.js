@@ -778,14 +778,45 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 const { error: _histErr } = await dbSoc.from('anticipos_historial').insert(histRows);
                 if (_histErr) console.error('[sb] error archivando anticipos_historial:', _histErr.message);
             }
-            // 3. Guardar snapshot de saldos_socio en saldos_cierre_mes antes de limpiar
-            dbSoc.from('saldos_socio').select('monto').then(({ data: snap }) => {
-                const totalSnap = (snap || []).reduce((s, r) => s + Number(r.monto || 0), 0);
-                dbSoc.from('saldos_cierre_mes').upsert(
-                    { id: crypto.randomUUID(), periodo, datos: { total: totalSnap, count: (snap || []).length } },
-                    { onConflict: 'periodo' }
-                ).then(({ error }) => { if (error) console.error('[sb] error guardando saldos_cierre_mes:', error.message); });
-            });
+            // 3. Guardar snapshot de saldos_socio en saldos_cierre_mes antes de limpiar.
+            //
+            // Es la cifra que sale en el banner como "Período ant.". Dos arreglos
+            // sobre cómo se hacía antes:
+            //
+            //  · NO se pisa un snapshot que ya exista para el mismo período. Antes
+            //    el upsert con onConflict:'periodo' lo sobrescribía: al reiniciar
+            //    los anticipos por segunda vez, la foto buena (+$32.193) quedó
+            //    reemplazada por la del cierre fallido (−$229.807).
+            //  · Se EXCLUYE Gastos Comisión, que retira completo y no lleva
+            //    remanente. El total en vivo que va al lado ya lo excluye
+            //    (`getTotalRemanentes`), así que incluirlo acá comparaba una cifra
+            //    contra otra que no medía lo mismo.
+            try {
+                const { data: yaHay } = await dbSoc.from('saldos_cierre_mes')
+                    .select('periodo').eq('periodo', periodo).limit(1);
+                if (yaHay && yaHay.length) {
+                    console.warn('[sb] saldos_cierre_mes: ya existe la foto de', periodo, '— no se pisa');
+                    _sbAudit('Snapshot de período conservado', {
+                        detalle: `Ya existía la foto de ${periodo}; se conserva la original`,
+                        datos: { periodo }
+                    });
+                } else {
+                    const [{ data: snap }, { data: socsSnap }] = await Promise.all([
+                        dbSoc.from('saldos_socio').select('id, monto'),
+                        dbSoc.from('socios').select('id, area')
+                    ]);
+                    const idsComision = new Set((socsSnap || []).filter(s => {
+                        const a = String(s.area || '').toLowerCase();
+                        return a.includes('gasto') || a.includes('comision') || a.includes('comisión');
+                    }).map(s => String(s.id)));
+                    const cuentan = (snap || []).filter(r => !idsComision.has(String(r.id)));
+                    const totalSnap = cuentan.reduce((s, r) => s + Number(r.monto || 0), 0);
+                    const { error: snapErr } = await dbSoc.from('saldos_cierre_mes').insert(
+                        { id: crypto.randomUUID(), periodo, datos: { total: totalSnap, count: cuentan.length } }
+                    );
+                    if (snapErr) console.error('[sb] error guardando saldos_cierre_mes:', snapErr.message);
+                }
+            } catch (eSnap) { console.error('[sb] snapshot saldos_cierre_mes:', eSnap.message); }
             _sbAudit('Reiniciar Anticipos', {
                 detalle: `Período archivado: ${periodo} | ${activos?.length || 0} anticipos`,
                 datos: { periodo, cantidad_archivada: activos?.length || 0 }
