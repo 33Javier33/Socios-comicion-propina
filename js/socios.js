@@ -325,10 +325,20 @@ function prepararEdicion(id) {
 }
 
 async function eliminarSocio(id) {
-    if(!confirm('¿Eliminar socio?')) return;
+    if (!confirm('¿Eliminar socio?\n\nSi tiene movimientos registrados no se borra: se da de baja y desaparece de las listas, pero su historial se conserva.')) return;
     toggleLoader(true, "Eliminando...");
-    try { await callApiSocios('deleteSocio', { socioId: id }); showToast('Eliminado', 'error'); fetchSociosDeGoogle(); }
-    catch(e) { showToast('Error', 'error'); toggleLoader(false); }
+    try {
+        const res = await callApiSocios('deleteSocio', { socioId: id });
+        // El aviso dice lo que REALMENTE pasó: borrado de verdad o dado de baja.
+        if (res && res.modo === 'desactivado') {
+            showToast(`${res.nombre || 'Socio'} dado de baja · conserva ${res.movimientos} registro(s) de historial`, 'success');
+        } else {
+            showToast('Socio eliminado', 'success');
+        }
+        try { localStorage.removeItem(CACHE_KEY_SOCIOS); } catch(e) {}
+        fetchSociosDeGoogle();
+    }
+    catch(e) { showToast('No se pudo eliminar: ' + (e.message || e), 'error'); toggleLoader(false); }
 }
 
 async function subirPuntosSocio(id, nombre, puntosNuevos) {
@@ -690,10 +700,18 @@ function pendientes_editar(id) {
 }
 
 function pendientes_eliminar(id, nombre) {
-    if (!confirm('¿Eliminar a ' + nombre + '?\nEsta acción no se puede deshacer.')) return;
+    if (!confirm('¿Eliminar a ' + nombre + '?\n\nSi tiene movimientos registrados no se borra: se da de baja y desaparece de las listas, pero su historial se conserva.')) return;
     toggleLoader(true, 'Eliminando...');
     callApiSocios('deleteSocio', { socioId: id })
-        .then(() => { showToast('Socio eliminado', 'success'); fetchSociosDeGoogle(); })
+        .then(res => {
+            if (res && res.modo === 'desactivado') {
+                showToast(`${nombre} dado de baja · conserva ${res.movimientos} registro(s)`, 'success');
+            } else {
+                showToast('Socio eliminado', 'success');
+            }
+            try { localStorage.removeItem(CACHE_KEY_SOCIOS); } catch(e) {}
+            fetchSociosDeGoogle();
+        })
         .catch(() => showToast('Error al eliminar', 'error'))
         .finally(() => toggleLoader(false));
 }

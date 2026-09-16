@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-16 — No se podía borrar un socio: alta, edición y baja nunca llegaban a Supabase (SW v125)
+
+- **Causa.** `deleteSocio`, `addSocio` y `updateSocio` **no tenían handler**: se iban derecho a la planilla (GAS). Pero la lista de socios se **lee de Supabase**, y el sync de vuelta (`_seedSociosToSupabase`) es un **upsert que solo agrega y actualiza — nunca borra**. Por eso borrar un socio no se veía jamás, y editar nombre, área o contrato solo aparecía cuando el sync lo traía de vuelta. De `updateSocio` únicamente el campo **Puntos** tenía camino propio a Supabase.
+- **Señal que lo confirmaba:** en 4.571 registros de Auditoría **no había ni uno solo** de «Eliminar Socio», «Editar Socio» ni «Agregar Socio» — esas rutas nunca pasaban por la capa que audita.
+- **Borrar ahora distingue dos casos**, porque los 67 socios tienen historial y borrarlos dejaría anticipos, cierres y desgloses sin dueño:
+  - **Sin ningún movimiento** → se borra de verdad.
+  - **Con historial** → se **da de baja** (`activo = false`): desaparece de las listas y el historial queda intacto.
+  - El aviso dice cuál de las dos cosas pasó y cuántos registros conserva, para no dar por borrado algo que sigue ahí. La confirmación lo advierte antes.
+- **La lista de socios ahora filtra por `activo`**, así que el dado de baja desaparece de verdad de todas las pantallas.
+- **Editar un socio** escribe en Supabase nombre, apellido, área, contrato y las dos fechas, y recién después sincroniza la planilla.
+- **Las tres acciones quedan en Auditoría**, con el socio y el detalle de lo que cambió.
+- **Verificado** en navegador con los dos caminos: un socio con 8 registros de historial queda `activo:false` y avisa «dado de baja · conserva 8 registro(s)»; uno sin movimientos se borra y avisa «Socio eliminado»; cancelar no ejecuta nada; y editar escribe los seis campos y deja el registro en Auditoría.
+- Archivos: `js/supabase-config.js`, `js/socios.js`, `index.html`. `supabase-config.js?v=66`, `socios.js?v=42`, SW `fondo-admin-v125`, versión visible **v125**.
+
 #### 2026-09-16 — Auditoría: el detalle ahora dice a qué socio afectó cada movimiento (SW v124)
 
 - **Faltaba lo esencial.** Un «Actualizar Anticipo» mostraba *«Fecha: 2026-08-25 | Monto: $50.000»* y el responsable, pero **no de qué socio**. Lo mismo en varias acciones más. En una auditoría eso es justo lo que hace falta.

@@ -300,7 +300,11 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         try {
             // 1. Intentar Supabase primero
             const sbRes = await _origFetch(
-                `${_SB_URL_SOC}/rest/v1/socios?select=id,nombre,apellido,area,contrato,fecha_ingreso,fecha_inicio_puntos,puntos,rut,foto_url,correo&order=nombre.asc`,
+                // `activo=is.true` deja fuera a los socios dados de baja que
+                // conservan historial: desaparecen de las listas sin borrar sus
+                // movimientos. (`is.true` y no `not.is.false` a propósito: si
+                // alguna fila quedara con activo nulo, se ve y se corrige.)
+                `${_SB_URL_SOC}/rest/v1/socios?select=id,nombre,apellido,area,contrato,fecha_ingreso,fecha_inicio_puntos,puntos,rut,foto_url,correo&activo=is.true&order=nombre.asc`,
                 { headers: { 'apikey': _SB_KEY_SOC, 'Authorization': 'Bearer ' + _SB_KEY_SOC } }
             );
             const sbData = sbRes.ok ? await sbRes.json() : [];
@@ -1419,6 +1423,92 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         }
 
         // ── updateSocio con Puntos → actualizar socios.puntos (misma tabla que lee propi.solicitada) ─
+        // ── ALTA / EDICIÓN / BAJA DE SOCIOS ──
+        //
+        // Estas tres acciones NO tenían handler: se iban derecho al GAS (la
+        // planilla). Pero la lista de socios se LEE de Supabase, y el sync de
+        // vuelta (`_seedSociosToSupabase`) es un upsert que solo agrega y
+        // actualiza — nunca borra. Resultado: borrar un socio no se veía nunca,
+        // y editarlo solo se reflejaba cuando el sync lo traía de vuelta.
+        // Tampoco quedaba nada en Auditoría, por eso no había ni un solo
+        // registro de "Eliminar Socio" en todo el historial.
+
+        // ── deleteSocio ──
+        // Si el socio no tiene NINGÚN movimiento, se borra de verdad. Si tiene
+        // historial (anticipos, cierres, desglose…), borrarlo dejaría esos
+        // registros sin dueño: en ese caso se DESACTIVA, desaparece de las
+        // listas y el historial queda intacto. El aviso dice cuál de las dos
+        // cosas pasó, para no dar por borrado algo que sigue ahí.
+        if (action === 'deleteSocio') {
+            const sid = String(body.socioId || body.id || '');
+            if (!sid) return _mockOk({ status: 'error', message: 'Falta el socio' });
+            try {
+                const socRes = await dbSoc.from('socios').select('nombre, apellido').eq('id', sid).limit(1);
+                const soc = (socRes.data || [])[0] || {};
+                const nombre = `${soc.nombre || ''} ${soc.apellido || ''}`.trim() || sid;
+
+                const tablas = ['anticipos', 'extras', 'retiros_anticipos', 'anticipos_historial',
+                                'cierres_mes', 'cierres_mes_historial', 'saldos_socio', 'dias_pt'];
+                let movimientos = 0;
+                const detalleTablas = {};
+                for (const t of tablas) {
+                    const col = (t === 'saldos_socio') ? 'id' : 'socio_id';
+                    const { count } = await dbSoc.from(t).select('*', { count: 'exact', head: true }).eq(col, sid);
+                    if (count) { movimientos += count; detalleTablas[t] = count; }
+                }
+
+                let modo;
+                if (movimientos === 0) {
+                    const { error } = await dbSoc.from('socios').delete().eq('id', sid);
+                    if (error) throw error;
+                    modo = 'eliminado';
+                } else {
+                    const { error } = await dbSoc.from('socios').update({ activo: false }).eq('id', sid);
+                    if (error) throw error;
+                    modo = 'desactivado';
+                }
+                _sbAudit('Eliminar Socio', {
+                    idAfectado: sid,
+                    detalle: `Socio: ${nombre} | ${modo === 'eliminado'
+                        ? 'eliminado (sin movimientos)'
+                        : 'desactivado — conserva ' + movimientos + ' registro(s) de historial'}`,
+                    datos: { socio_id: sid, nombre, modo, movimientos, tablas: detalleTablas }
+                });
+                _origFetch(url, options).catch(() => {});   // la planilla, en segundo plano
+                return _mockOk({ status: 'success', modo, movimientos, nombre });
+            } catch (e) {
+                console.error('[sb] deleteSocio:', e.message);
+                return _origFetch(url, options);           // si Supabase falla, que lo intente el GAS
+            }
+        }
+
+        // ── updateSocio general (no solo Puntos) ──
+        if (action === 'updateSocio' && body.updates && body.updates.Puntos === undefined) {
+            const sid = String(body.socioId || '');
+            const u = body.updates || {};
+            const upd = {};
+            if (u.Nombre            !== undefined) upd.nombre              = u.Nombre || '';
+            if (u.Apellido          !== undefined) upd.apellido            = u.Apellido || '';
+            if (u.Area              !== undefined) upd.area                = u.Area || '';
+            if (u.TipoContrato      !== undefined) upd.contrato            = u.TipoContrato || '';
+            if (u.FechaIngreso      !== undefined) upd.fecha_ingreso       = u.FechaIngreso || null;
+            if (u.FechaInicioPuntos !== undefined) upd.fecha_inicio_puntos = u.FechaInicioPuntos || null;
+            if (sid && Object.keys(upd).length) {
+                try {
+                    const { error } = await dbSoc.from('socios').update(upd).eq('id', sid);
+                    if (error) throw error;
+                    _invalidarDatosSocio(sid);
+                    _sbAudit('Editar Socio', {
+                        idAfectado: sid,
+                        detalle: `Socio: ${(u.Nombre || '') + ' ' + (u.Apellido || '')}`.trim()
+                               + ` | ${Object.keys(upd).join(', ')}`,
+                        datos: { socio_id: sid, nombre: `${u.Nombre || ''} ${u.Apellido || ''}`.trim(), cambios: upd }
+                    });
+                } catch (e) { console.error('[sb] updateSocio:', e.message); }
+            }
+            return _origFetch(url, options);   // la planilla manda su copia igual
+        }
+
         if (action === 'updateSocio' && body.updates && body.updates.Puntos !== undefined) {
             const socioId = String(body.socioId || '');
             if (socioId) {
