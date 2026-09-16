@@ -296,10 +296,10 @@ function auditoria_renderizar(datos) {
             // guardado de "Registrar Anticipo" dice solo «1 anticipo(s) — Total:
             // $80.000»: el nombre del socio está en `_extra.socios` y no se
             // mostraba. El responsable es el usuario de la sesión que lo registró.
-            const socios = _audSociosDe(ex);
+            const socios = _audSociosDe(ex, r);
             const extraHtml = socios.length
                 ? `<div style="font-size:0.8em;color:#0f172a;margin-top:2px;">${socios.map(s =>
-                        `<div>👤 <b>${_audEsc(s.nombre)}</b>${s.monto != null ? ' · ' + _audMonto(s.monto) : ''}${s.fecha ? ' · ' + _audEsc(s.fecha) : ''}</div>`
+                        `<div>👤 <b>${_audEsc(s.nombre)}</b>${s.monto != null ? ' · ' + _audMonto(s.monto) : ''}${s.fecha ? ' · ' + _audEsc(s.fecha) : ''}${s.tipo ? ' · ' + _audEsc(s.tipo) : ''}</div>`
                     ).join('')}</div>`
                 : '';
             const respHtml = r.usuario
@@ -708,18 +708,50 @@ function auditoria_reimprimirCanje(folio) {
 // Cada acción guarda el socio a su manera: "Registrar Anticipo" trae un array
 // `socios`, "Retiro Anticipo" trae `nombre` suelto, otras traen `socio_nombre`.
 // Esto las unifica para poder mostrar siempre a quién corresponde el movimiento.
-function _audSociosDe(ex) {
-    if (!ex || typeof ex !== 'object') return [];
+function _audSociosDe(ex, r) {
+    if (!ex || typeof ex !== 'object') ex = {};
+
+    // 1. Varios socios en un mismo movimiento (Registrar Anticipo, Registrar Extra)
     if (Array.isArray(ex.socios) && ex.socios.length) {
         return ex.socios.map(s => ({
-            nombre: s.nombre || s.socio_nombre || s.id || '—',
+            nombre: s.nombre || s.socio_nombre || _audNombreDeId(s.id) || s.id || '—',
             monto: (s.monto != null ? s.monto : null),
-            fecha: s.fecha || ''
+            fecha: s.fecha || '',
+            tipo:  s.tipo || s.detalle || ''
         }));
     }
-    const nombre = ex.nombre || ex.socio_nombre || ex.socioNombre || '';
-    if (nombre) return [{ nombre, monto: (ex.monto != null ? ex.monto : null), fecha: ex.fecha || '' }];
-    return [];
+
+    // 2. El nombre viene suelto (Retiro Anticipo, Registrar Saldo Anterior…)
+    let nombre = ex.nombre || ex.socio_nombre || ex.socioNombre || '';
+    // "CANJE" no es un socio: es el nombre del comprobante.
+    if (nombre.toUpperCase() === 'CANJE') nombre = '';
+
+    // 3. Solo queda el id (Eliminar Anticipo, Eliminar Extra, Registrar RUT,
+    //    Registrar Correo, Generar Certificado…). Se resuelve contra la lista
+    //    de socios: así los registros YA guardados también muestran el nombre,
+    //    sin tener que tocar la base.
+    const sid = ex.socio_id || ex.socioId
+        || (String(ex.id_afectado || r?.idAfectado || '').startsWith('SOC-') ? (ex.id_afectado || r.idAfectado) : '');
+    if (!nombre && sid) nombre = _audNombreDeId(sid);
+
+    // 4. Último recurso: el nombre quedó escrito dentro del propio detalle,
+    //    como "… — Julio Venegas" o "Socio: Laura Trocel | …".
+    if (!nombre) {
+        const d = String(ex.detalle || r?.detalle || '');
+        const m = /Socio:\s*([^|]+?)\s*(?:\||$)/.exec(d) || /—\s*([A-ZÁÉÍÓÚÑ][^|—]{2,40})\s*$/.exec(d);
+        if (m) nombre = m[1].trim();
+    }
+
+    if (!nombre) return [];
+    return [{ nombre, monto: (ex.monto != null ? ex.monto : null), fecha: ex.fecha || '',
+              tipo: ex.tipo || '', id: sid || '' }];
+}
+
+// Nombre de un socio a partir de su id, usando la lista ya cargada en la app.
+function _audNombreDeId(id) {
+    if (!id || typeof cacheSocios === 'undefined' || !Array.isArray(cacheSocios)) return '';
+    const s = cacheSocios.find(x => String(x.id) === String(id));
+    return s ? `${s.nombre || ''} ${s.apellido || ''}`.trim() : '';
 }
 
 function _audMonto(v) {

@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-16 — Auditoría: el detalle ahora dice a qué socio afectó cada movimiento (SW v124)
+
+- **Faltaba lo esencial.** Un «Actualizar Anticipo» mostraba *«Fecha: 2026-08-25 | Monto: $50.000»* y el responsable, pero **no de qué socio**. Lo mismo en varias acciones más. En una auditoría eso es justo lo que hace falta.
+- **Se revisó cómo guarda el socio cada acción** y resultó que lo hace de cinco maneras distintas: un array `socios[]`, un `nombre` suelto, solo el `socio_id`, el id en `id_afectado`, o el nombre escondido dentro del texto del detalle. Ahora la pantalla las reconoce **todas** y resuelve el id contra la lista de socios, así que **los registros ya guardados también muestran el nombre**, sin tocar la base.
+- **Resultado por acción:** *Eliminar Anticipo* y *Eliminar Extra* pasaban de mostrar «Socio ID: SOC-1764…» a **Marcela Muñoz** / **Yessica Vargas**; *Registrar RUT* y *Registrar Correo*, que no mostraban a nadie, ahora dicen el socio; *Cobrado — Archivar anticipos del socio* y *Eliminar Desglose Anticipo* lo sacan del texto; *Registrar Extra* lista los socios uno por uno con su monto, fecha y tipo (ausencia, etc.).
+- **Dos acciones no guardaban el socio en absoluto y se corrigieron en el origen:**
+  - **Actualizar Anticipo** no guardaba ni el id. Ahora lee la fila **antes** de actualizarla y registra socio y nombre.
+  - **Editar Desglose Anticipo** guardaba solo la firma; ahora también el socio.
+- **«Eliminar Documento» decía solo «Documento eliminado» y un id interno** — no servía para saber qué se borró. Ahora registra **el nombre del archivo, el socio y la categoría**, leídos antes de borrar.
+- **Se completaron los 2 registros viejos de «Actualizar Anticipo»**, que eran los del caso reportado: el `uuid` del anticipo enlaza con el historial, así que se recuperó el socio — **Laura Trocel** ($50.000, 25/08) y **Carlos Perez** ($110.000, 12/08).
+- **No se inventa un socio donde no lo hay:** *Cambiar PIN Personal* es de un responsable, no de un socio, y *Canje* guarda «CANJE» como nombre del comprobante; ninguno muestra socio.
+- **Verificado** en navegador con una fila de cada forma real que hay en la base (nueve casos), incluidas las dos que no deben mostrar socio.
+- Archivos: `js/auditoria.js`, `js/supabase-config.js`, `js/documentacion.js`, `index.html`. `auditoria.js?v=34`, `supabase-config.js?v=65`, `documentacion.js?v=34`, SW `fondo-admin-v124`, versión visible **v124**.
+
 #### 2026-09-16 — Auditoría: el filtro de acción no filtraba de verdad (SW v123)
 
 - **Síntoma:** elegir «Registrar Anticipo» no mostraba nada, y lo mismo con otras acciones.

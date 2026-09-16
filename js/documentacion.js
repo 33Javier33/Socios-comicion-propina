@@ -244,9 +244,31 @@ async function doc_borrar(id, path) {
     if (!confirm('¿Eliminar este documento? No se puede deshacer.')) return;
     toggleLoader(true, 'Eliminando...');
     try {
+        // Qué archivo y de quién, ANTES de borrarlo. La auditoría registraba
+        // solo «Documento eliminado» y un id interno: no servía para saber qué
+        // se borró ni a qué socio pertenecía.
+        let _dNombre = '', _dSocio = '', _dSocioId = '', _dCat = '';
+        try {
+            const { data: prev } = await dbSoc.from('documentos')
+                .select('nombre_archivo, socio_nombre, socio_id, categoria').eq('id', id).limit(1);
+            if (prev && prev[0]) {
+                _dNombre  = prev[0].nombre_archivo || '';
+                _dSocio   = prev[0].socio_nombre || '';
+                _dSocioId = prev[0].socio_id || '';
+                _dCat     = prev[0].categoria || '';
+            }
+        } catch (e) { /* si no se puede leer, se audita igual con lo que haya */ }
+
         await dbSoc.storage.from('documentos').remove([path]);
         await dbSoc.from('documentos').delete().eq('id', id);
-        if (typeof sbAuditLog === 'function') sbAuditLog('Eliminar Documento', { detalle: 'Documento eliminado', datos: { id } });
+        if (typeof sbAuditLog === 'function') sbAuditLog('Eliminar Documento', {
+            detalle: (_dSocio ? 'Socio: ' + _dSocio + ' | ' : '')
+                   + 'Archivo: ' + (_dNombre || '(sin nombre)')
+                   + (_dCat ? ' | ' + _dCat : ''),
+            idAfectado: _dSocioId || id,
+            datos: { id, nombre_archivo: _dNombre, nombre: _dSocio || undefined,
+                     socio_id: _dSocioId || undefined, categoria: _dCat, path }
+        });
         showToast('Documento eliminado', 'success');
         if (_docTab === 'generales') doc_cargarGenerales();
         else if (_docSocioSel) doc_verSocio(_docSocioSel);

@@ -1267,10 +1267,28 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 monto: Number(body.monto || 0),
                 responsable: ((body.responsable || '') + (body.areaResponsable ? ' ' + body.areaResponsable : '')).trim()
             };
+            // De quién es el anticipo. No venía en el cuerpo, así que se lee de
+            // la propia fila ANTES de actualizarla: sin esto la auditoría decía
+            // "Actualizar Anticipo · Fecha · Monto" sin nombrar al socio, que es
+            // justo el dato que hace falta para revisar un movimiento.
+            let _aaSocioId = body.socioId || body.socio_id || '';
+            let _aaNombre  = body.socioNombre || body.nombre || '';
+            try {
+                if (!_aaSocioId || !_aaNombre) {
+                    const { data: prev } = await dbSoc.from('anticipos')
+                        .select('socio_id').eq('id', body.uuid).limit(1);
+                    if (prev && prev[0]) _aaSocioId = _aaSocioId || prev[0].socio_id;
+                }
+                if (_aaSocioId && !_aaNombre) {
+                    const { data: soc } = await dbSoc.from('socios')
+                        .select('nombre, apellido').eq('id', _aaSocioId).limit(1);
+                    if (soc && soc[0]) _aaNombre = `${soc[0].nombre || ''} ${soc[0].apellido || ''}`.trim();
+                }
+            } catch (e) { /* si no se puede resolver, igual se audita lo demás */ }
             _sbAudit('Actualizar Anticipo', {
-                detalle: `Fecha: ${body.fecha} | Monto: $${Number(body.monto || 0).toLocaleString('es-CL')}`,
+                detalle: `${_aaNombre ? 'Socio: ' + _aaNombre + ' | ' : ''}Fecha: ${body.fecha} | Monto: $${Number(body.monto || 0).toLocaleString('es-CL')}`,
                 idAfectado: body.uuid,
-                datos: { uuid: body.uuid, ...updData }
+                datos: { uuid: body.uuid, socio_id: _aaSocioId || undefined, nombre: _aaNombre || undefined, ...updData }
             });
             const { error: sbErr } = await dbSoc.from('anticipos').update(updData).eq('id', body.uuid);
             if (sbErr) {
@@ -2231,12 +2249,25 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 if (aqBody.billetes !== undefined)     upd.billetes = aqBody.billetes || {};
                 if (aqBody.fecha !== undefined)        upd.fecha = aqBody.fecha || null;
                 if (aqBody.socio_nombre !== undefined) upd.socio_nombre = aqBody.socio_nombre || '';
+                // El socio, para que la auditoría diga a quién se le editó el
+                // desglose. Si no vino en el cuerpo se lee de la propia fila.
+                let _edNombre = aqBody.socio_nombre || '';
+                let _edSocioId = '';
+                try {
+                    const { data: prevD } = await dbSoc.from('retiros_anticipos')
+                        .select('socio_id, socio_nombre').eq('firma', aqBody.firma).limit(1);
+                    if (prevD && prevD[0]) {
+                        _edSocioId = prevD[0].socio_id || '';
+                        if (!_edNombre) _edNombre = prevD[0].socio_nombre || '';
+                    }
+                } catch (e) { /* se audita igual sin el nombre */ }
                 const { error } = await dbSoc.from('retiros_anticipos').update(upd).eq('firma', aqBody.firma);
                 if (error) { console.error('[AQ-SB] actualizarRetiro error:', error.message); return _mockOk({ status: 'error', message: error.message }); }
                 _sbAudit('Editar Desglose Anticipo', {
                     idAfectado: aqBody.firma,
-                    detalle: `Editado por: ${aqBody.editadoPor || '—'} | Monto: $${Number(aqBody.monto || 0).toLocaleString('es-CL')}`,
-                    datos: { firma: aqBody.firma, cambios: upd, editadoPor: aqBody.editadoPor || '' }
+                    detalle: `${_edNombre ? 'Socio: ' + _edNombre + ' | ' : ''}Editado por: ${aqBody.editadoPor || '—'} | Monto: $${Number(aqBody.monto || 0).toLocaleString('es-CL')}`,
+                    datos: { firma: aqBody.firma, cambios: upd, editadoPor: aqBody.editadoPor || '',
+                             nombre: _edNombre || undefined, socio_id: _edSocioId || undefined }
                 });
                 return _mockOk({ status: 'success' });
             }
