@@ -232,6 +232,22 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-17 — El logotipo de marca, a un tamaño discreto (SW v130 / Horarios v9)
+
+- **El logo ocupaba demasiado espacio y resultaba hostil a la vista.** La causa es que `cpn-marca.png` es **casi cuadrado (520×480)**: el ancho se paga casi entero en alto. Puesto a 240 px de ancho medía **222 px de alto** — media ficha de «Acerca de» era logo.
+- **Escala nueva, idéntica en las 3 apps:**
+
+  | Ubicación | Antes | Ahora |
+  |---|---|---|
+  | Ficha «Acerca de» | 240 px (≈222 alto) | **118 px** (≈109 alto) |
+  | Portada de acceso | 190 px (≈175 alto) | **96 px** (≈89 alto) |
+  | Barra lateral | 150 px | **80 px** |
+  | Firma al pie | 130–158 px | **68 px** (≈63 alto) |
+
+- Las firmas al pie llevan además **`opacity: .85`**, para que se lean como firma y no compitan con el contenido.
+- **Se dejan de usar medidas escritas a mano en el HTML.** Ahora son clases (`.marca-logo-panel`, `.marca-logo-login`, `.marca-logo-side`, `.marca-logo-foot`) definidas en la hoja de estilos de cada app con los mismos valores, así el tamaño no se vuelve a desincronizar entre apps. `index2.html` no carga `styles.css`, así que ahí la medida sigue en línea pero con el mismo valor.
+- **Archivos:** `styles.css`, `index.html`, `index2.html`. No cambia el archivo del logo ni sus colores — **solo el tamaño**.
+
 #### 2026-09-16 — Las donaciones archivadas revivían solas desde Sheets (SW v129)
 
 - **Síntoma:** las donaciones de la colecta de agosto, ya archivadas, **volvieron a aparecer** en el historial de anticipos y ausencias del socio. Y volvieron **más**: 43 aportes en vez de los 41 originales, más los 2 externos y los 2 retiros de caja — **47 filas, $812.000**, todas recreadas de golpe hoy a las 10:00, justo al iniciar sesión.

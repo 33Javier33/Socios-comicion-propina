@@ -856,6 +856,15 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 2em; box-shadow: 0 8px 20px rgba(52,152,219,0.35);
         }
+        /* ── Logo de marca ──
+           PNG de fondo transparente: se apoya sobre el fondo de la app.
+           El archivo es casi cuadrado (520x480), así que el ancho se paga casi
+           entero en alto: a 240px de ancho ocupaba 222px y se comía la ficha.
+           Esta escala es la misma en las 3 apps. */
+        .marca-logo { filter: none; mix-blend-mode: normal; }
+        .marca-logo-panel { width: 118px; max-width: 45vw; height: auto; display: block; margin: 0 auto 10px; }
+        .marca-logo-foot  { width: 68px;  max-width: 40vw; height: auto; display: block; margin: 0 auto; opacity: .85; }
+
         .login-title { font-size: 1.3em; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
         .login-sub { font-size: 0.82em; color: #7f8c8d; margin-bottom: 28px; }
         .login-user-badge {
