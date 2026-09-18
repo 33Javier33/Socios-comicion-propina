@@ -1,5 +1,5 @@
 // ============================================================
-// REGISTRO DE ACTIVIDAD DE SOCIOS (estilo Telegram)
+// REGISTRO DE ACTIVIDAD DE SOCIOS
 // Muestra, con fecha y hora, cuándo un socio se conecta a propi.solicitada
 // y cuándo entra a "Recaudación del Día" dentro de su app.
 // Fuente: tabla `conexiones_log` (proyecto socios, dbSoc).

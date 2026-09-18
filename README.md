@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-18 — Telegram eliminado por completo (SW v131)
+
+- **Se retira la integración con Telegram de las 3 apps.** No queda código que envíe ni reciba datos por esa vía.
+- **Lo que se quitó en `backend.gs`** (≈20.000 caracteres): las funciones de envío (`telegramEnviar`, `telegramEnviarA`, `probarTelegram`), el **webhook de entrada** (`doTelegramWebhook` y su despacho en `doPost`, que era la puerta por donde el bot mandaba órdenes al script), los 8 comandos de consulta (`/recaudacion`, `/montosDiarios`, `/sala`, `/online`, `/anticipos`, `/socio`, `/historial`, `/resumen`) y sus ayudantes (`tgSocios`, `tgAnticipos`, `sbGet`, `sbRecGet`, `_tgRecPorFecha`, `_tgSum`, `URL_REC_TELEGRAM`, `URL_SOCIOCOMISION_TG`, `MON_TIMEOUT_MS_TG`).
+- **Los 9 avisos que se enviaban** (cierre de mes, alta de socio, anticipo, ausencia simple y múltiple, conexión y desconexión) se borraron con su bloque completo. El agrupador de ausencias existía **solo** para no llenar el chat, así que se fue entero.
+- **La puerta de entrada queda cerrada:** `doPost` ya no inspecciona `update_id`, así que un POST del webhook cae en el manejador normal y se rechaza por no traer una acción válida.
+- **No se pierde nada de lo que se veía en pantalla.** El centro de actividad (la campana) nunca dependió de Telegram: lo alimenta la tabla `conexiones_log` de Supabase, que escribe `logActividad()` desde propi.solicitada. Lo verificado: la campana sigue mostrando conexión, desconexión y entrada a Recaudación del Día.
+- **Supabase revisado:** ninguna función, trigger o Edge Function de los dos proyectos menciona Telegram.
+- **Archivos:** `backend.gs`, `index.html`, `js/help.js`, `js/conexiones-log.js`.
+
+> ⚠️ **Pendiente fuera del repositorio:** el token del bot estaba escrito en el código de las otras dos apps y quedó en el historial de git. **Hay que revocarlo en @BotFather** — borrar el archivo no lo invalida. Ver el detalle en el README de `diario.propi`.
+
 #### 2026-09-17 — El logotipo de marca, a un tamaño discreto (SW v130 / Horarios v9)
 
 - **El logo ocupaba demasiado espacio y resultaba hostil a la vista.** La causa es que `cpn-marca.png` es **casi cuadrado (520×480)**: el ancho se paga casi entero en alto. Puesto a 240 px de ancho medía **222 px de alto** — media ficha de «Acerca de» era logo.

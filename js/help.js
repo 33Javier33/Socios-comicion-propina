@@ -552,7 +552,7 @@ const BASE_CONOCIMIENTO = [
           </div>
           <div class="ayuda-mini-card" style="flex-direction:row;align-items:center;gap:10px;">
             <span style="font-size:20px;">⚙️</span>
-            <div><div style="font-weight:700;font-size:0.85em;">Google Apps Script</div><div style="font-size:0.75em;color:#7f8c8d;">Servicio en la nube · cierres, notificaciones Telegram, respaldo en Sheets</div></div>
+            <div><div style="font-weight:700;font-size:0.85em;">Google Apps Script</div><div style="font-size:0.75em;color:#7f8c8d;">Servicio en la nube · cierres y respaldo en Sheets</div></div>
           </div>
           <div class="ayuda-mini-card" style="flex-direction:row;align-items:center;gap:10px;">
             <span style="font-size:20px;">📱</span>
