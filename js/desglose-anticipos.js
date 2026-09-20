@@ -8,6 +8,10 @@ let _dsgCargando = false;
 let _dsgPeriodoSeleccionado = null; // null = período actual, 'YYYY-MM-DD' = otro
 let _dsgPeriodos = [];              // períodos anteriores con movimientos
 let _dsgAutoElegido = false;        // ya se decidió qué período abrir al entrar
+let _dsgRtListo = false;            // el canal de tiempo real ya se abrió
+let _dsgCanal = null;
+let _dsgRtTimer = null;
+let _dsgUltimaCarga = 0;            // timestamp de la última carga con éxito
 
 // Retorna la fecha ISO del inicio del período actual (el 15 correspondiente)
 function _dsgCalcPeriodoInicio() {
@@ -173,13 +177,91 @@ function dsg_onNuevoAnticipo(registro) {
     }
 }
 
-// Carga el historial desde Supabase
-async function dsg_cargarHistorial(forzar = false) {
+// ══════════════════════════════════════════════════════════════════════
+// ACTUALIZACIÓN AUTOMÁTICA
+//
+// Antes la tabla se cargaba UNA sola vez —`app-init.js` solo llamaba a cargar
+// si la lista estaba vacía— y no había nada escuchando a la base. Un anticipo
+// registrado en otro equipo, o en esta misma app antes de entrar a la pestaña,
+// no aparecía hasta apretar "Actualizar" a mano.
+//
+// Ahora hay tres gatillos: al entrar a la pestaña, al volver a la app, y en
+// vivo mientras la pestaña está abierta.
+// ══════════════════════════════════════════════════════════════════════
+
+// ¿Está a la vista la pestaña de desglose? No tiene sentido recargar —ni
+// gastar consultas— si el administrador está en otra pantalla.
+function _dsgVisible() {
+    const tab = document.getElementById('tab-desglose');
+    return !!tab && tab.classList.contains('active');
+}
+
+function _dsgRefrescoAgrupado() {
+    clearTimeout(_dsgRtTimer);
+    // Un anticipo se escribe en DOS tablas: primero `anticipos` —que es la que
+    // avisa por tiempo real— y enseguida `retiros_anticipos`, que es la que se
+    // lista acá. Sin esta espera la recarga llegaría antes que la segunda
+    // escritura y el registro nuevo igual no aparecería. De paso agrupa los
+    // varios eventos que dispara un registro en lote.
+    _dsgRtTimer = setTimeout(() => {
+        if (_dsgVisible()) dsg_cargarHistorial(true, true);
+    }, 1500);
+}
+
+function dsg_initRealtime() {
+    if (_dsgRtListo || typeof dbSoc === 'undefined') return;
+    _dsgRtListo = true;
+    try {
+        // Se escucha `anticipos` y no `retiros_anticipos` porque la primera ya
+        // está publicada en tiempo real y todo anticipo escribe en las dos. Para
+        // lo que solo toca `retiros_anticipos` —editar o borrar un desglose— va
+        // el aviso por `broadcast`, que no necesita configuración en la base.
+        _dsgCanal = dbSoc.channel('desglose-rt')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'anticipos' }, _dsgRefrescoAgrupado)
+            .on('broadcast', { event: 'cambio' }, _dsgRefrescoAgrupado)
+            .subscribe();
+    } catch (e) {
+        console.warn('[DSG] tiempo real no disponible:', e.message);
+        _dsgCanal = null;
+    }
+
+    // Al volver a la app (cambiar de pestaña del navegador, desbloquear el
+    // teléfono) se recarga: mientras estuvo en segundo plano el socket pudo
+    // cortarse y haberse perdido avisos.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && _dsgVisible()) dsg_cargarHistorial(true, true);
+    });
+}
+
+// Avisa a los otros equipos que cambió un desglose. El emisor no se recibe a
+// sí mismo, así que no hay recarga doble.
+function dsg_avisarCambio() {
+    if (!_dsgCanal) return;
+    try { _dsgCanal.send({ type: 'broadcast', event: 'cambio', payload: { ts: Date.now() } }); }
+    catch (e) { /* sin conexión: el otro equipo se enterará al entrar */ }
+}
+
+// Sella la hora de la última actualización, para que se vea que está al día.
+function _dsgSellarHora() {
+    _dsgUltimaCarga = Date.now();
+    const el = document.getElementById('dsg-actualizado');
+    if (!el) return;
+    const d = new Date(_dsgUltimaCarga);
+    const p = n => String(n).padStart(2, '0');
+    el.textContent = 'Al día · ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
+
+// Carga el historial desde Supabase.
+// `silencioso` recarga sin borrar lo que ya está en pantalla: se usa en los
+// refrescos automáticos, donde el "⏳ Cargando..." sería un parpadeo molesto.
+async function dsg_cargarHistorial(forzar = false, silencioso = false) {
     if (_dsgCargando) return;
     _dsgCargando = true;
 
     const lista = document.getElementById('dsg-lista');
-    if (lista) lista.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;font-size:0.9em;">⏳ Cargando...</div>';
+    if (lista && !(silencioso && _dsgRegistros.length)) {
+        lista.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;font-size:0.9em;">⏳ Cargando...</div>';
+    }
 
     try {
         // Cargar períodos archivados disponibles
@@ -237,9 +319,12 @@ async function dsg_cargarHistorial(forzar = false) {
                 + ' anticipos de este período, ' + cerrados + ' ya están cerrados y ' + abiertos
                 + ' todavía no. Se listan todos igual; archívalos para dejar el período cerrado.';
         }
+        _dsgSellarHora();
     } catch(e) {
         console.warn('[DSG] Error cargando historial:', e.message);
-        _dsgRegistros = [];
+        // En un refresco automático NO se vacía la lista: si falla la red, es
+        // mejor seguir mostrando lo último bueno que dejar la pantalla en blanco.
+        if (!silencioso) _dsgRegistros = [];
     } finally {
         _dsgCargando = false;
     }
@@ -517,6 +602,7 @@ async function dsg_guardarEdicion() {
         showToast('Desglose actualizado ✅', 'success');
         dsg_cerrarEditar();
         dsg_filtrar();
+        dsg_avisarCambio();
     } catch(e) {
         mostrarError('Error al guardar: ' + e.message);
     } finally {
@@ -568,6 +654,7 @@ async function dsg_eliminar(firma) {
         _dsgAsignarOrdenCreacion();
         showToast('Desglose eliminado ✅', 'success');
         dsg_filtrar();
+        dsg_avisarCambio();
     } catch(e) {
         showToast('Error al eliminar: ' + e.message, 'error');
     } finally {

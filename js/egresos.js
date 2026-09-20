@@ -119,6 +119,9 @@ function egresos_irASocio(solicitudId) {
     if (typeof seleccionarSocio === 'function') seleccionarSocio(String(e.socio_id));
 
     setTimeout(() => {
+        // La tarjeta del anticipo viene minimizada: acá se abre sola, porque
+        // el monto queda pre-cargado y si no el aviso parecería no hacer nada.
+        if (typeof panelPlegable_toggle === 'function') panelPlegable_toggle('cardAnticipo', true);
         const campo = document.getElementById('montoAnticipo');
         if (campo) {
             campo.value = String(Number(e.monto) || 0);

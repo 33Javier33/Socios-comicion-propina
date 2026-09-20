@@ -574,7 +574,10 @@
                     <div class="action-grid">
                         <div class="action-card">
                             <div class="action-title" style="display:flex;justify-content:space-between;align-items:center;">
-                                <span>💰 Anticipo de Propina</span>
+                                <span onclick="panelPlegable_toggle('cardAnticipo')" style="flex:1;cursor:pointer;user-select:none;display:flex;align-items:center;gap:7px;">
+                                    <span id="cardAnticipoIcon" style="font-size:0.75em;color:#7f8c8d;transition:transform 0.25s;">▼</span>
+                                    💰 Anticipo de Propina
+                                </span>
                                 <div style="position:relative;">
                                     <button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('popover-anticipo',this)" title="Ayuda rápida">?</button>
                                     <div id="popover-anticipo" class="ayuda-popover">
@@ -593,6 +596,7 @@
                                     </div>
                                 </div>
                             </div>
+                            <div id="cardAnticipoBody" style="display:none;">
                             <div id="egresoVinculadoAviso" style="display:none;background:#e0f2fe;border:1px solid #7dd3fc;border-radius:9px;padding:9px 11px;margin-bottom:10px;"></div>
                             <div class="form-group"><label>Monto ($)</label><input type="text" inputmode="numeric" id="montoAnticipo" placeholder="Ej: 50.000" oninput="formatearInputMonto(this)" onkeydown="if(event.key==='Enter') enviarAnticipo()"></div>
                             <div class="form-group" style="margin-top:10px;"><label>Fecha</label><input type="date" id="fechaAnticipo"></div>
@@ -604,10 +608,14 @@
                                 <select id="responsableAnticipo" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:0.9em;"></select>
                             </div>
                             <button class="btn-action" style="width:100%; margin-top:15px;" onclick="enviarAnticipo()">Registrar Anticipo</button>
+                            </div>
                         </div>
                         <div class="action-card" id="cardAusencias" style="display:none;">
                             <div class="action-title" style="color:var(--danger);display:flex;justify-content:space-between;align-items:center;">
-                                <span>📅 Reportar Ausencia</span>
+                                <span onclick="panelPlegable_toggle('cardAusencia')" style="flex:1;cursor:pointer;user-select:none;display:flex;align-items:center;gap:7px;">
+                                    <span id="cardAusenciaIcon" style="font-size:0.75em;transition:transform 0.25s;">▼</span>
+                                    📅 Reportar Ausencia
+                                </span>
                                 <div style="position:relative;">
                                     <button class="ayuda-rapida-btn" onclick="ayudaRapida_toggle('popover-ausencia',this)" title="Ayuda rápida">?</button>
                                     <div id="popover-ausencia" class="ayuda-popover">
@@ -627,6 +635,7 @@
                                     </div>
                                 </div>
                             </div>
+                            <div id="cardAusenciaBody" style="display:none;">
                             <div class="form-group"><label>Fecha Ausencia</label><input type="date" id="fechaAusencia" onchange="actualizarInfoTerminoContrato()"></div>
                             <div class="form-group" style="margin-top:10px;">
                                 <label>Motivo</label>
@@ -651,6 +660,7 @@
                                 <div id="infoRangoAusencia" style="margin-top:8px; font-size:0.82em; color:#991b1b; background:#fee2e2; border-radius:6px; padding:7px 10px; font-weight:600; min-height:28px;"></div>
                             </div>
                             <button class="btn-action" style="background-color:var(--danger); width:100%; margin-top:15px;" onclick="enviarAusencia()">Marcar Ausencia</button>
+                            </div>
                         </div>
                     </div>
 
@@ -687,6 +697,7 @@
                 <div>
                     <div style="color:white;font-weight:800;font-size:1em;">💸 Desglose de Anticipos</div>
                     <div style="color:#bfdbfe;font-size:0.78em;margin-top:2px;">Historial de anticipos con detalle de billetes entregados</div>
+                    <div id="dsg-actualizado" style="color:#93c5fd;font-size:0.72em;margin-top:3px;font-weight:600;"></div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <button onclick="dsg_informe()" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.5);border-radius:8px;padding:8px 16px;font-weight:700;font-size:0.82em;cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
@@ -2286,8 +2297,8 @@
     <script src="js/api.js?v=36"></script>
     <script src="js/socios.js?v=42"></script>
     <script src="js/puntos.js?v=32"></script>
-    <script src="js/anticipos.js?v=59"></script>
-    <script src="js/desglose-anticipos.js?v=38"></script>
+    <script src="js/anticipos.js?v=60"></script>
+    <script src="js/desglose-anticipos.js?v=39"></script>
     <script src="js/meses-anteriores.js?v=33"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
     <script src="js/recaudacion.js?v=51"></script>
@@ -2304,11 +2315,11 @@
     <script src="js/diario-pins.js?v=34"></script>
     <script src="js/donaciones.js?v=41"></script>
     <script src="js/documentacion.js?v=34"></script>
-    <script src="js/egresos.js?v=39"></script>
+    <script src="js/egresos.js?v=40"></script>
     <script src="js/pt-dias.js?v=36"></script>
     <script src="js/conexiones-log.js?v=4"></script>
 <script src="js/mensajes-admin.js?v=48"></script>
-    <script src="js/app-init.js?v=99"></script>
+    <script src="js/app-init.js?v=100"></script>
 
 <!-- ══════════════════════════════════════════
      MODAL: ACERCA DE / RESEÑA
@@ -2717,7 +2728,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v131</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v132</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

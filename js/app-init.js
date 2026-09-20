@@ -156,7 +156,13 @@ function switchTab(tabName) {
     else if(tabName === 'mensajes') { fabRec.style.display = 'none'; aq_detenerSync(); msgAdmin_init(); }
     else if(tabName === 'desglose') {
         fabRec.style.display = 'none'; aq_detenerSync();
-        if(typeof dsg_cargarHistorial === 'function' && _dsgRegistros.length === 0) dsg_cargarHistorial();
+        // Se recarga SIEMPRE al entrar, no solo la primera vez. Antes la
+        // condición era `_dsgRegistros.length === 0`, así que tras la carga
+        // inicial la tabla quedaba congelada y había que apretar "Actualizar"
+        // a mano para ver lo registrado entretanto. La recarga es silenciosa:
+        // deja a la vista lo que ya estaba mientras llega lo nuevo.
+        if (typeof dsg_initRealtime === 'function') dsg_initRealtime();
+        if (typeof dsg_cargarHistorial === 'function') dsg_cargarHistorial(true, _dsgRegistros.length > 0);
         if (typeof dsg_aplicarVista === 'function') dsg_aplicarVista();
     }
     else if(tabName === 'mesesant') { fabRec.style.display = 'none'; aq_detenerSync(); if(typeof mesesAnt_init === 'function') mesesAnt_init(); }

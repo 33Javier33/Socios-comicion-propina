@@ -482,6 +482,35 @@ function _antAntReset() {
     if (filtros) filtros.style.display = 'none';
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// TARJETAS PLEGABLES DE LA COLUMNA DERECHA
+//
+// "Anticipo de Propina" y "Reportar Ausencia" son formularios largos —entre
+// los dos se llevaban casi toda la ficha del socio— y la mayoría de las veces
+// se entra solo a mirar saldos. Ahora arrancan minimizados y se abren al tocar
+// el título.
+//
+// El estado NO se guarda a propósito: al elegir OTRO socio vuelven a cerrarse.
+// Si se guardara, bastaría abrirlos una vez para que quedaran siempre abiertos
+// y volveríamos al problema. Dentro del mismo socio sí se quedan como los dejes,
+// para poder registrar varios movimientos seguidos sin reabrir cada vez.
+// ══════════════════════════════════════════════════════════════════════
+const PANEL_PLEGABLES = ['cardAnticipo', 'cardAusencia'];
+
+function panelPlegable_toggle(id, abrir) {
+    const cuerpo = document.getElementById(id + 'Body');
+    if (!cuerpo) return;
+    const abierto = (abrir === undefined) ? (cuerpo.style.display === 'none') : !!abrir;
+    cuerpo.style.display = abierto ? 'block' : 'none';
+    const icono = document.getElementById(id + 'Icon');
+    if (icono) icono.style.transform = abierto ? 'rotate(180deg)' : '';
+}
+
+// Deja todas las tarjetas minimizadas (al seleccionar un socio).
+function panelPlegable_colapsarTodas() {
+    PANEL_PLEGABLES.forEach(id => panelPlegable_toggle(id, false));
+}
+
 function toggleAnticiposAnt() {
     _antAntAbierto = !_antAntAbierto;
     const panel = document.getElementById('panelAnticiposAnt');
@@ -2476,6 +2505,8 @@ function seleccionarSocio(id) {
     if (typeof gest_renderFoto === 'function') gest_renderFoto(socio);
     document.getElementById('detPuntos').textContent = socio.puntos;
     document.getElementById('cardAusencias').style.display = (socio.contrato === 'Planta') ? 'block' : 'none';
+    // Las opciones (anticipo / ausencia) arrancan minimizadas con cada socio
+    panelPlegable_colapsarTodas();
 
     const cardDias = document.getElementById('cardDiasTrabajados');
     if(socio.contrato === 'Part-Time') { cardDias.style.display = 'block'; document.getElementById('socioDiasCount').innerText = '...'; }

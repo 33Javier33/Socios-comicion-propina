@@ -232,6 +232,27 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-20 — Opciones del socio minimizadas y el Desglose se actualiza solo (SW v132)
+
+**1. La columna de opciones arranca plegada.**
+
+- «💰 Anticipo de Propina» y «📅 Reportar Ausencia» son formularios largos y ocupaban casi toda la pantalla, aunque la mayoría de las veces se entra solo a mirar saldos. Ahora **arrancan minimizados** y se abren tocando el título.
+- Medido en la app: la columna de opciones pasa de **762 px a 184 px** en escritorio (1440), de 404 a 84 en portátil (1100) y de **798 a 188 px** en celular. Son ~76% menos de alto. En escritorio esa columna medía 762 px dentro de una ventana de 900: era prácticamente toda la pantalla.
+- **El estado no se guarda, a propósito.** Al elegir OTRO socio vuelven a cerrarse. Si se guardara, bastaría abrirlos una vez para que quedaran siempre abiertos y volvería el problema. Dentro del mismo socio sí se quedan como los dejes, para registrar varios movimientos seguidos sin reabrir.
+- **Excepción:** al entrar desde un aviso de egreso pendiente, la tarjeta del anticipo **se abre sola** — el monto llega pre-cargado y si no el aviso parecería no hacer nada.
+
+**2. El Desglose de Anticipos ya no se queda congelado.**
+
+- **Síntoma:** la tabla no reflejaba la base; había que apretar «Actualizar» a mano para que llegaran los datos.
+- **Causa:** `app-init.js` cargaba el historial solo `if (_dsgRegistros.length === 0)`. Tras la primera carga, entrar y salir de la pestaña ya no recargaba nada, y no había **nada escuchando a la base**: un anticipo registrado en otro equipo —o en esta misma app antes de abrir la pestaña— no aparecía nunca solo.
+- **Tres gatillos nuevos:** al entrar a la pestaña (siempre, no solo la primera vez), al volver a la app (`visibilitychange`, por si el socket se cortó en segundo plano) y **en vivo** mientras la pestaña está abierta.
+- **Cómo escucha en vivo:** por `postgres_changes` sobre la tabla `anticipos`, que ya está publicada en tiempo real; todo anticipo escribe en `anticipos` y en `retiros_anticipos`. Para lo que solo toca `retiros_anticipos` —editar o borrar un desglose desde otro equipo— va un aviso por `broadcast`, el mismo recurso que ya usa `anticipos.js`. **Así no hizo falta tocar nada en Supabase.**
+- **Espera de 1,5 s antes de recargar:** el anticipo escribe primero en `anticipos` (la que avisa) y enseguida en `retiros_anticipos` (la que se lista). Sin esa espera la recarga llegaría antes que la segunda escritura y el registro nuevo igual no aparecería. De paso agrupa los varios eventos de un registro en lote.
+- **La recarga automática es silenciosa:** no borra la lista ni muestra el «⏳ Cargando…», para que no parpadee. Y si falla la red en un refresco automático, **se conserva lo último bueno** en vez de dejar la pantalla en blanco.
+- **Solo recarga si la pestaña está a la vista**, para no gastar consultas trabajando en otra pantalla.
+- Se agregó un sello **«Al día · hh:mm:ss»** bajo el título, para poder comprobar de un vistazo que está llegando sola.
+- **Archivos:** `index.html`, `js/anticipos.js`, `js/desglose-anticipos.js`, `js/app-init.js`, `js/egresos.js`.
+
 #### 2026-09-18 — Telegram eliminado por completo (SW v131)
 
 - **Se retira la integración con Telegram de las 3 apps.** No queda código que envíe ni reciba datos por esa vía.
