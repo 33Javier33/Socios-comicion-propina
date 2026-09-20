@@ -166,8 +166,9 @@ async function verEstadoFinanciero(id) {
 
             const saldoReal = (alcance + saldoAnt) - sumaPedidos;
             const _comisModal = _esGastoComision(socio.area);
-            const aPagarModal = _comisModal ? (saldoReal > 0 ? Math.round(saldoReal) : 0) : (saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0);
-            const remanenteModal = _comisModal ? 0 : (saldoReal > 0 ? Math.round(saldoReal - aPagarModal) : Math.round(saldoReal));
+            const _repModal = repartirSaldo(saldoReal, _comisModal);
+            const aPagarModal = _repModal.aPagar;
+            const remanenteModal = _repModal.remanente;
 
             document.getElementById('resumenSaldoAnt').innerText = formatearMoneda(saldoAnt);
             document.getElementById('resumenAlcance').innerText = formatearMoneda(alcance);
@@ -848,19 +849,8 @@ async function cargarHistorialSocio(id) {
 
             const saldoReal = (alcance + saldoAnterior) - sumaTotalPedido;
 
-            let aPagar = 0;
-            let remanente = 0;
-            if (_esGastoComision(socio.area)) {
-                // Gastos Comisión retira todo: a pagar = saldo completo, remanente 0.
-                aPagar = saldoReal > 0 ? Math.round(saldoReal) : 0;
-                remanente = 0;
-            } else if (saldoReal > 0) {
-                aPagar = Math.floor(saldoReal / 1000) * 1000;
-                remanente = Math.round(saldoReal - aPagar);
-            } else {
-                aPagar = 0;
-                remanente = Math.round(saldoReal);
-            }
+            // Gastos Comisión retira todo: a pagar = saldo completo, remanente 0.
+            const { aPagar, remanente } = repartirSaldo(saldoReal, _esGastoComision(socio.area));
 
             document.getElementById('gestionSocioRemanente').value = remanente;
             document.getElementById('socioTotalPedido').innerText = formatearMoneda(sumaTotalPedido);
@@ -1923,8 +1913,7 @@ async function cierresMes_calcularSocio(socio) {
             alcance *= socio.puntos;
         }
         const saldoReal = alcance + saldoAnterior - sumaPedido;
-        aPagar = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
-        remanente = Math.round(saldoReal - aPagar);
+        ({ aPagar, remanente } = repartirSaldo(saldoReal));
     }
     return { aPagar, remanente, alcance, saldoAnterior, sumaPedido, anticiposList };
 }
@@ -2196,8 +2185,7 @@ async function ejecutarCierreTodos() {
                 }
 
                 saldoReal = alcance + saldoAnterior - sumaPedido;
-                aPagar = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
-                remanente = saldoReal > 0 ? Math.round(saldoReal - aPagar) : Math.round(saldoReal);
+                ({ aPagar, remanente } = repartirSaldo(saldoReal));
             }
 
             await callApiSocios('registrarSaldoAnterior', {
@@ -2402,8 +2390,7 @@ async function calcularRemanenteVivo() {
         const saldoReal = alcance + (saldos[socio.id] || 0) - sumaAnt;
         // Idéntico al cierre: a pagar en múltiplos de $1.000 y el resto queda
         // como remanente; si el saldo es negativo, el remanente es ese negativo.
-        const aPagar = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
-        const rem = Math.round(saldoReal - aPagar);
+        const rem = repartirSaldo(saldoReal).remanente;
         total += rem;
         const gk = (socio.contrato === 'Part-Time') ? { key: 'parttime', label: 'Part-Time' } : _area;
         if (!porAreaMap[gk.key]) porAreaMap[gk.key] = { label: gk.label, total: 0 };
@@ -2822,11 +2809,7 @@ function _calcSaldoRealSocio(socio, data) {
     }
     const saldoReal = alcance + saldoAnterior - sumaPedido;
     // Gastos Comisión: retira todo → a pagar es el saldo completo y remanente 0.
-    if (_esGastoComision(socio.area)) {
-        return { alcance, saldoAnterior, sumaPedido, saldoReal, aPagar: saldoReal > 0 ? Math.round(saldoReal) : 0, remanente: 0 };
-    }
-    const aPagar = saldoReal > 0 ? Math.floor(saldoReal / 1000) * 1000 : 0;
-    const remanente = saldoReal > 0 ? Math.round(saldoReal - aPagar) : Math.round(saldoReal);
+    const { aPagar, remanente } = repartirSaldo(saldoReal, _esGastoComision(socio.area));
     return { alcance, saldoAnterior, sumaPedido, saldoReal, aPagar, remanente };
 }
 

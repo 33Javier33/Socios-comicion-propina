@@ -232,6 +232,22 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-20 — El remanente podía marcar $1.000, que es imposible (SW v133)
+
+- **Síntoma:** apareció un remanente de **$1.000**. El remanente es lo que no alcanza a completar un billete de mil, así que por definición va de **0 a 999**: si llega a mil, ese mil se paga y el remanente queda en 0.
+- **Causa: dos redondeos sueltos.** Cada pantalla calculaba por su cuenta:
+  ```js
+  aPagar    = Math.floor(saldoReal / 1000) * 1000;
+  remanente = Math.round(saldoReal - aPagar);
+  ```
+  El saldo real **casi nunca es entero** — el punto de la noche es `total / divisor`, por ejemplo `839,9253731…`. Con un saldo de **5.999,66** el piso daba 5.000 y el resto, 999,66, **se redondeaba a 1.000**. Además los dos números no cuadraban con el saldo: 5.000 + 1.000 = 6.000 ≠ 5.999,66.
+- **El caso concreto:** era **Mario Reyes** — 8 puntos, saldo anterior $177, $35.000 pedidos → saldo real **$5.999,66**. Se verificó contra los datos reales del período (15 sep – 14 oct).
+- **Fix:** se redondea **una sola vez, al principio**, y recién ahí se parte. Ahora ese socio muestra **a pagar $6.000 y remanente $0**.
+- **Se unificó en un solo lugar.** La fórmula estaba repetida en **6 puntos** de `anticipos.js` (ficha del socio, modal de resumen, cierre individual, cierre masivo, remanente en vivo y saldo real a pagar), cada uno con su propia variante. Ahora todos llaman a `repartirSaldo()` en `utils.js`, así no vuelve a quedar una copia distinta de las demás. La función también cubre Gastos Comisión (retira todo, remanente 0) y las deudas (saldo negativo pasa entero).
+- **Verificación:** prueba exhaustiva de **189.000 valores** cubriendo todo el borde 0–999 con nueve decimales en 21 magnitudes. Cero fallos: el remanente siempre queda entre 0 y 999, «a pagar» siempre es múltiplo de 1.000 y **a pagar + remanente da exactamente el saldo**.
+- **No hubo que corregir datos:** se revisó `saldos_socio` y `cierres_mes` y no hay ningún remanente guardado en 1.000 ni mayor. El $1.000 que se vio era un cálculo en pantalla, nunca llegó a guardarse.
+- **Archivos:** `js/utils.js` (nueva `repartirSaldo`), `js/anticipos.js`.
+
 #### 2026-09-20 — Opciones del socio minimizadas y el Desglose se actualiza solo (SW v132)
 
 **1. La columna de opciones arranca plegada.**

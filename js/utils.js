@@ -326,3 +326,32 @@ async function compartirEnlace(id) {
     }
     copiarEnlace(id);   // el teléfono no sabe compartir → al menos se copia
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// REPARTO DEL SALDO: A PAGAR (múltiplos de $1.000) + REMANENTE (0 a 999)
+//
+// El remanente es lo que no alcanza a completar un billete de mil y pasa
+// como saldo al mes siguiente, así que por definición va de 0 a 999.
+//
+// Antes cada pantalla lo calculaba por su cuenta con dos redondeos sueltos:
+//     aPagar    = Math.floor(saldoReal / 1000) * 1000;
+//     remanente = Math.round(saldoReal - aPagar);
+// El saldo real casi nunca es entero —el punto de la noche es total/divisor,
+// por ejemplo 839,9253731…— así que con un saldo de 5.999,66 el piso daba
+// 5.000 y el resto, 999,66, se redondeaba a **1.000**: un remanente imposible,
+// y además los dos números no sumaban el saldo (5.000 + 1.000 = 6.000).
+//
+// Ahora se redondea UNA sola vez, al principio, y recién ahí se parte. Así el
+// remanente nunca llega a 1.000 y `aPagar + remanente` da exacto.
+//
+// `todoALaMano` es para Gastos Comisión, que retira el saldo completo.
+// Si el saldo es negativo (deuda) no hay nada que pagar y pasa entero como
+// remanente, igual que antes.
+// ══════════════════════════════════════════════════════════════════════
+function repartirSaldo(saldoReal, todoALaMano) {
+    const total = Math.round(Number(saldoReal) || 0);
+    if (total <= 0)     return { aPagar: 0,     remanente: total };
+    if (todoALaMano)    return { aPagar: total, remanente: 0 };
+    const aPagar = Math.floor(total / 1000) * 1000;
+    return { aPagar, remanente: total - aPagar };
+}
