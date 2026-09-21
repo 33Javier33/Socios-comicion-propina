@@ -527,6 +527,53 @@ function aq_aplicarBilletesAnticipo(billetes) {
     if (aq_iniciado) aq_generarCampos();
 }
 
+// Saca del rastro el "-n" que dejó un retiro que se está deshaciendo.
+// "5-1-2" quitando 1 → "5-2".  "5-1" quitando 1 → "5".
+// Si no encuentra ese término exacto —el rastro se editó a mano entretanto—
+// cae en sumar "+n", que al menos deja la caja cuadrada.
+function _aqQuitarRetiroDelRastro(rastro, n) {
+    const prev = aq_normTrace(rastro || '');
+    const term = '-' + n;
+    const i = prev.lastIndexOf(term);
+    // Debe ser un término completo, no el "-1" de dentro de un "-12"
+    const finLimpio = i >= 0 && !/[0-9]/.test(prev.charAt(i + term.length));
+    if (i >= 0 && finLimpio) return aq_normTrace(prev.slice(0, i) + prev.slice(i + term.length));
+    return prev === '' ? String(n) : prev + '+' + n;
+}
+
+// Devuelve al cajón los billetes de un anticipo que se borró. Es el reverso
+// exacto de aq_aplicarBilletesAnticipo: vuelve a sumar las unidades, descuenta
+// lo retirado y deja el rastro "+N" para que se vea que la plata volvió.
+//
+// Sin esto, borrar un anticipo dejaba el arqueo con un faltante fantasma: la
+// plata volvía físicamente al cajón, pero el conteo seguía creyendo que había
+// salido y el total de anticipos ya no la compensaba. Un anticipo de $35.000
+// borrado hacía marcar "FALTA 🚨 -$35.000" sin que faltara nada.
+function aq_devolverBilletesAnticipo(billetes) {
+    if (!billetes || Object.keys(billetes).length === 0) return;
+    if (Object.keys(aq_conteo).length === 0) {
+        try { const c = localStorage.getItem(AQ_SK_CONTEO); if (c) aq_conteo = JSON.parse(c); } catch(e) {}
+    }
+    if (Object.keys(aq_movi).length === 0) {
+        try { const m = localStorage.getItem(AQ_SK_MOVI); if (m) aq_movi = JSON.parse(m); } catch(e) {}
+    }
+    Object.entries(billetes).forEach(([d, cant]) => {
+        const den = Number(d); const n = Number(cant);
+        if (!den || !n) return;
+        aq_conteo[den] = (aq_conteo[den] || 0) + n;
+        aq_totalRetirado -= n * den;
+        // El retiro se ANULA del rastro, no se compensa con un ingreso. Si se
+        // agregara "+n", el total de "Retiros" —que se recalcula sumando los
+        // términos negativos— seguiría contando una salida que ya no ocurrió:
+        // "5-1+1" da caja 5 pero retiros 1. Quitando el "-n" queda "5", que es
+        // lo que de verdad pasó. El borrado queda registrado en la auditoría.
+        aq_movi[den] = _aqQuitarRetiroDelRastro(aq_movi[den], n);
+    });
+    if (aq_totalRetirado < 0) aq_totalRetirado = 0;
+    aq_saveState();
+    if (aq_iniciado) aq_generarCampos();
+}
+
 // Suma billetes de una recaudación verificada al conteo de arqueo.
 // Espejo de aq_aplicarBilletesAnticipo pero sumando: rastro "+N" por denominación.
 // Usa aq_saveState() para persistir en localStorage, marcar dirty y sincronizar a la nube.

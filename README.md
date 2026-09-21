@@ -232,6 +232,31 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-21 — Borrar un anticipo dejaba un faltante fantasma en el arqueo (SW v134)
+
+**Lo que se verificó (y sí funciona).** Al registrar un anticipo, los billetes del desglose se descuentan del arqueo de caja como retiros. La cadena es: `enviarAnticipo()` → modal de desglose (obligatorio: el botón no se habilita hasta que los billetes suman exacto el monto) → `confirmarDesgloseAnticipo()` → `aq_aplicarBilletesAnticipo()`, que resta las unidades de `aq_conteo`, suma a `aq_totalRetirado`, deja el rastro `-N` por denominación y guarda en el dispositivo + nube. Comprobado con 18 verificaciones: descuento exacto por denominación, denominaciones no usadas intactas, rastro correcto, total de retiros, persistencia, marca de pendiente de subir, encadenado de dos anticipos sobre la misma denominación, caja sin contar todavía y llamadas vacías.
+
+**El hueco que apareció.** La operación era de **ida y no de vuelta**: nada devolvía los billetes al borrar un anticipo. El arqueo cuadra porque `diferencia = contado + anticipos − esperado`; al borrar, `anticipos` baja pero `contado` se queda abajo, así que:
+
+| | Contado | Anticipos | Diferencia |
+|---|---|---|---|
+| Caja contada | $226.000 | $0 | $0 — CUADRADO |
+| Se registra anticipo de $35.000 | $191.000 | $35.000 | $0 — CUADRADO |
+| Se borra ese anticipo | $191.000 | $0 | **−$35.000 — FALTA 🚨** |
+
+La plata volvía al cajón, pero el arqueo seguía creyendo que había salido y marcaba un faltante que no existía, justo del monto borrado. Además el desglose quedaba huérfano en «Desglose de Anticipos».
+
+**El arreglo.** Al borrar un anticipo se buscan sus billetes en `retiros_anticipos` (antes de borrar, que después ya no hay con qué cruzar socio y fecha) y se ofrece devolverlos:
+
+- **No se devuelve en silencio.** Mover plata es del encargado: se le muestra el desglose billete por billete y decide. ACEPTAR devuelve al conteo; CANCELAR deja el arqueo como está (para cuando la plata ya se entregó y el borrado es solo del registro). El anticipo se borra igual en ambos casos.
+- **La devolución anula el retiro en el rastro, no lo compensa.** Agregar `+n` dejaba «5-1+1»: caja correcta pero el total de «Retiros» seguía contando una salida que ya no ocurrió. Ahora se quita el `-n` y el rastro vuelve a «5». El borrado queda registrado en la auditoría, que es donde corresponde.
+- El desglose huérfano se borra para que no siga apareciendo en la lista ni en el informe.
+- Anticipos viejos sin desglose guardado: no encuentra nada, no pregunta y no rompe.
+
+**Verificación:** ciclo completo registrar → borrar → devolver (la caja vuelve a $226.000 y el arqueo a CUADRADO), el caso de cancelar, el de anticipo sin desglose, y 10 casos borde del quitado en el rastro — incluido que un `-1` no se confunda con el `-1` de dentro de un `-12`.
+
+**Archivos:** `js/arqueo.js` (`aq_devolverBilletesAnticipo`, `_aqQuitarRetiroDelRastro`), `js/anticipos.js` (`_anticipoDesglosesDe`, `_anticipoDevolverBilletes`, enganche en `borrarItemConfirmado`).
+
 #### 2026-09-20 — El remanente podía marcar $1.000, que es imposible (SW v133)
 
 - **Síntoma:** apareció un remanente de **$1.000**. El remanente es lo que no alcanza a completar un billete de mil, así que por definición va de **0 a 999**: si llega a mil, ese mil se paga y el remanente queda en 0.

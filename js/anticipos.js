@@ -1155,6 +1155,91 @@ function mostrarModalBorrar(item) {
     document.getElementById('borrarTipo').value = (_esAnticipo && !_esAusencia) ? 'Anticipo' : 'Extra';
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// BORRAR UN ANTICIPO → DEVOLVER LOS BILLETES AL CAJÓN
+//
+// Registrar un anticipo saca los billetes del arqueo (aq_aplicarBilletesAnticipo).
+// Borrarlo tiene que hacer lo contrario, o el arqueo queda con un faltante
+// fantasma: la plata vuelve al cajón pero el conteo sigue creyendo que salió, y
+// el total de anticipos ya no la compensa.
+//
+// No se devuelve en silencio: mover plata es del encargado, así que se le
+// muestra el desglose y decide. Si dice que no, el anticipo igual se borra y el
+// arqueo queda como estaba.
+// ══════════════════════════════════════════════════════════════════════
+
+// Busca en `retiros_anticipos` los desgloses de ese socio en esas fechas.
+async function _anticipoDesglosesDe(socioId, fechas) {
+    const limpias = [...new Set((fechas || []).filter(Boolean).map(f => String(f).split('T')[0]))];
+    if (!socioId || !limpias.length) return [];
+    try {
+        const res = await fetch(AQ_URL_POST, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'getRetirosAnticipos', limit: 500, socio_id: String(socioId),
+                desde: limpias.slice().sort()[0], hasta: limpias.slice().sort().pop()
+            })
+        });
+        const json = await res.json();
+        const filas = (json.status === 'success' && Array.isArray(json.data)) ? json.data : [];
+        return filas.filter(r => limpias.includes(String(r.fecha || '').split('T')[0])
+                              && r.billetes && Object.keys(r.billetes).length);
+    } catch (e) {
+        console.warn('[AQ] no se pudieron leer los desgloses del anticipo borrado:', e.message);
+        return [];
+    }
+}
+
+// Ofrece devolver los billetes al arqueo y borra el desglose que quedó huérfano.
+async function _anticipoDevolverBilletes(desgloses) {
+    if (!desgloses.length || typeof aq_devolverBilletesAnticipo !== 'function') return;
+
+    const juntos = {};
+    let totalDev = 0;
+    desgloses.forEach(r => {
+        Object.entries(r.billetes || {}).forEach(([d, c]) => {
+            const den = Number(d), n = Number(c);
+            if (!den || !n) return;
+            juntos[den] = (juntos[den] || 0) + n;
+            totalDev += den * n;
+        });
+    });
+    if (!totalDev) return;
+
+    const fmt = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v);
+    const detalle = Object.keys(juntos).map(Number).sort((a, b) => b - a)
+        .map(d => `   ${juntos[d]} × ${fmt(d)}`).join('\n');
+
+    const devolver = window.confirm(
+        '💵 DEVOLVER AL ARQUEO\n\n' +
+        'Este anticipo se pagó con estos billetes, que salieron del cajón:\n\n' +
+        detalle + '\n\n   Total: ' + fmt(totalDev) + '\n\n' +
+        'ACEPTAR  →  Vuelven al conteo de caja (lo normal si la plata no se entregó)\n' +
+        'CANCELAR →  El arqueo queda como está (la plata ya se había entregado)'
+    );
+    if (!devolver) return;
+
+    aq_devolverBilletesAnticipo(juntos);
+
+    // El desglose queda huérfano: su anticipo ya no existe. Se borra para que
+    // no siga apareciendo en "Desglose de Anticipos" ni en el informe.
+    for (const r of desgloses) {
+        if (!r.firma) continue;
+        try {
+            await fetch(AQ_URL_POST, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'eliminarRetiroAnticipo', firma: r.firma,
+                    nombre: r.socio_nombre || '', monto: Number(r.monto || 0),
+                    eliminadoPor: 'Anticipo borrado'
+                })
+            });
+        } catch (e) { console.warn('[AQ] no se pudo borrar el desglose huérfano:', e.message); }
+    }
+    if (typeof dsg_avisarCambio === 'function') dsg_avisarCambio();
+    showToast('Billetes devueltos al arqueo: ' + fmt(totalDev), 'success');
+}
+
 async function borrarItemConfirmado() {
     const uuidVal = document.getElementById('borrarUUID').value;
     const tipo = document.getElementById('borrarTipo').value;
@@ -1174,6 +1259,12 @@ async function borrarItemConfirmado() {
         try { const f = JSON.parse(fechaVal); fechas = Array.isArray(f) ? f : [fechaVal]; }
         catch(e) { fechas = [fechaVal]; }
 
+        // Los desgloses se leen ANTES de borrar: después el anticipo ya no está
+        // y no habría con qué cruzar socio y fecha.
+        const desglosesPrevios = (tipo === 'Anticipo')
+            ? await _anticipoDesglosesDe(socioId, fechas)
+            : [];
+
         // Se revisa la respuesta de cada borrado: antes se asumía que todo salía
         // bien y se mostraba "Eliminado correctamente" aunque no se borrara nada.
         let borrados = 0;
@@ -1181,6 +1272,13 @@ async function borrarItemConfirmado() {
         for (let i = 0; i < uuids.length; i++) {
             const res = await callApiSocios('borrarMovimiento', { uuid: uuids[i], tipo, socioId, fecha: fechas[i] || fechas[0] || '' });
             if (res && res.status === 'error') fallos.push(res.message || 'error'); else borrados++;
+        }
+
+        // Solo se ofrece devolver si algo se borró de verdad.
+        if (borrados && desglosesPrevios.length) {
+            toggleLoader(false);
+            await _anticipoDevolverBilletes(desglosesPrevios);
+            toggleLoader(true, 'Actualizando...');
         }
 
         // Refrescar SIEMPRE (aunque algo falle) para que la pantalla muestre el estado real.
