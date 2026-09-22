@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-22 — Filtrar la lista de socios por área y por contrato (SW v135)
+
+- En **Anticipos y Ausencias**, bajo los botones de siempre, hay dos desplegables: **🏢 Área** y **📄 Contrato**. Permiten ver solo Bóveda, solo Máquinas, solo Mesas, solo Gastos Comisión, solo Part-Time, solo Planta, o cualquier combinación.
+- **Todo se combina:** área + contrato + los botones de Anticipos/Ausencias + el buscador por nombre se aplican juntos. Ejemplo: Mesas + Part-Time + «con anticipos».
+- **Los desplegables se arman desde los datos**, no a mano, y muestran cuántos hay en cada uno — «Mesas (33)», «Bóveda (11)», «Part-Time (4)». Así nunca aparece un área vacía ni falta una nueva. Se rearman solo cuando cambia la lista de socios: rehacerlos en cada tecla del buscador cerraría el desplegable justo al abrirlo.
+- **Detalle importante — el área viene escrita de varias formas en la base.** Conviven `Boveda` y `boveda`, `Maquinas` y `maquinas`, `Mesas` y `mesas`, más `Mesas - Cambistas`. Si el filtro comparara el texto crudo, elegir «Bóveda» dejaría fuera al socio guardado en minúscula. Por eso todo pasa por una clave normalizada (`_gestClaveArea`), la misma que ya usaba la lista para agrupar. Verificado: Bóveda devuelve los 11 (1 en minúscula + 10 con mayúscula) y Máquinas los 18 (3 + 15).
+- **Cambistas va dentro de Mesas**, igual que en la lista y en Gestión de Socios, y se sigue distinguiendo con la marca 💱 en cada socio.
+- Una **línea de resumen** dice qué está filtrando y cuántos quedaron — «4 socios · Mesas · Part-Time» — con un **✕ limpiar** que deja todo como estaba (área, contrato, buscador y botones).
+- **Verificación:** 15 comprobaciones en el navegador con la mezcla real de la base (66 socios), incluyendo los dos filtros a la vez, una combinación sin resultados (Bóveda + Part-Time) y el botón de limpiar.
+- **Archivos:** `index.html`, `js/socios.js` (`_gestClaveArea`, `gestionPoblarFiltros`, `gestionLimpiarFiltros`).
+
 #### 2026-09-21 — Borrar un anticipo dejaba un faltante fantasma en el arqueo (SW v134)
 
 **Lo que se verificó (y sí funciona).** Al registrar un anticipo, los billetes del desglose se descuentan del arqueo de caja como retiros. La cadena es: `enviarAnticipo()` → modal de desglose (obligatorio: el botón no se habilita hasta que los billetes suman exacto el monto) → `confirmarDesgloseAnticipo()` → `aq_aplicarBilletesAnticipo()`, que resta las unidades de `aq_conteo`, suma a `aq_totalRetirado`, deja el rastro `-N` por denominación y guarda en el dispositivo + nube. Comprobado con 18 verificaciones: descuento exacto por denominación, denominaciones no usadas intactas, rastro correcto, total de retiros, persistencia, marca de pendiente de subir, encadenado de dos anticipos sobre la misma denominación, caja sin contar todavía y llamadas vacías.

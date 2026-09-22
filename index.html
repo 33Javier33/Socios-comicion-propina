@@ -463,6 +463,18 @@
                         <button onclick="abrirModalBatchDiasPartTime()" style="flex:1; padding:6px 8px; border:1px solid #7c3aed; background:#7c3aed; color:white; border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s; white-space:nowrap;">➕ Batch PT</button>
                         <button onclick="abrirModalReiniciarDiasPT()" style="flex:1; padding:6px 8px; border:1px solid #e74c3c; background:white; color:#e74c3c; border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s; white-space:nowrap;">🔄 Reset PT</button>
                     </div>
+                    <!-- Filtros por área y contrato. Se combinan entre sí, con los
+                         botones de arriba y con el buscador: todo se aplica junto. -->
+                    <div style="display:flex; gap:5px; margin-bottom:8px;">
+                        <select id="filtroGestionArea" onchange="filtrarSociosGestion()" title="Filtrar por área"
+                            style="flex:1; min-width:0; padding:6px 7px; border:1px solid #ddd; border-radius:7px; font-size:0.75em; font-weight:700; color:#475569; background:white; cursor:pointer;">
+                            <option value="">🏢 Área: todas</option>
+                        </select>
+                        <select id="filtroGestionContrato" onchange="filtrarSociosGestion()" title="Filtrar por contrato"
+                            style="flex:1; min-width:0; padding:6px 7px; border:1px solid #ddd; border-radius:7px; font-size:0.75em; font-weight:700; color:#475569; background:white; cursor:pointer;">
+                            <option value="">📄 Contrato: todos</option>
+                        </select>
+                    </div>
                     <div id="filtroGestionInfo" style="font-size:0.75em; color:#7f8c8d; margin-bottom:6px; min-height:16px;"></div>
                     <input type="text" id="buscadorGestion" placeholder="Escribe nombre o apellido..." onkeyup="filtrarSociosGestion()" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ddd; border-radius:8px;">
                     <div id="listaResultados" class="search-results">
@@ -2295,7 +2307,7 @@
     <script src="js/config.js?v=99"></script>
     <script src="js/supabase-config.js?v=68"></script>
     <script src="js/api.js?v=36"></script>
-    <script src="js/socios.js?v=42"></script>
+    <script src="js/socios.js?v=43"></script>
     <script src="js/puntos.js?v=32"></script>
     <script src="js/anticipos.js?v=62"></script>
     <script src="js/desglose-anticipos.js?v=39"></script>
@@ -2728,7 +2740,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v134</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v135</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

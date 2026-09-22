@@ -727,24 +727,107 @@ function normalizarFechaInicioPuntos(fechaISO) {
 
 // El evento submit se registra en app-init.js después de DOMContentLoaded
 
+// ══════════════════════════════════════════════════════════════════════
+// FILTROS DE LA LISTA DE SOCIOS (Anticipos y Ausencias)
+//
+// Los datos traen el área escrita de varias formas —"Boveda" y "boveda",
+// "Mesas" y "mesas", "Mesas - Cambistas"— así que nunca se compara el texto
+// crudo: todo pasa por esta clave normalizada, la misma que agrupa la lista.
+// Si se comparara tal cual, filtrar "Bóveda" dejaría fuera a los que quedaron
+// guardados en minúscula.
+// ══════════════════════════════════════════════════════════════════════
+const GEST_NOMBRES_AREA = { 'mesas': 'Mesas', 'maquinas': 'Máquinas', 'tecnicos': 'Técnicos', 'boveda': 'Bóveda', 'gastoscomision': 'Gastos Comisión', 'otros': 'Otros' };
+
+// Área "base" del socio, sin separar Part-Time (eso lo hace el otro filtro).
+function _gestClaveArea(s) {
+    let key = (s.area || 'otros').toLowerCase().replace(/\s/g, '');
+    // Cambistas NO es un área aparte: es una sub-área de Mesas.
+    if (key.includes('cambista')) return 'mesas';
+    if (key.includes('gastos')) return 'gastoscomision';
+    return key;
+}
+
+// Llena los dos desplegables con lo que hay de verdad en la lista de socios.
+// Se arman desde los datos y no a mano para que no aparezca un área vacía ni
+// falte una nueva, y para poder mostrar cuántos hay en cada una.
+let _gestFiltrosFirma = '';
+function gestionPoblarFiltros() {
+    const selA = document.getElementById('filtroGestionArea');
+    const selC = document.getElementById('filtroGestionContrato');
+    if (!selA || !selC || !Array.isArray(cacheSocios)) return;
+
+    // Solo se rearman si cambió la lista de socios. Se llama desde el render,
+    // que corre con cada tecla del buscador: rehacer el <select> ahí cerraría
+    // el desplegable justo cuando el administrador lo tiene abierto.
+    const firma = cacheSocios.length + '|' + cacheSocios.map(s => _gestClaveArea(s) + s.contrato).sort().join(',');
+    if (firma === _gestFiltrosFirma) return;
+    _gestFiltrosFirma = firma;
+
+    const cuentaA = {}, cuentaC = {};
+    cacheSocios.forEach(s => {
+        const a = _gestClaveArea(s);
+        cuentaA[a] = (cuentaA[a] || 0) + 1;
+        const c = s.contrato || 'Sin contrato';
+        cuentaC[c] = (cuentaC[c] || 0) + 1;
+    });
+
+    const orden = ['mesas', 'maquinas', 'tecnicos', 'boveda', 'gastoscomision', 'otros'];
+    const claves = Object.keys(cuentaA).sort((a, b) => {
+        const ia = orden.indexOf(a), ib = orden.indexOf(b);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+
+    // Se conserva lo elegido: esta función corre cada vez que llegan socios
+    // nuevos y no debe borrar el filtro que el administrador tenía puesto.
+    const prevA = selA.value, prevC = selC.value;
+    selA.innerHTML = '<option value="">🏢 Área: todas</option>'
+        + claves.map(k => `<option value="${k}">${GEST_NOMBRES_AREA[k] || k} (${cuentaA[k]})</option>`).join('');
+    selC.innerHTML = '<option value="">📄 Contrato: todos</option>'
+        + Object.keys(cuentaC).sort().map(c => `<option value="${c}">${c} (${cuentaC[c]})</option>`).join('');
+    if (prevA && claves.includes(prevA)) selA.value = prevA;
+    if (prevC && cuentaC[prevC]) selC.value = prevC;
+}
+
 function renderizarListaBusqueda() {
+    gestionPoblarFiltros();
     const termino = document.getElementById('buscadorGestion').value.toLowerCase();
     const lista = document.getElementById('listaResultados');
+    const fArea     = document.getElementById('filtroGestionArea')?.value || '';
+    const fContrato = document.getElementById('filtroGestionContrato')?.value || '';
     lista.innerHTML = '';
     let filtrados = cacheSocios.filter(s => s.nombre.toLowerCase().includes(termino) || s.apellido.toLowerCase().includes(termino) || (s.area||'').toLowerCase().includes(termino));
+
+    if (fArea)     filtrados = filtrados.filter(s => _gestClaveArea(s) === fArea);
+    if (fContrato) filtrados = filtrados.filter(s => (s.contrato || 'Sin contrato') === fContrato);
+
     if (gestionFiltroActivo !== 'todos' && Object.keys(gestionSociosConMovimientos).length > 0) {
         filtrados = filtrados.filter(s => {
             const mov = gestionSociosConMovimientos[s.id];
             if (!mov) return false;
             return gestionFiltroActivo === 'anticipos' ? mov.anticipos : mov.ausencias;
         });
-        const infoEl = document.getElementById('filtroGestionInfo');
-        if (infoEl) infoEl.textContent = filtrados.length + ' socio' + (filtrados.length !== 1 ? 's' : '') +
-            (gestionFiltroActivo === 'anticipos' ? ' con anticipos' : ' con ausencias');
     }
+
+    // Una sola línea que resume TODO lo que está filtrando, no solo los botones:
+    // con tres filtros encima hay que poder ver de un vistazo por qué la lista
+    // quedó corta.
+    const infoEl = document.getElementById('filtroGestionInfo');
+    if (infoEl) {
+        const partes = [];
+        if (fArea)     partes.push(GEST_NOMBRES_AREA[fArea] || fArea);
+        if (fContrato) partes.push(fContrato);
+        if (gestionFiltroActivo === 'anticipos') partes.push('con anticipos');
+        if (gestionFiltroActivo === 'ausencias') partes.push('con ausencias');
+        infoEl.innerHTML = partes.length
+            ? `${filtrados.length} socio${filtrados.length !== 1 ? 's' : ''} · ${partes.join(' · ')}`
+              + ` <span onclick="gestionLimpiarFiltros()" style="color:#2563eb;cursor:pointer;font-weight:700;">✕ limpiar</span>`
+            : '';
+    }
+
     if (filtrados.length === 0) {
+        const hayFiltro = fArea || fContrato || gestionFiltroActivo !== 'todos';
         lista.innerHTML = '<div style="padding:14px; color:#7f8c8d; text-align:center; font-size:0.88em;">'
-            + (gestionFiltroActivo !== 'todos' ? 'Ninguno tiene ' + (gestionFiltroActivo === 'anticipos' ? 'anticipos' : 'ausencias') + ' registrados.' : 'No encontrado.')
+            + (hayFiltro ? 'Ningún socio cumple con esos filtros.' : 'No encontrado.')
             + '</div>';
         return;
     }
@@ -754,12 +837,9 @@ function renderizarListaBusqueda() {
 
     const grupos = {};
     filtrados.forEach(s => {
-        let key = (s.area || 'otros').toLowerCase().replace(/\s/g,'');
-        // Cambistas NO es un área aparte: es una sub-área de Mesas, igual que en
-        // Gestión de Socios. Va con Mesas según su contrato (Planta → Mesas
-        // Planta; Part-Time → Mesas Part-Time) y se marca con 💱 en cada socio,
-        // así se sigue viendo quién es cambista sin partir el área en dos.
-        if (key.includes('cambista')) key = 'mesas'; else if (key.includes('gastos')) key = 'gastoscomision';
+        // Mesas se parte en Planta y Part-Time solo para el encabezado de la
+        // lista; el filtro de área usa la clave base (ver _gestClaveArea).
+        let key = _gestClaveArea(s);
         if(key === 'mesas' && s.contrato === 'Part-Time') key = 'mesasparttime';
         if(!grupos[key]) grupos[key] = [];
         grupos[key].push(s);
@@ -803,6 +883,17 @@ function renderizarListaBusqueda() {
 
 function filtrarSociosGestion() { renderizarListaBusqueda(); }
 
+// Deja la lista completa: área, contrato, buscador y los botones de arriba.
+function gestionLimpiarFiltros() {
+    const selA = document.getElementById('filtroGestionArea');
+    const selC = document.getElementById('filtroGestionContrato');
+    const buscador = document.getElementById('buscadorGestion');
+    if (selA) selA.value = '';
+    if (selC) selC.value = '';
+    if (buscador) buscador.value = '';
+    setFiltroGestion('todos');
+}
+
 async function setFiltroGestion(tipo) {
     gestionFiltroActivo = tipo;
     const colores = { todos: 'var(--secondary)', anticipos: 'var(--warning)', ausencias: 'var(--danger)' };
@@ -814,7 +905,8 @@ async function setFiltroGestion(tipo) {
         btn.style.color      = activo ? 'white'    : colores[t];
     });
     if (tipo === 'todos') {
-        document.getElementById('filtroGestionInfo').textContent = '';
+        // La línea de resumen la escribe renderizarListaBusqueda: puede quedar
+        // texto si siguen puestos los filtros de área o contrato.
         renderizarListaBusqueda();
         return;
     }
