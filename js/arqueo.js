@@ -305,7 +305,9 @@ function aq_realizarArqueo() {
     }
 
     document.getElementById('aq-total-contado').textContent = aq_fmt(total);
-    document.getElementById('aq-total-retiros').textContent = aq_fmt(aq_calcRetiradoTotal());
+    const retirado = aq_calcRetiradoTotal();
+    document.getElementById('aq-total-retiros').textContent = aq_fmt(retirado);
+    aq_pintarDesgloseRetiros(retirado);
 
     const difEl = document.getElementById('aq-diferencia');
     difEl.textContent = aq_fmt(dif);
@@ -320,6 +322,54 @@ function aq_realizarArqueo() {
     AQ_DENOMINACIONES.forEach(v => { if(aq_conteo[v] > 0) { any = true; h += `<tr><td>${aq_fmt(v)}</td><td>${aq_conteo[v]}</td><td>${aq_fmt(v*aq_conteo[v])}</td></tr>`; } });
     document.getElementById('aq-desglose-contado').innerHTML = any ? h + '</tbody></table>' : '<p style="color:#7f8c8d; text-align:center;">Sin ingresos.</p>';
 
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// DE QUÉ SE COMPONE EL "RETIRADO"
+//
+// "RETIRADO" suma TODAS las salidas del conteo, no solo los anticipos: también
+// las veces que se apretó − para deshacer un ingreso mal tipeado. Por eso
+// comparado a secas con "ANTICIPOS (Nube)" parecía un descuadre enorme sin
+// serlo — en el período 15/09 el retirado era $1.195.500 contra $961.000 de
+// anticipos, y los $234.500 de diferencia eran exactamente lo mismo que había
+// entrado de más al cajón y vuelto a salir: correcciones del conteo.
+//
+// El arqueo seguía cuadrando en $0; lo que engañaba era la etiqueta. Partirlo
+// en dos deja ver de un vistazo qué parte es plata pagada y qué parte no.
+// ══════════════════════════════════════════════════════════════════════
+function aq_pintarDesgloseRetiros(retirado) {
+    const caja = document.getElementById('aq-retiros-detalle');
+    if (!caja) return;
+    const anticipos = Math.round(aq_totalAnticipos || 0);
+
+    // Sin retiros ni anticipos no hay nada que desglosar: se oculta.
+    if (!retirado && !anticipos) { caja.style.display = 'none'; return; }
+    caja.style.display = 'block';
+
+    // Lo atribuible a anticipos no puede pasar de lo que efectivamente salió:
+    // si hay más anticipos que retiros, el resto todavía no se descontó del
+    // conteo y eso se avisa aparte, en vez de mostrar un "otros" negativo.
+    const porAnticipos = Math.min(anticipos, retirado);
+    const otros        = retirado - porAnticipos;
+    const sinDescontar = anticipos - porAnticipos;
+
+    document.getElementById('aq-retiros-anticipos').textContent = aq_fmt(porAnticipos);
+    document.getElementById('aq-retiros-otros').textContent     = aq_fmt(otros);
+
+    const nota = document.getElementById('aq-retiros-nota');
+    if (sinDescontar > 0) {
+        // Hay anticipos registrados cuyos billetes nunca salieron de este conteo
+        // (por ejemplo, anticipos con fecha de un período anterior).
+        document.getElementById('aq-retiros-otros-lbl').textContent = '· otros movimientos del conteo';
+        nota.innerHTML = '<span style="color:#b45309;">⚠️ Hay ' + aq_fmt(sinDescontar)
+            + ' en anticipos que no se descontaron de este conteo.</span>';
+    } else if (otros > 0) {
+        document.getElementById('aq-retiros-otros-lbl').textContent = '· otros movimientos del conteo';
+        nota.innerHTML = 'Los “otros” son correcciones y retiros hechos a mano en el conteo, no plata del fondo.';
+    } else {
+        document.getElementById('aq-retiros-otros-lbl').textContent = '· otros movimientos del conteo';
+        nota.innerHTML = '';
+    }
 }
 
 async function aq_fetchEsperadoData() {

@@ -1872,6 +1872,21 @@
                                 <strong>RETIRADO:</strong>
                                 <span id="aq-total-retiros" style="font-weight:700;">$0</span>
                             </div>
+                            <!-- Desglose del retirado. "RETIRADO" suma TODAS las
+                                 salidas del conteo, no solo los anticipos, así que
+                                 comparado a secas con "ANTICIPOS (Nube)" parecía un
+                                 descuadre. Acá se ve de qué se compone. -->
+                            <div id="aq-retiros-detalle" style="display:none; margin-top:5px; padding-left:12px; border-left:2px solid #fecaca; font-size:0.8em; color:#94a3b8;">
+                                <div style="display:flex; justify-content:space-between; gap:8px;">
+                                    <span>· pagado en anticipos</span>
+                                    <span id="aq-retiros-anticipos" style="font-weight:700; white-space:nowrap;">$0</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; gap:8px; margin-top:2px;">
+                                    <span id="aq-retiros-otros-lbl">· otros movimientos del conteo</span>
+                                    <span id="aq-retiros-otros" style="font-weight:700; white-space:nowrap;">$0</span>
+                                </div>
+                                <div id="aq-retiros-nota" style="margin-top:4px; font-size:0.92em; line-height:1.35;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2314,7 +2329,7 @@
     <script src="js/meses-anteriores.js?v=33"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
     <script src="js/recaudacion.js?v=51"></script>
-    <script src="js/arqueo.js?v=34"></script>
+    <script src="js/arqueo.js?v=35"></script>
     <script src="js/canje.js?v=32"></script>
     <script src="js/notas.js?v=34"></script>
     <script src="js/reports.js?v=44"></script>
@@ -2740,7 +2755,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v135</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v136</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

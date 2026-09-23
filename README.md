@@ -232,6 +232,28 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-23 — «RETIRADO» ahora dice de qué se compone (SW v136)
+
+- **La duda:** en el arqueo, RETIRADO marcaba **$1.195.500** contra **$961.000** de ANTICIPOS (Nube). Parecía un descuadre de $234.500.
+- **No había plata faltante.** Desarmando el rastro billete por billete, **$961.000 corresponden exactamente a los 14 anticipos del período** y $234.500 no tenían anticipo detrás. Y al sumar lo que entró al cajón aparece la clave:
+
+  | | |
+  |---|---|
+  | Entradas al conteo | $4.984.550 |
+  | Recaudado (esperado) | $4.750.050 |
+  | **Entró de más** | **$234.500** |
+  | Salidas del conteo | $1.195.500 |
+  | Anticipos | $961.000 |
+  | **Salió de más** | **$234.500** |
+
+  El mismo número: todo lo que entró de más volvió a salir. **RETIRADO suma cada vez que se apretó −**, incluidas las que solo deshacen un ingreso mal tipeado — se ve en rastros como `0+1-1` en los $2.000 o `+5-5` en los $100. El arqueo marcaba diferencia $0 (CUADRADO): lo que engañaba era la etiqueta.
+- **Descartado:** anticipos borrados (30 registrados en auditoría = 30 desgloses guardados, ninguno borrado), egresos de donación (cero en el período) y desfase de fechas (el arqueo está guardado con clave `2026-09-15`, la misma ventana 15→14 de los anticipos).
+- **El cambio:** bajo RETIRADO aparece el desglose — *· pagado en anticipos* y *· otros movimientos del conteo* — con una nota aclarando que los «otros» son correcciones y retiros hechos a mano, no plata del fondo. RETIRADO sigue mostrando el total bruto.
+- **Si hay más anticipos que retiros** no se muestra un «otros» negativo: se avisa en ámbar *«Hay $X en anticipos que no se descontaron de este conteo»*, que es información útil (por ejemplo, anticipos con fecha de un período anterior). Con el arqueo recién abierto el desglose se oculta.
+- **Verificación:** 10 comprobaciones, empezando por las cifras reales del período — RETIRADO $1.195.500 = $961.000 + $234.500 — más el caso limpio, el de anticipos sin descontar y el arqueo vacío.
+- **Pendiente relacionado:** el arqueo **no registra nada en la auditoría**. Los movimientos manuales con + y − no dejan constancia de quién los hizo ni cuándo.
+- **Archivos:** `index.html`, `js/arqueo.js` (`aq_pintarDesgloseRetiros`).
+
 #### 2026-09-22 — Filtrar la lista de socios por área y por contrato (SW v135)
 
 - En **Anticipos y Ausencias**, bajo los botones de siempre, hay dos desplegables: **🏢 Área** y **📄 Contrato**. Permiten ver solo Bóveda, solo Máquinas, solo Mesas, solo Gastos Comisión, solo Part-Time, solo Planta, o cualquier combinación.
