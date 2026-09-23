@@ -232,6 +232,19 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-23 — Totales por área al filtrar por anticipos o ausencias (SW v137)
+
+- Al apretar **💰 Anticipos** (o **📅 Ausencias**) la lista ya no dice solo *cuántos* socios hay: dice **cuánto**.
+  - **Encabezado de cada área** con su subtotal: «MESAS (PLANTA) (6) — $521.000».
+  - **Línea de resumen** con el total general: «12 socios · con anticipos · **$961.000**».
+  - **Cada socio** muestra su monto en la etiqueta, en vez de «ANT» / «AUS», para poder comprobar de dónde sale el subtotal.
+- **Se combina con los filtros de área y contrato**, así se lee directo lo que se busque: Anticipos + Bóveda da $160.000, Anticipos + Máquinas $210.000, Anticipos + Part-Time $70.000.
+- **Sin filtro de anticipos/ausencias no cambia nada**: las etiquetas siguen diciendo «💰 ANT» y los encabezados no muestran montos, porque ahí no hay un monto que sumar.
+- **Detalle de espacio:** cuando se muestra el monto se omite el emoji de la etiqueta. Con el filtro puesto ya se sabe que todo lo listado es un anticipo, y en un panel de 300 px esos píxeles son justo los que partían el nombre del socio en dos líneas.
+- **De dónde salen los montos:** `cargarMovimientosGestion` ya traía todos los anticipos y extras para saber *si* el socio tenía movimientos; ahora además los suma. No hay ninguna consulta nueva a la base.
+- **Verificación:** 12 comprobaciones en el navegador con los 14 anticipos reales del período (12 socios, $961.000). Los cuatro subtotales por área suman exactamente el total general, y Bóveda agrupa bien los socios guardados como `Boveda` y `boveda`.
+- **Archivos:** `js/socios.js`.
+
 #### 2026-09-23 — «RETIRADO» ahora dice de qué se compone (SW v136)
 
 - **La duda:** en el arqueo, RETIRADO marcaba **$1.195.500** contra **$961.000** de ANTICIPOS (Nube). Parecía un descuadre de $234.500.

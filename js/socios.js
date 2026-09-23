@@ -808,6 +808,18 @@ function renderizarListaBusqueda() {
         });
     }
 
+    // Cuando se filtra por anticipos o ausencias hay un monto detrás de cada
+    // socio, así que se muestran los totales: el general en la línea de resumen
+    // y el subtotal de cada área en su encabezado. Filtrando "Anticipos" +
+    // "Bóveda" se lee de una cuánto se anticipó en Bóveda.
+    const campoMonto = gestionFiltroActivo === 'anticipos' ? 'montoAnt'
+                     : gestionFiltroActivo === 'ausencias' ? 'montoAus' : null;
+    const montoDe = s => {
+        const m = gestionSociosConMovimientos[s.id];
+        return (campoMonto && m) ? (Number(m[campoMonto]) || 0) : 0;
+    };
+    const fmtM = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v || 0);
+
     // Una sola línea que resume TODO lo que está filtrando, no solo los botones:
     // con tres filtros encima hay que poder ver de un vistazo por qué la lista
     // quedó corta.
@@ -818,8 +830,10 @@ function renderizarListaBusqueda() {
         if (fContrato) partes.push(fContrato);
         if (gestionFiltroActivo === 'anticipos') partes.push('con anticipos');
         if (gestionFiltroActivo === 'ausencias') partes.push('con ausencias');
+        const totalGral = campoMonto ? filtrados.reduce((t, s) => t + montoDe(s), 0) : 0;
         infoEl.innerHTML = partes.length
             ? `${filtrados.length} socio${filtrados.length !== 1 ? 's' : ''} · ${partes.join(' · ')}`
+              + (totalGral ? ` · <b style="color:${gestionFiltroActivo === 'anticipos' ? '#b45309' : '#9b1c1c'};">${fmtM(totalGral)}</b>` : '')
               + ` <span onclick="gestionLimpiarFiltros()" style="color:#2563eb;cursor:pointer;font-weight:700;">✕ limpiar</span>`
             : '';
     }
@@ -857,8 +871,10 @@ function renderizarListaBusqueda() {
         const label = nombresArea[key] || key.toUpperCase();
 
         const header = document.createElement('div');
-        header.style.cssText = `padding:5px 10px; font-size:0.72em; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:white; background:${color}; margin-top:6px; border-radius:4px;`;
-        header.textContent = `${label} (${socios.length})`;
+        header.style.cssText = `padding:5px 10px; font-size:0.72em; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:white; background:${color}; margin-top:6px; border-radius:4px; display:flex; justify-content:space-between; gap:8px; align-items:center;`;
+        const subtotal = campoMonto ? socios.reduce((t, s) => t + montoDe(s), 0) : 0;
+        header.innerHTML = `<span>${label} (${socios.length})</span>`
+            + (subtotal ? `<span style="font-weight:900; white-space:nowrap;">${fmtM(subtotal)}</span>` : '');
         lista.appendChild(header);
 
         socios.forEach(s => {
@@ -867,8 +883,15 @@ function renderizarListaBusqueda() {
             div.setAttribute('data-socio-id', s.id);
             div.style.borderLeft = `3px solid ${color}`;
             const mov = gestionSociosConMovimientos[s.id];
-            const badgeAnt = mov && mov.anticipos ? '<span style="background:#fff3cd;color:#856404;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:4px;">💰 ANT</span>' : '';
-            const badgeAus = mov && mov.ausencias ? '<span style="background:#fde8e8;color:#9b1c1c;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">📅 AUS</span>' : '';
+            // Con el filtro puesto la etiqueta muestra el monto en vez de "ANT"/"AUS":
+            // así se puede comprobar de dónde sale el subtotal del área.
+            // El emoji se omite cuando se muestra el monto: con el filtro puesto ya
+            // se sabe que todo lo listado es un anticipo (o una ausencia), y en un
+            // panel de 300px esos píxeles son los que parten el nombre en dos líneas.
+            const txtAnt = (campoMonto === 'montoAnt' && mov) ? fmtM(mov.montoAnt) : '💰 ANT';
+            const txtAus = (campoMonto === 'montoAus' && mov) ? fmtM(mov.montoAus) : '📅 AUS';
+            const badgeAnt = mov && mov.anticipos ? `<span style="background:#fff3cd;color:#856404;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:4px;white-space:nowrap;">${txtAnt}</span>` : '';
+            const badgeAus = mov && mov.ausencias ? `<span style="background:#fde8e8;color:#9b1c1c;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;white-space:nowrap;">${txtAus}</span>` : '';
             const badgeEgr = (typeof egresosPorSocio !== 'undefined' && egresosPorSocio[s.id]) ? '<span style="background:#e0f2fe;color:#075985;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">💸 EGRESO</span>' : '';
             // Cambistas van dentro de Mesas, pero se marcan para poder distinguirlos.
             const badgeCamb = (s.area || '').toLowerCase().includes('cambista')
@@ -940,10 +963,17 @@ async function cargarMovimientosGestion() {
 
         gestionSociosConMovimientos = {};
         cacheSocios.forEach(s => {
-            const tieneAnticipos = Array.isArray(todosAnticipos[s.id]) && todosAnticipos[s.id].length > 0;
-            const tieneAusencias = Array.isArray(todosExtras[s.id]) &&
-                todosExtras[s.id].some(e => e.tipo && e.tipo.toLowerCase().includes('ausencia'));
-            gestionSociosConMovimientos[s.id] = { anticipos: tieneAnticipos, ausencias: tieneAusencias };
+            const listaAnt = Array.isArray(todosAnticipos[s.id]) ? todosAnticipos[s.id] : [];
+            const listaAus = (Array.isArray(todosExtras[s.id]) ? todosExtras[s.id] : [])
+                .filter(e => e.tipo && e.tipo.toLowerCase().includes('ausencia'));
+            // Además de si tiene o no, se guarda CUÁNTO: así la lista puede mostrar
+            // el total por área y el total general de lo que se está filtrando.
+            const montoAnt = listaAnt.reduce((t, a) => t + (Number(a.monto ?? a.cantidad) || 0), 0);
+            const montoAus = listaAus.reduce((t, e) => t + (Number(e.monto) || 0), 0);
+            gestionSociosConMovimientos[s.id] = {
+                anticipos: listaAnt.length > 0, ausencias: listaAus.length > 0,
+                montoAnt, montoAus, nAnt: listaAnt.length, nAus: listaAus.length
+            };
         });
         if (infoEl) infoEl.textContent = '';
     } catch(e) {
