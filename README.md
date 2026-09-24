@@ -232,6 +232,19 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-24 — El socio también puede ver el mes como planilla (Horarios v12)
+
+- El supervisor podía alternar entre la **grilla del mes** y la **lista día por día** (la que imita la planilla de papel: día de la semana · número · turno). Ahora el socio tiene el mismo botón, arriba a la derecha del calendario.
+- **Es la misma vista, no una copia:** reusa `pintarListaMes()`, la función que ya usaba el supervisor. Los días siguen siendo tocables para abrir el detalle.
+- **La elección se guarda aparte de la del supervisor** (`hor_vista_socio` vs `hor_vista`): en un teléfono compartido son dos personas distintas mirando cosas distintas, y heredar la del otro sería confuso.
+- **Dos errores encontrados al hacerlo:**
+  1. **Preexistente, en la vista del supervisor:** la fila de la planilla tenía **dos atributos `style`** en la misma etiqueta —uno con el `cursor:pointer` y otro con el fondo y la franja de color del turno—. El navegador solo respeta el primero, así que el fondo alternado y la franja **nunca se vieron**, porque estas filas siempre son clickeables. Ahora van en un solo atributo.
+  2. **Introducido y corregido en el momento:** el contenedor nuevo se llamó `socioLista`, id que **ya existía** — es la lista de socios del login. `getElementById` devuelve el primero, así que el mes se pintaba dentro del buscador oculto y de paso lo habría destruido (justo lo que se arregló hoy). Pasó a llamarse `socioListaMes`.
+- **La lista se adaptó a los tres temas.** Sus fondos estaban fijos (`#0b1220`, `#151e2e`, `#111a28`): en tema claro habrían sido franjas negras. Ahora salen de variables (`--h-pl-libre`, `--h-pl-impar`, `--h-pl-par`, `--h-pl-hoy`).
+- **Verificación:** 14 comprobaciones del cambio de vista (grilla ↔ lista, la cabecera LU-DO se oculta, el botón cambia de texto, la elección se guarda, los días siguen siendo tocables) y la lista se lee bien en los tres temas — la auditoría de contraste ahora **compone los colores translúcidos** sobre el de atrás, que antes daba un falso positivo en el fondo de «hoy». Más 4 comprobaciones de que no hay ids repetidos y de que pintar el mes no destruye la lista del login.
+- **No se pudo verificar con una captura real:** el entorno de pruebas bloquea el CDN de Tailwind y sin él el layout de esta app colapsa. La verificación es de estructura y colores calculados, no visual.
+- **Archivos:** `index2.html`, `sw2.js`.
+
 #### 2026-09-24 — Horarios también tiene los tres temas (Horarios v11)
 
 - `index2.html` era la última app sin selector: nació **solo oscura**. Ahora tiene los mismos tres que el resto — **☀️ Claro · 🌙 Oscuro · ⚫ Negro** — con el botón en la cabecera, al lado de «Salir». Con esto las **cuatro apps** quedan parejas.

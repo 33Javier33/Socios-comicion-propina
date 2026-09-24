@@ -41,14 +41,20 @@
   :root{
     --h-bg:#0f172a; --h-card:#1e293b; --h-border:#334155; --h-text:#e2e8f0;
     --h-field:#0f172a; --h-line:#1e293b; --h-tabla:#293449; --h-ghost:#334155;
+    --h-muted:#cbd5e1; --h-hoy:#7dd3fc;
+    /* Filas de la vista lista (la que imita la planilla de papel) */
+    --h-pl-libre:#0b1220; --h-pl-impar:#151e2e; --h-pl-par:#111a28; --h-pl-hoy:#0c4a6e33;
   }
   body.tema-claro, :root.pre-claro body{
     --h-bg:#f1f5f9; --h-card:#ffffff; --h-border:#e2e8f0; --h-text:#0f172a;
     --h-field:#ffffff; --h-line:#e2e8f0; --h-tabla:#cbd5e1; --h-ghost:#e2e8f0;
+    --h-muted:#475569; --h-hoy:#0369a1;
+    --h-pl-libre:#e2e8f0; --h-pl-impar:#ffffff; --h-pl-par:#f8fafc; --h-pl-hoy:#e0f2fe;
   }
   body.tema-negro, :root.pre-negro body{
     --h-bg:#000000; --h-card:#141414; --h-border:#1e1e1e;
     --h-field:#000000; --h-line:#1a1a1a; --h-tabla:#1e1e1e; --h-ghost:#1e1e1e;
+    --h-pl-libre:#000000; --h-pl-impar:#141414; --h-pl-par:#0d0d0d; --h-pl-hoy:#0c4a6e40;
   }
 
   *{ -webkit-tap-highlight-color:transparent; box-sizing:border-box; }
@@ -268,10 +274,16 @@
       <div id="socioMesLabel" class="font-extrabold text-base"></div>
       <button onclick="socioMes(1)" class="btn-ghost">›</button>
     </div>
-    <div class="grid grid-cols-7 gap-1.5 mb-1 text-center text-[10px] font-bold text-slate-500">
+    <!-- Las dos formas de ver el mes, la misma opción que tiene el supervisor:
+         la grilla de siempre o la lista con forma de planilla de papel. -->
+    <div class="flex justify-end mb-2">
+      <button id="socioVistaBtn" onclick="socioToggleVista()" class="btn-ghost" style="font-size:12px;padding:6px 11px;">📋 Lista</button>
+    </div>
+    <div id="socioCalCab" class="grid grid-cols-7 gap-1.5 mb-1 text-center text-[10px] font-bold text-slate-500">
       <div>LU</div><div>MA</div><div>MI</div><div>JU</div><div>VI</div><div>SÁ</div><div>DO</div>
     </div>
     <div id="socioCal" class="grid grid-cols-7 gap-1.5"></div>
+    <div id="socioListaMes" style="display:none"></div>
     <div id="socioLeyenda" class="mt-5"></div>
     <div id="socioSinGrupo" class="hidden mt-6 card p-5 text-center text-sm text-slate-400">
       Aún no tienes un grupo asignado. Pídele al <b>supervisor</b> que te asigne a un grupo de turnos.
@@ -434,6 +446,7 @@ let socioViewDate = new Date();
 let supViewDate = new Date();
 let supSocioSel = '';
 let supVista = (()=>{ try{ return localStorage.getItem('hor_vista')||'mes'; }catch(e){ return 'mes'; } })();
+let socioVista = (()=>{ try{ return localStorage.getItem('hor_vista_socio')||'mes'; }catch(e){ return 'mes'; } })();
 let covDate = new Date(), covAbierto = false;
 let pinBuffer = '', pinCtx = null; // { modo:'create'|'verify', titulo, sub, avatar, onOk(pin) }
 
@@ -1114,12 +1127,20 @@ function pintarListaMes(cont, date, socioId, excepciones, onDayClick){
       txt=(h?h+' Hrs ':'')+p.ini+' a '+p.fin; peso=700;          // 7,5 Hrs 20:30 a 04:30
     }
 
-    // Los libres van en bloque oscuro y centrados, como en la hoja impresa.
-    const fondo = libre ? '#0b1220' : (esHoy ? '#0c4a6e33' : (d.getDate()%2 ? '#151e2e' : '#111a28'));
-    const clk=onDayClick?`onclick="${onDayClick}('${iso}')" style="cursor:pointer"`:'';
-    return `<div ${clk} class="pl-fila" style="background:${fondo};border-left:3px solid ${p?p.color:'#334155'};">
-      <div class="pl-sem" style="color:${esHoy?'#7dd3fc':'#cbd5e1'}">${DIAS[d.getDay()]}</div>
-      <div class="pl-num" style="color:${esHoy?'#7dd3fc':'#e2e8f0'}">${d.getDate()}</div>
+    // Los libres van en bloque aparte y centrados, como en la hoja impresa.
+    // Los fondos salen de variables y no de colores fijos: esta misma lista se
+    // ve en los tres temas, y en claro un fondo #111a28 sería una franja negra.
+    const fondo = libre ? 'var(--h-pl-libre)'
+                : (esHoy ? 'var(--h-pl-hoy)'
+                : (d.getDate()%2 ? 'var(--h-pl-impar)' : 'var(--h-pl-par)'));
+    // El cursor va DENTRO del mismo style que el fondo. Estaban en dos
+    // atributos style separados en la misma etiqueta y el navegador solo
+    // respeta el primero: el fondo de la fila y la franja de color del turno
+    // se perdían siempre, porque estas filas son clickeables en los dos usos.
+    const clk=onDayClick?`onclick="${onDayClick}('${iso}')"`:'';
+    return `<div ${clk} class="pl-fila" style="${onDayClick?'cursor:pointer;':''}background:${fondo};border-left:3px solid ${p?p.color:'var(--h-border)'};">
+      <div class="pl-sem" style="color:${esHoy?'var(--h-hoy)':'var(--h-muted)'}">${DIAS[d.getDay()]}</div>
+      <div class="pl-num" style="color:${esHoy?'var(--h-hoy)':'var(--h-text)'}">${d.getDate()}</div>
       <div class="pl-tur" style="color:${colTxt};font-weight:${peso};${libre?'letter-spacing:.06em;':''}">${esc(txt)}</div>
       ${esHoy?'<span class="pl-hoy">HOY</span>':''}
     </div>`;
@@ -1146,8 +1167,33 @@ async function renderSocioApp(){
   if(!gid && !hasExc){ sinGrupo.classList.remove('hidden'); document.getElementById('socioCal').innerHTML=''; document.getElementById('socioLeyenda').innerHTML=''; return; }
   sinGrupo.classList.add('hidden');
   _socioExc=exc;   // lo usa el modal del día, para no volver a consultar
-  pintarCalendario(document.getElementById('socioCal'), socioViewDate, sesion.id, exc, 'socioDiaClick');
+  // Grilla o lista, según lo que haya elegido. Se reusa el mismo par de
+  // funciones que el supervisor: es la misma vista, no una copia.
+  const grid=document.getElementById('socioCal');
+  const cab=document.getElementById('socioCalCab');
+  // OJO: 'socioListaMes', no 'socioLista' — ese id ya lo usa la lista de
+  // socios del login. Duplicarlo hacía que el mes se pintara dentro del
+  // buscador oculto y de paso lo destruía.
+  const lista=document.getElementById('socioListaMes');
+  const btn=document.getElementById('socioVistaBtn');
+  if(btn) btn.textContent = socioVista==='mes' ? '📋 Lista' : '🗓 Mes';
+  if(socioVista==='lista'){
+    grid.style.display='none'; cab.style.display='none'; lista.style.display='';
+    pintarListaMes(lista, socioViewDate, sesion.id, exc, 'socioDiaClick');
+  } else {
+    grid.style.display=''; cab.style.display=''; lista.style.display='none';
+    pintarCalendario(grid, socioViewDate, sesion.id, exc, 'socioDiaClick');
+  }
   leyendaMes(document.getElementById('socioLeyenda'), socioViewDate, sesion.id, exc);
+}
+
+// La vista del socio se guarda aparte de la del supervisor: en un teléfono
+// compartido son dos personas distintas mirando cosas distintas, y heredar
+// la elección del otro sería confuso.
+function socioToggleVista(){
+  socioVista = (socioVista==='mes') ? 'lista' : 'mes';
+  try{ localStorage.setItem('hor_vista_socio', socioVista); }catch(e){}
+  renderSocioApp();
 }
 // ══════════════════════════════════════════════════════════════════════
 // DETALLE DEL DÍA (socio) — solo lectura
