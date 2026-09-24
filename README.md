@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-24 — El tema oscuro ahora cubre todo el sistema (SW v138)
+
+- **El modo oscuro ya existía** (botón 🌙 en la cabecera, 200 reglas en `styles.css`), pero **no llegaba a todas partes**. Faltaba justo lo que aparece cuando hay datos, que es cuando se usa la app de verdad.
+- **El problema de fondo, medido:** por toda la app hay avisos con el patrón *fondo tenue + texto del mismo tono pero oscuro* — `#fee2e2` con `#991b1b`, `#fff3cd` con `#92400e`, `#dcfce7` con `#15803d`. Las reglas existentes ya oscurecían **esos fondos**, pero nadie tocaba **el texto**: quedaba café sobre azul marino. Son **158 textos** escritos a mano en esa situación, repartidos en index.html y los 30 módulos JS.
+- **Se mapeó cada familia completa —fondo Y texto— en vez de ir color por color**, para que el aviso siga leyéndose y conserve su color de significado: rojo (errores y ausencias), ámbar (advertencias), verde (confirmaciones), azul (información) y morado/rosa (donaciones). Así un aviso rojo se sigue viendo rojo, no gris.
+- **El peor caso encontrado:** `#eee` con texto `#555` daba gris claro sobre gris claro, **ilegible del todo** — el texto sí se aclaraba con las reglas viejas y el fondo no. Se sumaron `#eee`, `#ddd`, `#e2e8f0`, `#cbd5e1` y `#e5e7eb` a los fondos que se oscurecen.
+- **Colores de marca de tono medio** (`#2563eb`, `#059669`, `#0891b2`, `#7c3aed`): sobre blanco se leen, sobre el fondo oscuro quedaban apagados. Suben a la versión clara del mismo tono.
+- **Amarillo puro** (`#ffff00`) conserva su fondo chillón —es un resaltador, esa es su razón de ser— pero se le fuerza texto negro.
+- **Piezas que nacieron después del modo oscuro y nunca lo tuvieron:** los esqueletos de carga (`.sk-card`, `.sk`, que se quedaban blancos mientras cargaba), el editor de notas (`.nota-editor`, `.nota-toolbar`) y los puntos de la nómina (`.vp-puntos`).
+- **Verificación:** se extrajeron del código los **67 pares (fondo, texto) reales** que existen en recuadros claros y se renderizaron en modo oscuro: **0 con poco contraste** (antes 11 fallaban). Auditoría de toda la app con las 17 pestañas abiertas a la vez: **0 bloques claros y 0 textos ilegibles** reales — las 4 marcas que quedan son botones blancos translúcidos sobre los banners con degradado azul, que se leen perfecto (el auditor no ve a través del degradado).
+- **El tema claro no se tocó:** todas las reglas van bajo `body.dark-mode`. Comprobado corriendo la misma auditoría en claro antes y después del cambio: 32 y 32, idéntico.
+- **`index2.html` (Horarios) no necesita nada:** esa app es oscura de fábrica.
+- **Archivos:** `styles.css`.
+
 #### 2026-09-23 — Totales por área al filtrar por anticipos o ausencias (SW v137)
 
 - Al apretar **💰 Anticipos** (o **📅 Ausencias**) la lista ya no dice solo *cuántos* socios hay: dice **cuánto**.
