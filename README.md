@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-24 — Horarios también tiene los tres temas (Horarios v11)
+
+- `index2.html` era la última app sin selector: nació **solo oscura**. Ahora tiene los mismos tres que el resto — **☀️ Claro · 🌙 Oscuro · ⚫ Negro** — con el botón en la cabecera, al lado de «Salir». Con esto las **cuatro apps** quedan parejas.
+- **El oscuro sigue siendo el valor por defecto**, así que quien no elija nada no ve ningún cambio.
+- **Lo difícil acá era al revés que en las otras apps:** agregar el **claro**. El resto partía de un diseño claro y había que oscurecerlo; esta partía de uno oscuro y no tenía ninguna capa de temas. Se hizo en tres pasos:
+  1. Los colores neutros del bloque `<style>` pasaron a variables (`--h-bg`, `--h-card`, `--h-border`, `--h-text`, `--h-field`, `--h-line`, `--h-tabla`) — 13 reemplazos.
+  2. Las clases de Tailwind pensadas para fondo oscuro (`text-slate-400`, `text-slate-500`, `text-sky-300`…) se bajan varios tonos en claro: sobre blanco casi no se veían.
+  3. Los recuadros de aviso escritos a mano —azul `#0c4a6e`, rojo `#7f1d1d`, ámbar `#3f2d0a`, con su texto claro— se dan vuelta **enteros**, fondo y texto juntos. Si se cambiara solo uno, el aviso desaparecería.
+- **Un detalle que se habría visto feo:** el separador de filas de la planilla usaba `#1e293b`, el mismo valor que las tarjetas. Al pasar todo a variables quedó apuntando a `--h-card`, que en claro es **blanco** — la línea habría sido invisible. Se le puso su propia variable `--h-line`.
+- **El selector es uno solo, fijo arriba a la derecha**, y sirve para las dos cabeceras (socio y supervisor) en vez de duplicarlo.
+- **Sin fogonazo al abrir en claro:** un script en el `<head>` aplica el tema antes de pintar, con clases en el `<html>` que el script principal reemplaza al arrancar.
+- **Verificación:** 23 comprobaciones — los tres temas dan los colores exactos de fondo, tarjeta, barra del navegador e ícono del botón, quedan guardados y marcados, y al reabrir en claro el fondo ya está claro antes de que corra el script. Más una **auditoría de contraste con todas las pantallas abiertas a la vez**: **0 textos ilegibles en los tres temas**. Y se volvió a correr el test de la lista de socios (el arreglo de hoy) para confirmar que sigue funcionando.
+- **Archivos:** `index2.html`, `sw2.js`.
+
 #### 2026-09-24 — Horarios: no se podía elegir un socio para entrar (Horarios v10)
 
 - **Síntoma:** en `index2.html`, al buscar un socio la lista quedaba vacía. Sin lista no hay a quién tocar, así que **no se podía entrar a la app** salvo por el acceso directo ⭐ de quien ya lo tenía guardado.

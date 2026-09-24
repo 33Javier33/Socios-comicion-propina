@@ -16,9 +16,43 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  // El tema se aplica ANTES de pintar. Sin esto, quien elige el claro ve un
+  // fogonazo azul marino cada vez que abre. Como el <body> todavía no existe,
+  // la clase va en el <html> y el script principal la reemplaza al arrancar.
+  (function(){
+    try{
+      var t = localStorage.getItem('horarios_tema');
+      if (t === 'claro') document.documentElement.classList.add('pre-claro');
+      if (t === 'negro') document.documentElement.classList.add('pre-negro');
+      var c = { claro:'#f1f5f9', oscuro:'#0f172a', negro:'#000000' }[t];
+      if (c) document.querySelector('meta[name="theme-color"]').setAttribute('content', c);
+    }catch(e){}
+  })();
+</script>
 <style>
+  /* ══════════════════════════════════════════════════════════════════
+     TEMAS: Claro · Oscuro · Negro
+     Los mismos tres que socios-comicion, diario.propi y propi.solicitada.
+     Esta app nació solo oscura, así que el oscuro es el valor por defecto
+     (nadie ve un cambio si no elige otro) y los otros dos se aplican con
+     una clase en el <body> que redefine estas variables.
+     ══════════════════════════════════════════════════════════════════ */
+  :root{
+    --h-bg:#0f172a; --h-card:#1e293b; --h-border:#334155; --h-text:#e2e8f0;
+    --h-field:#0f172a; --h-line:#1e293b; --h-tabla:#293449; --h-ghost:#334155;
+  }
+  body.tema-claro, :root.pre-claro body{
+    --h-bg:#f1f5f9; --h-card:#ffffff; --h-border:#e2e8f0; --h-text:#0f172a;
+    --h-field:#ffffff; --h-line:#e2e8f0; --h-tabla:#cbd5e1; --h-ghost:#e2e8f0;
+  }
+  body.tema-negro, :root.pre-negro body{
+    --h-bg:#000000; --h-card:#141414; --h-border:#1e1e1e;
+    --h-field:#000000; --h-line:#1a1a1a; --h-tabla:#1e1e1e; --h-ghost:#1e1e1e;
+  }
+
   *{ -webkit-tap-highlight-color:transparent; box-sizing:border-box; }
-  body{ font-family:'Inter',sans-serif; background:#0f172a; color:#e2e8f0; margin:0; min-height:100dvh; }
+  body{ font-family:'Inter',sans-serif; background:var(--h-bg); color:var(--h-text); margin:0; min-height:100dvh; }
   .screen{ display:none; }
   .screen.active{ display:flex; }
   input,select{ font-family:inherit; }
@@ -49,9 +83,9 @@
   /* Vista lista con la forma de la planilla de papel: tres columnas
      (día de la semana · número · turno) para poder cotejar renglón por
      renglón contra la hoja impresa. */
-  .pl-tabla{ border:1px solid #293449; border-radius:10px; overflow:hidden; }
+  .pl-tabla{ border:1px solid var(--h-tabla); border-radius:10px; overflow:hidden; }
   .pl-fila{ display:grid; grid-template-columns:78px 26px 1fr auto; align-items:center;
-            gap:6px; padding:7px 9px; border-bottom:1px solid #1e293b; }
+            gap:6px; padding:7px 9px; border-bottom:1px solid var(--h-line); }
   .pl-tabla .pl-fila:last-child{ border-bottom:none; }
   .pl-sem{ font-size:12px; font-weight:600; }
   .pl-num{ font-size:13px; font-weight:800; text-align:right; }
@@ -63,8 +97,8 @@
   }
   .pin-dot{ width:16px; height:16px; border-radius:50%; border:2px solid #475569; transition:all .15s; }
   .pin-dot.on{ background:#38bdf8; border-color:#38bdf8; }
-  .keypad-btn{ height:64px; border-radius:16px; background:#1e293b; border:1px solid #334155; font-size:24px; font-weight:700; color:#e2e8f0; cursor:pointer; transition:.1s; }
-  .keypad-btn:active{ transform:scale(0.95); background:#334155; }
+  .keypad-btn{ height:64px; border-radius:16px; background:var(--h-card); border:1px solid var(--h-border); font-size:24px; font-weight:700; color:var(--h-text); cursor:pointer; transition:.1s; }
+  .keypad-btn:active{ transform:scale(0.95); background:var(--h-border); }
   /* Con cinco pestañas el texto ya no entra a 12px en un teléfono angosto. */
   .tab-btn{ flex:1; min-width:0; padding:10px 2px; font-size:11px; font-weight:700; color:#94a3b8; border:none; background:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; }
   @media (max-width:360px){ .tab-btn{ font-size:10px; } }
@@ -73,13 +107,69 @@
   .sup-panel.active{ display:block; }
   .chip{ display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:20px; font-size:12px; font-weight:700; }
   ::-webkit-scrollbar{ width:0; }
-  .card{ background:#1e293b; border:1px solid #334155; border-radius:16px; }
+  .card{ background:var(--h-card); border:1px solid var(--h-border); border-radius:16px; }
   .btn-primary{ background:linear-gradient(135deg,#0ea5e9,#0284c7); color:#fff; font-weight:700; border:none; border-radius:12px; padding:12px; cursor:pointer; }
-  .btn-ghost{ background:#334155; color:#e2e8f0; font-weight:600; border:none; border-radius:10px; padding:9px 12px; cursor:pointer; }
-  .fld{ width:100%; background:#0f172a; border:1px solid #334155; border-radius:10px; padding:10px 12px; color:#e2e8f0; font-size:14px; }
+  .btn-ghost{ background:var(--h-border); color:var(--h-text); font-weight:600; border:none; border-radius:10px; padding:9px 12px; cursor:pointer; }
+  .fld{ width:100%; background:var(--h-field); border:1px solid var(--h-border); border-radius:10px; padding:10px 12px; color:var(--h-text); font-size:14px; }
+
+  /* ── Tema CLARO: lo que hay que dar vuelta ──
+     La app se escribió solo para fondo oscuro, así que usa grises de Tailwind
+     pensados para eso (slate-400/500 sobre azul marino). Sobre blanco esos
+     grises casi no se ven, hay que bajarlos varios tonos. */
+  body.tema-claro .text-slate-200,
+  body.tema-claro .text-slate-300{ color:#334155 !important; }
+  body.tema-claro .text-slate-400{ color:#475569 !important; }
+  body.tema-claro .text-slate-500,
+  body.tema-claro .text-slate-600{ color:#64748b !important; }
+  body.tema-claro .text-sky-100,
+  body.tema-claro .text-sky-300,
+  body.tema-claro .text-sky-400{ color:#0369a1 !important; }
+  body.tema-claro .bg-slate-800{ background:#e2e8f0 !important; }
+  /* Los encabezados con degradado son oscuros en los tres temas: el texto
+     blanco que llevan encima se mantiene como está. */
+
+  /* Recuadros de aviso escritos a mano: fondo oscuro + texto claro del mismo
+     tono. En tema claro hay que dar vuelta LOS DOS, o el aviso desaparece. */
+  body.tema-claro [style*="#0c4a6e"]{ background:#e0f2fe !important; }
+  body.tema-claro [style*="#7f1d1d"]{ background:#fee2e2 !important; }
+  body.tema-claro [style*="#3f2d0a"]{ background:#fef3c7 !important; }
+  body.tema-claro [style*="color:#7dd3fc"]{ color:#0369a1 !important; }
+  body.tema-claro [style*="color:#fecaca"]{ color:#991b1b !important; }
+  body.tema-claro [style*="color:#fcd34d"],
+  body.tema-claro [style*="color:#fde68a"],
+  body.tema-claro [style*="color:#fbbf24"]{ color:#92400e !important; }
+  body.tema-claro [style*="color:#6ee7b7"]{ color:#047857 !important; }
+  body.tema-claro [style*="color:#cbd5e1"],
+  body.tema-claro [style*="color:#e2e8f0"]{ color:#334155 !important; }
+  body.tema-claro [style*="background:#1e293b"],
+  body.tema-claro [style*="background:#0f172a"]{ background:#ffffff !important; }
+  body.tema-claro [style*="background:#334155"]{ background:#e2e8f0 !important; }
+
+  /* ── Tema NEGRO: solo baja los fondos ── */
+  body.tema-negro [style*="background:#1e293b"],
+  body.tema-negro [style*="background:#0f172a"]{ background:#141414 !important; }
+  body.tema-negro [style*="background:#334155"]{ background:#1e1e1e !important; }
+
+  /* ── Selector de tema (☀️ 🌙 ⚫) ── */
+  /* Va fijo y no colgando del botón: hay DOS cabeceras (socio y supervisor)
+     y así se usa un solo panel para las dos, en vez de duplicarlo. */
+  #temaPickerH{ display:none; position:fixed; top:60px; right:12px; z-index:60;
+                gap:6px; padding:7px; border-radius:14px; background:var(--h-card);
+                border:1px solid var(--h-border); box-shadow:0 10px 25px rgba(0,0,0,.35); }
+  #temaPickerH.abierto{ display:flex; }
+  .tema-optH{ width:36px; height:36px; border-radius:10px; border:2px solid transparent;
+              background:var(--h-bg); font-size:16px; line-height:1; cursor:pointer; }
+  .tema-optH.activo{ border-color:#38bdf8; background:rgba(56,189,248,.18); }
 </style>
 </head>
 <body class="flex flex-col">
+
+<!-- Selector de tema. Uno solo para las dos cabeceras (socio y supervisor). -->
+<div id="temaPickerH" role="group" aria-label="Tema de la app">
+  <button type="button" class="tema-optH" data-tema="claro"  onclick="aplicarTemaH('claro')"  title="Tema claro">☀️</button>
+  <button type="button" class="tema-optH" data-tema="oscuro" onclick="aplicarTemaH('oscuro')" title="Tema oscuro">🌙</button>
+  <button type="button" class="tema-optH" data-tema="negro"  onclick="aplicarTemaH('negro')"  title="Tema negro (OLED)">⚫</button>
+</div>
 
 <!-- ══════════ LOGIN: ROL ══════════ -->
 <div id="scrRole" class="screen active flex-col items-center justify-center min-h-[100dvh] p-6">
@@ -161,7 +251,12 @@
   <div class="p-5 pt-8" style="background:linear-gradient(135deg,#0369a1,#0284c7);">
     <div class="flex items-center justify-between">
       <div><div class="text-xs text-sky-100/80">Mis turnos</div><div id="socioNombreHdr" class="text-lg font-extrabold text-white">...</div><div id="socioGrupoHdr" class="text-xs text-sky-100/80 mt-0.5"></div></div>
-      <button onclick="logout()" class="text-sky-100/90 text-xs bg-white/15 rounded-lg px-3 py-2">Salir</button>
+      <div class="flex items-center gap-2">
+        <div style="position:relative;">
+          <button onclick="temaPickerH_toggle(event)" class="tema-btn-h text-sky-100/90 text-xs bg-white/15 rounded-lg px-3 py-2" title="Tema de la app">🌙</button>
+        </div>
+        <button onclick="logout()" class="text-sky-100/90 text-xs bg-white/15 rounded-lg px-3 py-2">Salir</button>
+      </div>
     </div>
   </div>
   <div class="p-4 flex-1 overflow-y-auto pb-8">
@@ -188,7 +283,12 @@
 <div id="appSuper" class="screen flex-col min-h-[100dvh]">
   <div class="p-4 pt-7 flex items-center justify-between" style="background:linear-gradient(135deg,#4338ca,#6366f1);">
     <div><div class="text-xs text-indigo-100/80">Supervisor</div><div class="text-lg font-extrabold text-white">Gestión de Horarios</div></div>
-    <button onclick="logout()" class="text-indigo-100/90 text-xs bg-white/15 rounded-lg px-3 py-2">Salir</button>
+    <div class="flex items-center gap-2">
+      <div style="position:relative;">
+        <button onclick="temaPickerH_toggle(event)" class="tema-btn-h text-indigo-100/90 text-xs bg-white/15 rounded-lg px-3 py-2" title="Tema de la app">🌙</button>
+      </div>
+      <button onclick="logout()" class="text-indigo-100/90 text-xs bg-white/15 rounded-lg px-3 py-2">Salir</button>
+    </div>
   </div>
 
   <div class="flex-1 overflow-y-auto p-4 pb-24">
@@ -339,6 +439,46 @@ let pinBuffer = '', pinCtx = null; // { modo:'create'|'verify', titulo, sub, ava
 
 function uid(p){ return (p||'') + Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+// ══════════════════════════════════════════════════════════════════════
+// TEMAS: claro · oscuro · negro
+// Los mismos tres que las otras apps. Esta nació solo oscura, así que el
+// oscuro es el valor por defecto: quien no elija nada no ve ningún cambio.
+// Queda guardado en ESTE teléfono, igual que el acceso directo ⭐.
+// ══════════════════════════════════════════════════════════════════════
+const TEMAS_H = ['claro','oscuro','negro'];
+const TEMA_ICONO_H = { claro:'☀️', oscuro:'🌙', negro:'⚫' };
+const TEMA_COLOR_H = { claro:'#f1f5f9', oscuro:'#0f172a', negro:'#000000' };
+
+function temaActualH(){
+  try{ const t = localStorage.getItem('horarios_tema'); if(TEMAS_H.includes(t)) return t; }catch(e){}
+  return 'oscuro';
+}
+
+function aplicarTemaH(nombre){
+  if(!TEMAS_H.includes(nombre)) nombre='oscuro';
+  document.body.classList.toggle('tema-claro', nombre==='claro');
+  document.body.classList.toggle('tema-negro', nombre==='negro');
+  document.documentElement.classList.remove('pre-claro','pre-negro');
+  try{ localStorage.setItem('horarios_tema', nombre); }catch(e){}
+  document.querySelectorAll('.tema-btn-h').forEach(b=>{ b.textContent = TEMA_ICONO_H[nombre]; });
+  document.querySelectorAll('.tema-optH').forEach(b=>{
+    b.classList.toggle('activo', b.getAttribute('data-tema')===nombre);
+  });
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(m) m.setAttribute('content', TEMA_COLOR_H[nombre]);
+  const p=document.getElementById('temaPickerH'); if(p) p.classList.remove('abierto');
+}
+
+function temaPickerH_toggle(ev){
+  if(ev) ev.stopPropagation();
+  const p=document.getElementById('temaPickerH'); if(p) p.classList.toggle('abierto');
+}
+
+aplicarTemaH(temaActualH());
+document.addEventListener('click', ()=>{
+  const p=document.getElementById('temaPickerH'); if(p) p.classList.remove('abierto');
+});
 function esPartTime(s){ return /part/i.test((s&&s.contrato)||''); }
 function badgeContrato(s){ const pt=esPartTime(s); return `<span style="display:inline-block;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:${pt?'#8b5cf622':'#0ea5e922'};color:${pt?'#c4b5fd':'#7dd3fc'}">${pt?'Part-Time':'Planta'}</span>`; }
 function _fechaDesdeISO(iso){ const [y,m,d]=iso.split('-').map(Number); return new Date(y,m-1,d); }
