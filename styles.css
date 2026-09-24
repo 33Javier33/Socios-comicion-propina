@@ -572,6 +572,54 @@
         body.dark-mode { --bg:#0f172a; --text-color:#e2e8f0; --card-bg:#1e293b; --border:#334155; --primary:#93c5fd; --secondary:#3b82f6; --success:#22c55e; --danger:#f87171; --info:#38bdf8; --purple:#a78bfa; --surface:#1e293b; }
         body.dark-mode { background:#0f172a !important; color:#e2e8f0 !important; }
         body.dark-mode .container { background:#0f172a !important; }
+        /* Pintado inmediato del <head>: solo el fondo y el color base, lo justo
+           para que no haya destello blanco. El restyle completo lo aplica
+           auth.js unos milisegundos después, al poner la clase en el body. */
+        :root.pre-oscuro body { --bg:#0f172a; --text-color:#e2e8f0; --card-bg:#1e293b; --border:#334155; --surface:#1e293b;
+                                background:#0f172a !important; color:#e2e8f0 !important; }
+
+        /* ── TEMA NEGRO (OLED) ──
+           No es un tema aparte: se aplica ENCIMA del oscuro (las dos clases
+           juntas) y solo empuja los fondos a negro puro. Así reutiliza las 200
+           reglas del oscuro sin duplicar ni una.
+           Las variantes `pre-*` las pone el script del <head>, antes de que
+           exista el <body>, para que abrir en oscuro no dé un fogonazo blanco. */
+        body.tema-negro.dark-mode,
+        :root.pre-negro body { --bg:#000000; --card-bg:#141414; --border:#1e1e1e; --surface:#141414; }
+        body.tema-negro.dark-mode,
+        body.tema-negro.dark-mode .container,
+        :root.pre-negro body { background:#000000 !important; }
+        body.tema-negro.dark-mode .header,
+        body.tema-negro.dark-mode .tabs,
+        body.tema-negro.dark-mode #mobileNavBar,
+        body.tema-negro.dark-mode #mobileDrawerPanel { background:#000000 !important; }
+        /* Los fondos que el tema oscuro deja en #1e293b / #243040 bajan a negro */
+        body.tema-negro.dark-mode [style*="background:white"],body.tema-negro.dark-mode [style*="background: white"],
+        body.tema-negro.dark-mode [style*="background:#fff"],body.tema-negro.dark-mode [style*="background: #fff"],
+        body.tema-negro.dark-mode [style*="background:#ffffff"],
+        body.tema-negro.dark-mode .card,body.tema-negro.dark-mode .sk-card,
+        body.tema-negro.dark-mode .mini-stat,body.tema-negro.dark-mode .stat-card,
+        body.tema-negro.dark-mode .action-card,body.tema-negro.dark-mode .detail-panel,
+        body.tema-negro.dark-mode .search-panel,body.tema-negro.dark-mode .arqueo-card { background:#141414 !important; }
+        body.tema-negro.dark-mode input[type=text],body.tema-negro.dark-mode input[type=number],
+        body.tema-negro.dark-mode input[type=date],body.tema-negro.dark-mode input[type=password],
+        body.tema-negro.dark-mode select,body.tema-negro.dark-mode textarea,
+        body.tema-negro.dark-mode .smart-search { background:#000000 !important; border-color:#1e1e1e !important; }
+
+        /* ── Selector de tema (☀️ 🌙 ⚫), colgado del botón de la cabecera ── */
+        #temaPicker {
+            display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 3000;
+            gap: 6px; padding: 7px; border-radius: 14px;
+            background: var(--card-bg); border: 1px solid var(--border);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.22);
+        }
+        #temaPicker.abierto { display: flex; }
+        .tema-opt {
+            width: 36px; height: 36px; border-radius: 10px; border: 2px solid transparent;
+            background: var(--bg); font-size: 1.05em; line-height: 1; cursor: pointer; transition: 0.15s;
+        }
+        .tema-opt:hover { transform: scale(1.08); }
+        .tema-opt.activo { border-color: var(--secondary); background: rgba(59,130,246,0.18); }
 
         /* Fondos blancos y claros → oscuro */
         body.dark-mode [style*="background:white"],body.dark-mode [style*="background: white"],

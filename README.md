@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-24 — Tema Negro y selector de tres temas (SW v139)
+
+- El botón de la cabecera deja de ser un interruptor de dos estados y pasa a ser un **selector de tres**: **☀️ Claro · 🌙 Oscuro · ⚫ Negro** (OLED). El ícono del botón muestra cuál está puesto. Se cierra al elegir uno o al tocar fuera.
+- **Mismos tres temas, nombres y colores que diario.propi**, para que elegir el mismo deje las dos apps iguales. El tema queda guardado en ese equipo.
+- **Nadie pierde su preferencia:** quien ya tenía activado el modo oscuro con el 🌙 arranca en Oscuro sin tocar nada, y su marca vieja (`fondo_dark_mode`) se migra sola a la nueva (`fondo_tema`). La marca vieja se sigue escribiendo, por si algún módulo la consulta.
+- **Negro no duplica el oscuro:** se aplica encima de él (`dark-mode` + `tema-negro`) y solo empuja los fondos a negro puro. Reutiliza las 200 reglas del oscuro sin copiar ninguna.
+- **Un detalle de CSS que costó:** `body.tema-negro .card` empata en especificidad con `body.dark-mode .card` y **perdía por ir antes en el archivo** — los paneles se quedaban en azul marino aunque el fondo de página ya fuera negro. Se resolvió con `body.tema-negro.dark-mode`, que gana siempre y además es exacto: el negro nunca va solo.
+- **Sin fogonazo blanco al abrir**, igual que en diario.propi: un script en el `<head>` aplica el tema antes de pintar; como ahí todavía no existe el `<body>`, las clases van en el `<html>` y `auth.js` las reemplaza al arrancar.
+- **Verificación:** 17 comprobaciones — los tres temas dan los colores exactos de fondo y barra del navegador, el botón muestra su ícono, el selector abre/marca/aplica/cierra, quien venía del 🌙 sigue en oscuro y queda migrado, y al reabrir en negro el fondo ya está negro antes de que corra `auth.js`. Más la auditoría completa en Negro (17 pestañas abiertas): **0 bloques claros y 0 textos ilegibles** reales, y los 67 pares de color del sistema con **0 con poco contraste**.
+- **Archivos:** `index.html`, `styles.css`, `js/auth.js`.
+
 #### 2026-09-24 — El tema oscuro ahora cubre todo el sistema (SW v138)
 
 - **El modo oscuro ya existía** (botón 🌙 en la cabecera, 200 reglas en `styles.css`), pero **no llegaba a todas partes**. Faltaba justo lo que aparece cuando hay datos, que es cuando se usa la app de verdad.

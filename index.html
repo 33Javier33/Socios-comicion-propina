@@ -14,7 +14,24 @@
     <link rel="icon" type="image/png" href="img/fondo-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=113">
+    <link rel="stylesheet" href="styles.css?v=114">
+    <script>
+        // El tema se aplica ANTES de pintar nada. Si esperara a auth.js, abrir
+        // con tema oscuro daría un fogonazo blanco. Como acá todavía no existe
+        // el <body>, las clases van en el <html> y auth.js las reemplaza.
+        (function () {
+            try {
+                var t = localStorage.getItem('fondo_tema');
+                if (!t && localStorage.getItem('fondo_dark_mode') === '1') t = 'oscuro';
+                if (t === 'oscuro' || t === 'negro') {
+                    document.documentElement.classList.add('pre-oscuro');
+                    if (t === 'negro') document.documentElement.classList.add('pre-negro');
+                }
+                var c = { claro: '#1e3a5f', oscuro: '#0f172a', negro: '#000000' }[t];
+                if (c) document.querySelector('meta[name="theme-color"]').setAttribute('content', c);
+            } catch (e) {}
+        })();
+    </script>
 </head>
 <body>
 
@@ -82,7 +99,16 @@
                 <div style="position:relative;">
                     <button onclick="msgAdminBell_toggle()" id="msgAdminBell" title="Notificaciones (mensajes, egresos y días PT)" style="background:var(--card-bg);color:var(--text-color);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:1em;line-height:1;cursor:pointer;transition:0.2s;position:relative;">🔔<span id="msgAdminBellBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;font-size:0.62em;font-weight:800;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:9px;padding:0 3px;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></span></button>
                 </div>
-                <button onclick="toggleDarkMode()" id="darkModeBtn" style="background:var(--card-bg);color:var(--text-color);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:0.85em;cursor:pointer;transition:0.2s;" title="Modo oscuro">🌙</button>
+                <!-- Selector de tema. Mismos tres que diario.propi, para que
+                     elegir el mismo deje las dos apps iguales. -->
+                <div style="position:relative;">
+                    <button onclick="temaPicker_toggle(event)" id="darkModeBtn" style="background:var(--card-bg);color:var(--text-color);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:0.85em;cursor:pointer;transition:0.2s;" title="Tema de la app">🌙</button>
+                    <div id="temaPicker" role="group" aria-label="Tema de la app">
+                        <button type="button" class="tema-opt" data-tema="claro"  onclick="aplicarTema('claro')"  title="Tema claro">☀️</button>
+                        <button type="button" class="tema-opt" data-tema="oscuro" onclick="aplicarTema('oscuro')" title="Tema oscuro">🌙</button>
+                        <button type="button" class="tema-opt" data-tema="negro"  onclick="aplicarTema('negro')"  title="Tema negro (OLED)">⚫</button>
+                    </div>
+                </div>
                 <!-- Enlaces a las otras apps (editar URLs aquí si cambian) -->
                 <a href="https://diario-propi.vercel.app/" target="_blank" rel="noopener" title="Abrir Diario de Recaudación" style="background:#0e7490; color:white; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; text-decoration:none; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">📔 Diario</a>
                 <!-- La App de Socios casi nunca se abre desde acá: lo que se
@@ -2318,7 +2344,7 @@
     <script src="js/constants.js?v=32"></script>
     <script src="js/utils.js?v=34"></script>
     <script src="js/cache.js?v=32"></script>
-    <script src="js/auth.js?v=32"></script>
+    <script src="js/auth.js?v=33"></script>
     <script src="js/config.js?v=99"></script>
     <script src="js/supabase-config.js?v=68"></script>
     <script src="js/api.js?v=36"></script>
@@ -2755,7 +2781,7 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v138</div>
+<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v139</div>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">

@@ -2,19 +2,71 @@
 // AUTENTICACIÓN, LOGIN, SESIÓN E INACTIVIDAD
 // ============================================================
 
-function toggleDarkMode() {
-    const isDark = document.body.classList.toggle('dark-mode');
-    localStorage.setItem('fondo_dark_mode', isDark ? '1' : '0');
-    const btn = document.getElementById('darkModeBtn');
-    if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+// ══════════════════════════════════════════════════════════════════════
+// TEMAS: claro · oscuro · negro
+//
+// Mismos nombres y colores que diario.propi y propi.solicitada, para que
+// elegir el mismo tema deje las tres apps iguales. Queda guardado en ESTE
+// equipo, así que cada persona puede tener el suyo.
+//
+// Negro se aplica encima de Oscuro (las dos clases juntas): reutiliza sus
+// 200 reglas y solo empuja los fondos a negro puro.
+// ══════════════════════════════════════════════════════════════════════
+const TEMAS_APP = ['claro', 'oscuro', 'negro'];
+const TEMA_COLOR_APP = { claro: '#1e3a5f', oscuro: '#0f172a', negro: '#000000' };
+const TEMA_ICONO = { claro: '☀️', oscuro: '🌙', negro: '⚫' };
+const TEMA_KEY_APP = 'fondo_tema';
+
+function temaActualApp() {
+    try {
+        const t = localStorage.getItem(TEMA_KEY_APP);
+        if (TEMAS_APP.includes(t)) return t;
+        // Migración: quien ya tenía el modo oscuro del botón 🌙 sigue en oscuro
+        if (localStorage.getItem('fondo_dark_mode') === '1') return 'oscuro';
+    } catch (e) {}
+    return 'claro';
 }
-// Restaurar modo oscuro al cargar
+
+function aplicarTema(nombre) {
+    if (!TEMAS_APP.includes(nombre)) nombre = 'claro';
+    const oscuro = (nombre === 'oscuro' || nombre === 'negro');
+    document.body.classList.toggle('dark-mode', oscuro);
+    document.body.classList.toggle('tema-negro', nombre === 'negro');
+    document.documentElement.classList.remove('pre-oscuro', 'pre-negro');
+    try {
+        localStorage.setItem(TEMA_KEY_APP, nombre);
+        // Se mantiene la marca vieja por si algún módulo todavía la consulta
+        localStorage.setItem('fondo_dark_mode', oscuro ? '1' : '0');
+    } catch (e) {}
+    const btn = document.getElementById('darkModeBtn');
+    if (btn) btn.textContent = TEMA_ICONO[nombre];
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', TEMA_COLOR_APP[nombre]);
+    document.querySelectorAll('.tema-opt').forEach(b => {
+        b.classList.toggle('activo', b.getAttribute('data-tema') === nombre);
+    });
+    const pick = document.getElementById('temaPicker');
+    if (pick) pick.classList.remove('abierto');
+}
+
+function temaPicker_toggle(ev) {
+    if (ev) ev.stopPropagation();
+    const pick = document.getElementById('temaPicker');
+    if (pick) pick.classList.toggle('abierto');
+}
+
+// Se deja por compatibilidad: algún atajo o enlace viejo puede seguir llamándola.
+function toggleDarkMode() {
+    aplicarTema(temaActualApp() === 'claro' ? 'oscuro' : 'claro');
+}
+
 (function() {
-    if (localStorage.getItem('fondo_dark_mode') === '1') {
-        document.body.classList.add('dark-mode');
-        const btn = document.getElementById('darkModeBtn');
-        if (btn) btn.textContent = '☀️';
-    }
+    aplicarTema(temaActualApp());
+    // Tocar fuera cierra el selector
+    document.addEventListener('click', () => {
+        const pick = document.getElementById('temaPicker');
+        if (pick) pick.classList.remove('abierto');
+    });
 })();
 
 function intentarLogin() {
