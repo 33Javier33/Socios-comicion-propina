@@ -415,21 +415,26 @@ function accesoAlternar(id, ev){
   renderSocioLista(); pintarAccesoDirecto();
 }
 
+// Avatar del socio: su foto si la subió, su inicial si no.
+// Va acá arriba, suelta, y NO dentro de pintarAccesoDirecto: estaba anidada
+// ahí y renderSocioLista —que es otra función— la llamaba igual. Eso lanzaba
+// "_avatarSocio is not defined", cortaba el pintado a la mitad y la lista de
+// socios quedaba vacía: no se podía elegir a nadie para entrar.
+function _avatarSocio(s, px){
+  const n = (s && s.nombre) || '?';
+  const f = String((s && s.foto_url) || '').trim();
+  if (f) return `<div style="width:${px}px;height:${px}px;border-radius:9999px;flex-shrink:0;`
+    + `background-image:url('${f.replace(/'/g,'%27')}');background-size:cover;background-position:center;`
+    + `border:1px solid rgba(255,255,255,.15)"></div>`;
+  return `<div class="rounded-full bg-sky-500/15 text-sky-300 flex items-center justify-center font-bold"`
+    + ` style="width:${px}px;height:${px}px;flex-shrink:0;font-size:${Math.round(px*0.42)}px">`
+    + esc(n.charAt(0).toUpperCase()) + `</div>`;
+}
+
 function pintarAccesoDirecto(){
   const cont=document.getElementById('accesoDirecto'); if(!cont) return;
   const a=accesoLeer();
   if(!a || !a.id){ cont.style.display='none'; cont.innerHTML=''; return; }
-  // Avatar del socio: su foto si la subió, su inicial si no.
-  function _avatarSocio(s, px){
-    const n = (s && s.nombre) || '?';
-    const f = String((s && s.foto_url) || '').trim();
-    if (f) return `<div style="width:${px}px;height:${px}px;border-radius:9999px;flex-shrink:0;`
-      + `background-image:url('${f.replace(/'/g,'%27')}');background-size:cover;background-position:center;`
-      + `border:1px solid rgba(255,255,255,.15)"></div>`;
-    return `<div class="rounded-full bg-sky-500/15 text-sky-300 flex items-center justify-center font-bold"`
-      + ` style="width:${px}px;height:${px}px;flex-shrink:0;font-size:${Math.round(px*0.42)}px">`
-      + esc(n.charAt(0).toUpperCase()) + `</div>`;
-  }
   const ini=(a.nombre||'?').charAt(0).toUpperCase();
   cont.style.display='block';
   cont.innerHTML=`

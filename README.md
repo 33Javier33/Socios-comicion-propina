@@ -232,6 +232,17 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-24 — Horarios: no se podía elegir un socio para entrar (Horarios v10)
+
+- **Síntoma:** en `index2.html`, al buscar un socio la lista quedaba vacía. Sin lista no hay a quién tocar, así que **no se podía entrar a la app** salvo por el acceso directo ⭐ de quien ya lo tenía guardado.
+- **Causa: un error mío del cambio de fotos (v127).** La función `_avatarSocio` quedó declarada **dentro** de `pintarAccesoDirecto()`, pero quien la llama es `renderSocioLista()`, que es otra función. En JavaScript una función declarada dentro de otra solo existe mientras esa otra corre, así que la llamada lanzaba `ReferenceError: _avatarSocio is not defined`. El error ocurría dentro del `.map()` que arma las tarjetas, o sea **antes** de escribir nada en pantalla: la lista no quedaba a medias, quedaba vacía.
+- Para peor, `pintarAccesoDirecto()` **definía** la función pero no la usaba — pinta la inicial con su propio HTML. Estaba anidada por error, no por diseño.
+- **Fix:** se sacó `_avatarSocio` al nivel de arriba, donde las dos funciones la alcanzan.
+- **Verificación:** 11 comprobaciones en el navegador con 6 socios (2 con foto, 4 sin) — la lista pinta las 6 tarjetas, las fotos y las iniciales salen donde corresponde, buscar por nombre deja 2 «Carlos», buscar por apellido encuentra a «Diego Schmidt Vargas», sin coincidencias avisa, cada socio es tocable (`socioElegido('S1')`) y el acceso directo no se rompe. Cero errores JS. **Se corrió el mismo test contra la versión publicada para confirmar el diagnóstico**: falla con `ReferenceError: _avatarSocio is not defined` en la línea 473.
+- **Se revisó todo `index2.html` buscando otro caso igual** (funciones anidadas que se usan fuera de su función): no hay ninguno más.
+- **Los datos estaban bien:** 33 socios de Mesas, todos activos, incluido el más nuevo (Diego Schmidt Vargas, 26/07). El problema era solo el código.
+- **Archivos:** `index2.html`, `sw2.js`.
+
 #### 2026-09-24 — Tema Negro y selector de tres temas (SW v139)
 
 - El botón de la cabecera deja de ser un interruptor de dos estados y pasa a ser un **selector de tres**: **☀️ Claro · 🌙 Oscuro · ⚫ Negro** (OLED). El ícono del botón muestra cuál está puesto. Se cierra al elegir uno o al tocar fuera.
