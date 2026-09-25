@@ -2391,7 +2391,7 @@
                 <!-- SVG de fondo transparente: se apoya sobre el blanco de la
                      tarjeta sin recuadro ni fusión. -->
                 <img src="img/marca/cpn-marca.png?v=2026e" alt="Carlos P. Nauto Interactive" class="marca-logo marca-logo-panel">
-                <div style="font-size:11px; font-weight:700; color:#95a5a6; letter-spacing:0.12em; text-transform:uppercase; margin-top:2px;">Sistema Profesional de Gestión · 2026</div>
+                <div style="font-size:11px; font-weight:700; color:#95a5a6; letter-spacing:0.12em; text-transform:uppercase; margin-top:2px;">Sistema Profesional de Gestión · 2026 · <span class="app-version">—</span></div>
             </div>
 
             <!-- Divisor -->
@@ -2781,7 +2781,11 @@
   })();
 </script>
 <!-- Versión visible de la app (= versión del Service Worker) -->
-<div style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">v141</div>
+<!-- El número ya no se escribe acá: lo pone version.js leyendo la caché del
+     Service Worker, así este y el que va junto a la marca no pueden quedar
+     diciendo cosas distintas. -->
+<div class="app-version" style="position:fixed;bottom:6px;right:8px;z-index:9999;font-size:10px;color:#94a3b8;opacity:0.75;pointer-events:none;font-weight:600;">—</div>
+<script src="js/version.js?v=1"></script>
 <!-- MODAL: motivo del cierre masivo (texto de varias líneas, para poder releerlo) -->
 <div id="modalMotivoMasivo" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;">
     <div style="background:var(--card-bg,#fff);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;">
