@@ -1,5 +1,5 @@
 // Service Worker — Sistema Integral (Fondo Solidario, app admin)
-const CACHE = 'fondo-admin-v142';
+const CACHE = 'fondo-admin-v143';
 
 // ── Push (notificaciones aunque la app esté cerrada) ──
 self.addEventListener('push', event => {
@@ -49,6 +49,17 @@ self.addEventListener('install', event => {
 self.addEventListener('message', event => {
     if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
+// Responde con su propia versión. Lo pregunta version.js: es el único dato
+// fiable, porque puede haber una caché más nueva instalada y EN ESPERA —acá
+// la versión nueva no se activa sola— y desde la página no hay forma de
+// distinguir cuál de las dos está controlando de verdad.
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'VERSION') {
+        const v = CACHE;
+        if (event.ports && event.ports[0]) event.ports[0].postMessage(v);
+    }
+});
+
 
 self.addEventListener('activate', event => {
     event.waitUntil(

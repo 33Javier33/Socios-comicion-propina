@@ -1,6 +1,6 @@
 // Service Worker de la app de Horarios (index2.html).
 // Alcance acotado a /index2.html para NO afectar la app principal (index.html).
-const CACHE = 'horarios-mesas-v13';
+const CACHE = 'horarios-mesas-v14';
 const ASSETS = ['/index2.html', '/manifest2.json', '/img/horarios-192.png', '/img/horarios-512.png', '/img/marca/cpn-marca.png'];
 
 self.addEventListener('install', event => {
@@ -25,4 +25,15 @@ self.addEventListener('fetch', event => {
         .catch(() => caches.match(event.request).then(m => m || caches.match('/index2.html')))
     );
   }
+});
+
+// Responde con su propia versión. Lo pregunta version.js: es el único dato
+// fiable, porque puede haber una caché más nueva instalada y EN ESPERA —acá
+// la versión nueva no se activa sola— y desde la página no hay forma de
+// distinguir cuál de las dos está controlando de verdad.
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'VERSION') {
+        const v = CACHE;
+        if (event.ports && event.ports[0]) event.ports[0].postMessage(v);
+    }
 });

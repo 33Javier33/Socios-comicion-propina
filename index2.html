@@ -166,6 +166,25 @@
   .tema-optH{ width:36px; height:36px; border-radius:10px; border:2px solid transparent;
               background:var(--h-bg); font-size:16px; line-height:1; cursor:pointer; }
   .tema-optH.activo{ border-color:#38bdf8; background:rgba(56,189,248,.18); }
+
+/* ── La versión, encima del logotipo de la marca ──
+   El número va pegado al logo y no suelto por ahí: es el lugar donde se
+   busca "¿qué versión tengo?". El contenedor se ajusta al ancho del logo
+   (width:fit-content) para que la chapita quede sobre la imagen y no en el
+   borde del bloque que la contiene. */
+.marca-wrap { position: relative; display: block; width: fit-content; margin-left: auto; margin-right: auto; padding-bottom: 9px; }
+.marca-wrap .app-version {
+    /* Justo BAJO el logotipo, no encima: puesta sobre la esquina tapaba la
+       "e" final de "Interactive". Así sigue leyéndose como parte del logo. */
+    position: absolute; right: 0; bottom: -1px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #93c5fd;
+    font-size: 9px; font-weight: 800; letter-spacing: 0.04em;
+    line-height: 1; padding: 3px 6px; border-radius: 7px;
+    border: 1px solid rgba(147, 197, 253, 0.35);
+    pointer-events: none;
+}
+
 </style>
 </head>
 <body class="flex flex-col">
@@ -204,11 +223,11 @@
       <!-- SVG de fondo transparente: se apoya sobre el azul oscuro del login.
            Sus colores están pensados para fondo claro, así que aquí se avivan
            con un brillo (mismo criterio que en las otras apps en tema oscuro). -->
-      <img src="img/marca/cpn-marca.png?v=2026e" alt="Carlos P. Nauto Interactive"
+      <div class="marca-wrap"><img src="img/marca/cpn-marca.png?v=2026e" alt="Carlos P. Nauto Interactive"
            style="width:68px;max-width:40vw;height:auto;display:block;margin:0 auto;opacity:.85;
-                  filter:brightness(1.45) saturate(1.05);">
+                  filter:brightness(1.45) saturate(1.05);"><span class="app-version">—</span></div>
       <div style="font-size:9.5px;font-weight:700;color:#475569;letter-spacing:.14em;text-transform:uppercase;margin-top:9px;">
-        Sistema de Gestión de Horarios · 2026 · <span class="app-version">—</span>
+        Sistema de Gestión de Horarios · 2026
       </div>
     </div>
   </div>
