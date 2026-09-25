@@ -232,6 +232,15 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-25 — Ícono nuevo de la app (SW v140)
+
+- El ícono de la pantalla de inicio pasa a ser el **logotipo de la marca sobre placa oscura**, el mismo que en diario.propi. Reemplaza a `img/fondo-192.png` y `img/fondo-512.png`, así que también cambia el favicon, el ícono de iPhone y el de las **notificaciones** (el Service Worker ya usaba `fondo-192.png` para eso).
+- **Se agregó una versión *maskable* aparte** (`img/fondo-maskable-512.png`). Antes el manifiesto declaraba el mismo archivo como `any` y como `maskable`, pero Android recorta los maskable a la forma del launcher: con el ícono a sangre, «Interactive» quedaba cortado. La variante nueva lleva el logo al **80% centrado** sobre el gris casi negro de la placa.
+- El color del margen se tomó **midiendo la franja bajo el texto** del original, no su contorno: las esquinas redondeadas del original son claras y promediarlas daba un marco gris que no pegaba con nada (dos intentos antes de dar con la zona correcta).
+- **Verificación:** los 3 íconos del manifiesto se descargan (HTTP 200), decodifican como imagen y miden exactamente lo declarado; el manifiesto es JSON válido; la página tiene manifiesto, apple-touch-icon y favicon; ningún 404.
+- **Horarios (`index2.html`) conserva su propio ícono** a propósito: son dos apps distintas en la pantalla de inicio y con el mismo ícono no se distinguirían.
+- **Archivos:** `img/fondo-192.png`, `img/fondo-512.png`, `img/fondo-maskable-512.png`, `manifest.json`.
+
 #### 2026-09-24 — El socio también puede ver el mes como planilla (Horarios v12)
 
 - El supervisor podía alternar entre la **grilla del mes** y la **lista día por día** (la que imita la planilla de papel: día de la semana · número · turno). Ahora el socio tiene el mismo botón, arriba a la derecha del calendario.
