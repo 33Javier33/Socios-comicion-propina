@@ -1,7 +1,7 @@
 // Nombre base de la caché de ESTA app y número de respaldo (el del código).
 // Solo se usan si el Service Worker no puede decir su propia versión.
 const CACHE_BASE = 'horarios-mesas-';
-const VERSION_FALLBACK = 14;
+const VERSION_FALLBACK = 15;
 
 // ══════════════════════════════════════════════════════════════════════
 // VERSIÓN QUE SE ESTÁ VIENDO
