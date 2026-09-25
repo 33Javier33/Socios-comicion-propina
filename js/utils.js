@@ -243,7 +243,7 @@ function notificarAdmin(titulo, cuerpo, tipo) {
     try { if (navigator.vibrate) navigator.vibrate([90, 50, 90]); } catch (e) {}
     try {
         if ('Notification' in window && Notification.permission === 'granted') {
-            const n = new Notification(titulo, { body: cuerpo || '', icon: 'img/fondo-192.png', tag: (tipo || 'admin') + '-' + Date.now(), renotify: true });
+            const n = new Notification(titulo, { body: cuerpo || '', icon: 'img/icono-cpn-192.png', tag: (tipo || 'admin') + '-' + Date.now(), renotify: true });
             n.onclick = function () { try { window.focus(); } catch (e) {} n.close(); };
         }
     } catch (e) {}

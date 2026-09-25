@@ -1,5 +1,5 @@
 // Service Worker — Sistema Integral (Fondo Solidario, app admin)
-const CACHE = 'fondo-admin-v140';
+const CACHE = 'fondo-admin-v141';
 
 // ── Push (notificaciones aunque la app esté cerrada) ──
 self.addEventListener('push', event => {
@@ -8,8 +8,8 @@ self.addEventListener('push', event => {
     const title = data.title || 'Administración';
     const options = {
         body: data.body || '',
-        icon: 'img/fondo-192.png',
-        badge: 'img/fondo-192.png',
+        icon: 'img/icono-cpn-192.png',
+        badge: 'img/icono-cpn-192.png',
         tag: 'admin-push',
         renotify: true,
         vibrate: [90, 50, 90],
@@ -28,7 +28,7 @@ self.addEventListener('notificationclick', event => {
         })
     );
 });
-const CORE = ['/', 'index.html', 'styles.css', 'manifest.json', 'img/fondo-192.png', 'img/fondo-512.png'];
+const CORE = ['/', 'index.html', 'styles.css', 'manifest.json', 'img/icono-cpn-192.png', 'img/icono-cpn-512.png'];
 
 self.addEventListener('install', event => {
     // NO se llama skipWaiting() aquí a propósito. La versión nueva queda EN

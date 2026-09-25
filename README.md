@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-25 — El ícono nuevo no llegaba: los archivos cambiaron de nombre (SW v141)
+
+- **Síntoma:** después de cambiar el ícono, los teléfonos seguían mostrando el viejo.
+- **Causa: el ícono se reemplazó conservando el nombre del archivo.** Todo lo que cachea imágenes lo hace **por URL** —el navegador, el CDN de Vercel y la app ya instalada—, así que `img/fondo-192.png` seguía entregando los bytes antiguos. Y `vercel.json` declaraba `no-cache` para el HTML, el JS, el CSS y el manifiesto, **pero no para las imágenes**: eran justo las que faltaban en esa lista.
+- **Arreglo en dos partes:**
+  1. Los archivos pasaron a llamarse `img/icono-cpn-*.png`. Una URL nueva no puede tener una copia vieja en ninguna caché.
+  2. Se agregó `/img/(.*)` a las reglas de `vercel.json`, para que la próxima vez baste con reemplazar el archivo.
+- Se actualizaron **todas** las referencias: manifiesto, `apple-touch-icon`, favicon, la lista `CORE` del Service Worker, el ícono de las notificaciones push y el de `js/utils.js`.
+- **En iPhone igual hay que borrar la app de la pantalla de inicio y volver a agregarla**: iOS lee el ícono una sola vez, al instalar.
+- **Verificación:** los 3 íconos del manifiesto se descargan (HTTP 200), decodifican como imagen y miden lo declarado; no queda ninguna referencia al nombre viejo; `vercel.json` y `manifest.json` son JSON válido.
+- **Archivos:** `img/icono-cpn-*.png` (renombrados), `manifest.json`, `index.html`, `sw.js`, `js/utils.js`, `vercel.json`.
+
 #### 2026-09-25 — Ícono nuevo de la app (SW v140)
 
 - El ícono de la pantalla de inicio pasa a ser el **logotipo de la marca sobre placa oscura**, el mismo que en diario.propi. Reemplaza a `img/fondo-192.png` y `img/fondo-512.png`, así que también cambia el favicon, el ícono de iPhone y el de las **notificaciones** (el Service Worker ya usaba `fondo-192.png` para eso).

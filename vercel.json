@@ -12,6 +12,11 @@
       "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
     },
     {
+      "_comentario": "Las imágenes no estaban en esta lista: al cambiar el ícono dejando el mismo nombre de archivo, el navegador y el CDN seguían entregando el viejo. Ahora se revalidan como el resto.",
+      "source": "/img/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    },
+    {
       "source": "/js/(.*)",
       "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
     },
