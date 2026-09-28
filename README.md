@@ -232,6 +232,46 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-28 — El historial de arqueos archivados mostraba resultados invertidos (SW v146)
+
+**Síntoma reportado:** en el historial de arqueos archivados había registros con el «esperado» en 0, otros con el resultado invertido, y conteos de monedas cambiados sin que nadie las hubiera movido.
+
+**Causa — una sola cadena, no tres problemas.** El «esperado» no se guardaba como número: se recuperaba releyendo el texto del recuadro de la pantalla, en cuatro lugares distintos (`arqueo.js` 297, 652, 880, 902):
+
+```js
+parseInt(texto.replace(/[^0-9-]/g,'')) || 0
+```
+
+Mientras ese recuadro decía `"Cargando..."` no salía ningún número y el `|| 0` lo dejaba en **0**. Como la diferencia es `caja + anticipos − esperado`, con el esperado en 0 nunca puede ser negativa: una **FALTA** se veía como **SOBRA** por el monto entero del esperado.
+
+Y ocurría sin que nadie estuviera en el arqueo. Verificar una recaudación suma sus billetes al conteo; `aq_saveState()` guarda a la nube 3,5 s después; y ese guardado llamaba a `aq_crearBackupLocal()` (`arqueo.js:893`). Así que **cada movimiento del conteo archivaba un registro**, con el recuadro todavía en «Cargando...» porque esa pestaña nunca se abrió.
+
+**Alcance medido:** de 704 registros archivados entre junio y septiembre de 2026 —donde debería haber uno por cierre—, **213 tienen el esperado en 0** y **185 muestran el resultado invertido**. Se cruzaron las verificaciones de recaudaciones con los archivados: cada verificación produce un archivado 3–4 segundos después. Nueve verificaciones seguidas el 27/09 → nueve archivados, los nueve con esperado 0.
+
+**Las monedas:** una de esas recaudaciones traía `{10:1, 50:1, 100:2, 20000:8}`. Las monedas se movieron solas porque verificar una recaudación las suma al conteo, y en el rastro ese movimiento se veía igual que uno tipeado a mano.
+
+**Lo que se cambió:**
+
+- **El esperado se guarda en una variable numérica** (`aq_esperadoVal`), con `null` cuando todavía no llegó —distinto de 0, que es un valor válido—. Las cuatro lecturas del texto de la pantalla se eliminaron.
+- **Sin el esperado no se muestra ninguna diferencia:** el recuadro dice `—` y el mensaje «FALTA EL ESPERADO ⏳», en vez de calcular contra un 0 y afirmar «SOBRA».
+- **No se puede archivar ni crear un respaldo sin el esperado.** Avisa qué falta en vez de escribir un 0 en silencio. El conteo sí se sigue guardando —es el dato que no se puede perder—, pero con la diferencia en `null`.
+- **Guardar en la nube ya no archiva.** Solo «Archivar Informe Final» crea un registro. Guardar el estado no es cerrar una jornada.
+- **Si la consulta del esperado falla, se ve.** Antes el `catch` quedaba en silencio y el recuadro decía «Cargando...» para siempre; ahora muestra el error con un botón para reintentar.
+- **Se anota de dónde salió cada movimiento automático** (⚙️ `+1 recaudación 25/09 21:24`), bajo el rastro y aparte de él, para poder responder «¿por qué cambiaron las monedas si no las moví?». Es un registro local del dispositivo, no viaja a la nube.
+- **Se borra por fecha, no por posición.** La lista que se ve es la mezcla de nube y teléfono ordenada por fecha; su índice no es el del arreglo del teléfono, así que borrar un registro hacía desaparecer otro o ninguno.
+- **La lectura de fechas entiende los formatos que conviven en la base.** `toLocaleString()` cambia según el navegador, y había dos formatos (`28/9/2026, 3:34:11 a.m.` y `28-09-2026, 1:58:03 a. m.`). El segundo —506 de los 704 registros— no se entendía, quedaba en 0 y se iba al final de la lista; tampoco se miraba a.m./p.m., así que 10:24 p.m. se ordenaba como 10:24 a.m. Los archivados nuevos usan un formato fijo `dd-mm-aaaa hh:mm:ss`.
+
+**Verificación:** 18 comprobaciones sobre el escenario real —recaudación verificada con el arqueo nunca abierto—, todas correctas: el esperado se sabe ausente, la caja se cuenta igual, no se muestra diferencia, no se archiva nada y se explica por qué; con el esperado cargado marca FALTA y archiva el monto real; 5 guardados a la nube producen 0 archivados sin perder el conteo; el borrado saca el registro correcto; y los 6 formatos de fecha se entienden y ordenan bien.
+
+**Los 704 registros ya existentes no se tocaron.** Se pueden revisar con:
+
+```sql
+select fecha_texto, total_contado, total_anticipos, total_esperado, diferencia
+from arqueo_backups where total_esperado = 0 order by fecha desc;
+```
+
+**Archivos:** `js/arqueo.js`, `js/constants.js`, `js/supabase-config.js`, `styles.css`, `sw.js`, `js/version.js`, `index.html`.
+
 #### 2026-09-28 — El navegador pedía actualizar la contraseña en cada acción (SW v145)
 
 - **Síntoma:** el navegador preguntaba «¿Actualizar la contraseña?» en **cada acción** —agregar un billete en el arqueo, abrir un modal, cualquier cosa—, no solo al entrar.

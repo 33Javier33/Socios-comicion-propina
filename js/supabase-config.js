@@ -2856,9 +2856,11 @@ window.sbGuardarArqueo = async function(payload) {
         movimiento_display: payload.movimientoDisplay || {},
         total_retirado: payload.totalRetirado || 0,
         total_contado: payload.totalContado || 0,
-        total_esperado: payload.totalEsperado || 0,
+        // null cuando el esperado todavía no llegó de la nube. Antes el `|| 0`
+        // lo convertía en 0 y la diferencia quedaba invertida (ver arqueo.js).
+        total_esperado: payload.totalEsperado == null ? null : payload.totalEsperado,
         total_anticipos_nomina: payload.totalAnticiposNomina || 0,
-        diferencia: payload.diferencia || 0,
+        diferencia: payload.diferencia == null ? null : payload.diferencia,
         divisor_planta: String(payload.divisorPlanta || '1'),
         divisor_part_time: String(payload.divisorPartTime || '1'),
         updated_at: new Date().toISOString()

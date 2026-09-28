@@ -4,6 +4,80 @@
 
 let aq_iniciado = false;
 
+// ══════════════════════════════════════════════════════════════════════
+// EL "ESPERADO" SE GUARDA COMO NÚMERO, NO SE LEE DE LA PANTALLA
+//
+// Antes se recuperaba releyendo el texto del recuadro:
+//     parseInt(texto.replace(/[^0-9-]/g,'')) || 0
+// Mientras ese recuadro decía "Cargando..." no salía ningún número, el `|| 0`
+// lo dejaba en 0, y como la diferencia es (caja + anticipos − esperado), con el
+// esperado en 0 nunca podía dar negativa: una FALTA se veía como SOBRA por el
+// monto entero del esperado. Eso quedó archivado 213 veces entre junio y
+// septiembre de 2026, 185 de ellas con el resultado invertido.
+//
+// Casi todas ocurrieron sin que nadie estuviera en el arqueo: al verificar una
+// recaudación, el conteo cambia y se guarda 3,5 s después, con el recuadro
+// todavía en "Cargando..." porque esa pestaña nunca se abrió.
+//
+// null = todavía no llegó de la nube. Es distinto de 0, que es un valor válido.
+let aq_esperadoVal = null;
+
+function aq_setEsperado(n) {
+    const v = Math.round(Number(n));
+    aq_esperadoVal = isFinite(v) ? v : null;
+    const el = document.getElementById('aq-esperadoDisplay');
+    if (el) el.textContent = aq_esperadoVal === null ? 'Cargando...' : aq_fmt(aq_esperadoVal);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// DE DÓNDE SALIÓ CADA MOVIMIENTO QUE NADIE TIPEÓ
+//
+// Verificar una recaudación suma sus billetes al conteo, y registrar un anticipo
+// se los resta. Está bien que sea así, pero en el rastro esos movimientos se
+// veían idénticos a los tipeados a mano: un "+2" en las monedas de $100 no
+// distinguía entre "las conté" y "entraron con la recaudación del 25/9".
+//
+// Se anotan aparte, por denominación, y se muestran bajo el rastro. Es un
+// registro local de este dispositivo (no viaja a la nube): sirve para responder
+// "¿por qué cambiaron las monedas si no las moví?", no para cuadrar la caja.
+let aq_autoMov = {};
+let _aqAutoMovCargado = false;
+
+function _aqCargarAutoMov() {
+    try { aq_autoMov = JSON.parse(localStorage.getItem(AQ_SK_AUTOMOV) || '{}') || {}; }
+    catch(e) { aq_autoMov = {}; }
+    _aqAutoMovCargado = true;
+}
+
+function _aqAnotarAuto(den, n, de) {
+    if (!n) return;
+    // Esto corre al verificar una recaudación o registrar un anticipo, con la
+    // pestaña del arqueo posiblemente nunca abierta. Sin cargar primero lo ya
+    // guardado, el primer apunte del día borraría todo lo anterior.
+    if (!_aqAutoMovCargado) _aqCargarAutoMov();
+    const _f = new Date();
+    const _p = v => String(v).padStart(2, '0');
+    if (!aq_autoMov[den]) aq_autoMov[den] = [];
+    aq_autoMov[den].push({ n, de, cuando: _p(_f.getDate()) + '/' + _p(_f.getMonth() + 1) + ' ' + _p(_f.getHours()) + ':' + _p(_f.getMinutes()) });
+    // Solo interesa lo reciente; el rastro completo ya está en la fórmula.
+    if (aq_autoMov[den].length > 12) aq_autoMov[den].shift();
+    try { localStorage.setItem(AQ_SK_AUTOMOV, JSON.stringify(aq_autoMov)); } catch(e) {}
+}
+
+function _aqTextoAuto(den) {
+    const lista = aq_autoMov[den];
+    if (!lista || !lista.length) return '';
+    return lista.map(a => (a.n > 0 ? '+' : '−') + Math.abs(a.n) + ' ' + a.de + ' ' + a.cuando).join(' · ');
+}
+
+// Para guardar y archivar: si no está, no se inventa un 0.
+function aq_exigirEsperado(accion) {
+    if (aq_esperadoVal !== null) return true;
+    showToast('No se puede ' + accion + ': el total esperado todavía no llegó de la nube. '
+            + 'Abre Arqueo de Caja y espera a que el recuadro muestre el monto.', 'error');
+    return false;
+}
+
 async function aq_sincronizarSilencioso() {
     const dot = document.getElementById('aq-sync-dot');
     const txt = document.getElementById('aq-sync-txt');
@@ -18,7 +92,7 @@ async function aq_sincronizarSilencioso() {
             const espVal = Math.round(resEsp.totalAcumulado / 100);
             const totDay = Math.round(resEsp.totalLastDivisorDay / 100);
             const divisor = parseFloat(resEsp.lastDivisor) || 1.0;
-            document.getElementById('aq-esperadoDisplay').textContent = aq_fmt(espVal);
+            aq_setEsperado(espVal);
             document.getElementById('aq-divisor-day-total').textContent = aq_fmt(totDay);
             document.getElementById('aq-divisor-value').textContent = divisor.toFixed(2);
             document.getElementById('aq-punto-del-dia').textContent = aq_fmt(totDay / divisor);
@@ -66,6 +140,7 @@ function aq_initSiNoIniciado() {
     const sc = localStorage.getItem(AQ_SK_CONTEO);
     const sm = localStorage.getItem(AQ_SK_MOVI);
     const sr = localStorage.getItem(AQ_SK_RETIROS);
+    _aqCargarAutoMov();
     if(sc) aq_conteo = JSON.parse(sc);
     if(sm) { aq_movi = JSON.parse(sm); aq_normTraceTodos(); }  // limpia rastros antiguos con "Manual"/paréntesis
     if(sr) aq_totalRetirado = parseInt(sr);
@@ -80,7 +155,7 @@ function aq_initSiNoIniciado() {
             const obj = JSON.parse(aqCached);
             if (Date.now() - obj.ts < 10 * 60 * 1000) {
                 const data = obj.data;
-                document.getElementById('aq-esperadoDisplay').textContent = aq_fmt(Math.round(data.totalAcumulado / 100));
+                aq_setEsperado(Math.round(data.totalAcumulado / 100));
                 document.getElementById('aq-divisor-day-total').textContent = aq_fmt(Math.round(data.totalLastDivisorDay / 100));
                 const div = parseFloat(data.lastDivisor) || 1;
                 document.getElementById('aq-divisor-value').textContent = div.toFixed(2);
@@ -231,7 +306,8 @@ function aq_generarCampos() {
                 <div style="font-weight:bold; font-size:0.85em;">${aq_fmt(val * aq_conteo[val])}</div>
             </div>
         </div>
-        <div class="aq-denom-trace"><span>${aq_normTrace(aq_movi[val]) || 'Sin detalle'}</span></div>`;
+        <div class="aq-denom-trace"><span>${aq_normTrace(aq_movi[val]) || 'Sin detalle'}</span></div>
+        ${_aqTextoAuto(val) ? `<div class="aq-denom-auto">⚙️ ${_aqTextoAuto(val)}</div>` : ''}`;
         form.appendChild(row);
     });
     aq_realizarArqueo();
@@ -293,9 +369,8 @@ function aq_calcTotal() { let t = 0; AQ_DENOMINACIONES.forEach(v => t += v * (aq
 
 function aq_realizarArqueo() {
     const total = Math.round(aq_calcTotal());
-    const espEl = document.getElementById('aq-esperadoDisplay');
-    const espVal = Math.round(parseInt((espEl.textContent || '0').replace(/[^0-9-]/g, ''))) || 0;
-    const dif = Math.round((total + aq_totalAnticipos) - espVal);
+    const hayEsperado = aq_esperadoVal !== null;
+    const dif = hayEsperado ? Math.round((total + aq_totalAnticipos) - aq_esperadoVal) : null;
 
     // Barra de total en tiempo real dentro del modal de conteo
     const liveEl = document.getElementById('aq-conteo-total-live');
@@ -309,13 +384,21 @@ function aq_realizarArqueo() {
     document.getElementById('aq-total-retiros').textContent = aq_fmt(retirado);
     aq_pintarDesgloseRetiros(retirado);
 
+    // Sin el esperado no se muestra ninguna diferencia. Antes se mostraba la
+    // cuenta contra un 0, que siempre daba "SOBRA" por el monto entero de la caja.
     const difEl = document.getElementById('aq-diferencia');
-    difEl.textContent = aq_fmt(dif);
-    difEl.style.color = dif === 0 ? '#10b981' : (dif > 0 ? '#f59e0b' : '#ef4444');
-
     const msgEl = document.getElementById('aq-mensaje-arqueo');
-    msgEl.className = 'aq-mensaje ' + (dif === 0 ? 'cuadrado' : (dif > 0 ? 'sobrante' : 'faltante'));
-    msgEl.textContent = dif === 0 ? "CUADRADO 🎉" : (dif > 0 ? "SOBRA ⚠️" : "FALTA 🚨");
+    if (!hayEsperado) {
+        difEl.textContent = '—';
+        difEl.style.color = '#94a3b8';
+        msgEl.className = 'aq-mensaje';
+        msgEl.textContent = 'FALTA EL ESPERADO ⏳';
+    } else {
+        difEl.textContent = aq_fmt(dif);
+        difEl.style.color = dif === 0 ? '#10b981' : (dif > 0 ? '#f59e0b' : '#ef4444');
+        msgEl.className = 'aq-mensaje ' + (dif === 0 ? 'cuadrado' : (dif > 0 ? 'sobrante' : 'faltante'));
+        msgEl.textContent = dif === 0 ? "CUADRADO 🎉" : (dif > 0 ? "SOBRA ⚠️" : "FALTA 🚨");
+    }
 
     let h = '<table class="aq-table"><thead><tr><th>Denom.</th><th>Cant.</th><th>Subtotal</th></tr></thead><tbody>';
     let any = false;
@@ -379,7 +462,7 @@ async function aq_fetchEsperadoData() {
         const espVal = Math.round(data.totalAcumulado / 100);
         const totDay = Math.round(data.totalLastDivisorDay / 100);
         const ultimoDivisor = parseFloat(data.lastDivisor) || 1.0;
-        document.getElementById('aq-esperadoDisplay').textContent = aq_fmt(espVal);
+        aq_setEsperado(espVal);
         document.getElementById('aq-divisor-day-total').textContent = aq_fmt(totDay);
         document.getElementById('aq-divisor-value').textContent = ultimoDivisor.toFixed(2);
         document.getElementById('aq-punto-del-dia').textContent = aq_fmt(totDay / ultimoDivisor);
@@ -392,7 +475,15 @@ async function aq_fetchEsperadoData() {
         aq_mostrarAvisoSinVerificar(_sinVerif, _totalFalt);
         aq_fetchPuntosHistorial();
         aq_realizarArqueo();
-    } catch(e) { console.error('Arqueo esperado error:', e); }
+    } catch(e) {
+        // Antes esto fallaba en silencio y el recuadro quedaba en "Cargando..."
+        // para siempre, sin que nada avisara. Ahora se ve y se puede reintentar.
+        console.error('Arqueo esperado error:', e);
+        const el = document.getElementById('aq-esperadoDisplay');
+        if (el) el.innerHTML = '<span style="color:#ef4444;font-size:0.6em;">No se pudo cargar</span> '
+            + '<button onclick="aq_fetchEsperadoData()" style="font-size:0.5em;padding:2px 8px;border:none;border-radius:4px;background:#2563eb;color:#fff;cursor:pointer;">Reintentar</button>';
+        aq_realizarArqueo();
+    }
 }
 
 function aq_renderDesglose(desglosePorFecha) {
@@ -572,6 +663,7 @@ function aq_aplicarBilletesAnticipo(billetes) {
         aq_conteo[den] = (aq_conteo[den] || 0) - n;
         aq_totalRetirado += n * den;
         aq_movi[den] = (aq_movi[den] || '') + `-${n}`;
+        _aqAnotarAuto(den, -n, 'anticipo');
     });
     aq_saveState();
     if (aq_iniciado) aq_generarCampos();
@@ -618,6 +710,7 @@ function aq_devolverBilletesAnticipo(billetes) {
         // "5-1+1" da caja 5 pero retiros 1. Quitando el "-n" queda "5", que es
         // lo que de verdad pasó. El borrado queda registrado en la auditoría.
         aq_movi[den] = _aqQuitarRetiroDelRastro(aq_movi[den], n);
+        _aqAnotarAuto(den, n, 'anticipo borrado');
     });
     if (aq_totalRetirado < 0) aq_totalRetirado = 0;
     aq_saveState();
@@ -641,17 +734,29 @@ function aq_aplicarBilletesRecaudacion(billetes) {
         aq_conteo[den] = (aq_conteo[den] || 0) + n;
         const prev = aq_movi[den] || '';
         aq_movi[den] = prev ? `${prev}+${n}` : `+${n}`;
+        _aqAnotarAuto(den, n, 'recaudación');
     });
     aq_saveState();
     if (aq_iniciado) aq_generarCampos();
 }
 
 
+// Un archivado es el cierre de una jornada, no un autoguardado. Antes lo
+// llamaba aq_guardarEnNube(), que corre 3,5 s después de CADA movimiento del
+// conteo: 704 registros archivados entre junio y septiembre de 2026 donde
+// debería haber uno por cierre. Ahora solo lo llama aq_archivarEnNube().
 function aq_crearBackupLocal() {
+    if (!aq_exigirEsperado('archivar')) return;
     const totalCaja = Math.round(aq_calcTotal());
-    const espVal = Math.round(parseInt((document.getElementById('aq-esperadoDisplay').textContent || '0').replace(/[^0-9-]/g, ''))) || 0;
+    const espVal = aq_esperadoVal;
     const dif = Math.round((totalCaja + aq_totalAnticipos) - espVal);
-    const backup = { fecha: new Date().toLocaleString(), totalContado: totalCaja, esperado: espVal, anticipos: Math.round(aq_totalAnticipos), retiros: aq_calcRetiradoTotal(), diferencia: dif, conteo: JSON.parse(JSON.stringify(aq_conteo)), rastros: JSON.parse(JSON.stringify(aq_movi)) };
+    // Fecha en formato fijo (no toLocaleString, que cambia según el navegador:
+    // en la base convivían "28/9/2026, 3:34:11 a.m." y "28-09-2026, 1:58:03 a. m.").
+    const _f = new Date();
+    const _p = n => String(n).padStart(2, '0');
+    const fechaTxt = _p(_f.getDate()) + '-' + _p(_f.getMonth() + 1) + '-' + _f.getFullYear()
+                   + ' ' + _p(_f.getHours()) + ':' + _p(_f.getMinutes()) + ':' + _p(_f.getSeconds());
+    const backup = { fecha: fechaTxt, totalContado: totalCaja, esperado: espVal, anticipos: Math.round(aq_totalAnticipos), retiros: aq_calcRetiradoTotal(), diferencia: dif, conteo: JSON.parse(JSON.stringify(aq_conteo)), rastros: JSON.parse(JSON.stringify(aq_movi)) };
     let historial = JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || [];
     historial.unshift(backup);
     if(historial.length > 20) historial.pop();
@@ -666,6 +771,7 @@ function aq_resetear() {
     localStorage.removeItem(AQ_SK_CONTEO); localStorage.removeItem(AQ_SK_MOVI); localStorage.removeItem(AQ_SK_RETIROS);
     localStorage.removeItem(AQ_SK_RETIROS_ANTICIPOS);
     localStorage.removeItem(AQ_SK_DIRTY); _aqDirtyFlag = false;
+    localStorage.removeItem(AQ_SK_AUTOMOV); aq_autoMov = {}; _aqAutoMovCargado = true;
     aqAnticiposListaPeriodo = [];
     aq_generarCampos(); aq_realizarArqueo();
 }
@@ -749,7 +855,7 @@ function _aq_renderBackupList(historial) {
         html += `<div class="arqueo-card" style="border-left:4px solid #8b5cf6; margin-bottom:15px; padding:15px;">
             <div style="border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-weight:bold; color:#64748b;">${b.fecha}</span>
-                ${esLocal ? `<button onclick="aq_borrarBackup(${index})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1em;" title="Eliminar"><i class="fas fa-trash-alt"></i></button>` : '<span style="font-size:0.7em;color:#94a3b8;">☁️</span>'}
+                ${esLocal ? `<button onclick="aq_borrarBackup(${JSON.stringify(String(b.fecha)).replace(/"/g, '&quot;')})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1em;" title="Eliminar"><i class="fas fa-trash-alt"></i></button>` : '<span style="font-size:0.7em;color:#94a3b8;">☁️</span>'}
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.9em; margin-bottom:10px;">
                 <div>💰 En Caja:<br><b>${aq_fmt(b.totalContado)}</b></div>
@@ -790,14 +896,25 @@ async function aq_abrirModalBackup() {
     const fechasNube = new Set(nube.map(b => b.fecha));
     const soloLocales = locales.filter(b => !fechasNube.has(b.fecha));
 
+    // Entiende los formatos que conviven en la base, porque toLocaleString()
+    // cambia según el navegador de cada dispositivo:
+    //   "24/6/2025, 22:34:11"        "28/9/2026, 3:34:11 a.m."
+    //   "28-09-2026, 1:58:03 a. m."  "28-09-2026 01:58:03"  (el nuevo, fijo)
+    // Antes solo aceptaba barras y no miraba a.m./p.m., así que 506 de los 704
+    // registros quedaban en 0 y la lista salía en un orden distinto al guardado
+    // en el teléfono — de ahí que borrar uno hiciera desaparecer otro.
     function _parseFechaBackup(str) {
         if (!str) return 0;
+        const m = String(str).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap])?\.?\s*\.?\s*m?\.?/i);
+        if (m) {
+            let hora = +m[4];
+            const meridiem = (m[7] || '').toLowerCase();
+            if (meridiem === 'p' && hora < 12) hora += 12;
+            if (meridiem === 'a' && hora === 12) hora = 0;
+            return new Date(+m[3], +m[2] - 1, +m[1], hora, +m[5], +(m[6] || 0)).getTime();
+        }
         const iso = Date.parse(str);
-        if (!isNaN(iso)) return iso;
-        // Formato español: "24/6/2025, 22:34:11" o "24/6/2025 22:34:11"
-        const m = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})[,\s]+(\d{1,2}):(\d{2}):(\d{2})/);
-        if (m) return new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5], +m[6]).getTime();
-        return 0;
+        return isNaN(iso) ? 0 : iso;
     }
 
     const todos = [...nube, ...soloLocales].sort((a, b) =>
@@ -807,11 +924,18 @@ async function aq_abrirModalBackup() {
     _aq_renderBackupList(todos);
 }
 
-function aq_borrarBackup(index) {
+// Se borra por fecha, no por posición. La lista que se ve es la mezcla de nube
+// y teléfono ordenada por fecha; el índice de esa lista no es el índice del
+// arreglo del teléfono, así que borraba otro registro o ninguno.
+function aq_borrarBackup(fecha) {
     if(!confirm('¿Eliminar este registro archivado?')) return;
-    let historial = JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || [];
-    historial.splice(index, 1);
-    localStorage.setItem(AQ_SK_BACKUP, JSON.stringify(historial));
+    const historial = JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || [];
+    const quedan = historial.filter(b => String(b.fecha) !== String(fecha));
+    if (quedan.length === historial.length) {
+        showToast('Ese registro no está guardado en este dispositivo, solo en la nube.', 'warning');
+        return;
+    }
+    localStorage.setItem(AQ_SK_BACKUP, JSON.stringify(quedan));
     aq_abrirModalBackup();
 }
 
@@ -877,9 +1001,12 @@ async function aq_recuperarDeNube(silencioso = false) {
 async function aq_guardarEnNube(silencioso = false) {
     if(!silencioso && !confirm('☁️ ¿Guardar arqueo en la nube?\n\nEl estado actual queda disponible para cargar desde otro dispositivo.')) return;
     if(!silencioso) toggleLoader(true, 'Guardando arqueo...');
-    const espVal = Math.round(parseInt((document.getElementById('aq-esperadoDisplay').textContent||'0').replace(/[^0-9-]/g,''))) || 0;
+    // El conteo se guarda siempre: es el dato que no se puede perder. Pero si el
+    // esperado no llegó, no se guarda una diferencia inventada contra un 0 —
+    // van en null y la pantalla las recalcula cuando el esperado aparece.
+    const espVal = aq_esperadoVal;
     const totalCaja = Math.round(aq_calcTotal());
-    const payload = { conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
+    const payload = { conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: espVal === null ? null : Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
     try {
         if(typeof window.sbGuardarArqueo === 'function') {
             await window.sbGuardarArqueo(payload);
@@ -890,16 +1017,19 @@ async function aq_guardarEnNube(silencioso = false) {
         }
         _aqDirtyFlag = false;
         try { localStorage.removeItem(AQ_SK_DIRTY); } catch(e) {}
-        aq_crearBackupLocal();
+        // Antes acá se llamaba aq_crearBackupLocal(): guardar el estado NO es
+        // archivar un cierre. Ver el comentario en aq_crearBackupLocal().
         if(!silencioso) showToast('✅ Guardado en la nube', 'success');
     } catch(e) { if(!silencioso) showToast('Error al guardar: ' + e.message, 'error'); }
     finally { if(!silencioso) toggleLoader(false); }
 }
 
 async function aq_archivarEnNube() {
+    // Sin el esperado el informe quedaría con la diferencia al revés: se corta antes.
+    if(!aq_exigirEsperado('archivar el informe')) return;
     if(!confirm('🚨 ¿ARCHIVAR INFORME FINAL?')) return;
     toggleLoader(true, 'Archivando...');
-    const espVal = Math.round(parseInt((document.getElementById('aq-esperadoDisplay').textContent||'0').replace(/[^0-9-]/g,''))) || 0;
+    const espVal = aq_esperadoVal;
     const totalCaja = Math.round(aq_calcTotal());
     const payload = { conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
     try {

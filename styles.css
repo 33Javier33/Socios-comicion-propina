@@ -461,6 +461,9 @@
         .aq-denom-main label { flex: 1; font-weight: bold; font-size: 0.95em; color: var(--primary); }
         .aq-denom-trace { margin-top: 5px; padding: 5px 10px; background: #f1f5f9; border-radius: 6px; min-height: 25px; display: flex; align-items: center; }
         .aq-denom-trace span { font-size: 0.85rem; font-family: 'DM Mono', monospace; color: #2563eb; word-break: break-all; }
+        /* Movimientos que no tipeó nadie: entraron con una recaudación o salieron
+           con un anticipo. Van aparte del rastro para no confundirlos con el conteo. */
+        .aq-denom-auto { margin-top: 3px; padding: 3px 10px; font-size: 0.72rem; color: #b45309; background: #fffbeb; border: 1px dashed #fde68a; border-radius: 6px; word-break: break-word; }
         .aq-btn-group { display: flex; gap: 5px; }
         .aq-btn-group button { width: 36px; height: 36px; border: none; border-radius: 6px; color: white; font-size: 1rem; cursor: pointer; }
         .aq-total-display { text-align: right; min-width: 100px; display: flex; flex-direction: column; align-items: flex-end; }
