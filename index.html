@@ -115,6 +115,9 @@
                      necesita es MANDARLE el enlace a un socio. Por eso el botón
                      abre el panel para compartir, con la opción de abrirla igual. -->
                 <button onclick="abrirCompartirApps()" title="Compartir el enlace de la App de Socios" style="background:#6366f1; color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">📱 App Socios</button>
+                <!-- Atajo a los QR de las dos apps: sirve para que un socio
+                     nuevo apunte la cámara a la pantalla y llegue a la app. -->
+                <button onclick="abrirCompartirApps()" title="Mostrar los QR de las apps para un socio nuevo" style="background:#1d4ed8; color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">⬛ QR apps</button>
                 <button onclick="toggleAbout(true)" style="background:#2c3e50; color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">ℹ️ Acerca de</button>
                 <button onclick="cerrarSesion()" style="background:var(--danger); color:white; border:none; border-radius:20px; padding:7px 14px; font-size:0.8em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔒 Cerrar sesión</button>
             </div>
@@ -2342,7 +2345,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/constants.js?v=33"></script>
-    <script src="js/utils.js?v=34"></script>
+    <script src="js/utils.js?v=35"></script>
     <script src="js/cache.js?v=32"></script>
     <script src="js/auth.js?v=34"></script>
     <script src="js/config.js?v=99"></script>

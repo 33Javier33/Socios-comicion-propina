@@ -291,10 +291,50 @@ function abrirCompartirApps() {
                     <button onclick="copiarEnlace('${a.id}')" style="flex:1; min-width:96px; background:var(--surface); color:var(--text-color); border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-size:0.8em; font-weight:700; cursor:pointer;">📋 Copiar</button>
                     <a href="${a.url}" target="_blank" rel="noopener" style="flex:1; min-width:86px; text-align:center; background:var(--surface); color:var(--text-color); border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-size:0.8em; font-weight:700; cursor:pointer; text-decoration:none;">↗ Abrir</a>
                 </div>
+                <!-- El QR para que un socio nuevo apunte la cámara a esta
+                     pantalla y llegue a la app, sin tener que dictarle la
+                     dirección ni mandarle nada. Es la URL pública y nada más:
+                     acá no hay código de vinculación ni datos de nadie, así
+                     que este QR no caduca y se puede mostrar o imprimir. -->
+                <div style="margin-top:11px; padding-top:11px; border-top:1px dashed var(--border); text-align:center;">
+                    <div style="background:#fff; border:1px solid var(--border); border-radius:10px; padding:8px; display:inline-block;">
+                        <canvas id="qrapp-${a.id}" style="display:block; width:150px; height:150px; image-rendering:pixelated;"></canvas>
+                    </div>
+                    <div style="font-size:0.72em; color:#7f8c8d; margin-top:6px;">Que el socio apunte la cámara acá</div>
+                    <button onclick="qrAppDescargar('${a.id}')" style="margin-top:7px; background:var(--surface); color:var(--text-color); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:0.74em; font-weight:700; cursor:pointer;">⬇️ Descargar para imprimir</button>
+                </div>
             </div>`).join('');
+        // Se dibujan después de escribir el HTML: los canvas ya existen.
+        APPS_ENLACES.forEach(a => _qrAppDibujar(a));
     }
     const m = document.getElementById('modalCompartirApps');
     if (m) m.style.display = 'block';
+}
+
+function _qrAppDibujar(a) {
+    const c = document.getElementById('qrapp-' + a.id);
+    if (!c) return;
+    if (typeof _qrDibujar !== 'function') {   // vive en js/qr-socios.js
+        c.parentElement.innerHTML = '<span style="font-size:0.72em;color:#dc2626;">No se pudo dibujar el QR</span>';
+        return;
+    }
+    try {
+        const info = _qrDibujar(c, a.url, 150);
+        c.style.width = c.style.height = Math.min(170, info.pixeles) + 'px';
+    } catch (e) {
+        c.parentElement.innerHTML = '<span style="font-size:0.72em;color:#dc2626;">No se pudo dibujar el QR</span>';
+    }
+}
+
+// Para pegarlo en el mural o dejarlo impreso en la oficina.
+function qrAppDescargar(id) {
+    const a = _appPorId(id);
+    const c = document.getElementById('qrapp-' + id);
+    if (!a || !c) return;
+    const enlace = document.createElement('a');
+    enlace.href = c.toDataURL('image/png');
+    enlace.download = 'QR-' + a.nombre.replace(/[^A-Za-z0-9]+/g, '-') + '.png';
+    enlace.click();
 }
 
 function _appPorId(id) { return APPS_ENLACES.find(a => a.id === id); }

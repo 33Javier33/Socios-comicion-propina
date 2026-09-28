@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-28 — QR de las apps, para el socio nuevo (SW v149)
+
+En el panel **📱 App Socios** ahora cada app muestra su **QR**, junto a su enlace: el de la App de Socios lleva a `propi-solicitada.vercel.app` y el del Diario a `diario-propi.vercel.app`. Sirve para que un socio nuevo apunte la cámara a la pantalla y llegue a la app, sin dictarle la dirección ni tener que mandarle nada.
+
+Se agregó también un botón **⬛ QR apps** en el header, al lado de «Cerrar sesión», que abre ese mismo panel.
+
+**Estos QR son distintos a los de vinculación** (v148): llevan **solo la dirección pública** de la app, sin código ni datos de nadie. Por eso no caducan, no necesitan PIN, y se pueden mostrar en pantalla, descargar e imprimir para dejarlos pegados en la oficina. El QR personal de cada socio —el que lo deja vinculado con sus datos— se sigue generando desde Gestión de Socios.
+
+Los QR se dibujan sobre fondo blanco siempre, así que se escanean igual con el tema claro, el oscuro o el negro.
+
+**Verificación:** 10 comprobaciones — que se dibujen los dos, que un decodificador independiente lea de cada uno **la dirección de su propia app** (no la de la otra), y que lo que llevan sea solo la dirección, sin `?qr=` ni nada más.
+
+**Archivos:** `js/utils.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-09-28 — QR de vinculación por socio (SW v148) — *parte 1 de 2*
 
 Cada socio puede tener un QR que lo lleva a las apps con sus datos ya puestos. Esta entrada cubre **la generación**; el escaneo (elegir app, rellenar lo que hay y pedir lo que falta) va en la parte 2.
