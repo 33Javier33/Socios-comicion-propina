@@ -110,6 +110,18 @@ function intentarLogin() {
                 });
             }
         }, 600);
+        // El campo del PIN se vacía y deja de ser `type="password"`.
+        //
+        // Antes quedaba en el HTML con el PIN adentro para siempre, escondido
+        // dentro del overlay. El gestor de contraseñas del navegador re-evalúa
+        // los campos de contraseña ante cualquier cambio de la página, y como
+        // ya tenía una credencial guardada para este sitio, salía a preguntar
+        // "¿Actualizar la contraseña?" en CADA acción —agregar un billete en
+        // el arqueo, abrir un modal, cualquier cosa—. Sin valor y sin ser un
+        // campo de contraseña, no hay nada que el navegador pueda ofrecer.
+        const _pin = document.getElementById('pinInput');
+        if (_pin) { _pin.value = ''; _pin.type = 'text'; }
+
         const overlay = document.getElementById('loginOverlay');
         overlay.style.transition = 'opacity 0.4s';
         overlay.style.opacity = '0';
@@ -176,7 +188,11 @@ function cerrarSesion(silencioso = false) {
     if (respBadge) respBadge.style.display = 'none';
     clearTimeout(inactividadTimeout);
     clearInterval(inactividadInterval);
-    document.getElementById('pinInput').value = "";
+    // Vuelve a ser campo de contraseña para el login (al entrar se pasa a texto
+    // vacío, para que el gestor del navegador no lo vea mientras se usa la app).
+    const _pinSalir = document.getElementById('pinInput');
+    _pinSalir.value = "";
+    _pinSalir.type = "password";
     document.getElementById('loginError').style.display = "none";
     document.getElementById('recoverPanel').style.display = "none";
     document.getElementById('claveRecuperar').value = "";

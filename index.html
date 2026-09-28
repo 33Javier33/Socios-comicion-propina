@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/icono-cpn-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=114">
+    <link rel="stylesheet" href="styles.css?v=115">
     <script>
         // El tema se aplica ANTES de pintar nada. Si esperara a auth.js, abrir
         // con tema oscuro daría un fogonazo blanco. Como acá todavía no existe
@@ -1428,7 +1428,7 @@
                 <div style="font-size:2em;margin-bottom:8px;">🔒</div>
                 <div style="font-weight:800;color:#0f172a;margin-bottom:4px;">Sección protegida</div>
                 <div style="font-size:0.82em;color:#64748b;margin-bottom:16px;">Ingresa la clave de recuperación para ver y gestionar los PIN.</div>
-                <input type="password" id="dp-clave" placeholder="Clave de recuperación" onkeydown="if(event.key==='Enter')dp_desbloquear()"
+                <input type="text" class="campo-secreto" id="dp-clave" placeholder="Clave de recuperación" onkeydown="if(event.key==='Enter')dp_desbloquear()"
                     style="width:100%;padding:11px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.95em;text-align:center;box-sizing:border-box;margin-bottom:6px;">
                 <div id="dp-clave-error" style="display:none;color:#dc2626;font-size:0.8em;font-weight:700;margin-bottom:8px;"></div>
                 <button onclick="dp_desbloquear()" style="width:100%;padding:11px;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:white;border:none;border-radius:10px;font-weight:800;font-size:0.9em;cursor:pointer;margin-top:8px;">🔓 Desbloquear</button>
@@ -1653,7 +1653,7 @@
                 <input id="cert-firma-nombre" type="text" placeholder="Ej: Patricia Miralles" autocomplete="off"
                     style="width:100%;box-sizing:border-box;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9em;outline:none;margin-bottom:12px;">
                 <div style="font-size:0.72em;font-weight:700;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em;">PIN de acceso</div>
-                <input id="cert-firma-pin" type="password" placeholder="••••" maxlength="6" inputmode="numeric"
+                <input id="cert-firma-pin" type="text" class="campo-secreto" placeholder="••••" maxlength="6" inputmode="numeric"
                     style="width:100%;box-sizing:border-box;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:1em;outline:none;margin-bottom:12px;letter-spacing:6px;text-align:center;"
                     onkeydown="if(event.key==='Enter')cert_confirmarFirma()">
                 <div id="cert-firma-error" style="display:none;color:#dc2626;font-size:0.8em;margin-bottom:10px;padding:8px 10px;background:#fee2e2;border-radius:8px;"></div>
@@ -2076,17 +2076,17 @@
                     </div>
                     <div class="form-group" style="margin-bottom:12px;">
                         <label>PIN Actual</label>
-                        <input type="password" id="cfg-pin-actual" maxlength="4" inputmode="numeric" placeholder="••••"
+                        <input type="text" class="campo-secreto" id="cfg-pin-actual" maxlength="4" inputmode="numeric" placeholder="••••"
                             style="letter-spacing:6px; font-size:1.2em; text-align:center;">
                     </div>
                     <div class="form-group" style="margin-bottom:12px;">
                         <label>PIN Nuevo (4 dígitos)</label>
-                        <input type="password" id="cfg-pin-nuevo" maxlength="4" inputmode="numeric" placeholder="••••"
+                        <input type="text" class="campo-secreto" id="cfg-pin-nuevo" maxlength="4" inputmode="numeric" placeholder="••••"
                             style="letter-spacing:6px; font-size:1.2em; text-align:center;">
                     </div>
                     <div class="form-group" style="margin-bottom:16px;">
                         <label>Confirmar PIN Nuevo</label>
-                        <input type="password" id="cfg-pin-confirmar" maxlength="4" inputmode="numeric" placeholder="••••"
+                        <input type="text" class="campo-secreto" id="cfg-pin-confirmar" maxlength="4" inputmode="numeric" placeholder="••••"
                             style="letter-spacing:6px; font-size:1.2em; text-align:center;">
                     </div>
                     <div id="cfg-pin-msg" style="font-size:0.82em; min-height:18px; margin-bottom:10px;"></div>
@@ -2104,7 +2104,7 @@
                     </div>
                     <div class="form-group" style="margin-bottom:12px;">
                         <label>Clave actual de recuperación</label>
-                        <input type="password" id="cfg-clave-actual" placeholder="Clave actual"
+                        <input type="text" class="campo-secreto" id="cfg-clave-actual" placeholder="Clave actual"
                             style="font-size:0.95em;">
                     </div>
                     <div class="form-group" style="margin-bottom:12px;">
@@ -2344,7 +2344,7 @@
     <script src="js/constants.js?v=32"></script>
     <script src="js/utils.js?v=34"></script>
     <script src="js/cache.js?v=32"></script>
-    <script src="js/auth.js?v=33"></script>
+    <script src="js/auth.js?v=34"></script>
     <script src="js/config.js?v=99"></script>
     <script src="js/supabase-config.js?v=68"></script>
     <script src="js/api.js?v=36"></script>
@@ -2580,7 +2580,7 @@
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:12px;">
                 <div style="font-size:0.78em;color:#64748b;margin-bottom:8px;">Para guardar, confirma con <strong>tu PIN personal</strong>. La clave de recuperación, la clave global y el PIN de ingreso <strong>no</strong> sirven para editar.</div>
                 <div style="font-size:0.78em;color:#374151;margin-bottom:8px;">Responsable en sesión: <strong id="dsg-edit-responsable">—</strong></div>
-                <input type="password" id="dsg-edit-pin" inputmode="numeric" placeholder="Tu PIN personal" style="width:100%;padding:10px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.95em;box-sizing:border-box;text-align:center;letter-spacing:3px;">
+                <input type="text" class="campo-secreto" id="dsg-edit-pin" inputmode="numeric" placeholder="Tu PIN personal" style="width:100%;padding:10px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.95em;box-sizing:border-box;text-align:center;letter-spacing:3px;">
                 <div id="dsg-edit-error" style="display:none;color:#dc2626;font-size:0.8em;font-weight:700;margin-top:8px;text-align:center;"></div>
             </div>
 

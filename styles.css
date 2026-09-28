@@ -1475,3 +1475,16 @@
     border: 1px solid rgba(147, 197, 253, 0.35);
     pointer-events: none;
 }
+
+/* ── Campos secretos que NO son credenciales del sitio ──
+   Los PIN que la app pide para confirmar una acción (configuración,
+   certificados, borrar un desglose) se ven ocultos pero NO son
+   `type="password"`. Es a propósito: el gestor del navegador solo se ofrece
+   a guardar y "actualizar" contraseñas en campos de ese tipo, y lo hacía en
+   cada acción. Como texto enmascarado cumplen lo mismo sin que el navegador
+   los confunda con la clave del sitio. */
+.campo-secreto {
+    -webkit-text-security: disc;
+    text-security: disc;
+    letter-spacing: 3px;
+}
