@@ -843,19 +843,114 @@ function aq_listoConteo() {
     aq_snapAlAbrir = null;
 }
 
-function _aq_renderBackupList(historial) {
+// Entiende los formatos de fecha que conviven en la base, porque
+// toLocaleString() cambia según el navegador de cada dispositivo:
+//   "24/6/2025, 22:34:11"        "28/9/2026, 3:34:11 a.m."
+//   "28-09-2026, 1:58:03 a. m."  "28-09-2026 01:58:03"  (el nuevo, fijo)
+// Antes solo aceptaba barras y no miraba a.m./p.m., así que 506 de los 704
+// registros quedaban en 0 y la lista salía en un orden distinto al guardado en
+// el teléfono — de ahí que borrar uno hiciera desaparecer otro.
+function _aqFechaBackupMs(str) {
+    if (!str) return 0;
+    const m = String(str).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap])?\.?\s*\.?\s*m?\.?/i);
+    if (m) {
+        let hora = +m[4];
+        const meridiem = (m[7] || '').toLowerCase();
+        if (meridiem === 'p' && hora < 12) hora += 12;
+        if (meridiem === 'a' && hora === 12) hora = 0;
+        return new Date(+m[3], +m[2] - 1, +m[1], hora, +m[5], +(m[6] || 0)).getTime();
+    }
+    const iso = Date.parse(str);
+    return isNaN(iso) ? 0 : iso;
+}
+
+// Los registros que se están mostrando, por fecha. Restaurar y borrar los
+// buscan acá en vez de por posición en la lista.
+let _aqBackupsVistos = {};
+
+// ══════════════════════════════════════════════════════════════════════
+// TRAER UN CONTEO ARCHIVADO AL ARQUEO ACTUAL
+//
+// Se reutiliza el conteo y su rastro, que es todo lo que el arqueo necesita.
+// El "retirado" no se lee del registro: se recalcula sumando los términos
+// negativos del rastro, que es la única cuenta que no puede quedar desfasada.
+//
+// El esperado NO se restaura: es un dato vivo de las recaudaciones del período.
+// Un conteo traído de otro día se compara contra el esperado de hoy, así que
+// este botón no reproduce la diferencia que mostraba aquel día.
+//
+// Reemplaza el conteo en este dispositivo Y en los demás, porque el arqueo se
+// sincroniza a la nube. Por eso el conteo de ahora se guarda primero en el
+// historial de deshacer, y se puede volver con ↶.
+function aq_restaurarBackup(fecha) {
+    const b = _aqBackupsVistos[String(fecha)];
+    if (!b) { showToast('No se encontró ese registro. Vuelve a abrir el historial.', 'error'); return; }
+
+    const conteoNuevo = {};
+    AQ_DENOMINACIONES.forEach(v => { conteoNuevo[v] = Math.round(Number((b.conteo || {})[v]) || 0); });
+    const rastrosNuevos = {};
+    AQ_DENOMINACIONES.forEach(v => {
+        const r = aq_normTrace((b.rastros || {})[v] || '');
+        if (r) rastrosNuevos[v] = r;
+    });
+
+    const detalle = AQ_DENOMINACIONES.filter(v => conteoNuevo[v] > 0)
+        .map(v => '   ' + aq_fmt(v) + ' × ' + conteoNuevo[v]).join('\n') || '   (sin billetes)';
+    const totalNuevo = AQ_DENOMINACIONES.reduce((s, v) => s + v * conteoNuevo[v], 0);
+    const totalAhora = Math.round(aq_calcTotal());
+
+    if (!confirm('♻️ ¿TRAER ESTE CONTEO AL ARQUEO ACTUAL?\n\n'
+        + 'Del ' + b.fecha + ':\n' + detalle + '\n'
+        + '   Total: ' + aq_fmt(totalNuevo) + '\n\n'
+        + 'REEMPLAZA el conteo de ahora (' + aq_fmt(totalAhora) + '), también en los\n'
+        + 'otros dispositivos. Se puede deshacer con la flecha ↶.\n\n'
+        + 'El total esperado no se trae: la diferencia se calcula contra el de hoy.')) return;
+
+    aq_saveState();                       // deja el conteo de ahora en el historial de deshacer
+    aq_conteo = conteoNuevo;
+    aq_movi = rastrosNuevos;
+    aq_totalRetirado = aq_calcRetiradoTotal();
+    aq_saveState();                       // guarda el restaurado y lo sube a la nube
+    aq_generarCampos();
+
+    const modal = document.getElementById('aq-modalBackup');
+    if (modal) modal.style.display = 'none';
+    showToast('♻️ Conteo del ' + b.fecha + ' restaurado (' + aq_fmt(totalNuevo) + '). Se puede deshacer con ↶.', 'success');
+}
+
+function _aq_renderBackupList(historial, cierresMs) {
     const container = document.getElementById('aq-backup-list');
+    _aqBackupsVistos = {};
     if(!historial.length) { container.innerHTML = '<p style="color:#7f8c8d;">Sin registros archivados.</p>'; return; }
+    const cierres = cierresMs || [];
     let html = '';
-    historial.forEach((b, index) => {
-        const colorDif = b.diferencia >= 0 ? '#10b981' : '#ef4444';
-        const signo = b.diferencia > 0 ? '+' : '';
+    historial.forEach(b => {
+        const clave = String(b.fecha);
+        _aqBackupsVistos[clave] = b;
+        const claveAttr = JSON.stringify(clave).replace(/"/g, '&quot;');
+
+        // Un cierre de verdad escribe en arqueo_cierres y en arqueo_backups en la
+        // misma llamada: si hay un cierre a menos de dos minutos, esto es un cierre.
+        const tMs = _aqFechaBackupMs(b.fecha_iso || b.fecha);
+        const esCierre = tMs > 0 && cierres.some(c => Math.abs(c - tMs) < 120000);
+        // El esperado en 0 quiere decir que no había cargado: la diferencia de
+        // ese registro se calculó contra un 0 y quedó invertida. No es un dato.
+        const esperadoDudoso = !b.esperado;
+
         const rendido = Math.round((b.totalContado || 0) + (b.anticipos || 0));
         const esLocal = b._local === true;
-        html += `<div class="arqueo-card" style="border-left:4px solid #8b5cf6; margin-bottom:15px; padding:15px;">
-            <div style="border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+        html += `<div class="arqueo-card" style="border-left:4px solid ${esCierre ? '#8b5cf6' : '#cbd5e1'}; margin-bottom:15px; padding:15px;">
+            <div style="border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
                 <span style="font-weight:bold; color:#64748b;">${b.fecha}</span>
-                ${esLocal ? `<button onclick="aq_borrarBackup(${JSON.stringify(String(b.fecha)).replace(/"/g, '&quot;')})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1em;" title="Eliminar"><i class="fas fa-trash-alt"></i></button>` : '<span style="font-size:0.7em;color:#94a3b8;">☁️</span>'}
+                <span style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:0.68em; font-weight:700; padding:2px 7px; border-radius:20px; ${esCierre
+                        ? 'background:#ede9fe; color:#6d28d9; border:1px solid #ddd6fe;'
+                        : 'background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0;'}" title="${esCierre
+                        ? 'Se archivó con el botón Archivar Informe Final'
+                        : 'Foto automática del conteo, no un cierre. El conteo sirve igual.'}">${esCierre ? '🗂️ Cierre' : '⚙️ Automático'}</span>
+                    <button onclick="aq_restaurarBackup(${claveAttr})" style="background:#0ea5e9; border:none; color:white; border-radius:6px; padding:4px 9px; cursor:pointer; font-size:0.72em; font-weight:700;" title="Traer este conteo al arqueo actual">♻️ Restaurar</button>
+                    ${esLocal ? `<button onclick="aq_borrarBackup(${claveAttr})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1em;" title="Eliminar"><i class="fas fa-trash-alt"></i></button>` : '<span style="font-size:0.7em;color:#94a3b8;" title="Guardado en la nube">☁️</span>'}
+                </span>
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.9em; margin-bottom:10px;">
                 <div>💰 En Caja:<br><b>${aq_fmt(b.totalContado)}</b></div>
@@ -863,9 +958,11 @@ function _aq_renderBackupList(historial) {
                 <div>🧾 Anticipos:<br><b style="color:#8b5cf6">${aq_fmt(b.anticipos||0)}</b></div>
                 <div>📝 Rendido:<br><b style="color:#2563eb">${aq_fmt(rendido)}</b></div>
             </div>
-            <div style="background:${b.diferencia>=0?'#dcfce7':'#fee2e2'}; padding:10px; border-radius:6px; text-align:center; font-weight:bold; color:${colorDif}; border:1px solid ${colorDif}">
-                Diferencia: ${signo}${aq_fmt(b.diferencia)} (Esperado: ${aq_fmt(b.esperado)})
-            </div>
+            ${esperadoDudoso ? `<div style="background:#fffbeb; padding:10px; border-radius:6px; text-align:center; font-weight:bold; color:#b45309; border:1px solid #fde68a;">
+                ⚠️ Diferencia no fiable<div style="font-weight:400; font-size:0.78em; margin-top:3px;">El total esperado no había cargado cuando se guardó este registro, así que la diferencia se calculó contra $0 y quedó al revés. El conteo de billetes sí es correcto.</div>
+            </div>` : `<div style="background:${b.diferencia>=0?'#dcfce7':'#fee2e2'}; padding:10px; border-radius:6px; text-align:center; font-weight:bold; color:${b.diferencia>=0?'#10b981':'#ef4444'}; border:1px solid ${b.diferencia>=0?'#10b981':'#ef4444'}">
+                Diferencia: ${b.diferencia>0?'+':''}${aq_fmt(b.diferencia)} (Esperado: ${aq_fmt(b.esperado)})
+            </div>`}
             <details style="font-size:0.85em; margin-top:10px; border-top:1px dashed #e2e8f0; padding-top:5px;">
                 <summary style="cursor:pointer; color:#2563eb; font-weight:600;">Ver Desglose Billetes</summary>
                 <table style="width:100%; margin-top:5px;">
@@ -896,32 +993,16 @@ async function aq_abrirModalBackup() {
     const fechasNube = new Set(nube.map(b => b.fecha));
     const soloLocales = locales.filter(b => !fechasNube.has(b.fecha));
 
-    // Entiende los formatos que conviven en la base, porque toLocaleString()
-    // cambia según el navegador de cada dispositivo:
-    //   "24/6/2025, 22:34:11"        "28/9/2026, 3:34:11 a.m."
-    //   "28-09-2026, 1:58:03 a. m."  "28-09-2026 01:58:03"  (el nuevo, fijo)
-    // Antes solo aceptaba barras y no miraba a.m./p.m., así que 506 de los 704
-    // registros quedaban en 0 y la lista salía en un orden distinto al guardado
-    // en el teléfono — de ahí que borrar uno hiciera desaparecer otro.
-    function _parseFechaBackup(str) {
-        if (!str) return 0;
-        const m = String(str).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap])?\.?\s*\.?\s*m?\.?/i);
-        if (m) {
-            let hora = +m[4];
-            const meridiem = (m[7] || '').toLowerCase();
-            if (meridiem === 'p' && hora < 12) hora += 12;
-            if (meridiem === 'a' && hora === 12) hora = 0;
-            return new Date(+m[3], +m[2] - 1, +m[1], hora, +m[5], +(m[6] || 0)).getTime();
-        }
-        const iso = Date.parse(str);
-        return isNaN(iso) ? 0 : iso;
+    let cierres = [];
+    if(typeof window.sbCargarCierresFechas === 'function') {
+        try { cierres = await window.sbCargarCierresFechas(); } catch(e) {}
     }
 
     const todos = [...nube, ...soloLocales].sort((a, b) =>
-        _parseFechaBackup(b.fecha_iso || b.fecha) - _parseFechaBackup(a.fecha_iso || a.fecha)
+        _aqFechaBackupMs(b.fecha_iso || b.fecha) - _aqFechaBackupMs(a.fecha_iso || a.fecha)
     );
 
-    _aq_renderBackupList(todos);
+    _aq_renderBackupList(todos, cierres);
 }
 
 // Se borra por fecha, no por posición. La lista que se ve es la mezcla de nube

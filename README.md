@@ -232,6 +232,27 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-28 — Reutilizar un arqueo archivado, y saber qué registro es cada uno (SW v147)
+
+**Restaurar.** Cada tarjeta del historial de arqueos tiene un botón **♻️ Restaurar** que trae ese conteo al arqueo actual. Sirve para recuperar un conteo de una hora antigua sin volver a contar el cajón.
+
+- Se restauran el **conteo** y el **rastro**, que es todo lo que el arqueo necesita. El «retirado» no se lee del registro: se **recalcula** sumando los términos negativos del rastro. Comprobado contra el registro del 24-09: el recálculo da $1.456.500, exactamente lo que se había guardado ese día.
+- **El esperado no se restaura.** Es un dato vivo de las recaudaciones del período, así que un conteo traído de otro día se compara contra el esperado de hoy. El botón no reproduce la diferencia que mostraba aquel día, y eso es lo correcto.
+- **Antes de pisar nada, el conteo actual queda en el historial de deshacer.** Se vuelve atrás con la flecha ↶.
+- La confirmación muestra el desglose completo, el total que se va a traer, el total que se va a reemplazar, y avisa que **el cambio llega también a los otros dispositivos** — el arqueo se sincroniza a la nube cada 3,5 s, así que restaurar no es una operación local.
+
+**Marcas en el historial.** Los 704 registros archivados no son todos lo mismo, y ahora se distingue:
+
+- **🗂️ Cierre** — se archivó con el botón «Archivar Informe Final». Se detecta porque archivar escribe en `arqueo_cierres` y en `arqueo_backups` en la misma llamada: si hay un cierre a menos de dos minutos, es un cierre. No hizo falta cambiar nada en la base.
+- **⚙️ Automático** — una foto del conteo que dejó el fallo corregido en v146. El conteo sirve igual para restaurar; lo que no sirve es su diferencia.
+- **⚠️ Diferencia no fiable** — reemplaza la diferencia en los registros cuyo esperado quedó en 0. Antes esas tarjetas afirmaban un «+$7.750.540» de sobrante que nunca existió; ahora explican que el esperado no había cargado y que el conteo sí es correcto.
+
+De los 704: **7 cierres reales, todos de junio**; **686 posteriores al 24 de junio**, automáticos. Desde junio nadie cerró un informe con el botón — otro dato independiente que confirma el diagnóstico de v146.
+
+**Verificación:** 22 comprobaciones con dos registros copiados tal cual de la base, todas correctas — las marcas de cada tipo, que el registro con esperado 0 no afirme su diferencia invertida, que restaurar traiga las 9 denominaciones y el rastro completo, que el retirado recalculado coincida con el guardado, que quede persistido, que ↶ lo deshaga, y que un registro «no fiable» se pueda restaurar igual y su diferencia se recalcule contra el esperado de hoy.
+
+**Archivos:** `js/arqueo.js`, `js/supabase-config.js`, `sw.js`, `js/version.js`, `index.html`.
+
 #### 2026-09-28 — El historial de arqueos archivados mostraba resultados invertidos (SW v146)
 
 **Síntoma reportado:** en el historial de arqueos archivados había registros con el «esperado» en 0, otros con el resultado invertido, y conteos de monedas cambiados sin que nadie las hubiera movido.

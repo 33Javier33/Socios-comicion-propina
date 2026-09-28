@@ -2937,6 +2937,18 @@ window.sbCargarBackups = async function() {
     }));
 };
 
+// Fechas de los cierres de verdad (los que se hicieron con "Archivar Informe
+// Final"). Sirven para distinguir, en el historial, un cierre de una foto
+// automática: archivar escribe en arqueo_cierres y en arqueo_backups en la
+// misma llamada, con segundos de diferencia, así que un respaldo es un cierre
+// si hay un cierre a menos de dos minutos.
+window.sbCargarCierresFechas = async function() {
+    const { data, error } = await dbSoc.from('arqueo_cierres')
+        .select('fecha').order('fecha', { ascending: false }).limit(200);
+    if (error || !data) return [];
+    return data.map(r => Date.parse(r.fecha)).filter(t => !isNaN(t));
+};
+
 window.sbSyncBackupsLocales = async function() {
     const historial = JSON.parse(localStorage.getItem('arqueoBackupHistorial_List') || '[]');
     if (!historial.length) return;
