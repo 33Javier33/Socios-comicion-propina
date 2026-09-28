@@ -191,6 +191,12 @@
         .btn-delete:hover { background: var(--danger);   color: white; }
         .btn-info:hover   { background: var(--secondary); color: white; }
         .btn-puntos { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #059669; }
+        .btn-qr { background: rgba(37,99,235,0.1); border: 1px solid rgba(37,99,235,0.3); color: #1d4ed8; }
+        /* Botón de QR dentro del buscador de IDs, al lado del de copiar */
+        .id-qr-btn { background: rgba(37,99,235,0.1); border: 1px solid rgba(37,99,235,0.3); color: #1d4ed8;
+            border-radius: 8px; padding: 7px 9px; font-size: 0.78em; font-weight: 700; cursor: pointer;
+            white-space: nowrap; font-family: 'DM Sans', sans-serif; transition: 0.2s; }
+        .id-qr-btn:hover { background: rgba(37,99,235,0.2); }
         .btn-puntos:hover { background: #059669; color: white; }
 
         .gestion-layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }

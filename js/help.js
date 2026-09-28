@@ -762,6 +762,7 @@ function ids_buscar(q) {
     const matches = (cacheSocios || []).filter(s =>
         (s.nombre + ' ' + s.apellido).toLowerCase().includes(texto)
         || (s.area || '').toLowerCase().includes(texto)
+        || String(s.id || '').toLowerCase().includes(texto)   // también por ID
     );
     if (!matches.length) {
         cont.innerHTML = '<div style="text-align:center;color:#7f8c8d;padding:24px;font-size:0.85em;">😕 No se encontraron socios con ese nombre</div>';
@@ -783,10 +784,13 @@ function ids_buscar(q) {
             + '<div class="id-card-nombre">' + nombre + '</div>'
             + '<div class="id-card-area">' + area + '</div>'
             + '</div></div>'
+            + '<div style="display:flex;align-items:center;gap:6px;">'
             + '<button class="id-copy-btn" onclick="ids_copiar(this,\'' + id + '\')" title="Copiar ID">'
             + '<span class="id-code">' + id + '</span>'
             + '<span class="id-copy-icon">📋</span>'
             + '</button>'
+            + '<button class="id-qr-btn" onclick="qr_abrirPara(\'' + id + '\')" title="Generar su QR para entrar a las apps">⬛ QR</button>'
+            + '</div>'
             + '</div>'
         );
     }).join('');

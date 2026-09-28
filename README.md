@@ -232,6 +232,35 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-28 — QR de vinculación por socio (SW v148) — *parte 1 de 2*
+
+Cada socio puede tener un QR que lo lleva a las apps con sus datos ya puestos. Esta entrada cubre **la generación**; el escaneo (elegir app, rellenar lo que hay y pedir lo que falta) va en la parte 2.
+
+**El QR no lleva los datos del socio.** Lleva un código opaco de 32 caracteres que se canjea en Supabase. Eso importa porque:
+
+- **Caduca solo** (3 días) y se anula al emitir otro, así que un QR impreso o reenviado deja de servir.
+- **Sirve una vez en cada app**, no una vez en total: el mismo QR vincula propi.solicitada y entra a diario.propi.
+- **Ni el nombre ni el RUT viajan en la URL**, así que no quedan en el historial del navegador, ni en los registros del servidor, ni a la vista de quien escanee el código sin tener la app.
+
+**En Supabase — todo aditivo, no modifica ni borra nada de lo que existía:**
+
+| | |
+|---|---|
+| `vinculos_qr` | RLS activada y **sin políticas**: la llave anónima no puede leer ni escribir la tabla. Comprobado con una fila presente — el dueño ve 1, `anon` ve 0. |
+| `rpc_crear_vinculo_qr` | Exige el PIN global **o** el de un responsable, y reutiliza el contador de intentos fallidos (`rpc_intentos`) que ya usa el resto del sistema. Sin esa validación, cualquiera con la llave anónima podría emitir el QR de cualquier socio. |
+| `rpc_canjear_vinculo_qr` | Un uso por app, con vencimiento. Devuelve los datos del socio y **qué campos hay que pedirle**. |
+| `rpc_completar_datos_socio` | Solo rellena campos vacíos. **Nunca sobrescribe** un dato existente: si el socio se equivoca al tipear, no puede pisar la ficha. |
+
+**En la app:** botón **⬛ QR** en cada tarjeta de socio y en el **Buscador de IDs**, que ahora también encuentra escribiendo el ID (antes solo buscaba por nombre y área). Emitir pide el PIN **en el momento** —tener la pestaña abierta no alcanza, porque un QR es una credencial— y advierte que quien lo tenga entra como ese socio. El modal ofrece descargar, compartir y copiar el enlace.
+
+El PIN se pide en un campo de texto con `.campo-secreto` en vez de `type="password"`, por lo mismo que se arregló en v145: el gestor del navegador solo ofrece «actualizar la contraseña» en campos de ese tipo.
+
+**La librería de QR** (qrcode-generator de Kazuhiko Arase, MIT) va alojada en `js/vendor/qrcode.js`, **no por CDN**, para que el Service Worker la cachee y el QR se pueda generar sin conexión.
+
+**Verificación:** 12 casos contra la base real —incluidos PIN malo, socio inexistente, canjear dos veces, el mismo código en la otra app, código inventado, intentar pisar un dato ya guardado, y que emitir uno nuevo anule el anterior— más la limpieza comprobada de los datos de prueba. Y 19 en el navegador, entre ellos que **un decodificador independiente lea del QR dibujado exactamente la URL con el código**, y que no aparezca el nombre ni el RUT en ella.
+
+**Archivos:** `js/qr-socios.js` (nuevo), `js/vendor/qrcode.js` (nuevo), `js/help.js`, `js/socios.js`, `styles.css`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-09-28 — Reutilizar un arqueo archivado, y saber qué registro es cada uno (SW v147)
 
 **Restaurar.** Cada tarjeta del historial de arqueos tiene un botón **♻️ Restaurar** que trae ese conteo al arqueo actual. Sirve para recuperar un conteo de una hora antigua sin volver a contar el cajón.

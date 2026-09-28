@@ -237,7 +237,9 @@ function renderizarCards() {
         listaSocios.forEach(socio => {
             const card = document.createElement('div');
             card.className = `socio-card border-${key}`;
-            card.setAttribute('data-search-name', `${socio.nombre} ${socio.apellido} ${socio.area}`.toLowerCase());
+            // El ID va en la búsqueda: buscar por "SOC-1764..." también encuentra al socio,
+            // que es como se llega a él cuando se quiere generar su QR.
+            card.setAttribute('data-search-name', `${socio.nombre} ${socio.apellido} ${socio.area} ${socio.id}`.toLowerCase());
             const f = socio.fechaIngreso.split('-');
             const fechaVis = `${f[2]}/${f[1]}/${f[0]}`;
             let fipVis = '';
@@ -266,6 +268,7 @@ function renderizarCards() {
                     <button class="btn-card btn-edit" onclick="prepararEdicion('${socio.id}')">Editar</button>
                     <button class="btn-card btn-info" onclick="verEstadoFinanciero('${socio.id}')">&#128202; Estado</button>
                     <button class="btn-card btn-puntos" onclick="corregirPuntosSocio('${socio.id}','${socio.nombre} ${socio.apellido}',${socio.puntos})">✏️ ${socio.puntos}pts</button>
+                    <button class="btn-card btn-qr" onclick="qr_abrirPara('${socio.id}')" title="Generar su QR para entrar a las apps">⬛ QR</button>
                     <button class="btn-card btn-delete" onclick="eliminarSocio('${socio.id}')">Eliminar</button>
                 </div>
             `;
