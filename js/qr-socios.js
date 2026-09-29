@@ -93,6 +93,66 @@ function _qrDibujar(canvas, texto, lado) {
     return { modulos: n, pixeles: px };
 }
 
+// ── Armar la hoja que se descarga para imprimir ─────────────────────────────
+//
+// Lo que se baja no es el cuadrado pelado: es una hoja con el NOMBRE arriba.
+// Un QR impreso sin rótulo no se distingue de otro —los dos son un cuadrado
+// negro— y basta pegar dos en el mural para no saber cuál es cuál.
+//
+// El QR se vuelve a dibujar a 640 px para esto. El de la pantalla mide 150 y
+// se ve bien ahí, pero impreso a ese tamaño queda pixelado y cuesta leerlo.
+function _qrHojaParaImprimir(texto, titulo, subtitulo) {
+    const qr = document.createElement('canvas');
+    _qrDibujar(qr, texto, 640);
+
+    const margen = 44;
+    const ancho = qr.width + margen * 2;
+    const hoja = document.createElement('canvas');
+    const ctx = hoja.getContext('2d');
+
+    // El título puede no caber en una línea ("App Socios de la Comisión")
+    const fuenteTitulo = 'bold 40px "DM Sans", Arial, Helvetica, sans-serif';
+    ctx.font = fuenteTitulo;
+    const lineas = [];
+    let actual = '';
+    String(titulo || '').split(' ').forEach(palabra => {
+        const prueba = actual ? actual + ' ' + palabra : palabra;
+        if (ctx.measureText(prueba).width > qr.width && actual) { lineas.push(actual); actual = palabra; }
+        else { actual = prueba; }
+    });
+    if (actual) lineas.push(actual);
+
+    const altoTitulo = lineas.length ? lineas.length * 50 + 18 : 0;
+    const altoSub = subtitulo ? 42 : 0;
+    hoja.width = ancho;
+    hoja.height = margen + altoTitulo + qr.height + altoSub + margen;
+
+    const c = hoja.getContext('2d');
+    c.fillStyle = '#ffffff';
+    c.fillRect(0, 0, hoja.width, hoja.height);
+
+    c.textAlign = 'center';
+    c.fillStyle = '#0f172a';
+    c.font = fuenteTitulo;
+    lineas.forEach((l, i) => c.fillText(l, hoja.width / 2, margen + 40 + i * 50));
+
+    c.drawImage(qr, margen, margen + altoTitulo);
+
+    if (subtitulo) {
+        c.fillStyle = '#64748b';
+        c.font = '26px "DM Sans", Arial, Helvetica, sans-serif';
+        c.fillText(subtitulo, hoja.width / 2, margen + altoTitulo + qr.height + 30);
+    }
+    return hoja;
+}
+
+function _qrBajarHoja(hoja, nombreArchivo) {
+    const a = document.createElement('a');
+    a.href = hoja.toDataURL('image/png');
+    a.download = nombreArchivo;
+    a.click();
+}
+
 // ── Abrir el QR de un socio ─────────────────────────────────────────────────
 async function qr_abrirPara(socioId) {
     const socio = (cacheSocios || []).find(s => s.id === socioId);
@@ -185,12 +245,12 @@ function _qrNombreArchivo() {
 }
 
 function qr_descargar() {
-    const c = document.getElementById('qr-canvas');
-    if (!c || !_qrDatos) return;
-    const a = document.createElement('a');
-    a.href = c.toDataURL('image/png');
-    a.download = _qrNombreArchivo();
-    a.click();
+    if (!_qrDatos) return;
+    // Lleva el nombre del socio arriba: al imprimir varios, así se sabe cuál es
+    // de quién. La dirección NO va escrita: contiene el código de vinculación, y
+    // ponerlo en texto legible sería dejar la credencial impresa dos veces.
+    const hoja = _qrHojaParaImprimir(_qrDatos.url, _qrDatos.nombre, 'Personal — no lo compartas');
+    _qrBajarHoja(hoja, _qrNombreArchivo());
 }
 
 async function qr_compartir() {

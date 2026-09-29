@@ -262,11 +262,16 @@ function notificarAdmin(titulo, cuerpo, tipo) {
 // está bloqueado —pasa fuera de HTTPS— se selecciona el texto para que se
 // pueda copiar a mano: nunca se queda sin salida.
 // ══════════════════════════════════════════════════════════════════════
+// `rotulo` es el nombre que va IMPRESO sobre el QR cuando se descarga. Es más
+// corto y más directo que el del panel: en un papel pegado en el mural, lo que
+// tiene que entenderse de un vistazo es para qué sirve ese cuadrado.
 const APPS_ENLACES = [
     { id: 'socios',  icono: '📱', nombre: 'App de Socios',
+      rotulo: 'App Socios de la Comisión',
       desc: 'Para los socios: sus anticipos, saldo y solicitudes',
       url: 'https://propi-solicitada.vercel.app/', color: '#6366f1' },
     { id: 'diario',  icono: '📔', nombre: 'Diario de Recaudación',
+      rotulo: 'Recaudaciones',
       desc: 'Carga diaria de recaudaciones',
       url: 'https://diario-propi.vercel.app/', color: '#0e7490' }
 ];
@@ -327,14 +332,23 @@ function _qrAppDibujar(a) {
 }
 
 // Para pegarlo en el mural o dejarlo impreso en la oficina.
+//
+// Sale con el nombre de la app arriba y la dirección abajo: impreso, un QR sin
+// rótulo no se distingue de otro, y la dirección escrita sirve para quien no
+// pueda o no quiera escanear.
 function qrAppDescargar(id) {
     const a = _appPorId(id);
-    const c = document.getElementById('qrapp-' + id);
-    if (!a || !c) return;
-    const enlace = document.createElement('a');
-    enlace.href = c.toDataURL('image/png');
-    enlace.download = 'QR-' + a.nombre.replace(/[^A-Za-z0-9]+/g, '-') + '.png';
-    enlace.click();
+    if (!a) return;
+    if (typeof _qrHojaParaImprimir !== 'function') {   // vive en js/qr-socios.js
+        showToast('No se pudo preparar el QR para imprimir.', 'error');
+        return;
+    }
+    try {
+        const hoja = _qrHojaParaImprimir(a.url, a.rotulo || a.nombre, a.url.replace(/^https?:\/\//, '').replace(/\/$/, ''));
+        _qrBajarHoja(hoja, 'QR-' + (a.rotulo || a.nombre).replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]+/g, '-') + '.png');
+    } catch (e) {
+        showToast('No se pudo preparar el QR: ' + e.message, 'error');
+    }
 }
 
 function _appPorId(id) { return APPS_ENLACES.find(a => a.id === id); }

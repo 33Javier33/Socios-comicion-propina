@@ -232,6 +232,25 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-29 — El QR se descarga con el nombre impreso (SW v151)
+
+Al descargar un QR ya no se baja el cuadrado pelado: se baja una **hoja con el nombre arriba**. Dos QR impresos sin rótulo son indistinguibles —los dos son un cuadrado negro—, y basta pegar ambos en el mural para no saber cuál es cuál.
+
+| QR | Dice arriba | Dice abajo |
+|---|---|---|
+| Diario de Recaudación | **Recaudaciones** | `diario-propi.vercel.app` |
+| App de Socios | **App Socios de la Comisión** | `propi-solicitada.vercel.app` |
+| El de cada socio | Su **nombre** | *Personal — no lo compartas* |
+
+- El rótulo impreso es un campo aparte (`rotulo` en `APPS_ENLACES`) del nombre que se ve en el panel: en un papel pegado en la pared lo que importa es entender de un vistazo para qué sirve ese cuadrado.
+- **La resolución sube de 148 a ~640 px.** El QR de la pantalla se ve bien ahí, pero impreso a ese tamaño quedaba pixelado.
+- El título se parte en varias líneas si no cabe, así que «App Socios de la Comisión» no se sale de la hoja.
+- **En el QR personal del socio la dirección NO se imprime**, a diferencia de los de las apps: esa dirección lleva el código de vinculación, y ponerlo en texto legible sería dejar la credencial impresa dos veces. Va el aviso en su lugar.
+
+**Verificación:** 12 comprobaciones — que cada hoja lleve su rótulo, que un decodificador independiente **siga leyendo el QR desde la hoja terminada** y apunte a la app correcta, que haya tinta de verdad en la franja del título (2.659 píxeles oscuros donde antes había blanco), que el título largo no desborde, y que el QR personal conserve su código intacto.
+
+**Archivos:** `js/qr-socios.js`, `js/utils.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-09-29 — «¿Actualizar la contraseña?» seguía apareciendo (SW v150)
 
 **Síntoma:** en Arqueo de Caja → Gestión de Efectivo → conteo, al pegar un dato saltaba el aviso de Edge «¿Actualizar la contraseña?», con usuario `comision` y una contraseña de 4 caracteres.
