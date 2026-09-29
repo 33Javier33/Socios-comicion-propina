@@ -232,6 +232,35 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-29 — La ayuda explicaba cosas que ya no funcionan así (SW v154)
+
+Se revisaron los **12 signos de «?»** y las 54 secciones de la ayuda completa contra lo que la app hace hoy. Lo que estaba **mal**, no solo incompleto:
+
+| Decía | Realidad |
+|---|---|
+| «Los arqueos se archivan al presionar ☁️ Guardar» | Falso desde v146. Se archiva con **Archivar Informe Final** o **solo al cerrar la app** (v152) |
+| «Total Esperado = Recaudación − Anticipos − Retiros» | Al revés. La cuenta es **caja contada + anticipos = esperado**: los anticipos suman, porque esa plata salió a los socios pero sigue siendo del fondo |
+| «El historial es de solo lectura» | Desde v147 se puede **♻️ Restaurar** un arqueo antiguo |
+| «Recaudación Nube: según Google Sheets» | Los datos están en Supabase |
+| «La auditoría registra en Google Sheets» / «hoja HistorialConexiones» | La auditoría está en Supabase |
+| «URLs: conexiones a Google Sheets» | Conexiones heredadas; los datos viven en Supabase |
+| «no inflyen» | Falta de ortografía |
+
+**Lo que faltaba explicar y ahora está:**
+
+- **⏳ FALTA EL ESPERADO** — qué significa y por qué mientras esté así no se muestra diferencia ni se puede archivar.
+- **⚙️ El conteo se mueve solo** — verificar una recaudación le suma billetes y registrar un anticipo se los resta; cada movimiento queda anotado con su origen.
+- **Las marcas del historial** — 🗂️ Cierre, ⚙️ Automático, ⚠️ Diferencia no fiable — y los frenos del archivado automático.
+- **La verificación prellenada** desde diario.propi, y que **Sala de Juegos son fichas** que no entran al arqueo (v153).
+- **Los dos QR y su diferencia**: el de las apps, que se puede imprimir y compartir, y el personal del socio, que es una credencial que vence en 3 días.
+- Los **temas** claro/oscuro/negro y que Buscar Socio también encuentra **por ID**.
+
+Se agregaron dos secciones nuevas a la ayuda completa: *«¿Cómo se archivan los arqueos y cómo reutilizo uno antiguo?»* (Arqueo) y *«¿Cómo le doy acceso a las apps a un socio nuevo? (QR)»* (Socios). Total: **55 secciones**.
+
+**Verificación:** 26 comprobaciones — que los 12 popovers abran y tengan contenido, que **ninguna de las 8 frases obsoletas siga apareciendo** en ningún archivo, que las 9 cosas nuevas sí estén explicadas, que el filtro de Arqueo muestre las 3 secciones sin colar otras categorías, y que el buscador encuentre la sección nueva escribiendo «restaurar».
+
+**Archivos:** `js/help.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-09-29 — La verificación llega con el conteo de la noche ya puesto (SW v153)
 
 Cuando en diario.propi se registra una recaudación **contando por denominación**, la verificación en Recaudaciones llega con las cantidades ya rellenadas: el encargado revisa contra lo que tiene en la mano y confirma.

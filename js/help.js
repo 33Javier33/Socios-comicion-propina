@@ -60,6 +60,11 @@ const BASE_CONOCIMIENTO = [
       pasos:['Presiona el botón ➕ flotante azul en Gestión de Socios','Completa: nombre, apellido, área, tipo de contrato, fecha de ingreso','Si la fecha de inicio de puntos es diferente a la de ingreso, indícala también','Presiona Guardar — el socio aparece en su área automáticamente'],
       nota:'Los campos de fecha son importantes: determinan cuántos puntos tiene el socio y cuándo le toca subir.' },
 
+    { id:'s6', cat:'socios', titulo:'¿Cómo le doy acceso a las apps a un socio nuevo? (QR)', tags:['qr','código','acceso','socio nuevo','vincular','app','ingresar','escanear','imprimir'],
+      resp:'Hay <strong>dos QR distintos</strong> y conviene no confundirlos: uno lleva a la app, el otro vincula la cuenta de ese socio.',
+      pasos:['<strong>Primero, para que instale la app:</strong> botón <strong>⬛ QR apps</strong> del encabezado. Muestra el QR de la App de Socios y el del Diario; el socio apunta la cámara a tu pantalla','Esos QR llevan solo la dirección: no caducan y se pueden imprimir y dejar pegados en la oficina. Salen con el nombre impreso arriba','<strong>Después, para que entre con sus datos:</strong> busca al socio en Gestión de Socios (sirve su nombre o su ID) y presiona <strong>⬛ QR</strong> en su tarjeta','Te pide tu PIN y genera su código personal','El socio lo escanea, elige a qué app entrar, y sus datos llegan puestos: solo crea su PIN'],
+      nota:'🔒 <strong>El QR personal es una credencial:</strong> quien lo tenga entra como ese socio. Entrégaselo solo a él y no lo dejes a la vista. Vence en 3 días y emitir uno nuevo anula el anterior al instante.<br><br>📝 <strong>Va completando la ficha:</strong> lo que el socio rellene al entrar (RUT, correo) se guarda en su ficha. Solo rellena lo que está vacío — nunca pisa un dato que ya cargaste.<br><br>Los QR de las apps, en cambio, no llevan ningún dato ni código: se pueden compartir sin riesgo.' },
+
     // ═══════════════════════════════════════════════════════
     // ANTICIPOS
     // ═══════════════════════════════════════════════════════
@@ -190,7 +195,7 @@ const BASE_CONOCIMIENTO = [
         </div>
       </div>`,
       pasos:['Presiona "➕ Nueva Recaudación" en la barra superior','Selecciona el tipo: Sala de Juegos, Efectivo MDA, Tarjeta MDA o Bóveda','Ingresa la fecha de la noche y el monto','El divisor es opcional — si no lo sabes, déjalo vacío y lo ingresas después desde la tarjeta del día','Presiona Guardar','Una vez ingresada, presiona <strong>⚠️ Verificar</strong> en la tarjeta del tipo para confirmar que el dinero fue ingresado físicamente a caja (conteo de billetes). Queda marcada como <strong>✅ En caja</strong>','Presiona 🔍 en cualquier tipo para ver el detalle: quién registró, cuándo se verificó y el desglose de billetes'],
-      nota:'Puedes ingresar varios tipos para el mismo día (ej: Mesas + Efectivo MDA + Bóveda). Cada uno se verifica por separado en caja.' },
+      nota:'Puedes ingresar varios tipos para el mismo día (ej: Mesas + Efectivo MDA + Bóveda). Cada uno se verifica por separado en caja.<br><br>🧮 <strong>Si en diario.propi contaron por denominación</strong>, la verificación llega con las cantidades <strong>ya rellenadas</strong>: revisas contra lo que tienes en la mano y confirmas. Arriba dice quién las cargó.<br><br>🎰 <strong>Sala de Juegos es distinto:</strong> ahí la noche cuenta FICHAS (de $1.000.000 a $500), pero a la bóveda llega efectivo. Las fichas se muestran arriba como referencia y la grilla llega <strong>vacía</strong>: hay que contar la plata igual que siempre. Las fichas nunca entran al arqueo de caja.<br><br>✏️ <strong>Si corriges lo que vino cargado</strong>, se puede: se te muestra qué denominación cambió, se guarda TU conteo y la diferencia queda registrada en la auditoría.' },
 
     { id:'r2', cat:'recaudacion', titulo:'¿Qué es el divisor y por qué es crítico?', tags:['divisor','punto noche','cálculo','inflación','sin divisor'],
       resp:'El divisor define cuánto vale un punto esa noche. <strong>Sin divisor correcto, los cálculos se inflan</strong> y los socios recibirían montos incorrectos.',
@@ -249,8 +254,13 @@ const BASE_CONOCIMIENTO = [
           </div>
         </div>
       </div>`,
-      pasos:['Presiona "💵 Conteo" en la barra del arqueo','Ingresa cuántos billetes/monedas hay de cada denominación ($20.000, $10.000, etc.) — el total se calcula automáticamente','Revisa la tabla de Recaudación Esperada: cada tipo (TarjetaMDA, EfectivoMDA, SalaDeJuegos) muestra si está <strong>✓ arqueado</strong> o <strong>⚠️ falta agregar</strong> según lo verificado en Montos Recaudados','Si hay diferencia en el resultado: revisa retiros y anticipos ingresados antes de cerrar','Guarda con ☁️ Guardar para no perder el progreso entre dispositivos'],
-      nota:'Verde = cuadrado. Amarillo = sobrante. Rojo = faltante. El estado por tipo (✓ arqueado / ⚠️ falta agregar) se actualiza automáticamente al verificar entradas en Montos Recaudados.' },
+      pasos:['Presiona "💵 Conteo" en la barra del arqueo','Ingresa cuántos billetes/monedas hay de cada denominación ($20.000, $10.000, etc.) — el total se calcula automáticamente','La cuenta es <strong>caja contada + anticipos = esperado</strong>. Los anticipos SUMAN: esa plata salió a los socios pero sigue siendo del fondo','Revisa la tabla de Recaudación Esperada: cada tipo (TarjetaMDA, EfectivoMDA, SalaDeJuegos) muestra si está <strong>✓ arqueado</strong> o <strong>⚠️ falta agregar</strong> según lo verificado en Montos Recaudados','Si hay diferencia en el resultado: revisa retiros y anticipos ingresados antes de cerrar','El conteo se guarda solo unos segundos después de cada cambio; ☁️ Guardar lo sube en el momento'],
+      nota:'Verde = cuadrado. Amarillo = sobrante. Rojo = faltante.<br><br>⏳ <strong>FALTA EL ESPERADO</strong> significa que el total esperado todavía no llegó de la nube. Mientras esté así <strong>no se muestra ninguna diferencia y no se puede archivar</strong>: calculada contra un cero, una falta se vería como un sobrante del tamaño de toda la caja.<br><br>⚙️ <strong>El conteo se mueve solo:</strong> verificar una recaudación le suma esos billetes y registrar un anticipo se los resta. Cada movimiento automático queda anotado bajo el rastro con su origen y la hora.' },
+
+    { id:'aq3', cat:'arqueo', titulo:'¿Cómo se archivan los arqueos y cómo reutilizo uno antiguo?', tags:['archivar','historial','arqueos','archivados','restaurar','reutilizar','cierre','automático'],
+      resp:'Un arqueo llega al historial de <strong>dos formas</strong>: cuando aprietas <strong>🚨 Archivar Informe Final</strong>, o <strong>solo al cerrar la app</strong> si el conteo cambió.',
+      pasos:['Abre <strong>📜 Historial de Arqueos</strong> en la barra del arqueo','Cada tarjeta trae en caja, retiros, anticipos, rendido y el desglose completo por denominación','<strong>🗂️ Cierre</strong> = lo archivaste tú con el botón. <strong>⚙️ Automático</strong> = es una foto que quedó al cerrar la app','<strong>♻️ Restaurar</strong> trae ese conteo al arqueo actual, con su rastro. El conteo de ahora queda en ↶ por si te arrepientes','Abre <strong>Ver Desglose Billetes</strong> para el detalle de esa vez'],
+      nota:'El archivado automático tiene frenos para no llenar el historial: solo si el conteo cambió, solo si pasaron 2 horas desde el último automático, y solo si el esperado ya llegó. Cerrar sesión se salta el freno de las 2 horas, porque es una señal clara de que terminaste.<br><br>♻️ <strong>Restaurar no trae el esperado</strong>, que es un dato vivo de las recaudaciones: un conteo traído de otro día se compara contra el esperado de hoy. Y reemplaza el conteo <strong>también en los otros dispositivos</strong>.<br><br>⚠️ <strong>Diferencia no fiable</strong> marca los registros viejos cuyo esperado quedó en cero: esa diferencia está al revés. El conteo de billetes sí es correcto y se puede restaurar sin problema.' },
 
     { id:'aq2', cat:'arqueo', titulo:'¿Cómo funciona el Canje a Bóveda?', tags:['canje','bóveda','cambio','billetes','comprobante'],
       resp:'El <strong>💱 Canje</strong> se usa cuando necesitas cambiar billetes de una denominación a otra, solicitándolo a Bóveda. Genera un comprobante oficial.',
@@ -377,7 +387,7 @@ const BASE_CONOCIMIENTO = [
       nota:'Los PINs personales se guardan en este dispositivo (localStorage). Si el responsable trabaja desde otro dispositivo, deberás configurar su PIN allí también.' },
 
     { id:'seg2', cat:'seguridad', titulo:'¿Qué es el Historial de Auditoría y para qué sirve?', tags:['auditoría','historial','logs','quién','eliminó','seguridad','registro','robo'],
-      resp:'La pestaña <strong>🔍 Auditoría</strong> registra en Google Sheets <strong>quién hizo qué y cuándo</strong>: anticipos registrados, borrados, cierres de mes, cambios en socios y saldos.',
+      resp:'La pestaña <strong>🔍 Auditoría</strong> registra en la base de datos <strong>quién hizo qué y cuándo</strong>: anticipos registrados, borrados, cierres de mes, cambios en socios y saldos.',
       vista:`<div class="ayuda-vista">
         <div class="ayuda-vista-titulo">🔍 Ejemplo de registro de auditoría</div>
         <div style="background:white;border-radius:8px;overflow:hidden;border:1px solid #eee;">
@@ -398,10 +408,10 @@ const BASE_CONOCIMIENTO = [
         </div>
       </div>`,
       pasos:['Cada acción crítica queda registrada automáticamente (no requiere intervención manual)','Ve a la pestaña <strong>🔍 Auditoría</strong> → presiona <strong>🔄 Actualizar</strong>','Usa los filtros para buscar por usuario, tipo de acción, fechas o texto libre','Presiona <strong>🖨️ Imprimir informe</strong> para generar un PDF con todos los registros filtrados','El informe incluye un resumen por usuario y por tipo de acción'],
-      nota:'Las acciones registradas son: Registrar/Editar/Eliminar Anticipo, Agregar/Editar/Eliminar Socio, Actualizar/Registrar Saldo Anterior, Reiniciar Anticipos, Cierre de Mes, Agregar Días PT, Imprimir Recibo, Canje, Ingreso Material, Gasto Material, Eliminar Material. Los accesos se registran en la hoja HistorialConexiones de Google Sheets.' },
+      nota:'Las acciones registradas son: Registrar/Editar/Eliminar Anticipo, Agregar/Editar/Eliminar Socio, Actualizar/Registrar Saldo Anterior, Reiniciar Anticipos, Cierre de Mes, Agregar Días PT, Imprimir Recibo, Canje, Ingreso Material, Gasto Material, Eliminar Material. Los accesos quedan en el registro de conexiones. Todo se guarda en Supabase, no en la aplicación: borrar algo aquí no borra su rastro allá.' },
 
     { id:'seg3', cat:'seguridad', titulo:'¿Cómo evito que alguien borre anticipos sin dejar rastro?', tags:['borrar','eliminar','rastro','seguridad','robo','fraude','control'],
-      resp:'El sistema tiene <strong>tres capas de protección</strong>: PIN personalizado por usuario, Historial de Auditoría que registra cada borrado, y el Historial en Google Sheets que no se puede borrar desde la aplicación.',
+      resp:'El sistema tiene <strong>tres capas de protección</strong>: PIN personalizado por usuario, Historial de Auditoría que registra cada borrado, y el Historial en la base de datos, que no se puede borrar desde la aplicación.',
       pasos:['<strong>PIN personal:</strong> cada responsable usa su propia contraseña — si alguien borra algo, queda identificado','<strong>Auditoría:</strong> cada borrado registra quién lo hizo, qué monto, de qué socio y en qué fecha','<strong>Historial en Sheets:</strong> los datos van a la hoja AuditoriaLogs directamente — solo accesible por el administrador de la planilla','<strong>Informe periódico:</strong> imprime el informe de Auditoría una vez por semana para revisión externa al sistema'],
       nota:'⚠️ Para máxima seguridad: asegúrate de que TODOS los responsables tengan su PIN personal configurado y que nadie comparta sus credenciales.' },
 
@@ -542,7 +552,7 @@ const BASE_CONOCIMIENTO = [
       nota:'El panel de menú en móvil cubre automáticamente los botones flotantes para evitar confusión.' },
 
     { id:'tec1', cat:'config', titulo:'¿Qué tecnología usa el sistema por dentro?', tags:['supabase','PWA','offline','tecnología','tiempo real','apps script','base de datos','instalar'],
-      resp:'El sistema combina <strong>Supabase</strong> como base de datos en tiempo real, <strong>Google Apps Script</strong> para procesos de cierre y notificaciones, y funciona como <strong>PWA instalable</strong> en cualquier dispositivo.',
+      resp:'El sistema combina <strong>Supabase</strong> como base de datos en tiempo real, <strong>Google Apps Script</strong> para algunos procesos heredados, y funciona como <strong>PWA instalable</strong> en cualquier dispositivo.',
       vista:`<div class="ayuda-vista">
         <div class="ayuda-vista-titulo">⚡ Tecnologías del sistema</div>
         <div style="display:flex;flex-direction:column;gap:6px;">
