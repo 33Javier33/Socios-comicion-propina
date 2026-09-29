@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-29 — La verificación llega con el conteo de la noche ya puesto (SW v153)
+
+Cuando en diario.propi se registra una recaudación **contando por denominación**, la verificación en Recaudaciones llega con las cantidades ya rellenadas: el encargado revisa contra lo que tiene en la mano y confirma.
+
+**Sala de Juegos es distinto a propósito.** Ahí la noche cuenta **fichas**, pero a la bóveda llega **efectivo**. Así que las fichas se muestran arriba como referencia —con su desglose y su total, y la advertencia «Son fichas, no efectivo»— y la grilla **sigue siendo de billetes y llega vacía**: hay que contar la plata igual que siempre. Las fichas no prellenan nada y **nunca entran al arqueo de caja**.
+
+**Si el encargado corrige, se puede y queda constancia.** El monto del Diario no siempre es exacto, así que corregir tiene que ser posible. Pero no pasa en silencio: se muestra qué denominación cambió y de cuánto a cuánto, se guarda **el conteo del encargado** (nunca el declarado), y la diferencia queda registrada en la auditoría con las dos cifras. Esa diferencia entre lo declarado y lo encontrado es el dato que sirve cuando después hay que revisar algo.
+
+En la base son **columnas nuevas y separadas** (`billetes_declarados`, `fichas_declaradas`, `declarado_por`, `declarado_at`), no se tocó `billetes`: ese sigue siendo el conteo verificado y el único que se suma al arqueo. Si se pisaran, se perdería justamente la diferencia. Se respaldaron antes las 42 filas de `recaudaciones`.
+
+**Verificación:** 38 comprobaciones de punta a punta — que las cantidades lleguen puestas y las no declaradas queden vacías, que el total ya cuadre sin tocar nada, que confirmar sin cambios no registre ninguna corrección, que corregir avise y deje el rastro con las dos cifras y el detalle por denominación, que en Sala de Juegos la grilla llegue vacía y **al arqueo entren billetes y nunca fichas**, y que una recaudación sin desglose se verifique exactamente como antes.
+
+**Archivos:** `js/recaudacion.js`, `js/supabase-config.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-09-29 — El arqueo se archiva solo al cerrar la app (SW v152)
 
 **Esto lo causó el arreglo de v146.** Ahí se sacó el archivado automático porque corría 3,5 s después de **cada** movimiento del conteo — 704 registros en tres meses donde debía haber uno por cierre. Pero quitarlo del todo dejó el otro extremo: si nadie se acuerda de apretar «Archivar Informe Final», no queda nada archivado. Medido en la base: el último archivado era de **ayer 08:55 UTC**, justo cuando salió v146, y el arqueo se siguió trabajando (se actualizó hace 1 h 44 min, $8.041.020 contados y cuadrado en $0) sin quedar registrado.

@@ -2478,7 +2478,12 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     arqueado: r.arqueado === true,
                     arqueado_at: r.arqueado_at || null,
                     arqueado_por: r.arqueado_por || null,
-                    billetes: r.billetes || {}
+                    billetes: r.billetes || {},
+                    // Lo que contó la noche en diario.propi. Prellena la
+                    // verificación; NO es el conteo verificado ni entra al arqueo.
+                    billetes_declarados: r.billetes_declarados || null,
+                    fichas_declaradas: r.fichas_declaradas || null,
+                    declarado_por: r.declarado_por || null
                 }));
                 return succ(data);
             } catch (e) { return err(e.message); }

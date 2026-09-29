@@ -672,9 +672,50 @@ function rec_initScrollFab() {}
 // ============================================================
 
 const REC_DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
+// Fichas de Sala de Juegos. NO son efectivo y NO entran al arqueo: la noche
+// cuenta fichas en diario.propi, pero a la bóveda llega plata. Acá se muestran
+// solo como referencia de lo que se declaró.
+const REC_FICHAS = [1000000, 500000, 200000, 100000, 50000, 20000, 10000, 5000, 1000, 500];
 let _recVerIdx   = null;
 let _recVerMonto = 0;
 let _recVerTipo  = '';
+let _recVerDeclarado = null;   // lo que vino de diario.propi, para comparar al confirmar
+
+// El aviso que va arriba de la grilla cuando la noche dejó el conteo cargado.
+//
+// En Sala de Juegos las fichas se muestran como REFERENCIA y no prellenan nada:
+// lo que llega a la bóveda es efectivo, así que la grilla sigue siendo de
+// billetes y el encargado cuenta la plata igual que siempre.
+function _recVerAvisoDeclarado(reg, decBil, decFic) {
+    if (!decBil && !decFic) return '';
+    const quien = (reg && reg.declarado_por) ? reg.declarado_por : 'el Diario';
+
+    if (decFic) {
+        const filas = REC_FICHAS.filter(v => decFic[v]).map(v =>
+            `<div style="display:flex;justify-content:space-between;font-size:0.78em;padding:1px 0;">
+                <span>${formatearMoneda(v)} × ${decFic[v]}</span>
+                <span style="font-weight:700;">${formatearMoneda(v * decFic[v])}</span>
+            </div>`).join('');
+        const total = REC_FICHAS.reduce((s, v) => s + v * (decFic[v] || 0), 0);
+        return `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 11px;margin-bottom:10px;">
+            <div style="font-size:0.8em;font-weight:800;color:#b45309;margin-bottom:5px;">🎰 Fichas declaradas por ${_htmlEscRec(quien)}</div>
+            ${filas}
+            <div style="display:flex;justify-content:space-between;border-top:1px solid #fde68a;margin-top:5px;padding-top:4px;font-size:0.82em;font-weight:800;color:#b45309;">
+                <span>Total declarado</span><span>${formatearMoneda(total)}</span></div>
+            <div style="font-size:0.72em;color:#92400e;margin-top:5px;line-height:1.35;">Son fichas, no efectivo. Cuenta abajo la plata que llegó a la bóveda.</div>
+        </div>`;
+    }
+
+    return `<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:9px 11px;margin-bottom:10px;">
+        <div style="font-size:0.8em;font-weight:800;color:#0369a1;">🧮 Conteo cargado por ${_htmlEscRec(quien)}</div>
+        <div style="font-size:0.74em;color:#075985;margin-top:3px;line-height:1.35;">Las cantidades ya vienen puestas. Revísalas contra lo que tienes en la mano y confirma; si algo no calza, corrígelo y queda registrado.</div>
+    </div>`;
+}
+
+function _htmlEscRec(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 function rec_abrirVerificar(idx, fecha, tipo, monto) {
     if (!idx || idx === 'null') return showToast('No se puede identificar el registro', 'error');
@@ -693,19 +734,27 @@ function rec_abrirVerificar(idx, fecha, tipo, monto) {
             <span style="font-size:1.1em;font-weight:900;color:#1e293b;">${formatearMoneda(monto)}</span>
         </div>`;
 
+    // ¿La noche dejó cargado el conteo en diario.propi?
+    const _reg = (typeof recDatosRaw !== 'undefined' ? recDatosRaw : []).find(r => r.originalIndex === idx);
+    const _decBil = (_reg && _reg.billetes_declarados) || null;
+    const _decFic = (_reg && _reg.fichas_declaradas) || null;
+    _recVerDeclarado = _decBil;
+
     let html = '';
     REC_DENOMS.forEach(v => {
+        // Las cantidades declaradas llegan puestas: el encargado revisa y confirma.
+        const _pre = _decBil && _decBil[v] ? _decBil[v] : '';
         html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;">
             <span style="flex:1;font-size:0.85em;font-weight:600;color:#374151;">${formatearMoneda(v)}</span>
             <button onclick="recVer_adj(${v},-1)" style="background:#ef4444;color:white;border:none;border-radius:4px;width:26px;height:26px;font-size:1em;cursor:pointer;line-height:1;">−</button>
-            <input type="number" id="rv-${v}" value="" placeholder="0" min="0"
-                style="width:50px;text-align:center;border:1px solid #cbd5e1;border-radius:6px;padding:3px 4px;font-size:0.9em;font-weight:700;"
+            <input type="number" id="rv-${v}" value="${_pre}" placeholder="0" min="0"
+                style="width:50px;text-align:center;border:1px solid ${_pre ? '#0ea5e9' : '#cbd5e1'};border-radius:6px;padding:3px 4px;font-size:0.9em;font-weight:700;"
                 oninput="recVer_updateTotal()" onkeydown="recVer_enterNext(event,${v})">
             <button onclick="recVer_adj(${v},1)" style="background:#10b981;color:white;border:none;border-radius:4px;width:26px;height:26px;font-size:1em;cursor:pointer;line-height:1;">+</button>
             <span id="rv-sub-${v}" style="flex:0 0 85px;text-align:right;font-size:0.8em;color:#64748b;">$0</span>
         </div>`;
     });
-    document.getElementById('recVerDenoms').innerHTML = html;
+    document.getElementById('recVerDenoms').innerHTML = _recVerAvisoDeclarado(_reg, _decBil, _decFic) + html;
     recVer_updateTotal();
     document.getElementById('modalRecVerificar').style.display = 'block';
     setTimeout(() => { const f = document.getElementById(`rv-${REC_DENOMS[0]}`); if (f) { f.focus(); f.select(); } }, 100);
@@ -759,6 +808,31 @@ async function rec_confirmarVerificacion() {
     }
     const billetes = {};
     REC_DENOMS.forEach(v => { const q = parseInt(document.getElementById(`rv-${v}`).value) || 0; if (q > 0) billetes[v] = q; });
+
+    // Si la noche había dejado el conteo cargado y el encargado lo corrigió,
+    // queda constancia de las dos cifras. Corregir SE PUEDE —el monto del
+    // Diario no siempre es exacto—, pero no debe pasar en silencio: la
+    // diferencia entre lo declarado y lo encontrado es el dato que sirve
+    // cuando después hay que revisar algo.
+    let _correccion = null;
+    if (_recVerDeclarado) {
+        const dif = {};
+        new Set([...Object.keys(_recVerDeclarado), ...Object.keys(billetes)]).forEach(d => {
+            const antes = Number(_recVerDeclarado[d] || 0), ahora = Number(billetes[d] || 0);
+            if (antes !== ahora) dif[d] = { declarado: antes, verificado: ahora };
+        });
+        if (Object.keys(dif).length) {
+            const totalDec = Object.entries(_recVerDeclarado).reduce((s, [d, n]) => s + Number(d) * Number(n), 0);
+            const lineas = Object.entries(dif).map(([d, x]) =>
+                '  ' + formatearMoneda(Number(d)) + ': declarado ' + x.declarado + ' → contado ' + x.verificado).join('\n');
+            if (!confirm('✏️ Tu conteo no calza con lo que cargó el Diario.\n\n' + lineas
+                + '\n\nDeclarado: ' + formatearMoneda(totalDec)
+                + '\nContado:   ' + formatearMoneda(total)
+                + '\n\nSe guarda TU conteo y queda registrada la diferencia.\n¿Continuar?')) return;
+            _correccion = { porDenominacion: dif, totalDeclarado: totalDec, totalVerificado: total };
+        }
+    }
+
     document.getElementById('modalRecVerificar').style.display = 'none';
     toggleLoader(true, 'Verificando...');
     // Responsable que realiza la verificación (queda guardado en arqueado_por)
@@ -768,7 +842,18 @@ async function rec_confirmarVerificacion() {
         const result = await rec_postRec({ action: 'arqueado', id: _recVerIdx, billetes, responsable: _responsable });
         if (!result || result.status !== 'success') throw new Error(result?.message || 'Error en base de datos');
         _rec_volcarBilletesAArqueo(_recVerTipo, billetes);
-        showToast('Recaudación verificada en caja ✅', 'success');
+        if (_correccion && typeof window.sbAuditLog === 'function') {
+            window.sbAuditLog('Corrección de verificación', {
+                usuario: _responsable,
+                detalle: 'El conteo verificado no calzó con lo declarado en el Diario: '
+                       + formatearMoneda(_correccion.totalDeclarado) + ' declarado → '
+                       + formatearMoneda(_correccion.totalVerificado) + ' contado',
+                datos: { id: _recVerIdx, tipo: _recVerTipo, ..._correccion }
+            });
+        }
+        showToast(_correccion
+            ? 'Verificada con tu conteo. La diferencia quedó registrada.'
+            : 'Recaudación verificada en caja ✅', _correccion ? 'warning' : 'success');
         try { localStorage.removeItem(CACHE_KEY_REC); } catch(e) {}
         cargarRecaudaciones();
     } catch(e) {
