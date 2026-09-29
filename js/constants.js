@@ -14,6 +14,7 @@ const AQ_SK_CONTEO = 'arqueoConteoCLP', AQ_SK_MOVI = 'arqueoMoviDisplayCLP', AQ_
 const AQ_SK_RETIROS_ANTICIPOS = 'arqueoRetirosAnticipos';
 const AQ_SK_DIRTY = 'arqueoCambiosPendientes'; // '1' = hay cambios locales sin guardar en nube
 const AQ_SK_AUTOMOV = 'arqueoMovimientosAutomaticos'; // de dónde salió lo que nadie tipeó
+const AQ_SK_ULT_ARCHIVO = 'arqueoUltimoArchivado';    // huella y hora del último archivado
 
 // ===== RESPONSABLES DE ANTICIPOS =====
 const RESP_KEY = 'fondo_responsables';

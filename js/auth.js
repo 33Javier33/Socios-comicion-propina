@@ -169,6 +169,13 @@ let tiempoRestante = INACTIVIDAD_MS;
 let _ultimaActividad = Date.now(); // hora real de la última actividad
 
 function cerrarSesion(silencioso = false) {
+    // Archivar el arqueo antes de soltar la sesión. Cerrar sesión es una señal
+    // clara de "terminé", así que se salta el freno de las 2 horas que sí
+    // aplica al cambiar de app (ver aq_archivarAlCerrar).
+    if (typeof aq_archivarAlCerrar === 'function') {
+        try { aq_archivarAlCerrar(true); } catch (e) {}
+    }
+
     // Auditar cierre de sesión antes de limpiar sessionStorage
     const _sesResp = sessionStorage.getItem('fs_sesion_responsable') || '';
     if (_sesResp && typeof window.sbAuditLog === 'function') {

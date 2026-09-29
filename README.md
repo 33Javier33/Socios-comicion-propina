@@ -232,6 +232,28 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-29 — El arqueo se archiva solo al cerrar la app (SW v152)
+
+**Esto lo causó el arreglo de v146.** Ahí se sacó el archivado automático porque corría 3,5 s después de **cada** movimiento del conteo — 704 registros en tres meses donde debía haber uno por cierre. Pero quitarlo del todo dejó el otro extremo: si nadie se acuerda de apretar «Archivar Informe Final», no queda nada archivado. Medido en la base: el último archivado era de **ayer 08:55 UTC**, justo cuando salió v146, y el arqueo se siguió trabajando (se actualizó hace 1 h 44 min, $8.041.020 contados y cuadrado en $0) sin quedar registrado.
+
+**El punto medio:** se archiva al cerrar la app, con tres frenos para que no vuelva el aluvión.
+
+1. **Solo si el conteo cambió** desde el último archivado. Se compara una huella del conteo, los rastros y los anticipos.
+2. **Solo si pasaron 2 horas** desde el último archivado automático. En el celular, cambiar de app dispara «oculto» todo el rato: sin este freno, contar una tarde con el WhatsApp de por medio dejaría veinte registros.
+3. **Solo si el esperado ya llegó.** Sin él la diferencia se calcularía contra cero y quedaría invertida — el fallo de v146.
+
+**Cerrar sesión se salta el freno de las 2 horas**, porque es una señal clara de «terminé», no un cambio de pestaña. El cierre automático por inactividad (15 min) también archiva.
+
+**Qué lo dispara:** `visibilitychange → hidden` y `pagehide`. Son los únicos que llegan de verdad al cerrar la app en el celular: `beforeunload` no se dispara cuando se mata la app desde el multitarea, y `unload` ya no es fiable en ningún navegador moderno.
+
+**Que no se pierda si la red falla al cerrar:** primero se escribe en el teléfono —eso no puede fallar ni quedar a medias— y después se empuja a la nube. Lo que quede solo en el teléfono lo sube `sbSyncBackupsLocales()` en el arranque siguiente. Comprobado: con la nube fallando, el registro igual queda guardado.
+
+**El esperado ahora se pide al arrancar**, no solo al abrir Arqueo de Caja. Sin eso, una jornada en la que nadie entró a esa pestaña no quedaría archivada por el freno 3 — y el conteo igual cambia solo, porque verificar una recaudación le suma los billetes.
+
+**Verificación:** 25 comprobaciones — los dos casos que no deben archivar, el archivado con el esperado y la diferencia correctos, los tres frenos uno por uno (no duplica sin cambios, espera si fue recién, archiva pasadas las 2 h), que cerrar sesión no espere, que el evento real de ocultar la app lo dispare, y que con la nube caída el registro no se pierda.
+
+**Archivos:** `js/arqueo.js`, `js/auth.js`, `js/app-init.js`, `js/constants.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-09-29 — El QR se descarga con el nombre impreso (SW v151)
 
 Al descargar un QR ya no se baja el cuadrado pelado: se baja una **hoja con el nombre arriba**. Dos QR impresos sin rótulo son indistinguibles —los dos son un cuadrado negro—, y basta pegar ambos en el mural para no saber cuál es cuál.

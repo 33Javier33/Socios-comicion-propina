@@ -757,11 +757,101 @@ function aq_crearBackupLocal() {
     const fechaTxt = _p(_f.getDate()) + '-' + _p(_f.getMonth() + 1) + '-' + _f.getFullYear()
                    + ' ' + _p(_f.getHours()) + ':' + _p(_f.getMinutes()) + ':' + _p(_f.getSeconds());
     const backup = { fecha: fechaTxt, totalContado: totalCaja, esperado: espVal, anticipos: Math.round(aq_totalAnticipos), retiros: aq_calcRetiradoTotal(), diferencia: dif, conteo: JSON.parse(JSON.stringify(aq_conteo)), rastros: JSON.parse(JSON.stringify(aq_movi)) };
-    let historial = JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || [];
+    _aqGuardarBackup(backup);
+}
+
+// Guarda el respaldo en el teléfono y lo empuja a la nube.
+//
+// Primero en localStorage y recién después a la nube, en ese orden a propósito:
+// escribir en el teléfono no puede fallar ni quedar a medias, y al cerrar la
+// app la petición de red sí puede morir en el camino. Lo que quede solo en el
+// teléfono lo sube _aqSubirPendientes() en el próximo arranque.
+function _aqGuardarBackup(backup) {
+    let historial = [];
+    try { historial = JSON.parse(localStorage.getItem(AQ_SK_BACKUP)) || []; } catch(e) {}
     historial.unshift(backup);
-    if(historial.length > 20) historial.pop();
-    localStorage.setItem(AQ_SK_BACKUP, JSON.stringify(historial));
-    if(typeof window.sbGuardarBackup === 'function') window.sbGuardarBackup(backup).catch(() => {});
+    if (historial.length > 20) historial.pop();
+    try { localStorage.setItem(AQ_SK_BACKUP, JSON.stringify(historial)); } catch(e) {}
+    try { localStorage.setItem(AQ_SK_ULT_ARCHIVO, JSON.stringify({ huella: _aqHuellaEstado(), cuando: Date.now() })); } catch(e) {}
+    if (typeof window.sbGuardarBackup === 'function') window.sbGuardarBackup(backup).catch(() => {});
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ARCHIVAR SOLO AL CERRAR
+//
+// En v146 se sacó el archivado automático porque corría 3,5 s después de CADA
+// movimiento del conteo: 704 registros en tres meses donde debía haber uno por
+// cierre. Pero quitarlo del todo dejó el otro extremo — si nadie se acuerda de
+// apretar "Archivar Informe Final", no queda nada archivado.
+//
+// El punto medio es archivar cuando se cierra la app, con tres frenos para que
+// no vuelva el aluvión:
+//
+//   1. Solo si el conteo CAMBIÓ desde el último archivado (se compara una
+//      huella del conteo, los rastros y los anticipos).
+//   2. Solo si pasaron 2 horas desde el último archivado automático. En el
+//      celular, cambiar de app dispara "oculto" todo el rato: sin este freno,
+//      contar una tarde con el WhatsApp de por medio dejaría veinte registros.
+//   3. Solo si el esperado ya llegó. Sin él, la diferencia se calcularía contra
+//      cero y quedaría invertida — el fallo que se corrigió en v146.
+//
+// Cerrar sesión a mano se salta el freno de las 2 horas: es una señal clara de
+// "terminé", no un cambio de pestaña.
+// ══════════════════════════════════════════════════════════════════════
+const AQ_HORAS_ENTRE_AUTOARCHIVOS = 2;
+
+function _aqHuellaEstado() {
+    try {
+        return JSON.stringify({ c: aq_conteo, m: aq_movi, a: Math.round(aq_totalAnticipos || 0) });
+    } catch (e) { return ''; }
+}
+
+function _aqUltimoArchivo() {
+    try { return JSON.parse(localStorage.getItem(AQ_SK_ULT_ARCHIVO) || 'null'); } catch (e) { return null; }
+}
+
+// Devuelve el motivo por el que NO se archiva, o '' si sí corresponde.
+// Separado de la acción para poder comprobarlo caso por caso.
+function aq_motivoNoArchivar(forzar) {
+    if (aq_esperadoVal === null) return 'sin_esperado';
+    if (Math.round(aq_calcTotal()) === 0) return 'sin_conteo';
+    const ult = _aqUltimoArchivo();
+    if (ult && ult.huella === _aqHuellaEstado()) return 'sin_cambios';
+    if (!forzar && ult && ult.cuando && (Date.now() - ult.cuando) < AQ_HORAS_ENTRE_AUTOARCHIVOS * 3600 * 1000) {
+        return 'muy_seguido';
+    }
+    return '';
+}
+
+function aq_archivarAlCerrar(forzar) {
+    const motivo = aq_motivoNoArchivar(forzar);
+    if (motivo) return motivo;
+    aq_crearBackupLocal();
+    return 'archivado';
+}
+
+// Sube los respaldos que quedaron solo en el teléfono, por si la petición de
+// red murió al cerrar la app. Correr esto al arrancar es la red de seguridad
+// que hace que el archivado al cerrar no dependa de que la red alcance.
+function _aqSubirPendientes() {
+    if (typeof window.sbSyncBackupsLocales === 'function') {
+        window.sbSyncBackupsLocales().catch(() => {});
+    }
+}
+
+function aq_engancharArchivadoAlCerrar() {
+    if (window._aqCierreEnganchado) return;
+    window._aqCierreEnganchado = true;
+
+    // 'hidden' es lo único que dispara de verdad al cerrar la app en el
+    // celular: 'beforeunload' no llega cuando se mata la app desde el
+    // multitarea, y 'unload' ya no es fiable en ningún navegador moderno.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') aq_archivarAlCerrar(false);
+    });
+    window.addEventListener('pagehide', () => { aq_archivarAlCerrar(false); });
+
+    _aqSubirPendientes();
 }
 
 

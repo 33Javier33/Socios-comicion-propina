@@ -28,6 +28,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function iniciarApp() {
+    // Archivar el arqueo al cerrar la app. Va acá y no en el arranque porque
+    // por iniciarApp() pasan los dos caminos de entrada: sesión ya abierta y
+    // login con el PIN. La función se protege sola de engancharse dos veces.
+    if (typeof aq_engancharArchivadoAlCerrar === 'function') aq_engancharArchivadoAlCerrar();
+
+    // El total esperado se pide al arrancar, no solo al abrir Arqueo de Caja.
+    // Sin él, el archivado al cerrar se salta —y con razón, porque la
+    // diferencia saldría invertida—, así que una jornada en la que nadie entró
+    // a esa pestaña no quedaría archivada. Y el conteo igual cambia solo:
+    // verificar una recaudación le suma los billetes.
+    if (typeof aq_fetchEsperadoData === 'function' && typeof aq_esperadoVal !== 'undefined' && aq_esperadoVal === null) {
+        setTimeout(() => { try { aq_fetchEsperadoData(); } catch (e) {} }, 1500);
+    }
     const hoy = new Date();
     // En el teléfono la fecha larga ("lunes, 14 de septiembre de 2026") ocupa
     // una línea entera del encabezado y empuja los botones a una tercera fila.
