@@ -110,17 +110,11 @@ function intentarLogin() {
                 });
             }
         }, 600);
-        // El campo del PIN se vacía y deja de ser `type="password"`.
-        //
-        // Antes quedaba en el HTML con el PIN adentro para siempre, escondido
-        // dentro del overlay. El gestor de contraseñas del navegador re-evalúa
-        // los campos de contraseña ante cualquier cambio de la página, y como
-        // ya tenía una credencial guardada para este sitio, salía a preguntar
-        // "¿Actualizar la contraseña?" en CADA acción —agregar un billete en
-        // el arqueo, abrir un modal, cualquier cosa—. Sin valor y sin ser un
-        // campo de contraseña, no hay nada que el navegador pueda ofrecer.
+        // El campo del PIN se vacía: no debe quedar el PIN escrito en el HTML,
+        // escondido dentro del overlay, mientras se usa la app.
+        // (El campo ya no es type="password"; se tapa con la clase .pin-oculto.)
         const _pin = document.getElementById('pinInput');
-        if (_pin) { _pin.value = ''; _pin.type = 'text'; }
+        if (_pin) _pin.value = '';
 
         const overlay = document.getElementById('loginOverlay');
         overlay.style.transition = 'opacity 0.4s';
@@ -156,8 +150,10 @@ function actualizarHintPin() {
 function togglePinVista() {
     const inp = document.getElementById('pinInput');
     const eye = document.getElementById('pinEye');
-    if (inp.type === 'password') { inp.type = 'text'; eye.textContent = '🙈'; }
-    else { inp.type = 'password'; eye.textContent = '👁'; }
+    // Se tapa y destapa con la clase, no cambiando el type: el campo nunca
+    // vuelve a ser type="password" (ver .pin-oculto en styles.css).
+    const oculto = inp.classList.toggle('pin-oculto');
+    eye.textContent = oculto ? '👁' : '🙈';
 }
 
 function toggleRecuperar() {
@@ -188,11 +184,13 @@ function cerrarSesion(silencioso = false) {
     if (respBadge) respBadge.style.display = 'none';
     clearTimeout(inactividadTimeout);
     clearInterval(inactividadInterval);
-    // Vuelve a ser campo de contraseña para el login (al entrar se pasa a texto
-    // vacío, para que el gestor del navegador no lo vea mientras se usa la app).
+    // Vacío y tapado para el próximo ingreso. Nunca vuelve a ser
+    // type="password": se tapa con la clase (ver .pin-oculto en styles.css).
     const _pinSalir = document.getElementById('pinInput');
     _pinSalir.value = "";
-    _pinSalir.type = "password";
+    _pinSalir.classList.add('pin-oculto');
+    const _ojoSalir = document.getElementById('pinEye');
+    if (_ojoSalir) _ojoSalir.textContent = '👁';
     document.getElementById('loginError').style.display = "none";
     document.getElementById('recoverPanel').style.display = "none";
     document.getElementById('claveRecuperar').value = "";

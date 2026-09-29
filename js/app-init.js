@@ -5,6 +5,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Si hay sesión activa, mostrar app directamente
     if (sessionStorage.getItem(SESSION_KEY) === 'ok') {
+        // Por si el navegador alcanzó a rellenar el PIN antes de que corriera
+        // este código: se vacía igual. Con la sesión abierta el login ni se
+        // muestra, así que ese valor no lo escribió nadie y no debe quedar.
+        const _pinBoot = document.getElementById('pinInput');
+        if (_pinBoot) _pinBoot.value = '';
         document.getElementById('loginOverlay').style.display = 'none';
         iniciarApp();
         return;

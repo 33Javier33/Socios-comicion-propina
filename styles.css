@@ -1023,6 +1023,16 @@
             text-align: center; color: var(--text-color); background: var(--surface); transition: 0.3s; box-sizing: border-box; font-family: 'DM Mono', monospace;
         }
         .pin-input:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 0 3px rgba(52,152,219,0.12); }
+        /* El PIN se tapa con CSS, no con type="password".
+           Siendo campo de contraseña, Edge lo rellenaba SOLO al cargar la página
+           —aunque la sesión ya estuviera abierta y el login ni se mostrara— y
+           desde ahí preguntaba "¿Actualizar la contraseña?" ante cualquier
+           cambio de la página: pegar un dato en el conteo del arqueo, abrir un
+           modal, cualquier cosa. Sin un campo de contraseña no hay nada que
+           rellenar ni que ofrecer.
+           Va como clase aparte de .campo-secreto para no perder el
+           letter-spacing de 8px que tiene .pin-input. */
+        .pin-input.pin-oculto { -webkit-text-security: disc; text-security: disc; }
         /* El ojo se veía bien pero su zona tocable era de 31x25px, chica para
            un dedo (lo recomendado son 44px). Se agranda el ÁREA sin agrandar
            el icono: mismo tamaño a la vista, mucho más fácil de acertar. */

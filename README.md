@@ -232,6 +232,23 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-09-29 — «¿Actualizar la contraseña?» seguía apareciendo (SW v150)
+
+**Síntoma:** en Arqueo de Caja → Gestión de Efectivo → conteo, al pegar un dato saltaba el aviso de Edge «¿Actualizar la contraseña?», con usuario `comision` y una contraseña de 4 caracteres.
+
+**Por qué el arreglo de v145 no bastaba.** Ese arreglo vaciaba el campo del PIN y lo pasaba a texto **al entrar con el PIN**. Pero cuando la sesión ya está abierta (`sessionStorage fs_sesion = 'ok'`), `app-init.js` oculta el login y entra directo (`return` en la línea 10): ese código **nunca corría**. El campo `#pinInput` se quedaba como `type="password"` dentro del overlay escondido, y **Edge lo rellenaba solo** con la credencial que ya tenía guardada. De ahí los 4 caracteres del aviso. Con un campo de contraseña con valor, el gestor re-evalúa ante cualquier cambio de la página —pegar un dato en el conteo, abrir un modal— y sale a preguntar.
+
+**El arreglo:** el PIN del login **deja de ser `type="password"`**. Pasa a ser `type="text"` tapado por CSS con `.pin-oculto` (`-webkit-text-security: disc`), que es el mismo recurso que ya usaba el resto de la app con `.campo-secreto`. Sin un campo de contraseña no hay nada que el navegador pueda rellenar ni ofrecer.
+
+- Va como clase propia y no `.campo-secreto` para no perder el `letter-spacing: 8px` de `.pin-input`.
+- El ojito (`togglePinVista`) ahora quita y pone la clase en vez de cambiar el `type`.
+- Al cerrar sesión se vuelve a tapar con la clase, no volviendo a `type="password"`.
+- Y al arrancar con la sesión ya abierta, el campo se vacía igual, por si el navegador alcanzó a rellenarlo antes de que corriera el código.
+
+**Verificación:** 15 comprobaciones — **cero campos `type=password` en toda la página** (de 98 campos), el PIN se sigue viendo tapado y conserva su separación de 8 px, el ojito destapa y vuelve a tapar sin cambiar el tipo, con la sesión abierta el campo queda vacío, y el ingreso sigue funcionando: con el PIN equivocado no entra y avisa, con el correcto entra, y el PIN no queda escrito en la página.
+
+**Archivos:** `index.html`, `styles.css`, `js/auth.js`, `js/app-init.js`, `sw.js`, `js/version.js`.
+
 #### 2026-09-28 — QR de las apps, para el socio nuevo (SW v149)
 
 En el panel **📱 App Socios** ahora cada app muestra su **QR**, junto a su enlace: el de la App de Socios lleva a `propi-solicitada.vercel.app` y el del Diario a `diario-propi.vercel.app`. Sirve para que un socio nuevo apunte la cámara a la pantalla y llegue a la app, sin dictarle la dirección ni tener que mandarle nada.
