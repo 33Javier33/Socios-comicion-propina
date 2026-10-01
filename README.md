@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-01 — Avisos ilegibles en oscuro: el tema no veía lo que pinta JavaScript (SW v155)
+
+**Síntoma:** con el tema oscuro, el aviso «Falta agregar la recaudación del…» salía con **fondo amarillo claro y texto ámbar claro encima**. Medido: **1,29:1**, cuando el mínimo legible es 4,5.
+
+**Causa, y no era la que parecía.** El tema oscuro no usa clases: compara el **texto del atributo `style`** de cada elemento (`[style*="background:#fef3c7"]`) y lo remapea. `#fef3c7` **sí estaba** en la lista de ámbar.
+
+El problema es que ese aviso se pinta desde JavaScript con `el.style.cssText = 'background:#fef3c7'`, y el navegador **reescribe el atributo normalizado**: `background: rgb(254, 243, 199);`. El selector del hex deja de casar y el fondo no se oscurece.
+
+Y quedaba **peor que si el tema no hiciera nada**: el texto de adentro viene de `innerHTML`, que conserva el hex tal cual, así que **ese sí** se aclaraba. Resultado: ámbar claro sobre ámbar claro.
+
+**Arreglo en la raíz, no en el aviso.** Cada familia de color se repite con la forma `rgb()`, al mismo destino: un color se ve igual venga del HTML o de JavaScript. Con eso quedan cubiertos de una vez los **7 avisos más** que se pintan desde JavaScript y tenían el mismo defecto latente (el remanente en rojo/verde/morado de Anticipos, la tarjeta de anticipos del socio, y los tres recuadros de diferencia).
+
+Los selectores van **anclados** a `background:` y `background-color:`. Sin anclar, `rgb(255, 255, 255)` habría casado también con un **texto** blanco y le habría puesto fondo oscuro a un elemento que no lo pedía.
+
+**Verificación:** 14 comprobaciones midiendo los colores que calcula el navegador en los tres temas. El aviso pasa de **1,29:1 a 9,40:1** en oscuro y en negro; en claro queda idéntico (8,42 · 7,52 · 6,37). Y dos comprobaciones del anclaje: un elemento con solo texto blanco **conserva su fondo transparente**, mientras que uno que sí pide fondo blanco se oscurece.
+
+**Archivos:** `styles.css`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-09-29 — La ayuda explicaba cosas que ya no funcionan así (SW v154)
 
 Se revisaron los **12 signos de «?»** y las 54 secciones de la ayuda completa contra lo que la app hace hoy. Lo que estaba **mal**, no solo incompleto:

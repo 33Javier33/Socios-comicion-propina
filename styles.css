@@ -711,6 +711,38 @@
         body.dark-mode [style*="color:#6b21a8"],body.dark-mode [style*="color:#9d174d"],
         body.dark-mode [style*="color:#7e22ce"],body.dark-mode [style*="color:#8e44ad"] { color:#d8b4fe !important; }
 
+        /* ══════════════════════════════════════════════════════════════
+           LOS MISMOS COLORES, PERO ESCRITOS COMO rgb()
+           Todo lo de arriba compara el TEXTO del atributo style. Eso funciona
+           cuando el estilo está escrito a mano en el HTML, porque el atributo
+           se guarda tal cual. Pero cuando lo pone JavaScript —`el.style.cssText
+           = 'background:#fef3c7'`— el navegador lo reescribe normalizado:
+           `background: rgb(254, 243, 199);`. El selector del hex deja de casar
+           y ese fondo NO se oscurece.
+           El resultado era peor que no hacer nada: el texto de adentro sí se
+           aclaraba (ese viene de innerHTML, que conserva el hex), así que
+           quedaba ámbar claro sobre ámbar claro — 1,29:1, invisible.
+           Cada familia se repite con la forma rgb(), al mismo destino: un color
+           se ve igual venga del HTML o de JavaScript.
+           Van ANCLADOS a `background:` y `background-color:`. Sin anclar,
+           "rgb(255, 255, 255)" casaría también con un texto blanco y le
+           pondría fondo oscuro a un elemento que no lo pedía.
+           ══════════════════════════════════════════════════════════════ */
+                /* Rojo */
+        body.dark-mode [style*="background: rgb(254, 226, 226)"],body.dark-mode [style*="background-color: rgb(254, 226, 226)"],body.dark-mode [style*="background: rgb(254, 242, 242)"],body.dark-mode [style*="background-color: rgb(254, 242, 242)"],body.dark-mode [style*="background: rgb(253, 232, 232)"],body.dark-mode [style*="background-color: rgb(253, 232, 232)"],body.dark-mode [style*="background: rgb(253, 236, 234)"],body.dark-mode [style*="background-color: rgb(253, 236, 234)"] { background:#3b1d1d !important; }
+                /* Ámbar */
+        body.dark-mode [style*="background: rgb(254, 243, 199)"],body.dark-mode [style*="background-color: rgb(254, 243, 199)"],body.dark-mode [style*="background: rgb(254, 252, 232)"],body.dark-mode [style*="background-color: rgb(254, 252, 232)"],body.dark-mode [style*="background: rgb(255, 237, 213)"],body.dark-mode [style*="background-color: rgb(255, 237, 213)"],body.dark-mode [style*="background: rgb(253, 230, 138)"],body.dark-mode [style*="background-color: rgb(253, 230, 138)"],body.dark-mode [style*="background: rgb(254, 249, 195)"],body.dark-mode [style*="background-color: rgb(254, 249, 195)"] { background:#3a2c12 !important; }
+                /* Verde */
+        body.dark-mode [style*="background: rgb(240, 253, 244)"],body.dark-mode [style*="background-color: rgb(240, 253, 244)"],body.dark-mode [style*="background: rgb(234, 250, 241)"],body.dark-mode [style*="background-color: rgb(234, 250, 241)"],body.dark-mode [style*="background: rgb(220, 252, 231)"],body.dark-mode [style*="background-color: rgb(220, 252, 231)"],body.dark-mode [style*="background: rgb(209, 250, 229)"],body.dark-mode [style*="background-color: rgb(209, 250, 229)"] { background:#10291c !important; }
+                /* Azul */
+        body.dark-mode [style*="background: rgb(239, 246, 255)"],body.dark-mode [style*="background-color: rgb(239, 246, 255)"],body.dark-mode [style*="background: rgb(219, 234, 254)"],body.dark-mode [style*="background-color: rgb(219, 234, 254)"],body.dark-mode [style*="background: rgb(224, 242, 254)"],body.dark-mode [style*="background-color: rgb(224, 242, 254)"] { background:#152a3f !important; }
+                /* Morado */
+        body.dark-mode [style*="background: rgb(250, 245, 255)"],body.dark-mode [style*="background-color: rgb(250, 245, 255)"],body.dark-mode [style*="background: rgb(253, 242, 248)"],body.dark-mode [style*="background-color: rgb(253, 242, 248)"],body.dark-mode [style*="background: rgb(243, 232, 255)"],body.dark-mode [style*="background-color: rgb(243, 232, 255)"] { background:#2a1d3d !important; }
+                /* Blancos y grises claros */
+        body.dark-mode [style*="background: rgb(255, 255, 255)"],body.dark-mode [style*="background-color: rgb(255, 255, 255)"],body.dark-mode [style*="background: rgb(248, 250, 252)"],body.dark-mode [style*="background-color: rgb(248, 250, 252)"],body.dark-mode [style*="background: rgb(241, 245, 249)"],body.dark-mode [style*="background-color: rgb(241, 245, 249)"],body.dark-mode [style*="background: rgb(255, 251, 235)"],body.dark-mode [style*="background-color: rgb(255, 251, 235)"] { background:#243040 !important; }
+                /* En Negro, los blancos bajan un escalón más */
+        body.tema-negro.dark-mode [style*="background: rgb(255, 255, 255)"],body.tema-negro.dark-mode [style*="background-color: rgb(255, 255, 255)"],body.tema-negro.dark-mode [style*="background: rgb(248, 250, 252)"],body.tema-negro.dark-mode [style*="background-color: rgb(248, 250, 252)"] { background:#141414 !important; }
+
         /* Grises claros que quedaban fuera. Los tres últimos son los peores:
            #eee con texto #555 daba gris claro sobre gris claro, ilegible del
            todo, porque el texto sí se aclaraba y el fondo no. */
