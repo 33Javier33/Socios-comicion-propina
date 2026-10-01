@@ -404,6 +404,51 @@
       <div id="asigLista" class="space-y-2"></div>
     </div>
 
+    <!-- PANEL: VACACIONES ───────────────────────────────────────────────
+         Antes esto estaba solo dentro de "Ver calendarios (comparar)", que se
+         abre desde un GRUPO: para dar vacaciones había que saber en qué grupo
+         estaba el socio y encontrar su mini-calendario entre los del grupo.
+         Acá se elige el socio directo. -->
+    <div id="panVacaciones" class="sup-panel">
+      <h3 class="font-extrabold mb-1">🏖️ Vacaciones</h3>
+      <p class="text-xs text-slate-400 mb-3">Elige al socio, marca el día que sale y la app cuenta los días en el calendario.</p>
+
+      <label class="text-[11px] text-slate-400 font-semibold">Socio</label>
+      <input id="vacBuscaSocio" class="fld mt-1 mb-1" autocomplete="off" placeholder="🔍 Escribe su nombre..."
+             oninput="vacSugerir(this.value)" onfocus="vacSugerir(this.value)">
+      <div id="vacSugerencias" style="display:none;max-height:220px;overflow-y:auto;border:1px solid #334155;border-radius:12px;background:#0f172a;" class="mb-2"></div>
+      <input type="hidden" id="vacSocioSel">
+      <div id="vacSocioChip" class="mb-3" style="display:none;"></div>
+
+      <div id="vacForm" style="display:none;">
+        <label class="text-[11px] text-slate-400 font-semibold">Tipo</label>
+        <select id="vacTipo2" class="fld mt-1 mb-2" onchange="vacTipoCambio2()">
+          <option value="v15">15 días hábiles (salta fines de semana y feriados)</option>
+          <option value="v6">6 días adicionales (corridos)</option>
+        </select>
+
+        <div class="flex gap-2 mb-2">
+          <div class="flex-1">
+            <label class="text-[11px] text-slate-400 font-semibold">Primer día</label>
+            <input id="vacInicio2" type="date" class="fld mt-1" oninput="vacPrevia()">
+          </div>
+          <div style="width:96px;">
+            <label class="text-[11px] text-slate-400 font-semibold">Días</label>
+            <input id="vacDias2" type="number" min="1" max="60" value="15" class="fld mt-1" oninput="vacPrevia()">
+          </div>
+        </div>
+
+        <!-- La previa se calcula al vuelo: el supervisor ve QUÉ días se van a
+             tomar y cuándo vuelve ANTES de guardar nada. -->
+        <div id="vacPreviaBox" class="card p-3 mb-3" style="display:none;"></div>
+
+        <button onclick="vacGuardar2()" class="btn-primary w-full mb-4">Agregar vacaciones</button>
+
+        <div class="text-xs text-slate-400 font-semibold mb-2">Vacaciones de este socio</div>
+        <div id="vacLista2"></div>
+      </div>
+    </div>
+
     <!-- PANEL: ACCESOS -->
     <div id="panAccesos" class="sup-panel">
       <div class="flex items-center justify-between mb-3">
@@ -432,6 +477,7 @@
     <button class="tab-btn" data-pan="Turnos" onclick="supTab('Turnos')"><span>⏰</span>Turnos</button>
     <button class="tab-btn" data-pan="Grupos" onclick="supTab('Grupos')"><span>👥</span>Grupos</button>
     <button class="tab-btn" data-pan="Socios" onclick="supTab('Socios')"><span>🧩</span>Asignar</button>
+    <button class="tab-btn" data-pan="Vacaciones" onclick="supTab('Vacaciones')"><span>🏖️</span>Vacaciones</button>
     <button class="tab-btn" data-pan="Accesos" onclick="supTab('Accesos')"><span>🔐</span>Accesos</button>
   </div>
 </div>
@@ -1351,6 +1397,7 @@ function supTab(pan){
   document.querySelectorAll('#appSuper .sup-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('pan'+pan).classList.add('active');
   if(pan==='Accesos') accRender();
+  if(pan==='Vacaciones') vacPanelInit();
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1868,6 +1915,117 @@ async function vacModal(socioId){
     ${lista}
     <button onclick="gcalRender()" class="w-full btn-ghost mt-2">‹ Volver a los calendarios</button>`);
 }
+// ══════════════════════════════════════════════════════════════════════
+// PANEL DE VACACIONES DEL SUPERVISOR
+//
+// Elegir socio → marcar el primer día → ver qué días se toman y cuándo
+// vuelve → guardar. El cálculo es el mismo `calcVacacion` de arriba, el del
+// proyecto Horarios: v15 salta fines de semana y feriados, v6 va corrido.
+// ══════════════════════════════════════════════════════════════════════
+function vacPanelInit(){
+  const hoy=fechaISO(new Date());
+  const ini=document.getElementById('vacInicio2');
+  if(ini && !ini.value) ini.value=hoy;
+  if(document.getElementById('vacSocioSel').value) vacPrevia();
+}
+
+function vacSugerir(txt){
+  const cont=document.getElementById('vacSugerencias');
+  const q=(txt||'').trim().toLowerCase();
+  const lista=(sociosMesas||[]).filter(s=>!q || `${s.nombre} ${s.apellido}`.toLowerCase().includes(q)).slice(0,30);
+  if(!lista.length){ cont.style.display='none'; cont.innerHTML=''; return; }
+  cont.innerHTML=lista.map(s=>`<div onclick="vacElegir('${s.id}')" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid #1e293b;"
+      class="text-xs font-bold">${esc(s.nombre)} ${esc(s.apellido)}</div>`).join('');
+  cont.style.display='block';
+}
+
+async function vacElegir(socioId){
+  const s=(sociosMesas||[]).find(x=>x.id===socioId); if(!s) return;
+  document.getElementById('vacSocioSel').value=socioId;
+  document.getElementById('vacBuscaSocio').value='';
+  document.getElementById('vacSugerencias').style.display='none';
+  const chip=document.getElementById('vacSocioChip');
+  chip.style.display='block';
+  chip.innerHTML=`<div class="card p-2 flex items-center gap-2"><span class="text-xs font-bold flex-1">${esc(s.nombre)} ${esc(s.apellido)}</span>
+    <button onclick="vacDeselegir()" class="btn-ghost text-xs">Cambiar</button></div>`;
+  document.getElementById('vacForm').style.display='block';
+  vacPanelInit(); vacPrevia();
+  await vacListar(socioId);
+}
+
+function vacDeselegir(){
+  document.getElementById('vacSocioSel').value='';
+  document.getElementById('vacSocioChip').style.display='none';
+  document.getElementById('vacForm').style.display='none';
+  document.getElementById('vacBuscaSocio').focus();
+}
+
+function vacTipoCambio2(){
+  const t=document.getElementById('vacTipo2'), d=document.getElementById('vacDias2');
+  if(t&&d) d.value=VAC_DIAS_POR_TIPO[t.value]||15;
+  vacPrevia();
+}
+
+// La previa: qué días se toman y cuándo vuelve, ANTES de guardar.
+function vacPrevia(){
+  const box=document.getElementById('vacPreviaBox'); if(!box) return;
+  const tipo=document.getElementById('vacTipo2').value;
+  const inicio=document.getElementById('vacInicio2').value;
+  const n=parseInt(document.getElementById('vacDias2').value,10);
+  if(!inicio){ box.style.display='none'; return; }
+  const {dias,fecha_regreso}=calcVacacion(tipo,inicio,n);
+  const fmt=f=>{ const d=new Date(f+'T00:00:00');
+    return d.toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short'}).replace(/\./g,''); };
+  const chips=dias.map(f=>`<span style="display:inline-block;background:#1e293b;border:1px solid #334155;border-radius:20px;
+      padding:2px 8px;margin:2px 3px 0 0;font-size:10px;white-space:nowrap;">${fmt(f)}</span>`).join('');
+  const salta = tipo==='v6' ? '' :
+    `<div class="text-[11px] text-slate-500 mt-2">Los fines de semana y feriados de por medio no se cuentan: el socio mantiene su turno esos días.</div>`;
+  box.style.display='block';
+  box.innerHTML=`<div class="text-xs font-bold mb-1">Toma ${dias.length} día${dias.length!==1?'s':''}</div>
+    <div class="text-[11px] text-slate-400 mb-2">Del ${fmt(dias[0])} al ${fmt(dias[dias.length-1])} · vuelve el <b style="color:#fbbf24">${fmt(fecha_regreso)}</b></div>
+    <div>${chips}</div>${salta}`;
+}
+
+async function vacListar(socioId){
+  const cont=document.getElementById('vacLista2'); if(!cont) return;
+  const {data}=await db.from('horarios_vacaciones').select('*').eq('socio_id',socioId).order('fecha_inicio');
+  cont.innerHTML=(data||[]).map(v=>{
+    const col=v.tipo==='v6'?'#8b5cf6':'#f59e0b';
+    const nom=v.tipo==='v6'?(v.dias||[]).length+' días adicionales':(v.dias||[]).length+' días hábiles';
+    return `<div class="card p-2 flex items-center gap-2 mb-2"><span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${col}"></span>
+      <div class="flex-1 min-w-0"><div class="text-xs font-bold">${nom}</div>
+      <div class="text-[11px] text-slate-400">${v.fecha_inicio} → vuelve ${v.fecha_regreso||'-'}</div></div>
+      <button onclick="vacQuitar2('${v.id}','${socioId}')" class="btn-ghost text-xs" style="background:#7f1d1d;color:#fecaca;">🗑</button></div>`;
+  }).join('') || '<div class="text-slate-500 text-xs text-center py-3">Sin vacaciones registradas</div>';
+}
+
+async function vacGuardar2(){
+  const socioId=document.getElementById('vacSocioSel').value;
+  if(!socioId) return toast('Elige al socio','#dc2626');
+  const tipo=document.getElementById('vacTipo2').value;
+  const inicio=document.getElementById('vacInicio2').value;
+  if(!inicio) return toast('Elige el primer día','#dc2626');
+  const n=parseInt(document.getElementById('vacDias2').value,10);
+  const {dias,fecha_regreso}=calcVacacion(tipo,inicio,n);
+  if(!confirm(`¿Agregar ${dias.length} día${dias.length!==1?'s':''} de vacaciones?\n\nDel ${dias[0]} al ${dias[dias.length-1]}\nVuelve el ${fecha_regreso}`)) return;
+  const vturno = tipo==='v6' ? 't_vac6' : 't_vac15';
+  await db.from('horarios_vacaciones').insert({ id:uid('vac'), socio_id:socioId, tipo, fecha_inicio:inicio, fecha_regreso, dias });
+  const rows=dias.map(f=>({ id:uid('ex'), socio_id:socioId, fecha:f, turno_id:vturno }));
+  for(let j=0;j<rows.length;j+=200){ await db.from('horarios_excepciones').upsert(rows.slice(j,j+200),{onConflict:'socio_id,fecha'}); }
+  toast('Vacaciones agregadas ('+dias.length+' días)');
+  await vacListar(socioId);
+}
+
+async function vacQuitar2(recId, socioId){
+  if(!confirm('¿Quitar estas vacaciones?')) return;
+  const {data}=await db.from('horarios_vacaciones').select('dias').eq('id',recId).maybeSingle();
+  const dias=(data&&data.dias)||[];
+  for(let j=0;j<dias.length;j+=200){ await db.from('horarios_excepciones').delete().eq('socio_id',socioId).in('fecha',dias.slice(j,j+200)); }
+  await db.from('horarios_vacaciones').delete().eq('id',recId);
+  toast('Vacaciones quitadas');
+  await vacListar(socioId);
+}
+
 // Al cambiar el tipo se propone su número de días habitual, pero sin forzarlo:
 // el motor acepta cualquier cantidad, igual que en el proyecto de referencia.
 function vacTipoCambio(){

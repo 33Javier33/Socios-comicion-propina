@@ -232,6 +232,25 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-01 — Horarios: sección propia de Vacaciones en el supervisor (SW horarios v17)
+
+**El problema:** las vacaciones existían, pero el botón 🏖️ vivía **solo dentro de «📅 Ver calendarios (comparar)»**, que se abre desde un **grupo**. Para dar vacaciones había que saber en qué grupo estaba el socio, abrir la comparativa del grupo, encontrar su mini-calendario entre los demás y pulsar un botón pequeño. En la práctica, no había cómo llegar.
+
+**Ahora hay una pestaña propia 🏖️ Vacaciones** en la barra del supervisor, al lado de Accesos:
+
+1. **Eliges al socio** escribiendo su nombre.
+2. **Marcas el primer día** (viene puesto en hoy) y el tipo.
+3. **Ves la previa antes de guardar**: cuántos días toma, un recuadro por cada día con su fecha, y **cuándo vuelve**, resaltado. Si es de 15 hábiles, avisa que los fines de semana y feriados de por medio no se cuentan y el socio mantiene su turno esos días.
+4. Guardas. Pide confirmación con las fechas a la vista.
+
+Debajo quedan las vacaciones ya registradas de ese socio, con su 🗑 para quitarlas.
+
+El cálculo es el mismo `calcVacacion` del motor traído del proyecto Horarios (v16): v15 salta fines de semana y feriados, v6 va corrido. El botón 🏖️ de la vista de calendarios se mantiene, para quien ya lo usaba.
+
+**Verificación:** 22 comprobaciones en el navegador — que la pestaña exista y el formulario no aparezca hasta elegir socio; que buscar por nombre lo encuentre; que la previa muestre 15 recuadros y la fecha de regreso, y 6 al cambiar de tipo; que al guardar se cree el registro **y** se marquen los 15 días con el turno `t_vac15`, **ninguno en fin de semana**; y que sin socio elegido no guarde nada.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-01 — Horarios: el motor de vacaciones, igual al del proyecto Horarios (SW horarios v16)
 
 Las vacaciones ya existían en `index2.html`, pero su cálculo **no era** el del proyecto [Horarios](https://github.com/33Javier33/horarios). Ahora se trajo tal cual (`calcularVacacionesMotor`).
