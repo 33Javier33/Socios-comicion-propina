@@ -232,6 +232,28 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-01 — Horarios: el motor de vacaciones, igual al del proyecto Horarios (SW horarios v16)
+
+Las vacaciones ya existían en `index2.html`, pero su cálculo **no era** el del proyecto [Horarios](https://github.com/33Javier33/horarios). Ahora se trajo tal cual (`calcularVacacionesMotor`).
+
+| | Antes | Ahora (como el repo) |
+|---|---|---|
+| **15 días hábiles** | Marcaba **todos** los días del tramo —sábados, domingos y feriados incluidos— hasta juntar 15 hábiles. En un tramo típico eran **22 días marcados** | Marca **solo los 15 hábiles**. Los fines de semana y feriados de por medio quedan con el turno normal del socio |
+| **6 días adicionales** | 6 corridos | 6 corridos — **sin cambios** |
+| **Regreso** | Siguiente día **hábil** tras el tramo | Día siguiente al último de vacaciones, aunque caiga fin de semana |
+
+**La etiqueta del modal ya decía «salta fines de semana y feriados»**, así que el texto describía esta lógica y el código hacía otra cosa. Ahora coinciden.
+
+**Se trajo también la cantidad de días configurable** que tiene el original: el campo propone 15 o 6 según el tipo, pero acepta cualquier número.
+
+Único cambio respecto del original: se usa `fechaISO()` en vez de `toISOString().slice(0,10)`. Dan la misma fecha —Chile va detrás de UTC, así que la medianoche local cae el mismo día en UTC— pero `fechaISO` es la que usa el resto del archivo y no depende de la zona horaria.
+
+**Verificación:** 25 comprobaciones comparando **los dos motores día por día**, con el original copiado del repo dentro de la prueba. Coinciden en los 8 escenarios probados, incluidos los que cruzan **Semana Santa**, el **18 de septiembre** y **Navidad/Año Nuevo**, y uno que empieza en sábado. Los 16 feriados chilenos de 2026 y 2027 coinciden entre ambos. Y se comprobó qué cambia: de 22 días marcados a 15, y los 7 que se dejan de marcar son **todos** findes o feriados.
+
+**Las vacaciones ya registradas quedan con el criterio viejo** — se guardaron con su lista de días, y esa lista no se reescribe. Si alguna conviene rehacerla, se quita y se vuelve a agregar.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-01 — Avisos ilegibles en oscuro: el tema no veía lo que pinta JavaScript (SW v155)
 
 **Síntoma:** con el tema oscuro, el aviso «Falta agregar la recaudación del…» salía con **fondo amarillo claro y texto ámbar claro encima**. Medido: **1,29:1**, cuando el mínimo legible es 4,5.

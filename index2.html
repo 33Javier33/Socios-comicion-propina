@@ -532,12 +532,50 @@ function _feriados(y){
 }
 function esFeriado(d){ return _feriados(d.getFullYear()).has(String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')); }
 function esHabil(d){ const w=d.getDay(); return w!==0 && w!==6 && !esFeriado(d); }
-// Calcula los días de una vacación y la fecha de regreso (siguiente hábil)
-function calcVacacion(tipo, inicioISO){
-  const [y,m,dd]=inicioISO.split('-').map(Number); let cur=new Date(y,m-1,dd); const dias=[];
-  if(tipo==='v6'){ for(let i=0;i<6;i++){ dias.push(fechaISO(cur)); cur.setDate(cur.getDate()+1); } }
-  else { let hab=0; let guard=0; while(hab<15 && guard<60){ dias.push(fechaISO(cur)); if(esHabil(cur)) hab++; cur.setDate(cur.getDate()+1); guard++; } }
-  let reg=new Date(cur); let g2=0; while(!esHabil(reg) && g2<30){ reg.setDate(reg.getDate()+1); g2++; }
+// ══════════════════════════════════════════════════════════════════════
+// MOTOR DE VACACIONES
+//
+// Es el mismo del proyecto Horarios (github.com/33Javier33/horarios,
+// `calcularVacacionesMotor`), traído tal cual:
+//
+//   v15 — días hábiles: SALTA los fines de semana y los feriados. Solo se
+//         marcan los 15 días hábiles. Un sábado de por medio NO queda como
+//         vacación: el socio conserva su turno de ese día.
+//   v6  — días adicionales: corridos puros, sin ninguna exclusión.
+//
+//   Regreso = el día siguiente al último día de vacaciones, aunque caiga
+//   fin de semana o feriado.
+//
+// Antes, v15 marcaba TODOS los días del tramo hasta juntar 15 hábiles, y el
+// regreso buscaba el siguiente hábil. La etiqueta del modal ya decía «salta
+// fines de semana y feriados», así que el texto describía esta lógica y el
+// código hacía otra cosa.
+//
+// Único cambio respecto del original: se usa `fechaISO()` en vez de
+// `toISOString().slice(0,10)`. Dan la misma fecha —Chile va detrás de UTC,
+// así que la medianoche local cae el mismo día en UTC— pero `fechaISO` es la
+// que usa el resto de este archivo y no depende de la zona horaria.
+// ══════════════════════════════════════════════════════════════════════
+const VAC_DIAS_POR_TIPO = { v15: 15, v6: 6 };
+
+function calcVacacion(tipo, inicioISO, diasPedidos){
+  const objetivo = Math.max(1, parseInt(diasPedidos, 10) || VAC_DIAS_POR_TIPO[tipo] || 15);
+  const [y,m,dd] = inicioISO.split('-').map(Number);
+  let cur = new Date(y, m-1, dd);
+  const dias = [];
+  let guard = 0;
+  while (dias.length < objetivo && guard < 400) {
+    guard++;
+    if (tipo !== 'v6') {
+      const w = cur.getDay();
+      if (w === 0 || w === 6 || esFeriado(cur)) { cur.setDate(cur.getDate()+1); continue; }
+    }
+    dias.push(fechaISO(cur));
+    cur.setDate(cur.getDate()+1);
+  }
+  // `cur` ya quedó en el día siguiente al último marcado.
+  const ultimo = new Date(dias[dias.length-1] + 'T00:00:00');
+  const reg = new Date(ultimo); reg.setDate(ultimo.getDate() + 1);
   return { dias, fecha_regreso: fechaISO(reg) };
 }
 
@@ -1816,22 +1854,32 @@ async function vacModal(socioId){
   abrirModal(`<h3 class="font-extrabold mb-1">🏖️ Vacaciones</h3>
     <p class="text-xs text-slate-400 mb-3">${esc(s?s.nombre+' '+s.apellido:'')}</p>
     <label class="text-[11px] text-slate-400 font-semibold">Tipo</label>
-    <select id="vacTipo" class="fld mt-1 mb-2">
+    <select id="vacTipo" class="fld mt-1 mb-2" onchange="vacTipoCambio()">
       <option value="v15">15 días hábiles (salta fines de semana y feriados)</option>
       <option value="v6">6 días adicionales (corridos)</option>
     </select>
     <label class="text-[11px] text-slate-400 font-semibold">Fecha de inicio</label>
-    <input id="vacInicio" type="date" class="fld mt-1 mb-3" value="${fechaISO(_gcalDate)}">
+    <input id="vacInicio" type="date" class="fld mt-1 mb-2" value="${fechaISO(_gcalDate)}">
+    <label class="text-[11px] text-slate-400 font-semibold">Cuántos días</label>
+    <input id="vacDias" type="number" min="1" max="60" class="fld mt-1 mb-1" value="15">
+    <p class="text-[11px] text-slate-500 mb-3">Se rellena solo al cambiar el tipo: 15 para hábiles, 6 para adicionales. Puedes ajustarlo.</p>
     <button onclick="vacGuardar('${socioId}')" class="btn-primary w-full mb-4">Agregar vacaciones</button>
     <div class="text-xs text-slate-400 font-semibold mb-2">Registradas</div>
     ${lista}
     <button onclick="gcalRender()" class="w-full btn-ghost mt-2">‹ Volver a los calendarios</button>`);
 }
+// Al cambiar el tipo se propone su número de días habitual, pero sin forzarlo:
+// el motor acepta cualquier cantidad, igual que en el proyecto de referencia.
+function vacTipoCambio(){
+  const t=document.getElementById('vacTipo'), d=document.getElementById('vacDias');
+  if(t && d) d.value = VAC_DIAS_POR_TIPO[t.value] || 15;
+}
 async function vacGuardar(socioId){
   const tipo=document.getElementById('vacTipo').value;
   const inicio=document.getElementById('vacInicio').value;
   if(!inicio) return toast('Elige la fecha de inicio','#dc2626');
-  const {dias,fecha_regreso}=calcVacacion(tipo,inicio);
+  const nDias=parseInt((document.getElementById('vacDias')||{}).value,10);
+  const {dias,fecha_regreso}=calcVacacion(tipo,inicio,nDias);
   const vturno = tipo==='v6' ? 't_vac6' : 't_vac15';
   await db.from('horarios_vacaciones').insert({ id:uid('vac'), socio_id:socioId, tipo, fecha_inicio:inicio, fecha_regreso, dias });
   const rows=dias.map(f=>({ id:uid('ex'), socio_id:socioId, fecha:f, turno_id:vturno }));
