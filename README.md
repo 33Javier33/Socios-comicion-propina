@@ -232,6 +232,29 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-02 — Horarios: pedir vacaciones con anticipación (SW horarios v21)
+
+**Un pedido no marca el calendario.** Es la intención: en enero el socio dice «quiero salir en noviembre», el supervisor lo ve con meses de anticipación y cuando llega el momento marca las fechas con el motor de siempre.
+
+**Del lado del socio** — botón **🏖️ Pedir vacaciones**: elige el mes y qué piensa tomar (15 hábiles, 6 adicionales, ambos, o «todavía no lo sé»). Abajo ve sus pedidos con su estado, y si alguno fue rechazado, **el motivo**.
+
+**Del lado del supervisor** — la pestaña 🏖️ Vacaciones se parte en dos:
+
+- **📅 Agendar** — lo de siempre: elegir socio, marcar fechas.
+- **📋 Quién sale y cuándo** — de este mes en adelante, mes por mes: quién ya tiene **fechas marcadas**, quién solo **pidió el mes**, y cuántos son. Arriba, destacado, **quiénes salen el mes que viene**, que es lo que hay que alcanzar a armar. Al final, **a quién le falta salir este año**: todo socio activo sin fechas ni pedido en el año en curso.
+
+Los pedidos pendientes se **aceptan o rechazan** desde ahí mismo. Al rechazar se pide el motivo y el socio lo ve en su app. El supervisor también puede **anotar un pedido por el socio**, para dejar constancia de un aviso de palabra.
+
+**Al marcar las fechas de verdad**, el pedido de ese mes queda **cumplido** y deja de figurar como pendiente.
+
+**Si la tabla todavía no existe, nada se rompe.** La sección avisa que falta crearla y nombra el archivo; el resto de Horarios funciona igual. Comprobado.
+
+**Falta aplicar la migración:** está en **`migracion-pedidos-vacaciones.sql`**, en la raíz del repositorio. Supabase → SQL Editor → pegar → Run. Es aditiva: crea una tabla nueva y no toca nada existente. Un socio no puede pedir dos veces el mismo mes — si cambia de idea, se actualiza el pedido que ya tenía.
+
+**Verificación:** 24 comprobaciones — que sin la tabla avise y no rompa; que la vista por mes distinga fechas marcadas de pedidos y destaque el mes siguiente; que «les falta salir» excluya a quien ya tiene fechas; aceptar y rechazar con motivo guardado; que el supervisor pueda anotar; y que el pedido del socio salga como pendiente, con su id, y **sin tocar el calendario**.
+
+**Archivos:** `index2.html`, `migracion-pedidos-vacaciones.sql` (nuevo), `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-02 — Horarios: una actualización ya no te saca de la sesión (SW horarios v20)
 
 **Dos problemas, uno detrás del otro.**

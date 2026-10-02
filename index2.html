@@ -288,6 +288,9 @@
     <!-- Lo primero que se ve al abrir: qué toca HOY. Antes había que buscar
          el día dentro de la grilla del mes. -->
     <div id="socioHoy" class="mb-4"></div>
+    <!-- Pedir vacaciones con anticipación: avisa el MES, no marca fechas.
+         Las fechas las pone el supervisor cuando corresponda. -->
+    <button onclick="socioPedirModal()" class="btn-ghost w-full mb-4" style="font-size:12px;padding:9px;">🏖️ Pedir vacaciones</button>
     <div class="flex items-center justify-between mb-3">
       <button onclick="socioMes(-1)" class="btn-ghost">‹</button>
       <div id="socioMesLabel" class="font-extrabold text-base"></div>
@@ -410,7 +413,20 @@
          estaba el socio y encontrar su mini-calendario entre los del grupo.
          Acá se elige el socio directo. -->
     <div id="panVacaciones" class="sup-panel">
-      <h3 class="font-extrabold mb-1">🏖️ Vacaciones</h3>
+      <h3 class="font-extrabold mb-2">🏖️ Vacaciones</h3>
+      <div class="flex gap-2 mb-3">
+        <button id="vacSub1" onclick="vacSubVista('agendar')" class="btn-primary flex-1" style="font-size:12px;padding:7px;">📅 Agendar</button>
+        <button id="vacSub2" onclick="vacSubVista('proximas')" class="btn-ghost flex-1" style="font-size:12px;padding:7px;">📋 Quién sale y cuándo</button>
+      </div>
+
+      <!-- Quién sale y cuándo: de este mes en adelante, con los pedidos que
+           los socios hicieron con anticipación y a quién le falta salir. -->
+      <div id="vacVistaProximas" style="display:none;">
+        <button onclick="pedidoAnotarModal()" class="btn-ghost w-full mb-3" style="font-size:12px;padding:8px;">📝 Anotar que un socio pidió un mes</button>
+        <div id="vacProximasCont"></div>
+      </div>
+
+      <div id="vacVistaAgendar">
       <p class="text-xs text-slate-400 mb-3">Elige al socio, marca el día que sale y la app cuenta los días en el calendario.</p>
 
       <label class="text-[11px] text-slate-400 font-semibold">Socio</label>
@@ -453,6 +469,7 @@
              que una marca de otro mes sobrevive y no hay cómo verla. -->
         <div id="vacSueltasBox" class="mt-4" style="display:none;"></div>
       </div>
+      </div><!-- /vacVistaAgendar -->
     </div>
 
     <!-- PANEL: ACCESOS -->
@@ -1980,6 +1997,17 @@ async function vacModal(socioId){
 // vuelve → guardar. El cálculo es el mismo `calcVacacion` de arriba, el del
 // proyecto Horarios: v15 salta fines de semana y feriados, v6 va corrido.
 // ══════════════════════════════════════════════════════════════════════
+function vacSubVista(cual){
+  const prox = cual==='proximas';
+  document.getElementById('vacVistaAgendar').style.display = prox ? 'none' : 'block';
+  document.getElementById('vacVistaProximas').style.display = prox ? 'block' : 'none';
+  const b1=document.getElementById('vacSub1'), b2=document.getElementById('vacSub2');
+  b1.className = prox ? 'btn-ghost flex-1' : 'btn-primary flex-1';
+  b2.className = prox ? 'btn-primary flex-1' : 'btn-ghost flex-1';
+  b1.style.cssText = b2.style.cssText = 'font-size:12px;padding:7px;';
+  if(prox) vacProximas();
+}
+
 function vacPanelInit(){
   const hoy=fechaISO(new Date());
   const ini=document.getElementById('vacInicio2');
@@ -2094,6 +2122,239 @@ async function _vacLimpiarTramo(socioId, desde, hasta){
   return true;
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// PEDIDOS DE VACACIONES
+//
+// Un pedido NO marca el calendario: es la intención. En enero el socio dice
+// "quiero salir en noviembre", el supervisor lo ve con meses de anticipación
+// y cuando llega el momento marca las fechas con el motor de siempre.
+//
+// La tabla es `horarios_vacaciones_pedidos` (ver migracion-pedidos-vacaciones.sql).
+// Si todavía no existe, TODO esto se apaga solo en vez de romper la app: la
+// sección avisa que falta la tabla y el resto de Horarios sigue igual.
+// ══════════════════════════════════════════════════════════════════════
+const MESES_N = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let _pedidosHay = null;   // null = sin comprobar, false = la tabla no existe
+
+async function pedidosConsultar(filtro){
+  try{
+    let q = db.from('horarios_vacaciones_pedidos').select('*');
+    if(filtro && filtro.socioId) q = q.eq('socio_id', filtro.socioId);
+    const {data, error} = await q;
+    if(error) throw error;
+    _pedidosHay = true;
+    return data || [];
+  }catch(e){
+    _pedidosHay = false;
+    return null;   // null = no se pudo (tabla ausente o sin red)
+  }
+}
+
+function pedidoEtiqueta(p){
+  const col = { pendiente:'#f59e0b', aceptado:'#22c55e', rechazado:'#ef4444', cumplido:'#64748b' }[p.estado] || '#64748b';
+  const txt = { pendiente:'Pendiente', aceptado:'Aceptado', rechazado:'Rechazado', cumplido:'Ya salió' }[p.estado] || p.estado;
+  return `<span style="background:${col}22;border:1px solid ${col};color:${col};border-radius:20px;
+    padding:1px 8px;font-size:10px;font-weight:800;white-space:nowrap;">${txt}</span>`;
+}
+function pedidoTipoTxt(t){
+  return t==='v15' ? '15 días hábiles' : t==='v6' ? '6 adicionales' : t==='ambos' ? '15 + 6' : 'Sin definir';
+}
+
+// ── Vista del supervisor: quién sale y cuándo ────────────────────────────
+async function vacProximas(){
+  const cont = document.getElementById('vacProximasCont'); if(!cont) return;
+  cont.innerHTML = '<div class="text-slate-500 text-xs text-center py-4">Cargando…</div>';
+
+  const pedidos = await pedidosConsultar();
+  if(pedidos === null){
+    cont.innerHTML = `<div class="card p-3" style="border:1px solid #92400e;">
+      <div class="text-xs font-bold" style="color:#fcd34d;">⚠️ Falta crear la tabla de pedidos</div>
+      <div class="text-[11px] text-slate-400 mt-1">Está el archivo <b>migracion-pedidos-vacaciones.sql</b> en el repositorio: pégalo en Supabase → SQL Editor y vuelve a entrar. El resto de Horarios funciona igual.</div></div>`;
+    return;
+  }
+
+  const hoy = new Date(); const anio = hoy.getFullYear();
+  const {data:vacs} = await db.from('horarios_vacaciones').select('socio_id,tipo,fecha_inicio,fecha_regreso,dias');
+  const nombre = id => { const s=(sociosMesas||[]).find(x=>x.id===id); return s ? `${s.nombre} ${s.apellido}` : '—'; };
+
+  // Todo lo que pasa de este mes en adelante, junto: fechas ya marcadas y pedidos.
+  const desdeClave = anio*12 + hoy.getMonth();
+  const porMes = {};
+  const meter = (y, m, obj) => { const k=y*12+(m-1); if(k<desdeClave) return; (porMes[k]=porMes[k]||[]).push(obj); };
+
+  (vacs||[]).forEach(v=>{
+    const d = String(v.fecha_inicio||'').split('-');
+    if(d.length<2) return;
+    meter(+d[0], +d[1], { tipo:'marcada', socio_id:v.socio_id, v });
+  });
+  (pedidos||[]).filter(p=>p.estado!=='rechazado').forEach(p=>{
+    meter(p.anio, p.mes, { tipo:'pedido', socio_id:p.socio_id, p });
+  });
+
+  const claves = Object.keys(porMes).map(Number).sort((a,b)=>a-b);
+  const mesSig = desdeClave + 1;
+
+  let html = '';
+  // Lo del mes que viene va destacado: es lo que hay que alcanzar a armar.
+  const delSig = porMes[mesSig] || [];
+  if(delSig.length){
+    html += `<div class="card p-3 mb-3" style="border:1px solid #2563eb;background:#152a3f;">
+      <div class="text-xs font-bold" style="color:#93c5fd;">📣 El mes que viene salen ${delSig.length}</div>
+      <div class="text-[11px] text-slate-300 mt-1">${delSig.map(x=>esc(nombre(x.socio_id))).join(' · ')}</div>
+      <div class="text-[11px] text-slate-400 mt-1">Conviene armar los turnos de ese mes contando con esto.</div></div>`;
+  }
+
+  if(!claves.length){
+    html += '<div class="text-slate-500 text-xs text-center py-4">Nadie tiene vacaciones ni pedidos de aquí en adelante.</div>';
+  }
+  claves.forEach(k=>{
+    const y = Math.floor(k/12), m = k%12;
+    const items = porMes[k];
+    html += `<div class="mb-3">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="text-xs font-extrabold">${MESES_N[m]} ${y}</div>
+        <span style="background:#1e293b;border:1px solid #334155;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:800;">${items.length}</span>
+      </div>`;
+    items.forEach(x=>{
+      if(x.tipo==='marcada'){
+        html += `<div class="card p-2 flex items-center gap-2 mb-1">
+          <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#f59e0b"></span>
+          <div class="flex-1 min-w-0"><div class="text-xs font-bold truncate">${esc(nombre(x.socio_id))}</div>
+          <div class="text-[11px] text-slate-400">${x.v.fecha_inicio} → vuelve ${x.v.fecha_regreso||'?'} · ${(x.v.dias||[]).length} días</div></div>
+          <span style="background:#f59e0b22;border:1px solid #f59e0b;color:#fbbf24;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:800;">Con fechas</span></div>`;
+      } else {
+        const p = x.p;
+        const acciones = p.estado==='pendiente'
+          ? `<button onclick="pedidoResponder('${p.id}','aceptado')" class="btn-ghost" style="font-size:10px;padding:3px 7px;background:#14532d;color:#86efac;">✓</button>
+             <button onclick="pedidoResponder('${p.id}','rechazado')" class="btn-ghost" style="font-size:10px;padding:3px 7px;background:#7f1d1d;color:#fecaca;">✕</button>`
+          : `<button onclick="pedidoBorrar('${p.id}')" class="btn-ghost" style="font-size:10px;padding:3px 7px;">🗑</button>`;
+        html += `<div class="card p-2 flex items-center gap-2 mb-1">
+          <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#38bdf8"></span>
+          <div class="flex-1 min-w-0"><div class="text-xs font-bold truncate">${esc(nombre(p.socio_id))}</div>
+          <div class="text-[11px] text-slate-400">Pidió ${pedidoTipoTxt(p.tipo)}${p.origen==='supervisor'?' · anotado por el supervisor':''}</div>
+          ${p.estado==='rechazado'&&p.motivo?`<div class="text-[11px]" style="color:#fca5a5">Motivo: ${esc(p.motivo)}</div>`:''}</div>
+          ${pedidoEtiqueta(p)}${acciones}</div>`;
+      }
+    });
+    html += '</div>';
+  });
+
+  // ── A quién le falta salir este año ──
+  // Falta todo socio activo sin fechas marcadas NI pedido en el año en curso.
+  const conAlgo = new Set();
+  (vacs||[]).forEach(v=>{ if(String(v.fecha_inicio||'').startsWith(String(anio))) conAlgo.add(v.socio_id); });
+  (pedidos||[]).forEach(p=>{ if(p.anio===anio && p.estado!=='rechazado') conAlgo.add(p.socio_id); });
+  const faltan = (sociosMesas||[]).filter(s=>!conAlgo.has(s.id));
+  html += `<div class="card p-3 mt-2" style="border:1px solid #334155;">
+    <div class="text-xs font-bold mb-1">Les falta salir en ${anio} · ${faltan.length}</div>
+    ${faltan.length
+      ? `<div class="text-[11px] text-slate-300" style="line-height:1.7;">${faltan.map(s=>`<span style="background:#1e293b;border:1px solid #334155;border-radius:20px;padding:2px 8px;margin:2px 3px 0 0;display:inline-block;">${esc(s.nombre)} ${esc(s.apellido)}</span>`).join('')}</div>
+         <div class="text-[11px] text-slate-500 mt-2">Ninguno tiene fechas marcadas ni pedido para este año.</div>`
+      : '<div class="text-[11px] text-slate-400">Todos tienen fechas o pedido para este año.</div>'}
+  </div>`;
+
+  cont.innerHTML = html;
+}
+
+async function pedidoResponder(id, estado){
+  let motivo = null;
+  if(estado==='rechazado'){
+    motivo = prompt('¿Por qué se rechaza? El socio va a ver este motivo:');
+    if(motivo===null) return;
+    motivo = String(motivo).trim();
+    if(!motivo) return toast('Escribe el motivo','#dc2626');
+  }
+  await db.from('horarios_vacaciones_pedidos')
+    .update({ estado, motivo, resuelto_en:new Date().toISOString() }).eq('id', id);
+  toast(estado==='aceptado' ? 'Pedido aceptado' : 'Pedido rechazado');
+  vacProximas();
+}
+
+async function pedidoBorrar(id){
+  if(!confirm('¿Borrar este pedido?')) return;
+  await db.from('horarios_vacaciones_pedidos').delete().eq('id', id);
+  toast('Pedido borrado'); vacProximas();
+}
+
+// El supervisor también puede anotar un pedido por el socio.
+function pedidoAnotarModal(){
+  const opc = (sociosMesas||[]).map(s=>`<option value="${s.id}">${esc(s.nombre)} ${esc(s.apellido)}</option>`).join('');
+  const hoy = new Date();
+  const meses = []; for(let i=0;i<18;i++){ const d=new Date(hoy.getFullYear(), hoy.getMonth()+i, 1);
+    meses.push(`<option value="${d.getFullYear()}-${d.getMonth()+1}">${MESES_N[d.getMonth()]} ${d.getFullYear()}</option>`); }
+  abrirModal(`<h3 class="font-extrabold mb-1">📝 Anotar pedido</h3>
+    <p class="text-xs text-slate-400 mb-3">Para dejar constancia de que un socio avisó que quiere salir ese mes. No marca el calendario.</p>
+    <label class="text-[11px] text-slate-400 font-semibold">Socio</label>
+    <select id="pedSocio" class="fld mt-1 mb-2">${opc}</select>
+    <label class="text-[11px] text-slate-400 font-semibold">Mes</label>
+    <select id="pedMes" class="fld mt-1 mb-2">${meses.join('')}</select>
+    <label class="text-[11px] text-slate-400 font-semibold">Qué piensa tomar</label>
+    <select id="pedTipo" class="fld mt-1 mb-3">
+      <option value="">Sin definir</option>
+      <option value="v15">15 días hábiles</option>
+      <option value="v6">6 adicionales</option>
+      <option value="ambos">15 + 6</option>
+    </select>
+    <button onclick="pedidoAnotar()" class="btn-primary w-full">Anotar</button>`);
+}
+
+async function pedidoAnotar(){
+  const socioId=document.getElementById('pedSocio').value;
+  const [y,m]=document.getElementById('pedMes').value.split('-').map(Number);
+  const tipo=document.getElementById('pedTipo').value||null;
+  const {error}=await db.from('horarios_vacaciones_pedidos').upsert({
+    id:uid('ped'), socio_id:socioId, anio:y, mes:m, tipo,
+    estado:'aceptado', origen:'supervisor'
+  },{onConflict:'socio_id,anio,mes'});
+  if(error) return toast('No se pudo anotar: '+error.message,'#dc2626');
+  cerrarModal(); toast('Pedido anotado'); vacProximas();
+}
+
+// ── Lado del socio: pedir vacaciones ─────────────────────────────────────
+async function socioPedirModal(){
+  const hoy=new Date();
+  const meses=[]; for(let i=0;i<18;i++){ const d=new Date(hoy.getFullYear(), hoy.getMonth()+i, 1);
+    meses.push(`<option value="${d.getFullYear()}-${d.getMonth()+1}">${MESES_N[d.getMonth()]} ${d.getFullYear()}</option>`); }
+  const pedidos = await pedidosConsultar({socioId:sesion.id});
+  if(pedidos === null){
+    abrirModal(`<h3 class="font-extrabold mb-2">🏖️ Pedir vacaciones</h3>
+      <p class="text-xs text-slate-400">Todavía no está disponible. Avísale al supervisor.</p>`);
+    return;
+  }
+  const mios=(pedidos||[]).sort((a,b)=>(a.anio*12+a.mes)-(b.anio*12+b.mes)).map(p=>`
+    <div class="card p-2 flex items-center gap-2 mb-2">
+      <div class="flex-1 min-w-0"><div class="text-xs font-bold">${MESES_N[p.mes-1]} ${p.anio}</div>
+      <div class="text-[11px] text-slate-400">${pedidoTipoTxt(p.tipo)}</div>
+      ${p.estado==='rechazado'&&p.motivo?`<div class="text-[11px]" style="color:#fca5a5">Motivo: ${esc(p.motivo)}</div>`:''}</div>
+      ${pedidoEtiqueta(p)}</div>`).join('') || '<div class="text-slate-500 text-xs text-center py-2">Todavía no has pedido ningún mes</div>';
+  abrirModal(`<h3 class="font-extrabold mb-1">🏖️ Pedir vacaciones</h3>
+    <p class="text-xs text-slate-400 mb-3">Avisa con tiempo en qué mes quieres salir. El supervisor lo revisa y después marca las fechas.</p>
+    <label class="text-[11px] text-slate-400 font-semibold">Mes</label>
+    <select id="spMes" class="fld mt-1 mb-2">${meses.join('')}</select>
+    <label class="text-[11px] text-slate-400 font-semibold">Qué piensas tomar</label>
+    <select id="spTipo" class="fld mt-1 mb-3">
+      <option value="">Todavía no lo sé</option>
+      <option value="v15">15 días hábiles</option>
+      <option value="v6">6 adicionales</option>
+      <option value="ambos">15 + 6</option>
+    </select>
+    <button onclick="socioPedir()" class="btn-primary w-full mb-4">Enviar pedido</button>
+    <div class="text-xs text-slate-400 font-semibold mb-2">Mis pedidos</div>
+    ${mios}`);
+}
+
+async function socioPedir(){
+  const [y,m]=document.getElementById('spMes').value.split('-').map(Number);
+  const tipo=document.getElementById('spTipo').value||null;
+  const {error}=await db.from('horarios_vacaciones_pedidos').upsert({
+    id:uid('ped'), socio_id:sesion.id, anio:y, mes:m, tipo,
+    estado:'pendiente', origen:'socio', motivo:null, resuelto_en:null
+  },{onConflict:'socio_id,anio,mes'});
+  if(error) return toast('No se pudo enviar: '+error.message,'#dc2626');
+  toast('Pedido enviado al supervisor');
+  socioPedirModal();
+}
+
 // Marcas de vacaciones que no pertenecen a ninguna vacación registrada.
 //
 // Pasa cuando una vacación vieja se borró a medias, cuando quedaron días de
@@ -2157,6 +2418,13 @@ async function vacGuardar2(){
   await db.from('horarios_vacaciones').insert({ id:uid('vac'), socio_id:socioId, tipo, fecha_inicio:inicio, fecha_regreso, dias });
   const rows=dias.map(f=>({ id:uid('ex'), socio_id:socioId, fecha:f, turno_id:vturno }));
   for(let j=0;j<rows.length;j+=200){ await db.from('horarios_excepciones').upsert(rows.slice(j,j+200),{onConflict:'socio_id,fecha'}); }
+  // Si había un pedido para ese mes, queda saldado: ya tiene fechas.
+  try{
+    const [yy,mm] = dias[0].split('-').map(Number);
+    await db.from('horarios_vacaciones_pedidos')
+      .update({ estado:'cumplido', resuelto_en:new Date().toISOString() })
+      .eq('socio_id',socioId).eq('anio',yy).eq('mes',mm);
+  }catch(e){}
   toast('Vacaciones agregadas ('+dias.length+' días)');
   await vacListar(socioId);
   await vacSueltas(socioId);
