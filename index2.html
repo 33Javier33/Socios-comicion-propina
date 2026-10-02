@@ -488,6 +488,22 @@
   </div>
 </div>
 
+<!-- ══════════ BANNER DE ACTUALIZACIÓN ══════════
+     Aparece cuando hay una versión nueva EN ESPERA. No se aplica sola: la
+     persona decide cuándo. Al aplicarla no se pierde la sesión. -->
+<div id="swBanner" style="display:none;position:fixed;left:12px;right:12px;bottom:calc(70px + env(safe-area-inset-bottom,0px));
+     z-index:60;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;border-radius:16px;
+     padding:12px 14px;box-shadow:0 12px 34px rgba(29,78,216,0.45);align-items:center;gap:10px;">
+  <div style="flex:1;min-width:0;">
+    <div style="font-weight:800;font-size:13px;">Hay una versión nueva</div>
+    <div style="font-size:11px;opacity:0.85;line-height:1.35;">Se aplica al instante y no tienes que volver a poner tu PIN.</div>
+  </div>
+  <button onclick="swDespues()" style="background:transparent;border:1px solid rgba(255,255,255,0.4);color:#fff;
+    border-radius:10px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">Después</button>
+  <button id="swBannerBtn" onclick="swAplicar()" style="background:#fff;border:none;color:#1d4ed8;
+    border-radius:10px;padding:7px 12px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;">Actualizar</button>
+</div>
+
 <!-- ══════════ MODAL GENÉRICO ══════════ -->
 <div id="modalBox" class="screen fixed inset-0 z-50 items-end justify-center" style="background:rgba(0,0,0,0.6);" onclick="if(event.target===this)cerrarModal()">
   <div class="w-full max-w-md bg-slate-800 rounded-t-3xl p-5 pb-8 max-h-[90dvh] overflow-y-auto">
@@ -769,7 +785,7 @@ function registrarAcceso(rol, id, nombre){
   }catch(e){ console.warn('[acceso]', e); }
 }
 
-function entrarSocio(s){ sesion={rol:'socio',id:s.id,nombre:`${s.nombre} ${s.apellido}`,contrato:s.contrato}; socioViewDate=new Date(); registrarAcceso('socio', s.id, `${s.nombre} ${s.apellido}`.trim()); arrancarInactividad(); renderSocioApp(); show('appSocio'); }
+function entrarSocio(s){ sesion={rol:'socio',id:s.id,nombre:`${s.nombre} ${s.apellido}`,contrato:s.contrato}; socioViewDate=new Date(); registrarAcceso('socio', s.id, `${s.nombre} ${s.apellido}`.trim()); arrancarInactividad(); sesionGuardar(); renderSocioApp(); show('appSocio'); }
 
 async function irSupervisor(){
   await cargarBase();
@@ -791,10 +807,10 @@ async function irSupervisor(){
       onOk:async(pin)=>{ await db.from('horarios_pins').upsert({usuario:'SUPERVISOR',pin,pin_inicial:pin}); entrarSuper(); }});
   }
 }
-function entrarSuper(){ sesion={rol:'super'}; supViewDate=new Date(); registrarAcceso('super', null, 'Supervisor'); arrancarInactividad(); renderSuper(); show('appSuper'); }
+function entrarSuper(){ sesion={rol:'super'}; supViewDate=new Date(); registrarAcceso('super', null, 'Supervisor'); arrancarInactividad(); sesionGuardar(); renderSuper(); show('appSuper'); }
 
 function logout(inactividad){
-  sesion=null; pinBuffer=''; pararInactividad();
+  sesion=null; pinBuffer=''; pararInactividad(); sesionBorrar();
   pintarAccesoDirecto(); show('scrRole');
   if(inactividad===true) toast('Sesión cerrada por inactividad (15 min)', '#dc2626');
 }
@@ -808,9 +824,39 @@ function logout(inactividad){
 // si corresponde. Un contador que resta de a uno se congela con la pestaña y
 // la sesión quedaría abierta indefinidamente.
 // ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
+// LA SESIÓN SOBREVIVE A UNA RECARGA
+//
+// `sesion` vivía SOLO en memoria, así que cualquier recarga —entre ellas la
+// de aplicar una actualización— devolvía a la pantalla del PIN. Ahora se
+// guarda en sessionStorage: dura mientras la pestaña esté abierta y muere al
+// cerrarla, que es justo lo que se quiere de una sesión.
+//
+// Se guarda también la hora de la última actividad: al volver se respeta el
+// mismo límite de 15 minutos, así que una actualización no sirve para
+// saltarse el cierre por inactividad.
+const SESION_KEY = 'hor_sesion';
+
+function sesionGuardar(){
+  try{
+    if(sesion) sessionStorage.setItem(SESION_KEY, JSON.stringify({ sesion, ult:_inactUlt }));
+    else sessionStorage.removeItem(SESION_KEY);
+  }catch(e){}
+}
+function sesionBorrar(){ try{ sessionStorage.removeItem(SESION_KEY); }catch(e){} }
+function sesionLeer(){
+  try{
+    const g = JSON.parse(sessionStorage.getItem(SESION_KEY) || 'null');
+    if(!g || !g.sesion) return null;
+    // Si ya pasó el tiempo de inactividad, no se restaura: se vuelve a pedir el PIN.
+    if(Date.now() - (g.ult || 0) >= INACT_MS){ sesionBorrar(); return null; }
+    return g;
+  }catch(e){ return null; }
+}
+
 const INACT_MS = 15 * 60 * 1000;
 const INACT_AVISO_MS = 2 * 60 * 1000;      // el aviso aparece en los últimos 2 min
-let _inactUlt = Date.now(), _inactInt = null;
+let _inactUlt = Date.now(), _inactInt = null, _sesionUltGuardado = 0;
 
 function _inactTick(){
   if(!sesion) return pararInactividad();
@@ -836,7 +882,13 @@ function pararInactividad(){
 }
 // Cualquier señal de que la persona sigue ahí reinicia la cuenta.
 ['click','keydown','touchstart','pointerdown','scroll'].forEach(ev=>{
-  window.addEventListener(ev, ()=>{ if(sesion) _inactUlt = Date.now(); }, {passive:true});
+  window.addEventListener(ev, ()=>{
+    if(!sesion) return;
+    _inactUlt = Date.now();
+    // Escribir en cada toque sería escribir cientos de veces por minuto; con
+    // guardar cada 20 s basta para que una recarga no pierda la sesión.
+    if(Date.now() - (_sesionUltGuardado||0) > 20000){ _sesionUltGuardado = Date.now(); sesionGuardar(); }
+  }, {passive:true});
 });
 // Al volver de segundo plano se revisa enseguida, sin esperar al próximo tick.
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && sesion) _inactTick(); });
@@ -2630,10 +2682,64 @@ function abrirModal(html){ document.getElementById('modalContent').innerHTML=htm
 function cerrarModal(){ document.getElementById('modalBox').classList.remove('active'); }
 
 // ── PWA: Service Worker (acotado a /index2, no afecta la app principal) ──
+// ══════════════════════════════════════════════════════════════════════
+// ACTUALIZACIONES: avisar, no interrumpir
+//
+// El Service Worker ya no se activa solo (se le quitó el skipWaiting): la
+// versión nueva queda EN ESPERA y aparece un banner. La persona decide
+// cuándo aplicarla, en vez de que la app se recargue sola a mitad de algo.
+//
+// Y al aplicarla no se pierde la sesión: está guardada en sessionStorage, así
+// que al volver se entra sola. Pedir el PIN otra vez por una actualización
+// era molesto y no protegía nada: la pestaña es la misma.
+// ══════════════════════════════════════════════════════════════════════
+let _swEnEspera = null, _swRecargando = false;
+
+function swMostrarBanner(worker){
+  _swEnEspera = worker;
+  const b = document.getElementById('swBanner');
+  if(b) b.style.display = 'flex';
+}
+
+function swAplicar(){
+  const btn = document.getElementById('swBannerBtn');
+  if(btn){ btn.textContent = 'Actualizando…'; btn.disabled = true; }
+  // La sesión se guarda con la hora actual: al volver, la recarga no cuenta
+  // como tiempo inactivo.
+  _inactUlt = Date.now(); sesionGuardar();
+  if(_swEnEspera){ try{ _swEnEspera.postMessage({ type:'SKIP_WAITING' }); }catch(e){} }
+  // Respaldo: si controllerchange no llega, se recarga igual.
+  setTimeout(()=>{ if(!_swRecargando){ _swRecargando = true; location.reload(); } }, 1500);
+}
+
+function swDespues(){
+  const b = document.getElementById('swBanner');
+  if(b) b.style.display = 'none';
+}
+
 if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    if(_swRecargando) return;
+    _swRecargando = true;
+    location.reload();
+  });
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('sw2.js', { scope: '/index2' })
-      .then(reg => console.log('[Horarios SW] registrado:', reg.scope))
+      .then(reg => {
+        // Ya había una versión nueva esperando al abrir
+        if(reg.waiting && navigator.serviceWorker.controller) swMostrarBanner(reg.waiting);
+        reg.addEventListener('updatefound', ()=>{
+          const nw = reg.installing; if(!nw) return;
+          nw.addEventListener('statechange', ()=>{
+            if(nw.state === 'installed' && navigator.serviceWorker.controller) swMostrarBanner(nw);
+          });
+        });
+        reg.update().catch(()=>{});
+        setInterval(()=>reg.update().catch(()=>{}), 60000);
+        document.addEventListener('visibilitychange', ()=>{
+          if(document.visibilityState === 'visible') reg.update().catch(()=>{});
+        });
+      })
       .catch(err => console.warn('[Horarios SW] error:', err));
   });
 }
@@ -2641,7 +2747,23 @@ if('serviceWorker' in navigator){
 let _deferredPrompt=null;
 function _estaInstalada(){ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
 function _mostrarBtnInstalar(v){ const b=document.getElementById('btnInstalar'); if(b) b.style.display = (v && !_estaInstalada()) ? 'block' : 'none'; }
+// Si quedó una sesión viva (p. ej. se acaba de aplicar una actualización),
+// se vuelve a entrar sola en vez de pedir el PIN otra vez.
+async function restaurarSesion(){
+  const g = sesionLeer();
+  if(!g) return false;
+  try{
+    sesion = g.sesion; _inactUlt = g.ult || Date.now();
+    await cargarBase();
+    arrancarInactividad();
+    if(sesion.rol === 'super'){ renderSuper(); show('appSuper'); }
+    else { socioViewDate = new Date(); renderSocioApp(); show('appSocio'); }
+    return true;
+  }catch(e){ sesion = null; sesionBorrar(); return false; }
+}
+
 window.addEventListener('DOMContentLoaded', ()=>{
+  restaurarSesion();
   pintarAccesoDirecto();   // se pinta al toque: el nombre está guardado, no se espera a la base
   if(_estaInstalada()){ _mostrarBtnInstalar(false); return; }
   // iOS no dispara beforeinstallprompt: mostramos el botón con instrucciones si aún no está en modo app

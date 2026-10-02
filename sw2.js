@@ -1,11 +1,19 @@
 // Service Worker de la app de Horarios (index2.html).
 // Alcance acotado a /index2.html para NO afectar la app principal (index.html).
-const CACHE = 'horarios-mesas-v19';
+const CACHE = 'horarios-mesas-v20';
 const ASSETS = ['/index2.html', '/manifest2.json', '/img/horarios-192.png', '/img/horarios-512.png', '/img/marca/cpn-marca.png'];
 
+// Sin skipWaiting a propósito: la versión nueva queda EN ESPERA y la página
+// muestra un banner para que la persona decida cuándo aplicarla. Antes se
+// activaba sola y la app podía recargarse a mitad de lo que se estaba
+// haciendo — y como la sesión no se guardaba, volvía a pedir el PIN.
 self.addEventListener('install', event => {
-  self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {})));
+});
+
+// La página pide aplicar la actualización al tocar "Actualizar".
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {

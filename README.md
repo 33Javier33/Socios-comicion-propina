@@ -232,6 +232,26 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-02 — Horarios: una actualización ya no te saca de la sesión (SW horarios v20)
+
+**Dos problemas, uno detrás del otro.**
+
+**1. La sesión vivía solo en memoria.** `sesion` era una variable y nada la guardaba, así que **cualquier recarga** devolvía a la pantalla del PIN. Ahora se guarda en `sessionStorage`: dura mientras la pestaña esté abierta y muere al cerrarla, que es justo lo que se espera de una sesión.
+
+Se guarda también la hora de la última actividad, así que **el cierre por inactividad de 15 minutos se sigue respetando**: una actualización no sirve para saltárselo. Comprobado — una sesión con 16 minutos sin actividad no se restaura y se borra; una de 5 minutos sí vuelve.
+
+Cerrar sesión borra lo guardado, así que tras salir y recargar sigue pidiendo entrar.
+
+**2. El Service Worker se activaba solo.** `sw2.js` llamaba a `skipWaiting()` en el install, así que la versión nueva tomaba el control sin avisar y la app podía recargarse a mitad de lo que estabas haciendo. Se le quitó: ahora la versión nueva queda **en espera** y aparece un **banner**.
+
+El banner ofrece **Después** —se cierra y sigues donde estabas— y **Actualizar**, que aplica la versión nueva al momento. Antes de recargar guarda la sesión con la hora actual, así que la recarga no cuenta como tiempo inactivo y al volver **se entra solo**. El botón avisa que está trabajando, y hay un respaldo por si `controllerchange` no llega.
+
+**Esto pasaba solo en Horarios.** Se revisaron las otras: la app principal, diario.propi y propi.solicitada guardan su sesión en `sessionStorage` y ya sobrevivían a la recarga.
+
+**Verificación:** 22 comprobaciones — entrar, **recargar de verdad** y comprobar que vuelve al panel sin pedir el PIN; que el banner arranque oculto, aparezca con la versión nueva y ofrezca las dos opciones; que «Después» no interrumpa; que «Actualizar» le pida al SW aplicarla y deje la sesión guardada; los dos casos de inactividad; que cerrar sesión limpie de verdad; y que el `install` del SW ya no llame a `skipWaiting` pero sí responda al mensaje.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-02 — Horarios: marcas de vacaciones sin vacación detrás (SW horarios v19)
 
 **Síntoma:** en el calendario de un socio con vacaciones desde el 9 de octubre aparecía marcado también **el 1 de octubre**, y seis días más en otro color.
