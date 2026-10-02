@@ -232,6 +232,26 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-02 — Horarios: las marcas de vacaciones se acumulaban (SW horarios v18)
+
+**Síntoma:** al dar vacaciones desde el 9, el calendario marcaba **el mes entero**.
+
+**Qué se descartó primero.** Se comprobó el motor con el caso exacto: desde el 2026-10-09 devuelve 15 días —del 9 al 30—, **ninguno antes del 9**, saltando los fines de semana y el feriado del 12. Y el calendario pinta **día por día** desde `horarios_excepciones`, sin rangos. Las dos piezas estaban bien.
+
+**La causa: las marcas no se reemplazaban, se sumaban.** El motor anterior (hasta v15) marcaba **todos** los días del tramo, findes y feriados incluidos — 22 días para ese mismo caso. Esas filas seguían en la base. Al agregar las nuevas encima, el calendario mostraba la **unión de las dos**: 22 + 15 días, o sea el mes entero.
+
+**Arreglo:** antes de escribir unas vacaciones nuevas se limpia el tramo.
+
+- Si hay **registros de vacaciones que se cruzan** con las fechas nuevas, se avisa con el detalle —fechas y cantidad de días de cada uno— y se reemplazan al confirmar.
+- Se borran además las **marcas sueltas** de vacaciones dentro del tramo que ya no pertenecen a ningún registro, que es lo que quedó de versiones anteriores.
+- Se borran **solo** las marcas de vacaciones (`t_vac15` / `t_vac6`), **solo** de ese socio y **solo** dentro del tramo nuevo: un turno que el supervisor haya puesto a mano en esos días no se toca.
+
+Va en los dos caminos: la pestaña 🏖️ Vacaciones y el botón de la vista de calendarios.
+
+**Verificación:** 11 comprobaciones partiendo del escenario real —un socio con 22 días marcados por el motor viejo, 6 de ellos en fin de semana—. Al agregar las nuevas: avisa del cruce, quedan **15 días y no 37**, **ninguno en fin de semana**, del 9 al 30, y **un solo registro**. Y sin vacaciones previas guarda directo, sin preguntar nada. Se volvieron a correr las 25 del motor y las 22 del panel: siguen pasando.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-01 — Horarios: sección propia de Vacaciones en el supervisor (SW horarios v17)
 
 **El problema:** las vacaciones existían, pero el botón 🏖️ vivía **solo dentro de «📅 Ver calendarios (comparar)»**, que se abre desde un **grupo**. Para dar vacaciones había que saber en qué grupo estaba el socio, abrir la comparativa del grupo, encontrar su mini-calendario entre los demás y pulsar un botón pequeño. En la práctica, no había cómo llegar.

@@ -1999,6 +1999,41 @@ async function vacListar(socioId){
   }).join('') || '<div class="text-slate-500 text-xs text-center py-3">Sin vacaciones registradas</div>';
 }
 
+// Antes de escribir unas vacaciones nuevas hay que limpiar las marcas que
+// pisen el mismo tramo. Si no, se SUMAN: el motor viejo marcaba todos los
+// días del tramo (findes y feriados incluidos) y esas filas siguen en la
+// base, así que al agregar las nuevas encima el calendario mostraba la unión
+// de las dos — el mes entero en vacaciones.
+//
+// Se borran SOLO las marcas de vacaciones (t_vac15 / t_vac6) de ese socio y
+// solo dentro del tramo nuevo: un turno puesto a mano por el supervisor en
+// esos días no se toca.
+async function _vacLimpiarTramo(socioId, desde, hasta){
+  // 1. Registros de vacaciones que se cruzan con el tramo nuevo
+  const {data:previas} = await db.from('horarios_vacaciones').select('id,dias,fecha_inicio,fecha_regreso')
+    .eq('socio_id',socioId);
+  const chocan = (previas||[]).filter(v=>{
+    const ds=(v.dias||[]); if(!ds.length) return false;
+    return ds.some(f=> f>=desde && f<=hasta);
+  });
+  if(chocan.length){
+    const detalle = chocan.map(v=>`· ${v.fecha_inicio} → ${v.fecha_regreso||'?'} (${(v.dias||[]).length} días)`).join('\n');
+    if(!confirm(`Este socio ya tiene vacaciones en esas fechas:\n\n${detalle}\n\nSe van a reemplazar por las nuevas. ¿Continuar?`)) return false;
+    for(const v of chocan){
+      const ds=v.dias||[];
+      for(let j=0;j<ds.length;j+=200){
+        await db.from('horarios_excepciones').delete().eq('socio_id',socioId).in('fecha',ds.slice(j,j+200));
+      }
+      await db.from('horarios_vacaciones').delete().eq('id',v.id);
+    }
+  }
+  // 2. Marcas sueltas de vacaciones dentro del tramo que no pertenezcan a
+  //    ningún registro (quedaron de versiones anteriores).
+  await db.from('horarios_excepciones').delete().eq('socio_id',socioId)
+    .in('turno_id',['t_vac15','t_vac6']).gte('fecha',desde).lte('fecha',hasta);
+  return true;
+}
+
 async function vacGuardar2(){
   const socioId=document.getElementById('vacSocioSel').value;
   if(!socioId) return toast('Elige al socio','#dc2626');
@@ -2008,6 +2043,7 @@ async function vacGuardar2(){
   const n=parseInt(document.getElementById('vacDias2').value,10);
   const {dias,fecha_regreso}=calcVacacion(tipo,inicio,n);
   if(!confirm(`¿Agregar ${dias.length} día${dias.length!==1?'s':''} de vacaciones?\n\nDel ${dias[0]} al ${dias[dias.length-1]}\nVuelve el ${fecha_regreso}`)) return;
+  if(!await _vacLimpiarTramo(socioId, dias[0], dias[dias.length-1])) return;
   const vturno = tipo==='v6' ? 't_vac6' : 't_vac15';
   await db.from('horarios_vacaciones').insert({ id:uid('vac'), socio_id:socioId, tipo, fecha_inicio:inicio, fecha_regreso, dias });
   const rows=dias.map(f=>({ id:uid('ex'), socio_id:socioId, fecha:f, turno_id:vturno }));
@@ -2038,6 +2074,7 @@ async function vacGuardar(socioId){
   if(!inicio) return toast('Elige la fecha de inicio','#dc2626');
   const nDias=parseInt((document.getElementById('vacDias')||{}).value,10);
   const {dias,fecha_regreso}=calcVacacion(tipo,inicio,nDias);
+  if(!await _vacLimpiarTramo(socioId, dias[0], dias[dias.length-1])) return;
   const vturno = tipo==='v6' ? 't_vac6' : 't_vac15';
   await db.from('horarios_vacaciones').insert({ id:uid('vac'), socio_id:socioId, tipo, fecha_inicio:inicio, fecha_regreso, dias });
   const rows=dias.map(f=>({ id:uid('ex'), socio_id:socioId, fecha:f, turno_id:vturno }));
