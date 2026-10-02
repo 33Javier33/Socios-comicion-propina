@@ -446,6 +446,12 @@
 
         <div class="text-xs text-slate-400 font-semibold mb-2">Vacaciones de este socio</div>
         <div id="vacLista2"></div>
+
+        <!-- Marcas de vacaciones que no pertenecen a ninguna vacación registrada:
+             quedaron de versiones anteriores o se pusieron a mano día por día.
+             La limpieza automática al guardar solo alcanza el tramo nuevo, así
+             que una marca de otro mes sobrevive y no hay cómo verla. -->
+        <div id="vacSueltasBox" class="mt-4" style="display:none;"></div>
       </div>
     </div>
 
@@ -1951,12 +1957,14 @@ async function vacElegir(socioId){
   document.getElementById('vacForm').style.display='block';
   vacPanelInit(); vacPrevia();
   await vacListar(socioId);
+  await vacSueltas(socioId);
 }
 
 function vacDeselegir(){
   document.getElementById('vacSocioSel').value='';
   document.getElementById('vacSocioChip').style.display='none';
   document.getElementById('vacForm').style.display='none';
+  const sb=document.getElementById('vacSueltasBox'); if(sb) sb.style.display='none';
   document.getElementById('vacBuscaSocio').focus();
 }
 
@@ -2034,6 +2042,55 @@ async function _vacLimpiarTramo(socioId, desde, hasta){
   return true;
 }
 
+// Marcas de vacaciones que no pertenecen a ninguna vacación registrada.
+//
+// Pasa cuando una vacación vieja se borró a medias, cuando quedaron días de
+// un motor anterior fuera del tramo que se rehizo, o cuando alguien marcó un
+// día a mano como VACAC. La limpieza al guardar solo toca el tramo nuevo, así
+// que una marca de otro mes no la alcanza nadie. Acá se ven y se quitan.
+async function vacSueltas(socioId){
+  const box=document.getElementById('vacSueltasBox'); if(!box) return;
+  const [rExc, rVac] = await Promise.all([
+    db.from('horarios_excepciones').select('fecha,turno_id').eq('socio_id',socioId).in('turno_id',['t_vac15','t_vac6']),
+    db.from('horarios_vacaciones').select('dias').eq('socio_id',socioId)
+  ]);
+  const registrados=new Set();
+  (rVac.data||[]).forEach(v=>(v.dias||[]).forEach(f=>registrados.add(String(f).substring(0,10))));
+  const sueltas=(rExc.data||[])
+    .map(e=>({fecha:String(e.fecha).substring(0,10), turno:e.turno_id}))
+    .filter(e=>!registrados.has(e.fecha))
+    .sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  if(!sueltas.length){ box.style.display='none'; box.innerHTML=''; return; }
+  const fmt=f=>{ const d=new Date(f+'T00:00:00');
+    return d.toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short'}).replace(/\./g,''); };
+  const chips=sueltas.map(e=>`<span style="display:inline-block;background:#3a2c12;border:1px solid #92400e;border-radius:20px;
+      padding:2px 8px;margin:2px 3px 0 0;font-size:10px;color:#fcd34d;white-space:nowrap;">${fmt(e.fecha)}</span>`).join('');
+  box.style.display='block';
+  box.innerHTML=`<div class="card p-3" style="border:1px solid #92400e;">
+    <div class="text-xs font-bold" style="color:#fcd34d;">⚠️ ${sueltas.length} día${sueltas.length!==1?'s':''} marcado${sueltas.length!==1?'s':''} como vacaciones sin vacación registrada</div>
+    <div class="text-[11px] text-slate-400 mt-1 mb-2">Quedaron de antes o se marcaron a mano. El calendario los muestra como VACAC aunque no correspondan a ninguna vacación de la lista de arriba.</div>
+    <div class="mb-2">${chips}</div>
+    <button onclick="vacQuitarSueltas('${socioId}')" class="btn-ghost w-full text-xs" style="background:#7f1d1d;color:#fecaca;">🧹 Quitar estas marcas</button>
+  </div>`;
+}
+
+async function vacQuitarSueltas(socioId){
+  const [rExc, rVac] = await Promise.all([
+    db.from('horarios_excepciones').select('fecha,turno_id').eq('socio_id',socioId).in('turno_id',['t_vac15','t_vac6']),
+    db.from('horarios_vacaciones').select('dias').eq('socio_id',socioId)
+  ]);
+  const registrados=new Set();
+  (rVac.data||[]).forEach(v=>(v.dias||[]).forEach(f=>registrados.add(String(f).substring(0,10))));
+  const sueltas=(rExc.data||[]).map(e=>String(e.fecha).substring(0,10)).filter(f=>!registrados.has(f));
+  if(!sueltas.length) return;
+  if(!confirm(`¿Quitar ${sueltas.length} marca${sueltas.length!==1?'s':''} de vacaciones?\n\n${sueltas.join(', ')}\n\nEsos días vuelven al turno que les toca por su grupo.`)) return;
+  for(let j=0;j<sueltas.length;j+=200){
+    await db.from('horarios_excepciones').delete().eq('socio_id',socioId).in('fecha',sueltas.slice(j,j+200));
+  }
+  toast('Marcas quitadas ('+sueltas.length+')');
+  await vacSueltas(socioId);
+}
+
 async function vacGuardar2(){
   const socioId=document.getElementById('vacSocioSel').value;
   if(!socioId) return toast('Elige al socio','#dc2626');
@@ -2050,6 +2107,7 @@ async function vacGuardar2(){
   for(let j=0;j<rows.length;j+=200){ await db.from('horarios_excepciones').upsert(rows.slice(j,j+200),{onConflict:'socio_id,fecha'}); }
   toast('Vacaciones agregadas ('+dias.length+' días)');
   await vacListar(socioId);
+  await vacSueltas(socioId);
 }
 
 async function vacQuitar2(recId, socioId){
@@ -2060,6 +2118,7 @@ async function vacQuitar2(recId, socioId){
   await db.from('horarios_vacaciones').delete().eq('id',recId);
   toast('Vacaciones quitadas');
   await vacListar(socioId);
+  await vacSueltas(socioId);
 }
 
 // Al cambiar el tipo se propone su número de días habitual, pero sin forzarlo:

@@ -232,6 +232,22 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-02 — Horarios: marcas de vacaciones sin vacación detrás (SW horarios v19)
+
+**Síntoma:** en el calendario de un socio con vacaciones desde el 9 de octubre aparecía marcado también **el 1 de octubre**, y seis días más en otro color.
+
+**Qué era cada cosa.** Leyendo el calendario: los **15 naranjos del 9 al 30** son exactamente los que calcula el motor — correctos. Los **6 verdes** eran `t_vac6` y caían en **sábado 10, domingo 11, feriado 12, sábado 17, domingo 18 y sábado 24**: justo los días que la vacación de 15 hábiles deja libres a propósito. Y el **1 de octubre** quedaba fuera del tramo 9–30, que es lo único que la limpieza de v18 alcanza.
+
+**El problema de fondo:** una marca de vacaciones puede quedar **sin ninguna vacación registrada detrás** —de un motor anterior, de una vacación borrada a medias, o puesta a mano día por día— y entonces **no hay cómo verla ni quitarla**. El calendario la muestra como VACAC y la lista de vacaciones no la menciona.
+
+**Ahora la pestaña 🏖️ Vacaciones las detecta y las limpia.** Al elegir un socio, si tiene días marcados como vacaciones que no pertenecen a ninguna vacación de su lista, aparece un aviso con **la fecha de cada uno** y un botón para quitarlas. Antes de borrar pide confirmación nombrando los días, y avisa que esos días vuelven al turno que les toca por su grupo.
+
+Se recalcula al elegir socio, al agregar y al quitar vacaciones. Si está todo en orden, no aparece nada.
+
+**Verificación:** 17 comprobaciones reproduciendo **el calendario exacto de la captura** — 22 días marcados contra una vacación registrada de 15. La app detecta los 7 sobrantes, los lista con su fecha (incluido el 1 de octubre y los 6 findes/feriado), y al limpiarlos quedan los 15 del 9 al 30 y el aviso desaparece. Las 25 del motor, 22 del panel y 11 del solape siguen pasando.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-02 — Horarios: las marcas de vacaciones se acumulaban (SW horarios v18)
 
 **Síntoma:** al dar vacaciones desde el 9, el calendario marcaba **el mes entero**.
