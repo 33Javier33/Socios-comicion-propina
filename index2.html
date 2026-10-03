@@ -293,18 +293,21 @@
     <!-- Lo primero que se ve al abrir: qué toca HOY. Antes había que buscar
          el día dentro de la grilla del mes. -->
     <div id="socioHoy" class="mb-4"></div>
-    <!-- Pedir vacaciones con anticipación: avisa el MES, no marca fechas.
-         Las fechas las pone el supervisor cuando corresponda. -->
-    <button onclick="socioPedirModal()" class="btn-ghost w-full mb-4" style="font-size:12px;padding:9px;">🏖️ Pedir vacaciones</button>
     <div class="flex items-center justify-between mb-3">
       <button onclick="socioMes(-1)" class="btn-ghost">‹</button>
       <div id="socioMesLabel" class="font-extrabold text-base"></div>
       <button onclick="socioMes(1)" class="btn-ghost">›</button>
     </div>
-    <!-- Las dos formas de ver el mes, la misma opción que tiene el supervisor:
-         la grilla de siempre o la lista con forma de planilla de papel. -->
-    <div class="flex justify-end mb-2">
-      <button id="socioVistaBtn" onclick="socioToggleVista()" class="btn-ghost" style="font-size:12px;padding:6px 11px;">📋 Lista</button>
+    <!-- Dos cosas en la misma fila, sobre el calendario:
+         · Pedir vacaciones con anticipación: avisa el MES, no marca fechas.
+           Las fechas las pone el supervisor cuando corresponda.
+         · Las dos formas de ver el mes, la misma opción que tiene el
+           supervisor: la grilla de siempre o la lista con forma de planilla.
+         Antes el botón de vacaciones iba solo y ancho arriba de todo, y
+         empujaba el calendario —que es a lo que se entra— fuera de la vista. -->
+    <div class="flex items-center justify-between gap-2 mb-2">
+      <button onclick="socioPedirModal()" class="btn-ghost" style="font-size:12px;padding:6px 11px;min-width:0;">🏖️ Pedir vacaciones</button>
+      <button id="socioVistaBtn" onclick="socioToggleVista()" class="btn-ghost" style="font-size:12px;padding:6px 11px;flex-shrink:0;">📋 Lista</button>
     </div>
     <div id="socioCalCab" class="grid grid-cols-7 gap-1.5 mb-1 text-center text-[10px] font-bold text-slate-500">
       <div>LU</div><div>MA</div><div>MI</div><div>JU</div><div>VI</div><div>SÁ</div><div>DO</div>
@@ -3543,6 +3546,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=5"></script>
+<script src="js/version-horarios.js?v=6"></script>
 </body>
 </html>

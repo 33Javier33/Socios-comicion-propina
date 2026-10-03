@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-03 — Horarios: «Pedir vacaciones» junto al cambio de vista (SW horarios v24)
+
+En la app del socio, el botón **🏖️ Pedir vacaciones** iba solo y de ancho completo arriba de todo, y empujaba el calendario —que es a lo que se entra— fuera de la pantalla.
+
+Ahora comparte fila con el botón que cambia entre **🗓 Mes** y **📋 Lista**, justo encima del calendario: vacaciones a la izquierda, la vista a la derecha. Es el mismo botón y hace lo mismo; solo cambió dónde está.
+
+**Verificación:** los dos botones quedan en la misma fila, sin cortarse, sin solaparse y sin apilarse, medido a 430, 390, 375, 360 y 320 px. Las cuatro suites de Horarios que tocan esta pantalla siguen en verde.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-03 — Horarios: cumpleaños y su día libre (SW horarios v23)
 
 **Pestaña nueva, 🎂 Cumple**, en el supervisor. Se carga la fecha de nacimiento de cada socio y **al guardarla la app le marca sola el día libre en el calendario**. No hay que acordarse de ir después a ponerlo a mano.
