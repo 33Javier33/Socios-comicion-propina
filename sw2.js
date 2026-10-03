@@ -1,6 +1,6 @@
 // Service Worker de la app de Horarios (index2.html).
 // Alcance acotado a /index2.html para NO afectar la app principal (index.html).
-const CACHE = 'horarios-mesas-v21';
+const CACHE = 'horarios-mesas-v22';
 const ASSETS = ['/index2.html', '/manifest2.json', '/img/horarios-192.png', '/img/horarios-512.png', '/img/marca/cpn-marca.png'];
 
 // Sin skipWaiting a propósito: la versión nueva queda EN ESPERA y la página

@@ -232,6 +232,37 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-03 — Horarios: cargar la planilla de TODOS los socios de una vez (SW horarios v22)
+
+Antes la planilla del mes se importaba **socio por socio**: con treinta socios eran treinta pasadas por el mismo formulario. Ahora se pega **la planilla completa** y entra de una sola vez.
+
+**El formato es el mismo** de la importación de uno, con una diferencia: **el nombre del socio en una línea sola** antes de sus días.
+
+```
+Carlos Perez
+Jueves   1   7,5 Hrs 20:30 a 04:30
+Viernes  2   LIBRE
+Sábado   3   LXF (7,5)
+
+Laura Trocel
+Jueves   1   LIBRE
+Viernes  2   7,5 Hrs 20:30 a 04:30
+```
+
+Cualquier línea que no se pueda leer como día empieza un bloque nuevo, así que las líneas en blanco no molestan y no hay que marcar nada. El nombre puede ir completo o **solo el de pila**, mientras no haya dos socios que empiecen igual; si queda ambiguo, no se arriesga y lo deja sin reconocer.
+
+**No guarda a ciegas.** Igual que la importación de uno, primero muestra una tarjeta por socio, con un borde de color: **verde** todo entendido, **ámbar** quedaron días dudosos, **rojo** ese nombre no corresponde a ningún socio — y ese bloque no se guarda. Arriba, el total: período, cuántos socios y cuántos días quedaron listos.
+
+**Los días dudosos se arreglan ahí mismo**, con una lista de turnos al lado de la celda que no se entendió. Solo aparecen los días que fallaron: con treinta socios, pintar los novecientos días sería una pared de casillas inútil.
+
+Al confirmar muestra el detalle **socio por socio** con cuántos días lleva cada uno, y escribe en tandas de 200 con `onConflict: socio_id,fecha` — los días que ya tenían turno se reemplazan, no se duplican.
+
+**Dónde está:** supervisor → **Calendario** → «📥 Importar la planilla de TODOS de una vez». La importación de un socio sigue donde estaba, sin cambios.
+
+**Verificación:** 29 comprobaciones — que reconozca los bloques y encuentre a cada socio (por nombre y apellido, y por nombre de pila solo); que un nombre que no existe quede marcado y **no escriba nada**; que cada día caiga en el socio y la fecha que le toca con su turno; que solo el día ilegible traiga casilla y que al elegir el turno a mano ese día entre; que pegar nada avise en vez de romper; y que la importación de un socio siga funcionando igual.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-02 — Horarios: pedir vacaciones con anticipación (SW horarios v21)
 
 **Un pedido no marca el calendario.** Es la intención: en enero el socio dice «quiero salir en noviembre», el supervisor lo ve con meses de anticipación y cuando llega el momento marca las fechas con el motor de siempre.

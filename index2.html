@@ -366,6 +366,7 @@
         <div id="supSugerencias" style="display:none;margin-top:6px;max-height:230px;overflow-y:auto;
              border:1px solid #293449;border-radius:10px;background:#0f172a;"></div>
         <button onclick="plModal()" class="btn-ghost w-full mt-2 text-sm">📸 Importar planilla del mes (foto o texto)</button>
+        <button onclick="plMasivoModal()" class="btn-ghost w-full mt-2 text-sm">📥 Importar la planilla de TODOS de una vez</button>
       </div>
       <div id="supCalWrap" class="hidden">
         <div class="flex items-center justify-between mb-3 gap-2">
@@ -2825,6 +2826,178 @@ function plParsear(texto, anio, mes){
   return filas;
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// IMPORTAR LA PLANILLA DE TODOS DE UNA VEZ
+//
+// Mismo formato por día que la importación de uno solo —día · número ·
+// turno—, con el NOMBRE DEL SOCIO en una línea sola antes de su bloque:
+//
+//     Carlos Perez
+//     Jueves   3   7,5 Hrs 20:30 a 04:30
+//     Viernes  4   LIBRE
+//
+//     Laura Trocel
+//     Jueves   3   LIBRE
+//
+// Una línea que no se puede leer como día empieza un bloque nuevo. Así la
+// planilla entera del mes entra de una pasada en vez de socio por socio.
+//
+// Igual que la de uno: NO se guarda a ciegas. Primero se muestra qué se
+// entendió de cada socio y qué quedó dudoso, y recién al confirmar se
+// escribe. Los días que no se entienden no se guardan.
+// ══════════════════════════════════════════════════════════════════════
+let _pmBloques = null, _pmPeriodo = '';
+
+// ¿Esta línea es una fila de día? Mismo criterio que plParsear.
+function pmEsFilaDia(l){
+  return /^\s*(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)?\s*(?:[|;\t]\s*|\s*)(\d{1,2})\s*(?:[|;\t]\s*|\s+)(.+)$/i.test(l);
+}
+
+// Nombre escrito → socio. Tolera acentos, mayúsculas y que venga solo el
+// nombre de pila, siempre que no haya dos socios que empiecen igual.
+function pmBuscarSocio(txt){
+  const q = plNorm(txt).replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+  if(!q) return null;
+  const lista = (sociosMesas||[]).map(s=>({ s, full: plNorm(s.nombre+' '+s.apellido) }));
+  let m = lista.filter(x=>x.full===q);                      // exacto
+  if(!m.length) m = lista.filter(x=>x.full.startsWith(q));  // "carlos" → "carlos perez"
+  if(!m.length) m = lista.filter(x=>x.full.includes(q));    // apellido suelto
+  return m.length===1 ? m[0].s : null;   // ambiguo = no se arriesga
+}
+
+function plMasivoModal(){
+  _pmBloques = null;
+  const hoy = new Date();
+  const optMes = MESES.map((m,i)=>`<option value="${i+1}"${i===hoy.getMonth()?' selected':''}>${m}</option>`).join('');
+  abrirModal(`<h3 class="font-extrabold mb-1">📥 Importar la planilla de todos</h3>
+    <p class="text-xs text-slate-400 mb-3">Pega la planilla completa del mes y se cargan los turnos de cada socio de una vez.</p>
+
+    <div class="flex gap-2 mb-3">
+      <div class="flex-1"><label class="text-xs text-slate-400 font-semibold">Mes</label>
+        <select id="pmMes" class="fld mt-1">${optMes}</select></div>
+      <div style="width:100px"><label class="text-xs text-slate-400 font-semibold">Año</label>
+        <input id="pmAnio" type="number" class="fld mt-1" value="${hoy.getFullYear()}"></div>
+    </div>
+
+    <label class="text-xs text-slate-400 font-semibold">La planilla</label>
+    <textarea id="pmTexto" class="fld mt-1" rows="9" placeholder="Carlos Perez&#10;Jueves 3 7,5 Hrs 20:30 a 04:30&#10;Viernes 4 LIBRE&#10;&#10;Laura Trocel&#10;Jueves 3 LIBRE&#10;Viernes 4 7,5 Hrs 20:30 a 04:30"></textarea>
+
+    <details class="mt-2 mb-3">
+      <summary class="text-[11px] text-sky-400 font-semibold cursor-pointer">¿Cómo tengo que ordenar los datos?</summary>
+      <div class="text-[11px] text-slate-400 mt-2 leading-relaxed" style="background:#0f172a;border:1px solid #293449;border-radius:9px;padding:10px;">
+        Es <b class="text-slate-200">el mismo formato</b> de la importación de un socio, con una diferencia:
+        el <b class="text-slate-200">nombre del socio en una línea sola</b> antes de sus días.<br><br>
+        <b class="text-slate-200">Cada día:</b> día de la semana · número · turno.<br>
+        El separador puede ser espacios, <b>tabulador</b>, <code>;</code> o <code>|</code>.<br><br>
+        <b class="text-slate-200">Turnos que entiende:</b><br>
+        <code>7,5 Hrs 20:30 a 04:30</code> · <code>20:30 a 04:30</code> · <code>20:30 - 04:30</code><br>
+        <code>LIBRE</code> · <code>LXF (7,5)</code> · <code>VACAC</code><br><br>
+        El nombre puede ir completo o solo el de pila, mientras no haya dos socios que empiecen igual.
+        Las líneas en blanco no molestan.
+      </div>
+    </details>
+
+    <button onclick="plMasivoProcesar()" class="btn-primary w-full">Revisar antes de guardar</button>
+    <div id="pmPrevia" class="mt-4"></div>`);
+}
+
+function plMasivoProcesar(){
+  const texto = document.getElementById('pmTexto').value || '';
+  const mes = parseInt(document.getElementById('pmMes').value,10);
+  const anio = parseInt(document.getElementById('pmAnio').value,10);
+  const cont = document.getElementById('pmPrevia');
+
+  // Partir en bloques: una línea que no es día empieza uno nuevo.
+  const bloques = []; let actual = null;
+  String(texto).split(/\r?\n/).forEach(linea=>{
+    const l = linea.trim();
+    if(!l) return;
+    if(pmEsFilaDia(l)){
+      if(!actual) actual = { nombre:'(sin nombre)', socio:null, lineas:[] };
+      actual.lineas.push(l);
+    } else {
+      if(actual) bloques.push(actual);
+      actual = { nombre:l, socio:pmBuscarSocio(l), lineas:[] };
+    }
+  });
+  if(actual) bloques.push(actual);
+
+  if(!bloques.length){ cont.innerHTML = '<div class="text-xs" style="color:#fca5a5">No se encontró nada que leer.</div>'; return; }
+
+  // Parsear los días de cada bloque con el mismo motor de siempre.
+  bloques.forEach(b=>{ b.filas = plParsear(b.lineas.join('\n'), anio, mes); });
+  _pmBloques = bloques; _pmPeriodo = MESES[mes-1] + ' ' + anio;
+
+  const optTurnos = t => '<option value="">— sin cargar —</option>' +
+    turnos.map(x=>`<option value="${x.id}"${x.id===t?' selected':''}>${esc(x.nombre||x.id)}</option>`).join('');
+
+  let totalOk=0, totalMal=0, sinSocio=0;
+  let html = '';
+  bloques.forEach((b,bi)=>{
+    const ok = b.filas.filter(f=>f.turno_id).length;
+    const mal = b.filas.filter(f=>!f.turno_id).length;
+    totalOk += b.socio ? ok : 0; totalMal += mal; if(!b.socio) sinSocio++;
+    const color = !b.socio ? '#ef4444' : mal ? '#f59e0b' : '#22c55e';
+    html += `<div class="card p-2 mb-2" style="border-left:3px solid ${color};">
+      <div class="flex items-center gap-2">
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-bold truncate">${esc(b.socio ? b.socio.nombre+' '+b.socio.apellido : b.nombre)}</div>
+          <div class="text-[11px] ${b.socio?'text-slate-400':''}" ${b.socio?'':'style="color:#fca5a5"'}>
+            ${b.socio ? `${ok} día${ok!==1?'s':''} listo${ok!==1?'s':''}${mal?` · ${mal} sin entender`:''}`
+                      : 'No se encontró este socio — ese bloque no se va a guardar'}</div>
+        </div>
+      </div>`;
+    // Solo se muestran para arreglar los días que NO se entendieron: con 30
+    // socios, pintar todos los días sería una pared de miles de casillas.
+    if(b.socio && mal){
+      html += '<div class="mt-2">';
+      b.filas.forEach((f,fi)=>{
+        if(f.turno_id) return;
+        html += `<div class="flex items-center gap-2 mb-1">
+          <span class="text-[11px] text-slate-400" style="width:58px;flex-shrink:0;">${f.num} ${f.diaReal.substring(0,3)}</span>
+          <span class="text-[11px] flex-1 min-w-0 truncate" style="color:#fca5a5" title="${esc(f.aviso||'')}">${esc(f.celda)}</span>
+          <select id="pm-${bi}-${fi}" class="fld" style="width:120px;padding:4px;font-size:11px;margin:0;">${optTurnos(null)}</select>
+        </div>`;
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+
+  const aviso = sinSocio ? `<div class="text-[11px] mb-2" style="color:#fca5a5">⚠️ ${sinSocio} bloque(s) sin socio reconocido: revisa cómo está escrito el nombre.</div>` : '';
+  cont.innerHTML = `<div class="text-xs font-bold mb-2">${_pmPeriodo} · ${bloques.length} socio(s) · ${totalOk} día(s) listos${totalMal?` · ${totalMal} sin entender`:''}</div>
+    ${aviso}${html}
+    <button onclick="plMasivoGuardar()" class="btn-primary w-full mt-2">Guardar los turnos</button>`;
+}
+
+async function plMasivoGuardar(){
+  if(!_pmBloques) return;
+  const rows = []; const resumen = [];
+  _pmBloques.forEach((b,bi)=>{
+    if(!b.socio) return;
+    let n = 0;
+    b.filas.forEach((f,fi)=>{
+      let tid = f.turno_id;
+      if(!tid){ const sel = document.getElementById(`pm-${bi}-${fi}`); tid = sel ? sel.value : ''; }
+      if(tid){ rows.push({ id:uid('ex'), socio_id:b.socio.id, fecha:f.fecha, turno_id:tid }); n++; }
+    });
+    if(n) resumen.push(`${b.socio.nombre} ${b.socio.apellido}: ${n}`);
+  });
+  if(!rows.length) return toast('No hay días para guardar','#dc2626');
+  if(!confirm(`Se van a cargar ${rows.length} día(s) de ${_pmPeriodo} para ${resumen.length} socio(s):\n\n`
+    + resumen.join('\n') + '\n\nLos días que ya tengan turno se reemplazan.\n\n¿Confirmar?')) return;
+  toast('Guardando…');
+  try{
+    for(let j=0;j<rows.length;j+=200){
+      const {error} = await db.from('horarios_excepciones').upsert(rows.slice(j,j+200),{onConflict:'socio_id,fecha'});
+      if(error) throw error;
+    }
+    cerrarModal();
+    supRenderCal();
+    toast(`✅ ${rows.length} día(s) cargados en ${resumen.length} socio(s)`);
+  }catch(e){ toast('Error al guardar: '+e.message,'#dc2626'); }
+}
+
 function plModal(){
   _plFilas = null;
   const hoy = new Date();
@@ -3046,6 +3219,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=3"></script>
+<script src="js/version-horarios.js?v=4"></script>
 </body>
 </html>
