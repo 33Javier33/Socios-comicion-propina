@@ -106,8 +106,13 @@
   .keypad-btn{ height:64px; border-radius:16px; background:var(--h-card); border:1px solid var(--h-border); font-size:24px; font-weight:700; color:var(--h-text); cursor:pointer; transition:.1s; }
   .keypad-btn:active{ transform:scale(0.95); background:var(--h-border); }
   /* Con cinco pestañas el texto ya no entra a 12px en un teléfono angosto. */
-  .tab-btn{ flex:1; min-width:0; padding:10px 2px; font-size:11px; font-weight:700; color:#94a3b8; border:none; background:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; }
-  @media (max-width:360px){ .tab-btn{ font-size:10px; } }
+  .tab-btn{ flex:1; min-width:0; padding:10px 1px; font-size:11px; font-weight:700; color:#94a3b8; border:none; background:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; white-space:nowrap; }
+  /* Son siete pestañas: la más larga ("Vacaciones") es la que manda. La
+     letra baja por tramos para que ninguna quede cortada ni se parta en
+     dos líneas, que subiría la barra y taparía contenido. */
+  @media (max-width:430px){ .tab-btn{ font-size:10px; } }
+  @media (max-width:375px){ .tab-btn{ font-size:9px; } }
+  @media (max-width:340px){ .tab-btn{ font-size:8px; letter-spacing:-0.2px; } }
   .tab-btn.active{ color:#38bdf8; }
   .sup-panel{ display:none; }
   .sup-panel.active{ display:block; }
@@ -473,6 +478,16 @@
       </div><!-- /vacVistaAgendar -->
     </div>
 
+    <!-- PANEL: CUMPLEAÑOS -->
+    <div id="panCumple" class="sup-panel">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="font-extrabold">🎂 Cumpleaños</h3>
+        <button onclick="cumplePanelInit()" class="btn-ghost text-xs">🔄 Actualizar</button>
+      </div>
+      <p class="text-xs text-slate-400 mb-3">Carga la fecha de cada socio y la app le marca sola el día libre de su cumpleaños en el calendario.</p>
+      <div id="cumpleCont"></div>
+    </div>
+
     <!-- PANEL: ACCESOS -->
     <div id="panAccesos" class="sup-panel">
       <div class="flex items-center justify-between mb-3">
@@ -502,6 +517,7 @@
     <button class="tab-btn" data-pan="Grupos" onclick="supTab('Grupos')"><span>👥</span>Grupos</button>
     <button class="tab-btn" data-pan="Socios" onclick="supTab('Socios')"><span>🧩</span>Asignar</button>
     <button class="tab-btn" data-pan="Vacaciones" onclick="supTab('Vacaciones')"><span>🏖️</span>Vacaciones</button>
+    <button class="tab-btn" data-pan="Cumple" onclick="supTab('Cumple')"><span>🎂</span>Cumple</button>
     <button class="tab-btn" data-pan="Accesos" onclick="supTab('Accesos')"><span>🔐</span>Accesos</button>
   </div>
 </div>
@@ -543,6 +559,9 @@ const SB_URL = 'https://teemahksasdougehrcly.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlZW1haGtzYXNkb3VnZWhyY2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTkwNjIsImV4cCI6MjA5Njg3NTA2Mn0.EIQ7gRcwf3zYgvGESKw3s5lnZMABN_EuNWsrJK3L1zk';
 const db = supabase.createClient(SB_URL, SB_KEY);
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+// Turno del día libre de cumpleaños. Se declara acá arriba porque el
+// calendario lo consulta al pintar, antes de que se abra su sección.
+const CUMPLE_TURNO = 't_cumple';
 
 // ══════════ Estado ══════════
 let sociosMesas = [], turnos = [], turnosMap = {}, grupos = [], gruposMap = {}, asignaciones = {};
@@ -1036,6 +1055,9 @@ function _turnoPartes(t){
   // Los libres NO son todos iguales: el de ciclo y el de feriado (LibreXF)
   // se distinguen por nombre. Poner "LIBRE" en los dos los hacía
   // indistinguibles en el calendario y duplicaba el chip en la leyenda.
+  // El libre de cumpleaños se distingue de un LIBRE cualquiera: en la celda
+  // va la torta, que se lee de una y no necesita que entre la palabra.
+  if(t.id===CUMPLE_TURNO) return { etq:'🎂', etqLargo:'CUMPLEAÑOS', color:t.color||'#f472b6', libre:true };
   if(t.es_libre){
     const n=String(t.nombre||'').trim();
     const esLlano=/^libre$/i.test(n) || !n;
@@ -1474,6 +1496,7 @@ function supTab(pan){
   document.getElementById('pan'+pan).classList.add('active');
   if(pan==='Accesos') accRender();
   if(pan==='Vacaciones') vacPanelInit();
+  if(pan==='Cumple') cumplePanelInit();
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -2827,6 +2850,307 @@ function plParsear(texto, anio, mes){
 }
 
 // ══════════════════════════════════════════════════════════════════════
+// CUMPLEAÑOS Y SU DÍA LIBRE
+//
+// La fecha de nacimiento se carga acá, desde Horarios, y al guardarla la
+// app marca sola el día libre en el calendario: ese es el trato. No hay
+// que acordarse de ir al calendario a ponerlo a mano.
+//
+// Se marca el PRÓXIMO cumpleaños, no el de este año a secas. Si el socio
+// ya cumplió en marzo y estamos en octubre, marcar marzo reescribiría un
+// turno que ya se trabajó de verdad: se marca el de marzo que viene.
+//
+// Si ese día YA lo tenía libre (ciclo, LXF, vacaciones), el libre no se
+// pierde: se corre al siguiente día que le tocaba trabajar. Un libre
+// encima de un libre no es un día libre, es un día perdido.
+//
+// La fecha vive en `socios.fecha_nacimiento` y no en una tabla aparte
+// porque es un dato de la persona: mañana cualquier app puede usarlo.
+// Si la columna todavía no existe, la sección lo avisa y el resto de
+// Horarios sigue funcionando igual.
+// ══════════════════════════════════════════════════════════════════════
+let _cumpleHay = null;     // null = no se ha consultado · false = falta la columna
+let _cumpleMap = {};       // socio_id → fecha de nacimiento
+let _cumpleMarcas = {};    // socio_id → fecha del libre ya marcado
+
+// Trae las fechas de nacimiento. Si la columna no existe, Supabase
+// responde con error y acá se anota, sin tirar abajo nada más.
+async function cumpleCargar(){
+  try{
+    const {data, error} = await db.from('socios').select('id,fecha_nacimiento').eq('activo',true);
+    if(error) throw error;
+    _cumpleHay = true;
+    _cumpleMap = {};
+    (data||[]).forEach(s=>{ if(s.fecha_nacimiento) _cumpleMap[s.id]=String(s.fecha_nacimiento).substring(0,10); });
+  }catch(e){ _cumpleHay = false; _cumpleMap = {}; }
+  // Qué libres de cumpleaños ya están puestos de hoy en adelante.
+  _cumpleMarcas = {};
+  try{
+    const {data} = await db.from('horarios_excepciones').select('socio_id,fecha')
+      .eq('turno_id', CUMPLE_TURNO).gte('fecha', fechaISO(new Date()));
+    (data||[]).forEach(e=>{ _cumpleMarcas[e.socio_id] = String(e.fecha).substring(0,10); });
+  }catch(e){}
+}
+
+// El próximo cumpleaños de hoy en adelante (hoy incluido).
+// El 29 de febrero se celebra el 28 en los años que no son bisiestos.
+function cumpleProximo(isoNac, desdeISO){
+  if(!isoNac) return null;
+  const p = String(isoNac).split('-').map(Number);
+  const mes = p[1], dia = p[2];
+  if(!mes || !dia) return null;
+  const h = desdeISO ? new Date(desdeISO+'T00:00:00') : new Date();
+  const base = new Date(h.getFullYear(), h.getMonth(), h.getDate());
+  for(let k=0; k<3; k++){
+    const y = base.getFullYear()+k;
+    const ultimo = new Date(y, mes, 0).getDate();   // días que tiene ese mes ese año
+    const f = new Date(y, mes-1, Math.min(dia, ultimo));
+    if(f >= base) return fechaISO(f);
+  }
+  return null;
+}
+function cumpleDiasPara(iso){
+  if(!iso) return 9999;
+  const h = new Date(); const hoy = new Date(h.getFullYear(), h.getMonth(), h.getDate());
+  return Math.round((new Date(iso+'T00:00:00') - hoy)/86400000);
+}
+function cumpleTxt(iso){
+  if(!iso) return '';
+  const p = iso.split('-').map(Number);
+  return p[2] + ' de ' + (MESES[p[1]-1]||'').toLowerCase();
+}
+// Los años que cumple en esa fecha. Solo si el año de nacimiento es
+// creíble: si alguien puso 1900 para no dar el año, no se inventa una edad.
+function cumpleEdad(isoNac, isoCumple){
+  const an = parseInt(String(isoNac).substring(0,4),10);
+  const ac = parseInt(String(isoCumple).substring(0,4),10);
+  if(!an || an < 1920 || an > ac - 10) return null;
+  return ac - an;
+}
+
+// ¿Ese día ya lo tiene libre? Cuenta el ciclo del grupo y lo que haya
+// puesto como excepción. Si el socio no tiene grupo no hay cómo saberlo,
+// y en la duda se marca igual: es más fácil correrlo después que notar
+// que faltó.
+function _cumpleEsLibre(socioId, d, exc){
+  const t = turnoDeSocioEnFecha(socioId, d, exc);
+  if(!t) return false;
+  return !!t.es_libre || t.id==='t_vac15' || t.id==='t_vac6' || /vacac/i.test(t.nombre||'');
+}
+function _cumpleSiguienteHabil(socioId, iso, exc){
+  const d = new Date(iso+'T00:00:00');
+  for(let k=1; k<=20; k++){
+    d.setDate(d.getDate()+1);
+    if(!_cumpleEsLibre(socioId, d, exc)) return fechaISO(d);
+  }
+  return null;
+}
+
+// Marca el libre. Devuelve qué pasó, para poder contarlo y decirlo.
+//   ok · movido · ya · cancelado · nada
+async function _cumpleMarcar(socio, iso, silencioso){
+  if(!socio || !iso) return { estado:'nada' };
+  if(!turnosMap[CUMPLE_TURNO]) return { estado:'nada', falta:'turno' };
+  const hasta = new Date(iso+'T00:00:00'); hasta.setDate(hasta.getDate()+22);
+  const {data} = await db.from('horarios_excepciones').select('fecha,turno_id')
+    .eq('socio_id', socio.id).gte('fecha', iso).lte('fecha', fechaISO(hasta));
+  const exc = {}; (data||[]).forEach(e=>exc[String(e.fecha).substring(0,10)]=e.turno_id);
+  if(exc[iso] === CUMPLE_TURNO) return { fecha:iso, estado:'ya' };
+
+  let destino = iso, movido = false;
+  if(_cumpleEsLibre(socio.id, new Date(iso+'T00:00:00'), exc)){
+    const alt = _cumpleSiguienteHabil(socio.id, iso, exc);
+    if(!alt) return { estado:'nada' };
+    if(!silencioso && !confirm(
+      `${socio.nombre} ${socio.apellido} cumple el ${cumpleTxt(iso)}, pero ese día ya lo tiene libre.\n\n`
+      + `¿Le paso el libre de cumpleaños al ${cumpleTxt(alt)}, que es el siguiente día que trabaja?\n\n`
+      + `Si cancelas, no se marca nada.`)) return { estado:'cancelado' };
+    destino = alt; movido = true;
+  }
+  const {error} = await db.from('horarios_excepciones')
+    .upsert({ id:uid('ex'), socio_id:socio.id, fecha:destino, turno_id:CUMPLE_TURNO }, {onConflict:'socio_id,fecha'});
+  if(error) return { estado:'nada', error:error.message };
+  return { fecha:destino, estado: movido ? 'movido' : 'ok' };
+}
+
+// Saca los libres de cumpleaños futuros de un socio. Se usa al cambiar la
+// fecha: si no, quedaría el libre del cumpleaños viejo dando vueltas.
+async function _cumpleQuitarMarcas(socioId){
+  try{
+    await db.from('horarios_excepciones').delete()
+      .eq('socio_id', socioId).eq('turno_id', CUMPLE_TURNO).gte('fecha', fechaISO(new Date()));
+  }catch(e){}
+}
+
+async function cumplePanelInit(){
+  const cont = document.getElementById('cumpleCont');
+  if(!cont) return;
+  cont.innerHTML = '<div class="text-xs text-slate-400">Cargando…</div>';
+  await cumpleCargar();
+  cumpleRender();
+}
+
+function cumpleRender(){
+  const cont = document.getElementById('cumpleCont');
+  if(!cont) return;
+
+  // Lo que falte de la migración se dice una vez, arriba, y claro.
+  if(_cumpleHay === false){
+    cont.innerHTML = `<div class="card p-3" style="border-left:3px solid #f59e0b">
+      <div class="text-xs font-bold mb-1" style="color:#fbbf24">Falta crear la columna de la fecha de nacimiento</div>
+      <div class="text-[11px] text-slate-400 leading-relaxed">
+        Está en <b class="text-slate-200">migracion-cumpleanos.sql</b>, en la raíz del repositorio.<br>
+        Supabase → SQL Editor → pegar → Run. Es aditiva: no toca nada de lo que ya existe.<br>
+        Mientras tanto el resto de Horarios funciona igual.</div></div>`;
+    return;
+  }
+  const faltaTurno = !turnosMap[CUMPLE_TURNO];
+
+  const hoy = new Date();
+  const conFecha = [], sinFecha = [];
+  (sociosMesas||[]).forEach(s=>{
+    const nac = _cumpleMap[s.id];
+    if(!nac){ sinFecha.push(s); return; }
+    const prox = cumpleProximo(nac);
+    conFecha.push({ s, nac, prox, dias: cumpleDiasPara(prox), marca: _cumpleMarcas[s.id] || null });
+  });
+  conFecha.sort((a,b)=>a.dias-b.dias);
+
+  const esteMes = conFecha.filter(c => c.prox && Number(c.prox.substring(5,7)) === hoy.getMonth()+1
+                                    && Number(c.prox.substring(0,4)) === hoy.getFullYear());
+  const porMarcar = conFecha.filter(c => !c.marca).length;
+
+  let html = '';
+  if(faltaTurno){
+    html += `<div class="card p-3 mb-3" style="border-left:3px solid #f59e0b">
+      <div class="text-xs font-bold mb-1" style="color:#fbbf24">Falta el turno «Cumpleaños»</div>
+      <div class="text-[11px] text-slate-400 leading-relaxed">Las fechas se pueden guardar, pero el día libre no se
+        puede marcar hasta crearlo. Está en la misma <b class="text-slate-200">migracion-cumpleanos.sql</b>.</div></div>`;
+  }
+
+  // Lo primero que uno quiere ver al abrir: quién cumple este mes.
+  html += `<div class="card p-3 mb-3">
+    <div class="text-xs font-extrabold mb-2">🎂 Cumplen en ${MESES[hoy.getMonth()]}</div>`;
+  html += esteMes.length
+    ? esteMes.map(c=>{
+        const ed = cumpleEdad(c.nac, c.prox);
+        return `<div class="flex items-center gap-2 mb-1">
+          ${_avatarSocio(c.s, 26)}
+          <div class="flex-1 min-w-0"><div class="text-xs font-bold truncate">${esc(c.s.nombre)} ${esc(c.s.apellido)}</div></div>
+          <div class="text-[11px] text-slate-400" style="flex-shrink:0">${cumpleTxt(c.prox)}${ed?` · ${ed}`:''}</div>
+        </div>`; }).join('')
+    : '<div class="text-[11px] text-slate-400">Nadie cumple este mes.</div>';
+  html += '</div>';
+
+  if(conFecha.length && !faltaTurno){
+    html += `<button onclick="cumpleMarcarTodos()" class="btn-ghost w-full mb-3" style="font-size:12px;padding:8px;">
+      🎂 Marcar los libres que falten${porMarcar?` (${porMarcar})`:''}</button>`;
+  }
+
+  // La lista completa, por cercanía: el que cumple primero arriba.
+  html += `<div class="text-xs text-slate-400 font-semibold mb-2">Fecha de cada socio</div>`;
+  html += conFecha.map(c=>{
+    const ed = cumpleEdad(c.nac, c.prox);
+    const movido = c.marca && c.marca !== c.prox;
+    const pie = c.marca
+      // El verde y el ámbar son los mismos tonos que el tema claro ya sabe
+      // dar vuelta (ver las reglas body.tema-claro [style*="color:…"]).
+      ? `<span style="color:#6ee7b7">✓ Libre marcado el ${cumpleTxt(c.marca)}${movido?' (corrido, ese día ya lo tenía libre)':''}</span>`
+      : (faltaTurno ? '<span class="text-slate-500">Libre sin marcar</span>'
+                    : `<span style="color:#fbbf24">Sin el libre marcado</span>`);
+    return `<div class="card p-2 mb-2">
+      <div class="flex items-center gap-2">
+        ${_avatarSocio(c.s, 30)}
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-bold truncate">${esc(c.s.nombre)} ${esc(c.s.apellido)}</div>
+          <div class="text-[11px] text-slate-400">Cumple el ${cumpleTxt(c.prox)}${ed?` · ${ed} años`:''} · ${c.dias===0?'hoy':c.dias===1?'mañana':'en '+c.dias+' días'}</div>
+        </div>
+        <input type="date" id="cum-${esc(c.s.id)}" value="${esc(c.nac)}" class="fld"
+               style="width:140px;padding:5px;font-size:11px;margin:0;flex-shrink:0"
+               onchange="cumpleGuardar('${esc(c.s.id)}', this.value)">
+      </div>
+      <div class="text-[11px] mt-1 flex items-center gap-2">
+        <span class="flex-1 min-w-0">${pie}</span>
+        <button onclick="cumpleBorrar('${esc(c.s.id)}')" class="btn-ghost" style="font-size:10px;padding:2px 7px;flex-shrink:0">Quitar</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  if(sinFecha.length){
+    html += `<div class="text-xs text-slate-400 font-semibold mt-4 mb-2">Sin fecha cargada · ${sinFecha.length}</div>`;
+    html += sinFecha.map(s=>`<div class="card p-2 mb-2">
+      <div class="flex items-center gap-2">
+        ${_avatarSocio(s, 30)}
+        <div class="flex-1 min-w-0"><div class="text-xs font-bold truncate">${esc(s.nombre)} ${esc(s.apellido)}</div>
+          <div class="text-[11px] text-slate-500">Todavía no tiene fecha</div></div>
+        <input type="date" id="cum-${esc(s.id)}" class="fld"
+               style="width:140px;padding:5px;font-size:11px;margin:0;flex-shrink:0"
+               onchange="cumpleGuardar('${esc(s.id)}', this.value)">
+      </div></div>`).join('');
+  }
+
+  if(!conFecha.length && !sinFecha.length) html += '<div class="text-xs text-slate-400">No hay socios cargados.</div>';
+  cont.innerHTML = html;
+}
+
+async function cumpleGuardar(socioId, iso){
+  if(!iso) return cumpleBorrar(socioId);
+  const socio = (sociosMesas||[]).find(s=>s.id===socioId);
+  if(!socio) return;
+  // Una fecha de nacimiento futura es siempre un error de tipeo.
+  if(iso > fechaISO(new Date())) return toast('Esa fecha todavía no llega','#dc2626');
+  toast('Guardando…');
+  const {error} = await db.from('socios').update({ fecha_nacimiento: iso }).eq('id', socioId);
+  if(error) return toast('No se pudo guardar: '+error.message,'#dc2626');
+  _cumpleMap[socioId] = iso;
+
+  // La fecha pudo cambiar: el libre viejo se saca antes de poner el nuevo.
+  await _cumpleQuitarMarcas(socioId);
+  const r = await _cumpleMarcar(socio, cumpleProximo(iso));
+  await cumplePanelInit();
+  await supRenderCal();
+  if(r.estado==='ok')       toast(`✅ Guardado · libre marcado el ${cumpleTxt(r.fecha)}`);
+  else if(r.estado==='movido') toast(`✅ Guardado · libre corrido al ${cumpleTxt(r.fecha)}`);
+  else if(r.estado==='cancelado') toast('Fecha guardada, sin marcar el libre');
+  else if(r.falta==='turno') toast('Fecha guardada · falta crear el turno «Cumpleaños»','#f59e0b');
+  else                      toast('Fecha guardada');
+}
+
+async function cumpleBorrar(socioId){
+  const socio = (sociosMesas||[]).find(s=>s.id===socioId);
+  if(!socio) return;
+  if(!confirm(`¿Quitar la fecha de cumpleaños de ${socio.nombre} ${socio.apellido}?\n\nTambién se saca el día libre que tenía marcado.`)) return;
+  const {error} = await db.from('socios').update({ fecha_nacimiento: null }).eq('id', socioId);
+  if(error) return toast('No se pudo quitar: '+error.message,'#dc2626');
+  delete _cumpleMap[socioId];
+  await _cumpleQuitarMarcas(socioId);
+  await cumplePanelInit();
+  await supRenderCal();
+  toast('Fecha quitada');
+}
+
+// Pasa por todos los que tienen fecha y les pone el libre que falte.
+// Acá no se pregunta por cada uno: si el día ya está libre se corre solo y
+// al final se dice cuántos se corrieron. Con 33 socios, 33 preguntas no.
+async function cumpleMarcarTodos(){
+  const pend = (sociosMesas||[]).filter(s=>_cumpleMap[s.id] && !_cumpleMarcas[s.id]);
+  if(!pend.length) return toast('Ya están todos marcados');
+  if(!confirm(`Se va a marcar el libre de cumpleaños de ${pend.length} socio(s).\n\n`
+    + `Al que ya tenga libre ese día, se le corre al siguiente día que trabaja.\n\n¿Confirmar?`)) return;
+  toast('Marcando…');
+  let ok=0, movidos=0, fallos=0;
+  for(const s of pend){
+    const r = await _cumpleMarcar(s, cumpleProximo(_cumpleMap[s.id]), true);
+    if(r.estado==='movido'){ ok++; movidos++; }
+    else if(r.estado==='ok' || r.estado==='ya') ok++;
+    else fallos++;
+  }
+  await cumplePanelInit();
+  await supRenderCal();
+  toast(`✅ ${ok} libre(s) marcados${movidos?` · ${movidos} corrido(s)`:''}${fallos?` · ${fallos} sin poder`:''}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // IMPORTAR LA PLANILLA DE TODOS DE UNA VEZ
 //
 // Mismo formato por día que la importación de uno solo —día · número ·
@@ -3219,6 +3543,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=4"></script>
+<script src="js/version-horarios.js?v=5"></script>
 </body>
 </html>

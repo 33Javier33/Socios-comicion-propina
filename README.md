@@ -232,6 +232,35 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-03 — Horarios: cumpleaños y su día libre (SW horarios v23)
+
+**Pestaña nueva, 🎂 Cumple**, en el supervisor. Se carga la fecha de nacimiento de cada socio y **al guardarla la app le marca sola el día libre en el calendario**. No hay que acordarse de ir después a ponerlo a mano.
+
+**Se marca el PRÓXIMO cumpleaños, no el de este año a secas.** Si el socio cumplió en marzo y estamos en octubre, marcar marzo reescribiría un turno que ya se trabajó de verdad: se marca el de marzo que viene.
+
+**Si ese día ya lo tenía libre** —por ciclo, por LXF o porque está de vacaciones— **el libre no se pierde: se corre al siguiente día que le tocaba trabajar**, y la app pregunta antes de hacerlo. Un libre encima de un libre no es un día libre, es un día perdido.
+
+**Qué muestra la sección:**
+
+- **Quién cumple este mes**, arriba del todo, con la edad que cumple.
+- **La lista completa ordenada por cercanía** — el que cumple primero, arriba — con la fecha editable, cuántos días faltan y si el libre ya está marcado (y si se corrió, lo dice).
+- **A quién le falta cargarle la fecha**, en su propio bloque al final.
+- **«Marcar los libres que falten»**, para ponerlos todos de una pasada: ahí no pregunta uno por uno —con 33 socios serían 33 preguntas— y al final informa cuántos tuvo que correr.
+
+**En el calendario** el libre de cumpleaños sale con su **🎂** y su color propio, así no se confunde con un LIBRE de ciclo ni con un LXF. El socio lo ve en su app sin hacer nada.
+
+**Detalles que estaban esperando para fallar:** el **29 de febrero** se celebra el **28** en los años que no son bisiestos; una fecha de nacimiento **del futuro** se rechaza (siempre es un error de tipeo); al **cambiar** la fecha se saca el libre viejo antes de poner el nuevo, y al **quitarla** se saca el libre también.
+
+**Dónde vive el dato:** en `socios.fecha_nacimiento`, no en una tabla aparte, porque es un dato de la persona y no del horario — mañana cualquiera de las otras apps puede usarlo.
+
+**Falta aplicar la migración:** está en **`migracion-cumpleanos.sql`**, en la raíz del repositorio. Supabase → SQL Editor → pegar → Run. Agrega la columna y crea el turno «Cumpleaños». **Si todavía no se aplica, nada se rompe:** la sección avisa qué falta y el resto de Horarios funciona igual.
+
+**La barra de abajo** pasó de seis pestañas a siete, así que la letra baja por tramos (10px bajo 430, 9px bajo 375, 8px bajo 340) para que ninguna etiqueta quede cortada ni se parta en dos líneas. Medido en 430, 390, 375, 360 y 320 px.
+
+**Verificación:** 40 comprobaciones — que sin la columna avise y no rompa; que sin el turno se puedan guardar fechas pero no ofrezca marcar lo que no puede; que guardar marque el libre el día exacto; que si ese día ya estaba libre pregunte y lo corra sin pisar lo que había; que cambiar la fecha mueva el libre y quitarla lo borre; que una fecha futura se rechace; que «marcar los que falten» no toque a quien no tiene fecha y cuente los corridos; los cuatro casos del 29 de febrero; y que el 🎂 no se confunda con un LIBRE. Más contraste medido en los tres temas (claro, oscuro y negro): los 16 textos de la sección sobre 4.5:1.
+
+**Archivos:** `index2.html`, `migracion-cumpleanos.sql` (nuevo), `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-03 — Horarios: cargar la planilla de TODOS los socios de una vez (SW horarios v22)
 
 Antes la planilla del mes se importaba **socio por socio**: con treinta socios eran treinta pasadas por el mismo formulario. Ahora se pega **la planilla completa** y entra de una sola vez.
