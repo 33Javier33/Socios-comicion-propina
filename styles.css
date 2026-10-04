@@ -222,7 +222,11 @@
 
         .amount-minus { color: var(--danger); font-weight: 700; }
         .amount-anticipo { color: var(--secondary); font-weight: 700; } /* Anticipos en azul */
-        .tag-absent { background: rgba(239,68,68,0.15); color: #fca5a5; padding: 2px 8px; border-radius: 5px; font-size: 0.78em; font-weight: 700; border: 1px solid rgba(239,68,68,0.3); }
+        .tag-absent { background: rgba(239,68,68,0.15); color: #991b1b; padding: 2px 8px; border-radius: 5px; font-size: 0.78em; font-weight: 700; border: 1px solid rgba(239,68,68,0.3); }
+        /* En claro el #fca5a5 de antes quedaba en 1,56:1 sobre su propio
+           fondo rosado: la etiqueta no se leía. En oscuro se vuelve al rojo
+           claro, que ahí sí contrasta. */
+        body.dark-mode .tag-absent { color: #fca5a5; }
 
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px; }
         .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border-left: 5px solid var(--secondary); display: flex; flex-direction: column; justify-content: center; }

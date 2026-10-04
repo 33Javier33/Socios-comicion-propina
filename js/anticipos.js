@@ -733,11 +733,19 @@ async function cargarHistorialSocio(id) {
                     const _tcItems2 = _ausItems.filter(e => e.detalle === 'Término de Contrato');
                     const _otrosAus = _ausItems.filter(e => e.detalle !== 'Término de Contrato');
                     const _montoTotalAus = Math.round(_ausItems.reduce((s, e) => s + (parseFloat(e.monto) || 0), 0));
+                    // Los días seguidos del mismo motivo van en UN chip. Con una
+                    // licencia de 19 días, 19 chips «día 16, día 17…» llenaban la
+                    // tarjeta y no se entendía que era una sola ausencia.
                     let _diasHtml = '';
-                    _otrosAus.forEach(e => {
-                        let f = e.fecha; if (f.includes('T')) f = f.split('T')[0];
-                        const dia = parseInt(f.split('-')[2]);
-                        _diasHtml += `<span style="background:#fee2e2;border-radius:5px;padding:2px 7px;font-size:0.78em;font-weight:700;color:#991b1b;">día ${dia}</span>`;
+                    _ausTramosSimple(_otrosAus).forEach(t => {
+                        const d1 = parseInt(t.fechas[0].split('-')[2], 10);
+                        const d2 = parseInt(t.fechas[t.fechas.length - 1].split('-')[2], 10);
+                        const m1 = MESES[parseInt(t.fechas[0].split('-')[1], 10) - 1];
+                        const m2 = MESES[parseInt(t.fechas[t.fechas.length - 1].split('-')[1], 10) - 1];
+                        const txt = t.fechas.length === 1
+                            ? `día ${d1}`
+                            : `${d1}${m1 !== m2 ? ' ' + m1 : ''} al ${d2} ${m2} (${t.fechas.length} días)`;
+                        _diasHtml += `<span style="background:#fee2e2;border-radius:5px;padding:2px 7px;font-size:0.78em;font-weight:700;color:#991b1b;">${txt}</span>`;
                     });
                     if (_tcItems2.length > 0) {
                         const _ftc = _tcItems2.map(e => { let f = e.fecha; if(f.includes('T')) f=f.split('T')[0]; return f; }).sort();
@@ -882,36 +890,18 @@ async function cargarHistorialSocio(id) {
             if(listaFinal.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#7f8c8d; padding:20px;">No hay movimientos registrados.</td></tr>'; return; }
             listaFinal.sort((a,b) => b.rawDate - a.rawDate);
 
-            // Agrupar entradas de Término de Contrato en una sola fila de visualización
-            const _esTC = item => Array.from(item.tipos).includes('AUSENCIA') && item.detalles.includes('Término de Contrato');
-            const _tcItems = listaFinal.filter(_esTC);
-            const _otrosItems = listaFinal.filter(item => !_esTC(item));
-            let listaDisplay;
-            if (_tcItems.length > 1) {
-                const _fechasTC = _tcItems.map(e => e.fecha).sort();
-                const _fD = f => { const p = f.split('-'); return `${parseInt(p[2])}/${p[1]}`; };
-                listaDisplay = [..._otrosItems, {
-                    fecha: _fechasTC[0],
-                    fechaDisplay: `${_fD(_fechasTC[0])} al ${_fD(_fechasTC[_fechasTC.length - 1])}`,
-                    tipos: new Set(['AUSENCIA']),
-                    detalles: [`Término de Contrato (${_tcItems.length} días)`],
-                    montoTotal: 0,
-                    rawDate: new Date(_fechasTC[0] + 'T12:00:00'),
-                    uuid: null,
-                    uuidsGrupo: _tcItems.map(e => e.uuid).filter(Boolean),
-                    fechasGrupo: _tcItems.map(e => e.fecha)
-                }].sort((a, b) => b.rawDate - a.rawDate);
-            } else {
-                listaDisplay = listaFinal;
-            }
+            const listaDisplay = _ausAgruparTramos(listaFinal);
 
             listaDisplay.forEach(item => {
                 const row = document.createElement('tr');
                 row.classList.add('row-deletable');
 
                 let pressTimer;
-                row.addEventListener('mousedown', () => { pressTimer = setTimeout(() => mostrarModalBorrar(item), 800); });
-                row.addEventListener('touchstart', () => { pressTimer = setTimeout(() => mostrarModalBorrar(item), 800); }, {passive:true});
+                // `_largo` marca que la pulsación fue larga, para que el click que
+                // viene después no despliegue además el tramo recién borrado.
+                const alLargo = () => { row._largo = true; mostrarModalBorrar(item); };
+                row.addEventListener('mousedown', () => { row._largo = false; pressTimer = setTimeout(alLargo, 800); });
+                row.addEventListener('touchstart', () => { row._largo = false; pressTimer = setTimeout(alLargo, 800); }, {passive:true});
                 row.addEventListener('mouseup', () => clearTimeout(pressTimer));
                 row.addEventListener('touchend', () => clearTimeout(pressTimer));
                 row.addEventListener('mouseleave', () => clearTimeout(pressTimer));
@@ -922,9 +912,13 @@ async function cargarHistorialSocio(id) {
                 const esAnticipo = tiposArr.includes('Anticipo');
                 let tipoHtml;
                 if (tiposArr.includes('AUSENCIA')) {
-                    tipoHtml = item.uuidsGrupo
+                    // El término de contrato conserva su etiqueta roja propia; los
+                    // demás tramos van con la de ausencia de siempre, más los días.
+                    tipoHtml = item.esTermino
                         ? '<span class="tag-absent" style="background:#991b1b;font-size:0.7em;letter-spacing:0.3px;">🔴 T.CONTRATO</span>'
-                        : '<span class="tag-absent">AUSENCIA</span>';
+                        : item.diasGrupo
+                            ? `<span class="tag-absent">AUSENCIA · ${item.diasGrupo.length}d</span>`
+                            : '<span class="tag-absent">AUSENCIA</span>';
                 } else if (tiposArr.some(t => typeof don_esDonacion === 'function' && don_esDonacion(t))) {
                     tipoHtml = '<span style="background:#db2777;color:white;border-radius:4px;padding:1px 6px;font-size:0.7em;font-weight:800;letter-spacing:0.3px;">💝 DONACIÓN</span>';
                 } else {
@@ -946,6 +940,42 @@ async function cargarHistorialSocio(id) {
                 const editBtn = esAnticipo
                     ? `<button onclick="event.stopPropagation(); mostrarModalEditar(${itemDataStr})" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);color:#b45309;border-radius:6px;padding:3px 8px;font-size:0.75em;cursor:pointer;font-weight:700;white-space:nowrap;">✏️</button>`
                     : '';
+
+                // Un tramo de varios días se muestra plegado. Al tocarlo se abre
+                // la lista de sus días: la fila de arriba dice de cuándo a cuándo
+                // y cuánto, y adentro está el día por día.
+                if (item.diasGrupo && item.diasGrupo.length > 1) {
+                    const gid = 'ausg-' + item.fecha.replace(/-/g, '') + '-' + item.diasGrupo.length;
+                    row.style.cursor = 'pointer';
+                    row.dataset.grupo = gid;
+                    row.addEventListener('click', () => { if (!row._largo) ausFilaToggle(gid); row._largo = false; });
+                    row.innerHTML = `<td><span id="${gid}-flecha" style="display:inline-block;width:11px;color:#64748b;font-size:0.8em;">▸</span> ${fechaVis}</td>`
+                        + `<td>${tipoHtml}</td><td style="font-size:0.82em;">${detalleHtml}</td>`
+                        + `<td style="white-space:nowrap;">${montoHtml}</td>`;
+                    tbody.appendChild(row);
+
+                    const det = document.createElement('tr');
+                    det.id = gid;
+                    det.style.display = 'none';
+                    const fmtDia = f => { const p = f.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
+                    const filas = item.diasGrupo.map(d =>
+                        `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dashed rgba(148,163,184,0.25);">
+                            <span style="color:#475569;">${fmtDia(d.fecha)}</span>
+                            <span style="font-weight:700;color:#991b1b;white-space:nowrap;">${d.monto > 0 ? '-' + formatearMoneda(d.monto) : '—'}</span>
+                        </div>`).join('');
+                    det.innerHTML = `<td colspan="4" style="padding:8px 12px 10px;background:rgba(148,163,184,0.07);">
+                        <div style="font-size:0.74em;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;">
+                            Los ${item.diasGrupo.length} días</div>
+                        <div style="font-size:0.8em;">${filas}</div>
+                        <div style="display:flex;justify-content:space-between;gap:10px;padding-top:6px;font-size:0.82em;font-weight:800;">
+                            <span style="color:#475569;">Deja de percibir</span>
+                            <span style="color:#991b1b;">${item.montoTotal > 0 ? '-' + formatearMoneda(item.montoTotal) : '—'}</span>
+                        </div>
+                        <div style="font-size:0.72em;color:#64748b;margin-top:5px;">Mantén presionada la fila de arriba para borrar el tramo completo.</div>
+                    </td>`;
+                    tbody.appendChild(det);
+                    return;
+                }
 
                 row.innerHTML = `<td>${fechaVis}</td><td>${tipoHtml}</td><td style="font-size:0.82em;">${detalleHtml}</td><td style="white-space:nowrap;">${montoHtml} ${editBtn}</td>`;
                 tbody.appendChild(row);
@@ -1041,6 +1071,89 @@ function obtenerDiasRango(fechaDesde, fechaHasta) {
         dias.push(d.toISOString().split('T')[0]);
     }
     return dias;
+}
+
+// ── Tramos de ausencia en el historial ──────────────────────
+// Una licencia de 19 días llenaba 19 filas y tapaba todo lo demás del
+// período. Cada tramo SEGUIDO del MISMO motivo se muestra plegado en una
+// sola fila —de cuándo a cuándo y cuánto deja de percibir— y al tocarla se
+// abren sus días.
+//
+// Seguido y del mismo motivo, las dos cosas: dos licencias separadas por una
+// semana son dos tramos, y una licencia pegada a un permiso también. Si se
+// juntaran, la fila diría un rango que el socio no estuvo ausente entero.
+function _ausAgruparTramos(lista) {
+    const esAus = it => Array.from(it.tipos).includes('AUSENCIA');
+    const aus = lista.filter(esAus);
+    const otros = lista.filter(it => !esAus(it));
+
+    const porMotivo = {};
+    aus.forEach(it => {
+        const m = [...new Set(it.detalles)].join(', ') || 'Ausencia';
+        (porMotivo[m] = porMotivo[m] || []).push(it);
+    });
+
+    const salida = otros.slice();
+    Object.keys(porMotivo).forEach(motivo => {
+        const dias = porMotivo[motivo].slice().sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+        let tramo = [];
+        const cerrar = () => {
+            if (!tramo.length) return;
+            if (tramo.length === 1) { salida.push(tramo[0]); tramo = []; return; }
+            const fD = f => { const p = f.split('-'); return `${parseInt(p[2], 10)}/${p[1]}`; };
+            const prim = tramo[0].fecha, ult = tramo[tramo.length - 1].fecha;
+            salida.push({
+                fecha: prim,
+                fechaDisplay: `${fD(prim)} al ${fD(ult)}`,
+                tipos: new Set(['AUSENCIA']),
+                detalles: [`${motivo} (${tramo.length} días)`],
+                montoTotal: tramo.reduce((s, d) => s + (Number(d.montoTotal) || 0), 0),
+                rawDate: new Date(prim + 'T12:00:00'),
+                uuid: null,
+                uuidsGrupo: tramo.map(d => d.uuid).filter(Boolean),
+                fechasGrupo: tramo.map(d => d.fecha),
+                diasGrupo: tramo.map(d => ({ fecha: d.fecha, monto: Number(d.montoTotal) || 0 })),
+                esTermino: /T[ée]rmino de Contrato/i.test(motivo)
+            });
+            tramo = [];
+        };
+        dias.forEach(d => {
+            if (!tramo.length) { tramo = [d]; return; }
+            const prev = new Date(tramo[tramo.length - 1].fecha + 'T12:00:00');
+            const act = new Date(d.fecha + 'T12:00:00');
+            if (Math.round((act - prev) / 86400000) === 1) tramo.push(d);
+            else { cerrar(); tramo = [d]; }
+        });
+        cerrar();
+    });
+    return salida.sort((a, b) => b.rawDate - a.rawDate);
+}
+
+// La misma idea de tramo, pero sobre los registros crudos de `extras`:
+// devuelve [{ motivo, fechas:[YYYY-MM-DD…] }] con los días seguidos juntos.
+function _ausTramosSimple(items) {
+    const norm = (items || []).map(e => ({
+        fecha: String(e.fecha || '').includes('T') ? String(e.fecha).split('T')[0] : String(e.fecha || ''),
+        motivo: String(e.detalle || '')
+    })).filter(e => e.fecha).sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const tramos = [];
+    norm.forEach(e => {
+        const ult = tramos[tramos.length - 1];
+        const seguido = ult && ult.motivo === e.motivo && Math.round(
+            (new Date(e.fecha + 'T12:00:00') - new Date(ult.fechas[ult.fechas.length - 1] + 'T12:00:00')) / 86400000) === 1;
+        if (seguido) ult.fechas.push(e.fecha);
+        else tramos.push({ motivo: e.motivo, fechas: [e.fecha] });
+    });
+    return tramos;
+}
+
+function ausFilaToggle(gid) {
+    const det = document.getElementById(gid);
+    const fle = document.getElementById(gid + '-flecha');
+    if (!det) return;
+    const abierto = det.style.display === 'none';
+    det.style.display = abierto ? 'table-row' : 'none';
+    if (fle) fle.textContent = abierto ? '▾' : '▸';
 }
 
 // ── Ausencia de varios días seguidos ────────────────────────

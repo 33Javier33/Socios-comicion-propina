@@ -232,6 +232,26 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-04 — Los tramos de ausencia se pliegan en el historial (SW v158)
+
+Una licencia de 19 días llenaba **19 filas** del historial y tapaba todo lo demás del período: los anticipos quedaban enterrados.
+
+**Ahora cada tramo seguido del mismo motivo es UNA fila plegada:** `16/09 al 20/09 · AUSENCIA · 5d · Licencia Médica (5 días) · −$100.000`. Al tocarla se abre y muestra **día por día** con su monto, y abajo el total que deja de percibir. Se cierra tocándola otra vez.
+
+**Seguido y del mismo motivo, las dos cosas.** Dos licencias separadas por una semana son dos tramos; una licencia pegada a un permiso también. Si se juntaran, la fila diría un rango que el socio no estuvo ausente entero. Un día suelto sigue siendo una fila normal, como siempre.
+
+**Para borrar el tramo completo**, mantén presionada la fila: ofrece eliminar los 5 (o los que sean) de una vez, como ya hacía el Término de Contrato. La nota dentro del desplegable lo recuerda.
+
+**La tarjeta «Ausencias» de arriba también se agrupó:** antes ponía un chip por día (`día 16`, `día 17`, `día 18`…) y con una licencia larga era una pared. Ahora cada tramo es un chip: `16 al 20 sep (5 días)`.
+
+**El Término de Contrato conserva su etiqueta roja** 🔴 T.CONTRATO y su comportamiento; es el mismo mecanismo, generalizado.
+
+**Contraste, de paso:** la etiqueta `.tag-absent` estaba en **1,56:1** en tema claro (rojo claro sobre su propio fondo rosado) — no se leía. Pasó a un rojo oscuro en claro y vuelve al rojo claro en oscuro, donde sí contrasta.
+
+**Verificación:** 25 comprobaciones — que 10 ausencias + 1 anticipo quepan en 5 filas; que el permiso pegado a la licencia NO se mezcle; que la segunda licencia, separada por un hueco, vaya aparte; que el día suelto y el anticipo no se toquen; que los montos del tramo sumen los de sus días; abrir, cerrar y la flecha; que mantener presionado ofrezca borrar los 5 con sus uuid; y que el Término de Contrato siga igual. Más contraste medido en los tres temas: 14/14 en oscuro y negro, 12/14 en claro — los dos que faltan son los estilos de siempre que ya había reportado (`#7f8c8d` del detalle y `.amount-minus`).
+
+**Archivos:** `js/anticipos.js`, `js/help.js`, `styles.css`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-10-04 — Ausencias de varios días seguidos (SW v157)
 
 Una licencia del **15 de septiembre al 3 de octubre** se marcaba día por día: 19 veces el mismo formulario. El rango ya existía, pero **solo para Término de Contrato**; ahora sirve para cualquier motivo.
