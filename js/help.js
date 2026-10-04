@@ -53,7 +53,7 @@ const BASE_CONOCIMIENTO = [
         <div class="ayuda-formula" style="margin-top:8px;">Puntos = base + (años × 2) → hasta el tope del área &nbsp;·&nbsp; base 4 (Bóveda: 2)</div>
       </div>`,
       pasos:['El sistema calcula los puntos automáticamente según la fecha de ingreso','Cuando un socio cumple años en el trabajo, aparece en el panel 🏆 Próximos a subir','Si ya llegó al tope de su área, el recibo muestra "TOPE MÁXIMO"','La fecha de inicio de puntos puede ser diferente a la de ingreso (ej: si tuvo un período sin puntos)'],
-      nota:'El 🏆 en el panel muestra quiénes suben de puntaje este mes, el mes pasado y el próximo.' },
+      nota:'El 🏆 en el panel muestra quiénes suben de puntaje este mes, el mes pasado y el próximo.<br><br>🔎 <strong>Con más puntos de los que da la fórmula:</strong> el número guardado en la base <strong>le gana a la fórmula</strong>, así que un socio cargado con un valor que no corresponde se queda con él y nadie se entera — las otras listas solo miran hacia arriba. Esa sección los muestra, dice cuántos le sobran y ofrece dejarlo en lo que corresponde. <strong>Revisa antes de corregir:</strong> puede ser un ajuste que alguien hizo a propósito.<br><br>🏦 <strong>Bóveda es la única excepción</strong> de la regla: parte en 2 puntos, no en 4, con tope 10. Todas las demás áreas parten en 4.' },
 
     { id:'s3', cat:'socios', titulo:'¿Cómo agrego o edito un socio?', tags:['agregar','nuevo','socio','registrar','editar'],
       resp:'Usa el botón <strong>➕ azul</strong> en la esquina inferior derecha para agregar. Para editar, abre la tarjeta del socio y usa el botón ✏️.',

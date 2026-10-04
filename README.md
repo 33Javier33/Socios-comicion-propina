@@ -232,6 +232,26 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-04 — Bóveda parte en 2 puntos: la regla estaba escrita pero no siempre se aplicaba (SW v159)
+
+La regla es la de siempre: **todos parten en 4 puntos** y suman **+2 por año cumplido** hasta el tope de su área. **Bóveda es la única excepción: parte en 2, con tope 10.**
+
+Estaba escrita en el código, pero **no siempre se aplicaba**, por dos motivos distintos:
+
+**1. El área se comparaba con tildes.** `areaNorm === 'boveda'` nunca calza con un área guardada como **«Bóveda»**: `'bóveda' !== 'boveda'`. A esos socios se les aplicaba el **base 4** en vez del 2. El mismo problema afectaba a **Máquinas** y **Técnicos**, que caían al tope por defecto (10) en vez de su **12**. Ahora la comparación va sin tildes y sin espacios.
+
+**2. La fórmula estaba repetida.** Base y tope vivían en cuatro lugares entre las dos apps, y en propi.solicitada **dos de ellos no tenían la regla de Bóveda**: al socio de bóveda su propia app le mostraba el base 4. Ahora salen de un solo sitio por app (`reglaPuntosArea` en `js/constants.js`, `_reglaPuntosArea` en propi).
+
+**Y lo que la corrección de código no arregla sola:** el número guardado en la base **le gana a la fórmula**. Un socio cargado en su momento con el base equivocado se queda con ese valor y nadie se entera, porque las listas de escalamiento **solo miran hacia arriba**.
+
+Por eso, en el panel 🏆 hay una sección nueva: **«🔎 Con más puntos de los que da la fórmula»**. Lista a quien tenga más de lo que le corresponde, dice **cuántos le sobran** y por qué (*«Bóveda parte en 2 y topa en 10»*), y ofrece **dejarlo en lo que corresponde**. Va primero en el panel: un socio cobrando de más es más urgente que uno que sube el mes que viene. **Revisa antes de corregir** — puede ser un ajuste hecho a propósito.
+
+De paso, el botón dejó de mentir: al bajar a alguien ya no pregunta *«¿Subir puntos a 8?»*, sino *«Ana tiene 10 pts y por fórmula le corresponden 8. ¿Dejarlo en 8 pts?»*.
+
+**Verificación:** 32 comprobaciones de la regla (base y tope por área, escrita con tilde, sin tilde, en mayúsculas y con espacios de sobra; la serie año por año de cada área; y que Bóveda sea **la única** que parte en 2, en las dos apps) más 14 del aviso nuevo (a quién marca, a quién no, que el que tiene de **menos** no se cuele ahí, y que el botón diga la verdad en los dos sentidos).
+
+**Archivos:** `js/constants.js`, `js/api.js`, `js/socios.js`, `js/help.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-10-04 — Los tramos de ausencia se pliegan en el historial (SW v158)
 
 Una licencia de 19 días llenaba **19 filas** del historial y tapaba todo lo demás del período: los anticipos quedaban enterrados.

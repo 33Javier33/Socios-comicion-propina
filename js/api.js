@@ -127,14 +127,12 @@ function procesarSocioDesdeGoogle(s) {
     if (areaNorm === 'gastoscomision' || areaNorm.includes('gastos')) {
         return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: 'GastosComision', contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios: 0, puntos: puntosActivos ? 1 : 0, puntosActivos, visible, rut: s.Rut || "", fotoUrl: s.FotoUrl || "", correo: s.Correo || "" };
     }
-    let puntosMaximos = 10;
-    if (areaNorm === 'mesas') puntosMaximos = 20;
-    else if (areaNorm === 'maquinas') puntosMaximos = 12;
-    else if (areaNorm === 'tecnicos') puntosMaximos = 12;
-    else if (areaNorm === 'boveda') puntosMaximos = 10;
-    else if (areaNorm.includes('cambista')) puntosMaximos = 8;
-    // Bóveda comienza en 2 puntos; el resto en 4 (+2 por año hasta el tope).
-    const puntosBase = (areaNorm === 'boveda') ? 2 : 4;
+    // Base y tope salen de reglaPuntosArea (js/constants.js): un solo lugar
+    // para los dos, y la comparación va sin tildes — antes 'bóveda' no calzaba
+    // con 'boveda' y a esos socios se les aplicaba el base 4 en vez del 2.
+    const _regla = reglaPuntosArea(s.Area);
+    const puntosMaximos = _regla.tope;
+    const puntosBase = _regla.base;
     // puntosMaxPosible: lo que corresponde por fórmula (para detectar escalamientos en verificarEscalamientos)
     const puntosMaxPosible = puntosActivos ? Math.min(puntosBase + (anios * 2), puntosMaximos) : 0;
     // puntosFinales: usa el valor guardado en Supabase si es positivo; 0 y null se tratan como "sin dato" → usa fórmula

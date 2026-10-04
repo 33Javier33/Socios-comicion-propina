@@ -345,7 +345,15 @@ async function eliminarSocio(id) {
 }
 
 async function subirPuntosSocio(id, nombre, puntosNuevos) {
-    if (!confirm(`Subir puntos de ${nombre} a ${puntosNuevos}?`)) return;
+    // El mismo botón sirve para aplicar un escalamiento y para corregir a la
+    // baja un socio cargado de más: preguntar «¿Subir puntos a 8?» cuando en
+    // realidad se está bajando de 10 a 8 es, derechamente, mentir.
+    const _actual = Number(((cacheSocios || []).find(s => String(s.id) === String(id)) || {}).puntos);
+    const _baja = Number.isFinite(_actual) && _actual > Number(puntosNuevos);
+    const _msg = _baja
+        ? `${nombre} tiene ${_actual} pts y por fórmula le corresponden ${puntosNuevos}.\n\n¿Dejarlo en ${puntosNuevos} pts?`
+        : `Subir puntos de ${nombre} a ${puntosNuevos}?`;
+    if (!confirm(_msg)) return;
     toggleLoader(true, 'Actualizando puntos...');
     try {
         await callApiSocios('updateSocio', { socioId: id, updates: { Puntos: puntosNuevos } });
@@ -382,28 +390,19 @@ async function corregirPuntosSocio(id, nombre, puntosActuales) {
     }
 }
 
-function calcularPuntosMaximos(area) {
-    const a = (area || '').toLowerCase();
-    if (a.includes('gastos')) return 1;
-    if (a === 'mesas' || a === 'mesasparttime') return 20;
-    if (a === 'maquinas') return 12;
-    if (a === 'tecnicos') return 12;
-    if (a === 'boveda') return 10;
-    if (a.includes('cambista')) return 8;
-    return 10;
-}
+// Base y tope viven en reglaPuntosArea (js/constants.js), que compara el área
+// SIN TILDES: acá se comparaba 'boveda' contra un área que en la base puede
+// venir "Bóveda", y entonces no calzaba.
+function calcularPuntosMaximos(area) { return reglaPuntosArea(area).tope; }
 
 // Puntos base (año 0) por área: Bóveda comienza en 2; el resto en 4.
 // Todos aumentan +2 por año hasta el tope de su área.
-function calcularPuntosBase(area) {
-    return ((area || '').toLowerCase().includes('boveda')) ? 2 : 4;
-}
+function calcularPuntosBase(area) { return reglaPuntosArea(area).base; }
 
 function calcularPuntosPorAnios(anios, area) {
-    const max = calcularPuntosMaximos(area);
-    if ((area || '').toLowerCase().includes('gastos')) return 1;
-    const calculado = calcularPuntosBase(area) + (anios * 2);
-    return Math.min(calculado, max);
+    const r = reglaPuntosArea(area);
+    if (r.gastos) return 1;
+    return Math.min(r.base + (anios * 2), r.tope);
 }
 
 function verificarEscalamientos() {
@@ -422,6 +421,11 @@ function verificarEscalamientos() {
     const subenEsteMes          = [];
     const subenProximoPeriodo   = [];
     const ingresaronEstePeriodo = [];
+    // Socios con MÁS puntos de los que da la fórmula de su área. El número
+    // guardado en la base le gana a la fórmula, así que un socio cargado con
+    // el base equivocado se queda con él para siempre y nadie se entera: las
+    // listas de «suben» solo miran hacia arriba. Acá se mira hacia abajo.
+    const fueraDeFormula        = [];
 
     let periodoInicio, periodoFin;
     if (diaActual > 15) {
@@ -452,6 +456,15 @@ function verificarEscalamientos() {
         const diaIngreso  = parseInt(partes[2]);
 
         const max = calcularPuntosMaximos(socio.area);
+
+        // Va ANTES del corte de abajo: un socio que ya está en el tope (o por
+        // encima) salía de la función sin que nadie revisara su número.
+        const esperado = calcularPuntosPorAnios(Math.max(0, socio.anios || 0), socio.area);
+        if (Number(socio.puntos) > esperado) {
+            fueraDeFormula.push({ ...socio, esperado, deMas: Number(socio.puntos) - esperado,
+                                  regla: reglaPuntosArea(socio.area) });
+        }
+
         if (socio.puntos >= max) return;
 
         if (mesIngreso === mesPasado) {
@@ -504,12 +517,12 @@ function verificarEscalamientos() {
     // Se exponen los resultados para que otros módulos (p. ej. el informe de
     // socios) usen EXACTAMENTE el mismo cálculo y no puedan contradecir esta
     // pantalla. Se guarda siempre, incluso cuando no hay avisos.
-    window._escalamientos = { subieronMesPasado, subieronReciente, subenEsteMes, subenProximoPeriodo, ingresaronEstePeriodo };
+    window._escalamientos = { subieronMesPasado, subieronReciente, subenEsteMes, subenProximoPeriodo, ingresaronEstePeriodo, fueraDeFormula };
 
     const panel = document.getElementById('panelEscalamientos');
     const lista  = document.getElementById('listaEscalamientos');
 
-    if (!subieronMesPasado.length && !subieronReciente.length && !subenEsteMes.length && !subenProximoPeriodo.length && !ingresaronEstePeriodo.length) {
+    if (!subieronMesPasado.length && !subieronReciente.length && !subenEsteMes.length && !subenProximoPeriodo.length && !ingresaronEstePeriodo.length && !fueraDeFormula.length) {
         panel.style.display = 'none';
         const contEl = document.getElementById('contadorEscalamientos');
         if(contEl) contEl.innerText = '🏆';
@@ -517,7 +530,7 @@ function verificarEscalamientos() {
     }
 
     panel.style.display = 'block';
-    const totalAvisos = subieronMesPasado.length + subieronReciente.length + subenEsteMes.length + subenProximoPeriodo.length + ingresaronEstePeriodo.length;
+    const totalAvisos = subieronMesPasado.length + subieronReciente.length + subenEsteMes.length + subenProximoPeriodo.length + ingresaronEstePeriodo.length + fueraDeFormula.length;
     const contEl = document.getElementById('contadorEscalamientos');
     if(contEl) contEl.innerText = totalAvisos;
     let html = '';
@@ -554,6 +567,38 @@ function verificarEscalamientos() {
         bloque += '</div>';
         return bloque;
     };
+
+    // Primero lo que está mal, no lo que viene: un socio cobrando de más es
+    // más urgente que uno que sube el mes que viene.
+    if (fueraDeFormula.length) {
+        html += '<div style="margin-bottom:12px;">';
+        html += '<div style="font-size:0.78em;font-weight:800;text-transform:uppercase;color:#b91c1c;letter-spacing:0.5px;margin-bottom:4px;">🔎 Con más puntos de los que da la fórmula</div>';
+        html += '<div style="font-size:0.74em;color:#64748b;margin-bottom:8px;line-height:1.45;">'
+              + 'El número guardado le gana a la fórmula, así que estos quedaron fijos en un valor que no corresponde. '
+              + 'Revisa antes de corregir: puede ser un ajuste hecho a propósito.</div>';
+        fueraDeFormula.forEach(s => {
+            const areaNom = s.area.charAt(0).toUpperCase() + s.area.slice(1);
+            const porQue = s.regla.base === 2
+                ? 'Bóveda parte en 2 y topa en ' + s.regla.tope
+                : 'parte en ' + s.regla.base + ' y topa en ' + s.regla.tope;
+            html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;'
+                  + 'background:white;border-radius:8px;padding:10px 13px;margin-bottom:6px;'
+                  + 'border-left:4px solid #b91c1c;box-shadow:0 1px 4px rgba(0,0,0,0.07);">'
+                  + '<div><span style="font-weight:700;font-size:0.95em;">' + s.nombre + ' ' + s.apellido + '</span>'
+                  + '<span style="font-size:0.75em;color:#64748b;margin-left:6px;">' + areaNom + ' — ' + porQue + '</span>'
+                  + '<div style="font-size:0.8em;color:#64748b;margin-top:3px;">'
+                  + 'Tiene <strong style="color:#b91c1c;">' + s.puntos + ' pts</strong>'
+                  + ' y por sus ' + (s.anios || 0) + ' año' + ((s.anios || 0) === 1 ? '' : 's') + ' le corresponden '
+                  + '<strong>' + s.esperado + ' pts</strong>'
+                  + '<span style="background:#fee2e2;color:#991b1b;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:4px;">+' + s.deMas + ' de más</span>'
+                  + '</div></div>'
+                  + '<button onclick="subirPuntosSocio(\'' + s.id + '\',\'' + s.nombre + ' ' + s.apellido + '\',' + s.esperado + ')"'
+                  + ' style="background:#b91c1c;color:white;border:none;border-radius:7px;padding:7px 13px;'
+                  + 'font-size:0.8em;font-weight:800;cursor:pointer;white-space:nowrap;">Dejar en ' + s.esperado + ' pts</button>'
+                  + '</div>';
+        });
+        html += '</div>';
+    }
 
     html += renderGrupo('Subieron el mes pasado — aplicar si aún no se hizo', '#e67e22', '⚠️', subieronMesPasado);
     html += renderGrupo('Suben este mes', '#27ae60', '📅', subenEsteMes);

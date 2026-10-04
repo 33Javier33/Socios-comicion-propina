@@ -114,3 +114,38 @@ let ayudaFiltroActivo = '';
 
 // Canje
 let canjeConteo = {};
+
+// ══════════════════════════════════════════════════════════════════
+// PUNTOS POR ÁREA — base, tope y la única excepción
+//
+// Todos arrancan en 4 puntos y suman +2 por cada año cumplido, hasta el
+// tope de su área. BÓVEDA es la única excepción: arranca en 2, con tope 10.
+//
+// El área se compara SIN TILDES. Venía escrita de varias formas en la base
+// ("Bóveda", "Máquinas", "Técnicos") y las comparaciones eran exactas:
+// 'bóveda' nunca calzaba con 'boveda', así que a esos socios se les aplicaba
+// el base 4 en vez del 2, y Máquinas y Técnicos caían al tope por defecto
+// (10) en vez de su 12.
+// ══════════════════════════════════════════════════════════════════
+const PUNTOS_BASE_NORMAL = 4;
+const PUNTOS_BASE_BOVEDA = 2;   // la única excepción
+const PUNTOS_TOPE_DEFECTO = 10;
+
+function areaNormalizada(area) {
+    return String(area || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .toLowerCase().replace(/\s+/g, '').trim();
+}
+function esAreaBoveda(area) { return areaNormalizada(area).includes('boveda'); }
+
+// { base, tope } del área. Un solo lugar: si mañana cambia un tope, cambia acá.
+function reglaPuntosArea(area) {
+    const a = areaNormalizada(area);
+    if (a.includes('gastos')) return { base: 1, tope: 1, gastos: true };
+    if (a.includes('boveda')) return { base: PUNTOS_BASE_BOVEDA, tope: 10 };
+    let tope = PUNTOS_TOPE_DEFECTO;
+    if (a.includes('mesa')) tope = 20;
+    else if (a.includes('maquina')) tope = 12;
+    else if (a.includes('tecnico')) tope = 12;
+    else if (a.includes('cambista')) tope = 8;
+    return { base: PUNTOS_BASE_NORMAL, tope };
+}
