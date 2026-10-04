@@ -668,8 +668,10 @@
                                         <ol class="ayuda-popover-pasos">
                                             <li>Selecciona la <strong>fecha</strong> de la ausencia</li>
                                             <li>Elige el <strong>motivo</strong> tocando uno de los botones</li>
+                                            <li>Si son <strong>varios días seguidos</strong>, marca la casilla 📆 e indica hasta cuándo</li>
                                             <li>Presiona <strong>"Marcar Ausencia"</strong></li>
                                         </ol>
+                                        <div style="background:#fffbeb;border-left:3px solid #f59e0b;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#92400e;margin-bottom:8px;">📆 <strong>Varios días seguidos</strong>: para una licencia o un permiso largo. Pones el primer y el último día y se registra una ausencia por cada día del rango. Antes de guardar te dice cuántos son y cuánto deja de percibir.</div>
                                         <div style="background:#fef2f2;border-left:3px solid #dc2626;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#991b1b;margin-bottom:8px;">🔴 <strong>Término de Contrato</strong>: congela los ingresos del socio desde la fecha seleccionada hasta el cierre del período. Se registran ausencias para todos los días del rango.</div>
                                         <div style="background:#fff3cd;border-left:3px solid #f39c12;border-radius:0 5px 5px 0;padding:5px 8px;font-size:0.78em;color:#856404;margin-bottom:8px;">⚠️ Socios Part-Time no tienen ausencias — su cálculo usa el calendario de días trabajados.</div>
                                         <div class="ayuda-popover-footer">
@@ -680,7 +682,14 @@
                                 </div>
                             </div>
                             <div id="cardAusenciaBody" style="display:none;">
-                            <div class="form-group"><label>Fecha Ausencia</label><input type="date" id="fechaAusencia" onchange="actualizarInfoTerminoContrato()"></div>
+                            <div class="form-group"><label>Fecha Ausencia</label><input type="date" id="fechaAusencia" onchange="ausActualizarInfo()"></div>
+                            <!-- Una ausencia larga (una licencia, por ejemplo) se marcaba día por
+                                 día. El rango existía solo para Término de Contrato; ahora sirve
+                                 para cualquier motivo. -->
+                            <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-size:0.86em; font-weight:600; color:#475569; cursor:pointer;">
+                                <input type="checkbox" id="ausVariosDias" onchange="ausToggleRango()" style="width:17px; height:17px; cursor:pointer;">
+                                📆 Son varios días seguidos
+                            </label>
                             <div class="form-group" style="margin-top:10px;">
                                 <label>Motivo</label>
                                 <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;" id="botonesMotivo">
@@ -691,17 +700,19 @@
                                     <button type="button" class="btn-motivo" onclick="seleccionarMotivo('Otro')">✏️ Otro</button>
                                     <button type="button" class="btn-motivo btn-motivo-termino" onclick="seleccionarMotivo('Término de Contrato')">🔴 Término de Contrato</button>
                                 </div>
-                                <input type="text" id="motivoAusencia" placeholder="Selecciona o escribe motivo..." style="width:100%; box-sizing:border-box;">
+                                <input type="text" id="motivoAusencia" placeholder="Selecciona o escribe motivo..." oninput="ausPintarPanel()" style="width:100%; box-sizing:border-box;">
                             </div>
-                            <!-- Panel de congelamiento por Término de Contrato / rango multi-día -->
-                            <div id="rangoAusenciaContainer" style="display:none; margin-top:12px; background:#fef2f2; border-radius:10px; padding:12px 14px; border:1.5px solid #fca5a5;">
-                                <div style="font-weight:700; color:#dc2626; margin-bottom:6px; font-size:0.88em; display:flex; align-items:center; gap:6px;">🔴 Congelamiento de Ingresos</div>
-                                <div style="font-size:0.78em; color:#7f8c8d; margin-bottom:10px;">Los ingresos del socio serán congelados desde la fecha inicio hasta la fecha fin. Se registrará una ausencia por cada día del rango.</div>
+                            <!-- Rango de días. El mismo panel sirve para una ausencia larga
+                                 cualquiera (ámbar) y para el Término de Contrato (rojo); lo que
+                                 cambia es el rótulo y el color, que los pinta ausPintarPanel(). -->
+                            <div id="rangoAusenciaContainer" style="display:none; margin-top:12px; background:#fffbeb; border-radius:10px; padding:12px 14px; border:1.5px solid #fcd34d;">
+                                <div id="rangoAusenciaTitulo" style="font-weight:700; color:#92400e; margin-bottom:6px; font-size:0.88em; display:flex; align-items:center; gap:6px;">📆 Varios días seguidos</div>
+                                <div id="rangoAusenciaBajada" style="font-size:0.78em; color:#64748b; margin-bottom:10px;">Se registra una ausencia por cada día del rango: esos días el socio no percibe ingresos.</div>
                                 <div class="form-group" style="margin-top:0;">
-                                    <label style="font-size:0.85em; font-weight:600; color:#991b1b;">Fecha Hasta (cierre)</label>
-                                    <input type="date" id="fechaHastaAusencia" onchange="actualizarInfoTerminoContrato()" style="width:100%; box-sizing:border-box; border-color:#fca5a5;">
+                                    <label id="rangoAusenciaLabel" style="font-size:0.85em; font-weight:600; color:#92400e;">Hasta (último día ausente)</label>
+                                    <input type="date" id="fechaHastaAusencia" onchange="ausActualizarInfo()" style="width:100%; box-sizing:border-box; border-color:#fcd34d;">
                                 </div>
-                                <div id="infoRangoAusencia" style="margin-top:8px; font-size:0.82em; color:#991b1b; background:#fee2e2; border-radius:6px; padding:7px 10px; font-weight:600; min-height:28px;"></div>
+                                <div id="infoRangoAusencia" style="margin-top:8px; font-size:0.82em; color:#92400e; background:#fef3c7; border-radius:6px; padding:7px 10px; font-weight:600; min-height:28px; line-height:1.5;"></div>
                             </div>
                             <button class="btn-action" style="background-color:var(--danger); width:100%; margin-top:15px;" onclick="enviarAusencia()">Marcar Ausencia</button>
                             </div>
@@ -2361,7 +2372,7 @@
     <script src="js/qr-socios.js?v=2"></script>
     <script src="js/socios.js?v=45"></script>
     <script src="js/puntos.js?v=32"></script>
-    <script src="js/anticipos.js?v=62"></script>
+    <script src="js/anticipos.js?v=63"></script>
     <script src="js/desglose-anticipos.js?v=39"></script>
     <script src="js/meses-anteriores.js?v=33"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
@@ -2370,7 +2381,7 @@
     <script src="js/canje.js?v=32"></script>
     <script src="js/notas.js?v=34"></script>
     <script src="js/reports.js?v=44"></script>
-    <script src="js/help.js?v=43"></script>
+    <script src="js/help.js?v=44"></script>
     <script src="js/auditoria.js?v=34"></script>
     <script src="js/carpetas.js?v=46"></script>
     <script src="js/materiales.js?v=32"></script>

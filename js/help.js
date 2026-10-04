@@ -91,8 +91,13 @@ const BASE_CONOCIMIENTO = [
 
     { id:'a2', cat:'anticipos', titulo:'¿Cómo registro una ausencia?', tags:['ausencia','falta','descuento','planta','inasistencia'],
       resp:'Las ausencias aplican <strong>solo a socios Planta</strong>. Cada ausencia descuenta el valor del punto de esa noche específica del cálculo del socio.',
-      pasos:['Selecciona un socio con contrato Planta (aparece la sección "Reportar Ausencia")','Selecciona el motivo: Enfermedad, Permiso, Falta injustificada u Otro','Indica la fecha de la ausencia','Presiona "Reportar Ausencia"'],
+      pasos:['Selecciona un socio con contrato Planta (aparece la sección "Reportar Ausencia")','Selecciona el motivo: Enfermedad, Permiso, Falta injustificada u Otro','Indica la fecha de la ausencia','Si son varios días seguidos, marca <strong>"📆 Son varios días seguidos"</strong> e indica hasta cuándo','Presiona "Marcar Ausencia"'],
       nota:'Los socios Part-Time NO tienen ausencias — su cálculo se basa en los días marcados en el calendario.' },
+
+    { id:'a2b', cat:'anticipos', titulo:'¿Cómo marco una ausencia de varios días (una licencia, por ejemplo)?', tags:['ausencia','varios','días','rango','licencia','médica','larga','desde','hasta','seguidos','periodo','vacaciones'],
+      resp:'Marca la casilla <strong>"📆 Son varios días seguidos"</strong> debajo de la fecha, pon el <strong>primer</strong> y el <strong>último</strong> día, y la app registra <strong>una ausencia por cada día</strong> del rango. Esos días el socio no percibe ingresos.',
+      pasos:['Entra a Anticipos y Ausencias y selecciona el socio','En "Reportar Ausencia" pon la fecha del primer día ausente','Marca "📆 Son varios días seguidos"','Pon la fecha del último día (ej. del 15 de septiembre al 3 de octubre)','Elige el motivo (Licencia Médica, Permiso…)','Revisa el recuadro: te dice cuántos días son y cuánto deja de percibir','Presiona "Marcar Ausencia" y confirma'],
+      nota:'Antes de guardar, el recuadro te muestra todo: cuántos días son, <strong>cuánto deja de percibir en este período</strong>, cuántos días caen en <strong>otro período</strong> (se guardan igual y descuentan cuando llegue ese período) y cuántos <strong>ya estaban marcados</strong> — esos no se repiten.<br><br>Si el socio es <strong>Part-Time</strong>, solo le bajan el alcance los días que tiene asignados en su calendario; los demás se marcan igual pero no le restan nada.<br><br>El <strong>Término de Contrato</strong> usa esta misma función: enciende el rango solo y lo lleva hasta el cierre del período.' },
 
     { id:'a3', cat:'anticipos', titulo:'¿Cómo edito o elimino un anticipo?', tags:['eliminar','borrar','anticipo','error','corregir','editar','modificar'],
       resp:'En la tabla de historial del socio puedes <strong>editar</strong> (botón ✏️) o <strong>eliminar</strong> (mantén presionado 1 segundo) cualquier anticipo.',

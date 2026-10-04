@@ -232,6 +232,33 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-04 — Ausencias de varios días seguidos (SW v157)
+
+Una licencia del **15 de septiembre al 3 de octubre** se marcaba día por día: 19 veces el mismo formulario. El rango ya existía, pero **solo para Término de Contrato**; ahora sirve para cualquier motivo.
+
+**Cómo se usa:** en *Anticipos y Ausencias → Reportar Ausencia*, debajo de la fecha hay una casilla **«📆 Son varios días seguidos»**. Al marcarla aparece el campo **Hasta**, y se registra **una ausencia por cada día del rango** — esos días el socio no percibe ingresos, que es como la app ya hacía el descuento: los días con ausencia quedan fuera del alcance.
+
+**Antes de guardar, el recuadro dice todo lo que hay que saber:**
+
+- cuántos días son y entre qué fechas;
+- **cuánto deja de percibir** en este período (suma de los valores de esos días × sus puntos);
+- cuántos días **caen en otro período** — se guardan igual y descuentan cuando llegue ese período, no se pierden ni se esconden;
+- cuántos **ya estaban marcados** — esos no se repiten, para no ensuciar el historial ni el borrado.
+
+Y al confirmar vuelve a mostrarlo en el diálogo, con el nombre del socio y el motivo.
+
+**Part-Time:** solo le bajan el alcance los días que tiene asignados en su calendario. El resumen lo aclara («solo cuentan sus días asignados») y los demás días se marcan igual, sin restarle nada.
+
+**Término de Contrato sigue igual:** enciende el rango solo, lo lleva hasta el cierre del período y el panel se pone rojo con su rótulo de «Congelamiento de Ingresos». Es el mismo panel, que cambia de cara según el motivo.
+
+**Redes:** un rango al revés avisa y no guarda; uno de más de 200 días se frena antes de escribir nada. El rango de varios días queda registrado en la auditoría con sus fechas y su cuenta.
+
+**Verificación:** 44 comprobaciones — el caso exacto del 15/09 al 03/10 con sus 19 días y sus $380.000; que mande una ausencia por día, sin saltarse ninguna fecha y con el motivo en el detalle; que un solo día siga funcionando como antes, sin preguntar; que Término de Contrato conserve su comportamiento y su color; el reparto entre períodos; los días ya marcados que no se repiten; el Part-Time contando solo sus días; y los dos rangos imposibles. Más contraste medido en los tres temas: los 4 textos del panel sobre 4.5:1.
+
+**Nota aparte:** midiendo quedaron a la vista dos contrastes flojos **que ya existían** y no toqué, porque son estilos de toda la app: la etiqueta «Fecha Ausencia» (3,30:1) y el botón rojo «Marcar Ausencia» (3,82:1).
+
+**Archivos:** `js/anticipos.js`, `js/help.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-10-04 — Documentación: quién tiene papeles cargados y a quién le falta (SW v156)
 
 La pestaña **Documentación → Por socio** mostraba 33 nombres iguales. Para saber si alguien tenía su contrato había que entrar socio por socio: 33 toques para una pregunta que se responde de un vistazo.

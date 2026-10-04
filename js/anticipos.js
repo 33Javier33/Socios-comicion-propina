@@ -1043,19 +1043,116 @@ function obtenerDiasRango(fechaDesde, fechaHasta) {
     return dias;
 }
 
-// Actualiza el resumen de días congelados cuando cambian las fechas de rango
-function actualizarInfoTerminoContrato() {
+// ── Ausencia de varios días seguidos ────────────────────────
+// Una licencia del 15 de septiembre al 3 de octubre se marcaba día por día.
+// El rango ya existía, pero solo para Término de Contrato; ahora cualquier
+// motivo puede abarcar varios días. Lo que se guarda es lo mismo de siempre:
+// UNA ausencia por día. Esos días quedan fuera del alcance del socio, que es
+// como la app hace que no perciba ingresos.
+const AUS_MAX_DIAS = 200;   // red contra un año tecleado por error
+
+function ausToggleRango() {
+    const on = !!document.getElementById('ausVariosDias')?.checked;
+    const cont = document.getElementById('rangoAusenciaContainer');
+    const hasta = document.getElementById('fechaHastaAusencia');
+    if (cont) cont.style.display = on ? 'block' : 'none';
+    // Al encender, el «hasta» parte en el mismo día de inicio: así el rango
+    // nunca nace inválido y la cuenta de abajo tiene algo que mostrar.
+    if (on && hasta && !hasta.value) hasta.value = document.getElementById('fechaAusencia')?.value || '';
+    ausPintarPanel();
+    ausActualizarInfo();
+}
+
+// El panel es uno solo; cambia de cara según el motivo.
+function ausPintarPanel() {
+    const esTermino = (document.getElementById('motivoAusencia')?.value || '').trim() === 'Término de Contrato';
+    const cont   = document.getElementById('rangoAusenciaContainer');
+    const tit    = document.getElementById('rangoAusenciaTitulo');
+    const baja   = document.getElementById('rangoAusenciaBajada');
+    const lab    = document.getElementById('rangoAusenciaLabel');
+    const hasta  = document.getElementById('fechaHastaAusencia');
+    const info   = document.getElementById('infoRangoAusencia');
+    if (!cont) return;
+    const c = esTermino
+        ? { bg:'#fef2f2', bd:'#fca5a5', tx:'#991b1b', tit:'#dc2626', infoBg:'#fee2e2',
+            titulo:'🔴 Congelamiento de Ingresos',
+            bajada:'Los ingresos del socio quedan congelados desde la fecha de inicio hasta la de cierre. Se registra una ausencia por cada día del rango.',
+            label:'Fecha Hasta (cierre)' }
+        : { bg:'#fffbeb', bd:'#fcd34d', tx:'#92400e', tit:'#92400e', infoBg:'#fef3c7',
+            titulo:'📆 Varios días seguidos',
+            bajada:'Se registra una ausencia por cada día del rango: esos días el socio no percibe ingresos.',
+            label:'Hasta (último día ausente)' };
+    cont.style.background = c.bg; cont.style.borderColor = c.bd;
+    if (tit)  { tit.style.color = c.tit; tit.innerText = c.titulo; }
+    if (baja) baja.innerText = c.bajada;
+    if (lab)  { lab.style.color = c.tx; lab.innerText = c.label; }
+    if (hasta) hasta.style.borderColor = c.bd;
+    if (info) { info.style.color = c.tx; info.style.background = c.infoBg; }
+}
+
+// Los días del rango, repartidos entre los que pesan en ESTE período y los
+// que no. Un día fuera del período igual se guarda: descuenta cuando se abra
+// el período al que pertenece.
+function ausDesgloseRango(desde, hasta) {
+    const dias = obtenerDiasRango(desde, hasta);
+    const id = document.getElementById('gestionSocioId')?.value;
+    const socio = (cacheSocios || []).find(s => String(s.id) === String(id));
+    const mapa = globalMapaPuntosDia || {};
+    // Al Part-Time solo le pesan los días que tiene asignados.
+    const diasPT = (socio && socio.contrato === 'Part-Time') ? new Set(globalDiasPT[id] || []) : null;
+    const enPeriodo = [], fuera = [], yaMarcados = [];
+    let sumaValor = 0;
+    dias.forEach(d => {
+        if (globalFechasAusenciaSocioActual && globalFechasAusenciaSocioActual.has(d)) { yaMarcados.push(d); return; }
+        if (!(d in mapa)) { fuera.push(d); return; }
+        enPeriodo.push(d);
+        if (diasPT && !diasPT.has(d)) return;         // no es día suyo: no resta nada
+        const v = mapa[d];
+        if (v !== null && v !== undefined) sumaValor += v;
+    });
+    const puntos = socio ? (parseFloat(socio.puntos) || 0)
+                         : (parseFloat(document.getElementById('gestionSocioPuntos')?.value) || 0);
+    return { dias, enPeriodo, fuera, yaMarcados, esPT: !!diasPT,
+             // El impacto real no es la suma de los montos por día sino la
+             // baja del alcance: suma de valores × puntos, redondeada al final.
+             dejaDePercibir: Math.round(sumaValor * puntos) };
+}
+
+// Actualiza el resumen del rango cuando cambian las fechas
+function ausActualizarInfo() {
     const fechaDesde = document.getElementById('fechaAusencia')?.value;
     const fechaHasta = document.getElementById('fechaHastaAusencia')?.value;
     const diasInfo = document.getElementById('infoRangoAusencia');
     if (!diasInfo) return;
+    if (!document.getElementById('ausVariosDias')?.checked) { diasInfo.innerText = ''; return; }
     if (!fechaDesde || !fechaHasta) { diasInfo.innerText = ''; return; }
-    if (fechaHasta < fechaDesde) { diasInfo.innerText = '⚠️ La fecha fin debe ser igual o posterior a la fecha inicio.'; return; }
-    const diasRango = obtenerDiasRango(fechaDesde, fechaHasta);
-    const diasEnPeriodo = diasRango.filter(d => globalMapaPuntosDia && d in globalMapaPuntosDia);
+    if (fechaHasta < fechaDesde) { diasInfo.innerText = '⚠️ La fecha de término debe ser igual o posterior a la de inicio.'; return; }
     const fmt = f => { const p = f.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
-    diasInfo.innerText = `⚠️ ${diasEnPeriodo.length} día${diasEnPeriodo.length !== 1 ? 's' : ''} congelado${diasEnPeriodo.length !== 1 ? 's' : ''} (${fmt(fechaDesde)} al ${fmt(fechaHasta)})`;
+    const g = ausDesgloseRango(fechaDesde, fechaHasta);
+    if (g.dias.length > AUS_MAX_DIAS) {
+        diasInfo.innerText = `⚠️ Son ${g.dias.length} días. Revisa las fechas: el máximo es ${AUS_MAX_DIAS}.`;
+        return;
+    }
+    const porMarcar = g.enPeriodo.length + g.fuera.length;
+    const lineas = [`📆 ${g.dias.length} día${g.dias.length !== 1 ? 's' : ''} · del ${fmt(fechaDesde)} al ${fmt(fechaHasta)}`];
+    if (g.dejaDePercibir > 0) {
+        lineas.push(`💸 Deja de percibir ≈ ${formatearMoneda(g.dejaDePercibir)} de este período`
+            + (g.esPT ? ' (solo cuentan sus días asignados)' : ''));
+    } else if (g.enPeriodo.length) {
+        lineas.push(g.esPT ? 'ℹ️ Ninguno de esos días es día asignado suyo: no le baja el alcance.'
+                           : 'ℹ️ Esos días todavía no tienen recaudación cargada.');
+    }
+    if (g.fuera.length) {
+        lineas.push(`🗓 ${g.fuera.length} día${g.fuera.length !== 1 ? 's' : ''} queda${g.fuera.length !== 1 ? 'n' : ''} fuera de este período — se guarda${g.fuera.length !== 1 ? 'n' : ''} igual y descuenta${g.fuera.length !== 1 ? 'n' : ''} cuando toque ese período.`);
+    }
+    if (g.yaMarcados.length) {
+        lineas.push(`✔️ ${g.yaMarcados.length} día${g.yaMarcados.length !== 1 ? 's' : ''} ya estaba${g.yaMarcados.length !== 1 ? 'n' : ''} marcado${g.yaMarcados.length !== 1 ? 's' : ''}: no se repite${g.yaMarcados.length !== 1 ? 'n' : ''}.`);
+    }
+    if (!porMarcar) lineas.push('No queda ningún día nuevo por marcar.');
+    diasInfo.innerHTML = lineas.map(l => _docEscSeguro(l)).join('<br>');
 }
+// Mismo escape de siempre, sin depender de que documentacion.js esté cargado.
+function _docEscSeguro(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 
 async function enviarAusencia() {
     const id = document.getElementById('gestionSocioId').value;
@@ -1072,39 +1169,64 @@ async function enviarAusencia() {
     const esTermino = motivo === 'Término de Contrato';
     const fechaHastaInput = document.getElementById('fechaHastaAusencia');
     const fechaHasta = fechaHastaInput ? fechaHastaInput.value : '';
+    // El rango vale para cualquier motivo, no solo para el término de contrato.
+    const esRango = !!document.getElementById('ausVariosDias')?.checked && !!fechaHasta;
 
     const socioActivo = cacheSocios.find(s => s.id === id);
     const puntosSocio = socioActivo ? (parseFloat(socioActivo.puntos) || 0) : (parseFloat(document.getElementById('gestionSocioPuntos')?.value) || 0);
+    const detalleTxt = esTermino ? 'Término de Contrato' : `Ausencia: ${motivo}`;
+    const unDia = dia => {
+        const puntosDia = globalMapaPuntosDia[dia];
+        const montoAusencia = (puntosDia !== null && puntosDia !== undefined) ? Math.round(puntosDia * puntosSocio) : 0;
+        return { id, nombre, fecha: dia, tipo: 'ausencia', monto: montoAusencia, detalle: detalleTxt };
+    };
 
     let detalleExtras = [];
 
-    if (esTermino && fechaHasta) {
-        if (fechaHasta < fecha) return showToast('La fecha fin debe ser posterior al inicio', 'error');
-        const diasRango = obtenerDiasRango(fecha, fechaHasta);
-        detalleExtras = diasRango.map(dia => {
-            const puntosDia = globalMapaPuntosDia[dia];
-            const montoAusencia = (puntosDia !== null && puntosDia !== undefined) ? Math.round(puntosDia * puntosSocio) : 0;
-            return { id, nombre, fecha: dia, tipo: 'ausencia', monto: montoAusencia, detalle: 'Término de Contrato' };
-        });
+    if (esRango) {
+        if (fechaHasta < fecha) return showToast('La fecha de término debe ser igual o posterior a la de inicio', 'error');
+        const g = ausDesgloseRango(fecha, fechaHasta);
+        if (g.dias.length > AUS_MAX_DIAS) return showToast(`Son ${g.dias.length} días. Revisa las fechas: el máximo es ${AUS_MAX_DIAS}.`, 'error');
+        // Los días que ya tenían ausencia no se vuelven a escribir: duplicarlos
+        // no cambia el alcance pero ensucia el historial y el borrado.
+        const porMarcar = g.enPeriodo.concat(g.fuera);
+        if (!porMarcar.length) return showToast('Esos días ya estaban marcados', 'error');
+        const fmt = f => { const p = f.split('-'); return `${p[2]}/${p[1]}`; };
+        const aviso = `${nombre}\n${detalleTxt}\n\n`
+            + `${porMarcar.length} día${porMarcar.length !== 1 ? 's' : ''} del ${fmt(fecha)} al ${fmt(fechaHasta)}`
+            + (g.yaMarcados.length ? `\n(${g.yaMarcados.length} ya estaba${g.yaMarcados.length !== 1 ? 'n' : ''} marcado${g.yaMarcados.length !== 1 ? 's' : ''} y se omite${g.yaMarcados.length !== 1 ? 'n' : ''})` : '')
+            + (g.dejaDePercibir > 0 ? `\n\nDeja de percibir ≈ ${formatearMoneda(g.dejaDePercibir)} de este período.` : '')
+            + (g.fuera.length ? `\n${g.fuera.length} día${g.fuera.length !== 1 ? 's' : ''} cae${g.fuera.length !== 1 ? 'n' : ''} en otro período y descuenta${g.fuera.length !== 1 ? 'n' : ''} allá.` : '')
+            + `\n\n¿Confirmar?`;
+        if (!confirm(aviso)) return;
+        detalleExtras = porMarcar.map(unDia);
     } else {
-        const puntosDia = globalMapaPuntosDia[fecha];
-        const montoAusencia = (puntosDia !== null && puntosDia !== undefined) ? Math.round(puntosDia * puntosSocio) : 0;
-        detalleExtras = [{ id, nombre, fecha, tipo: 'ausencia', monto: montoAusencia, detalle: `Ausencia: ${motivo}` }];
+        detalleExtras = [unDia(fecha)];
     }
 
     toggleLoader(true);
     try {
         await callApiSocios('registrarBatchExtras', { detalleExtras });
+        const n = detalleExtras.length;
         const msg = esTermino
-            ? `✅ Término de contrato: ${detalleExtras.length} día${detalleExtras.length !== 1 ? 's' : ''} congelado${detalleExtras.length !== 1 ? 's' : ''}`
+            ? `✅ Término de contrato: ${n} día${n !== 1 ? 's' : ''} congelado${n !== 1 ? 's' : ''}`
+            : esRango ? `✅ ${n} día${n !== 1 ? 's' : ''} de ausencia registrado${n !== 1 ? 's' : ''}`
             : '✅ Ausencia registrada correctamente';
         showToast(msg, 'success');
+        if (typeof sbAuditLog === 'function' && esRango) sbAuditLog('Reportar Ausencia', {
+            detalle: `${detalleTxt} · ${n} día${n !== 1 ? 's' : ''} (${fecha} al ${fechaHasta})`,
+            idAfectado: id, datos: { socio_id: id, nombre, desde: fecha, hasta: fechaHasta, dias: n, motivo: detalleTxt }
+        });
         campoMotivo.value = '';
         document.getElementById('fechaAusencia').value = new Date().toISOString().split('T')[0];
         document.querySelectorAll('.btn-motivo').forEach(b => b.classList.remove('activo'));
         if (fechaHastaInput) fechaHastaInput.value = '';
+        const chk = document.getElementById('ausVariosDias');
+        if (chk) chk.checked = false;
         const rangoContainer = document.getElementById('rangoAusenciaContainer');
         if (rangoContainer) rangoContainer.style.display = 'none';
+        const info = document.getElementById('infoRangoAusencia');
+        if (info) info.innerHTML = '';
         cargarHistorialSocio(id);
     } catch(e) { showToast('Error al registrar ausencia', 'error'); } finally { toggleLoader(false); }
 }
@@ -1118,18 +1240,20 @@ function seleccionarMotivo(motivo) {
         document.getElementById('motivoAusencia').value = '';
         document.getElementById('motivoAusencia').focus();
     }
+    // El Término de Contrato enciende el rango solo y lo lleva hasta el cierre
+    // del período. Los demás motivos respetan lo que la persona haya marcado:
+    // elegir «Licencia Médica» no tiene por qué apagar un rango ya puesto.
     const esTermino = motivo === 'Término de Contrato';
-    const rangoContainer = document.getElementById('rangoAusenciaContainer');
-    if (rangoContainer) {
-        rangoContainer.style.display = esTermino ? 'block' : 'none';
-        if (esTermino) {
-            const fechaHastaInput = document.getElementById('fechaHastaAusencia');
-            if (fechaHastaInput) {
-                fechaHastaInput.value = obtenerFinPeriodo();
-                actualizarInfoTerminoContrato();
-            }
-        }
+    const chk = document.getElementById('ausVariosDias');
+    if (esTermino && chk) {
+        chk.checked = true;
+        const fechaHastaInput = document.getElementById('fechaHastaAusencia');
+        if (fechaHastaInput) fechaHastaInput.value = obtenerFinPeriodo();
     }
+    const rangoContainer = document.getElementById('rangoAusenciaContainer');
+    if (rangoContainer) rangoContainer.style.display = (chk && chk.checked) ? 'block' : 'none';
+    ausPintarPanel();
+    ausActualizarInfo();
 }
 
 function mostrarModalBorrar(item) {
