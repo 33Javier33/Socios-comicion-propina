@@ -6,6 +6,15 @@
 let _docTab = 'generales';
 let _docSocioSel = null;
 
+// ── Quién tiene documentación cargada ───────────────────────
+// La lista de socios mostraba 33 nombres iguales y no había forma de saber
+// quién tenía papeles y quién no sin entrar uno por uno. El conteo se trae
+// de una sola consulta —no 33— y se guarda acá mientras dure la pestaña.
+//   _docConteo: socio_id → { total, delSocio, enviados, ultima }
+let _docConteo = null;      // null = todavía no se ha contado
+let _docConteoError = false;
+let _docFiltro = 'todos';   // todos | con | sin
+
 function doc_init() {
     doc_setTab(_docTab);
 }
@@ -23,7 +32,56 @@ function doc_setTab(tab) {
     document.getElementById('doc-panel-generales').style.display = (tab === 'generales') ? 'block' : 'none';
     document.getElementById('doc-panel-socios').style.display = (tab === 'socios') ? 'block' : 'none';
     if (tab === 'generales') doc_cargarGenerales();
-    else doc_renderBusquedaSocios();
+    else { doc_renderBusquedaSocios(); doc_cargarConteo(); }
+}
+
+// Una sola consulta para los 33 socios. Se piden solo las tres columnas que
+// hacen falta: con 500 documentos, traerlos enteros sería mover megas para
+// contar filas.
+async function doc_cargarConteo(forzar) {
+    if (_docConteo && !forzar) return _docConteo;
+    try {
+        const { data, error } = await dbSoc.from('documentos')
+            .select('socio_id, subido_por, created_at').eq('categoria', 'socio');
+        if (error) throw error;
+        const m = {};
+        (data || []).forEach(d => {
+            const k = String(d.socio_id || '');
+            if (!k) return;
+            if (!m[k]) m[k] = { total: 0, delSocio: 0, enviados: 0, ultima: null };
+            m[k].total++;
+            // El socio sube desde su app con subido_por 'socio'; cualquier otra
+            // cosa es administración mandándole un archivo a él.
+            if (String(d.subido_por || 'socio') === 'socio') m[k].delSocio++; else m[k].enviados++;
+            if (!m[k].ultima || d.created_at > m[k].ultima) m[k].ultima = d.created_at;
+        });
+        _docConteo = m;
+    } catch (e) {
+        _docConteo = {};   // {} = se consultó y no se pudo / no hay nada
+        _docConteoError = true;
+    }
+    if (_docTab === 'socios' && !_docSocioSel) doc_renderBusquedaSocios();
+    return _docConteo;
+}
+
+function doc_filtrar(f) { _docFiltro = f; doc_renderBusquedaSocios(); }
+
+// La marca que va al lado de cada nombre.
+function _docMarcaSocio(c) {
+    if (!c || !c.total) {
+        // #475569 y no el #94a3b8 de siempre: sobre el gris del chip ese tono
+        // queda en 2,4:1 y «Sin documentos» es justo el dato que hay que leer.
+        return `<span style="background:#f1f5f9;border:1px solid #e2e8f0;color:#475569;border-radius:20px;
+            padding:2px 9px;font-size:0.72em;font-weight:700;white-space:nowrap;flex-shrink:0;">Sin documentos</span>`;
+    }
+    const det = [];
+    if (c.delSocio) det.push(c.delSocio + ' del socio');
+    if (c.enviados) det.push(c.enviados + ' enviado' + (c.enviados > 1 ? 's' : ''));
+    return `<span style="text-align:right;flex-shrink:0;">
+        <span style="background:#dcfce7;border:1px solid #86efac;color:#15803d;border-radius:20px;
+            padding:2px 9px;font-size:0.72em;font-weight:800;white-space:nowrap;">📄 ${c.total}</span>
+        <span style="display:block;font-size:0.66em;color:#64748b;font-weight:500;margin-top:2px;white-space:nowrap;">
+            ${det.join(' · ')}${c.ultima ? '<br>último ' + _docFechaVis(c.ultima) : ''}</span></span>`;
 }
 
 function _docEsc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -161,18 +219,65 @@ async function doc_subirGeneral(input) {
 function doc_renderBusquedaSocios() {
     const term = (document.getElementById('doc-socio-buscar')?.value || '').toLowerCase().trim();
     const cont = document.getElementById('doc-socios-lista');
+    const res = document.getElementById('doc-socios-resumen');
     if (!cont) return;
-    if (_docSocioSel) { doc_verSocio(_docSocioSel); return; }
-    let socios = (cacheSocios || []);
+    if (_docSocioSel) { if (res) res.innerHTML = ''; doc_verSocio(_docSocioSel); return; }
+
+    const todos = (cacheSocios || []);
+    const cuenta = id => (_docConteo || {})[String(id)] || null;
+    const nCon = todos.filter(s => cuenta(s.id)).length;
+    const nSin = todos.length - nCon;
+    const nSubio = todos.filter(s => { const c = cuenta(s.id); return c && c.delSocio; }).length;
+
+    // ── El resumen y los filtros ──
+    if (res) {
+        if (_docConteo === null) {
+            res.innerHTML = '<div style="text-align:center;padding:10px;color:#94a3b8;font-size:0.8em;">⏳ Revisando quién tiene documentos…</div>';
+        } else if (_docConteoError) {
+            res.innerHTML = '<div style="text-align:center;padding:10px;color:#dc2626;font-size:0.8em;">No se pudo revisar quién tiene documentos.</div>';
+        } else {
+            const chip = (f, txt, n) => {
+                const on = _docFiltro === f;
+                return `<button onclick="doc_filtrar('${f}')" style="flex:1;padding:6px 4px;border-radius:8px;cursor:pointer;
+                    border:1px solid ${on ? '#2563eb' : '#e2e8f0'};background:${on ? '#2563eb' : 'white'};
+                    color:${on ? 'white' : '#475569'};font-size:0.74em;font-weight:800;white-space:nowrap;">${txt} ${n}</button>`;
+            };
+            res.innerHTML = `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+                <div style="font-size:0.84em;font-weight:800;color:#0f172a;">
+                    📄 ${nCon} de ${todos.length} socio${todos.length === 1 ? '' : 's'} con documentación</div>
+                <div style="font-size:0.72em;color:#64748b;margin-top:3px;line-height:1.45;">
+                    ${nSubio} la subió el socio desde su app · ${nSin} todavía no tiene nada.</div>
+                <div style="display:flex;gap:6px;margin-top:9px;">
+                    ${chip('todos', 'Todos', todos.length)}${chip('con', 'Con', nCon)}${chip('sin', 'Sin', nSin)}</div>
+            </div>`;
+        }
+    }
+
+    // ── La lista ──
+    let socios = todos;
     if (term) socios = socios.filter(s => ((s.nombre || '') + ' ' + (s.apellido || '')).toLowerCase().includes(term));
-    socios = socios.slice().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '')).slice(0, 40);
-    if (!socios.length) { cont.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.85em;">Sin socios.</div>'; return; }
-    cont.innerHTML = socios.map(s =>
-        `<button onclick="doc_verSocio('${s.id}')" style="width:100%;text-align:left;background:white;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;margin-bottom:6px;cursor:pointer;font-size:0.88em;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:9px;">
+    if (_docConteo !== null) {
+        if (_docFiltro === 'con') socios = socios.filter(s => cuenta(s.id));
+        else if (_docFiltro === 'sin') socios = socios.filter(s => !cuenta(s.id));
+    }
+    socios = socios.slice().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+    const hayMas = socios.length - 40;
+    socios = socios.slice(0, 40);
+    if (!socios.length) {
+        cont.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.85em;">'
+            + (_docFiltro === 'con' ? 'Ningún socio tiene documentos todavía.'
+             : _docFiltro === 'sin' ? 'Todos los socios tienen documentos. 🎉' : 'Sin socios.') + '</div>';
+        return;
+    }
+    cont.innerHTML = socios.map(s => {
+        const c = cuenta(s.id);
+        return `<button onclick="doc_verSocio('${s.id}')" style="width:100%;text-align:left;background:white;border:1px solid ${c ? '#bbf7d0' : '#e2e8f0'};border-radius:9px;padding:10px 12px;margin-bottom:6px;cursor:pointer;font-size:0.88em;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:9px;">
             ${avatarHTML(s.fotoUrl, s.nombre, 32)}
-            <span>${_docEsc(s.nombre)} ${_docEsc(s.apellido)} <span style="font-weight:500;color:#94a3b8;font-size:0.85em;">· ${_docEsc(s.area || '')}</span></span>
-        </button>`
-    ).join('');
+            <span style="flex:1;min-width:0;">${_docEsc(s.nombre)} ${_docEsc(s.apellido)} <span style="font-weight:500;color:#64748b;font-size:0.85em;">· ${_docEsc(s.area || '')}</span></span>
+            ${_docConteo === null ? '' : _docMarcaSocio(c)}
+        </button>`;
+    }).join('')
+    + (hayMas > 0 ? `<div style="text-align:center;padding:8px;color:#94a3b8;font-size:0.76em;">y ${hayMas} más — busca por nombre para encontrarlos</div>` : '');
 }
 
 async function doc_verSocio(socioId) {
@@ -180,6 +285,10 @@ async function doc_verSocio(socioId) {
     const socio = (cacheSocios || []).find(s => s.id === socioId);
     const cont = document.getElementById('doc-socios-lista');
     if (!cont) return;
+    // El resumen de «quién tiene documentos» es de la LISTA. Adentro de un
+    // socio sobra, y dejarlo arriba hacía parecer que los números eran de él.
+    const res = document.getElementById('doc-socios-resumen');
+    if (res) res.innerHTML = '';
     cont.innerHTML = `<button onclick="doc_volverSocios()" style="background:none;border:1px solid #cbd5e1;color:#64748b;border-radius:8px;padding:5px 12px;font-size:0.8em;font-weight:700;cursor:pointer;margin-bottom:10px;">← Volver</button>
         <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;">${socio ? avatarHTML(socio.fotoUrl, socio.nombre, 36) : ''}<div style="font-weight:800;font-size:0.95em;color:#0f172a;">${socio ? _docEsc(socio.nombre + ' ' + socio.apellido) : 'Socio'}</div></div>
         <label style="display:flex;align-items:center;justify-content:center;gap:7px;background:#2563eb;color:white;border-radius:9px;padding:9px 12px;font-size:0.82em;font-weight:700;cursor:pointer;margin-bottom:12px;">
@@ -224,6 +333,7 @@ async function doc_subirSocio(input, socioId) {
         });
         if (typeof sbAuditLog === 'function') sbAuditLog('Enviar Documento', { detalle: 'Documento a socio ' + (socioNombre || socioId) + ': ' + file.name, datos: { socioId, nombre: file.name } });
         showToast('Documento enviado al socio ✅', 'success');
+        doc_cargarConteo(true);   // el resumen de quién tiene qué cambió
         doc_verSocio(socioId);
     } catch(e) { showToast('No se pudo enviar: ' + _docErrorSubida(e), 'error'); }
     finally { toggleLoader(false); }
@@ -271,7 +381,7 @@ async function doc_borrar(id, path) {
         });
         showToast('Documento eliminado', 'success');
         if (_docTab === 'generales') doc_cargarGenerales();
-        else if (_docSocioSel) doc_verSocio(_docSocioSel);
+        else { doc_cargarConteo(true); if (_docSocioSel) doc_verSocio(_docSocioSel); }
     } catch(e) { showToast('No se pudo eliminar', 'error'); }
     finally { toggleLoader(false); }
 }

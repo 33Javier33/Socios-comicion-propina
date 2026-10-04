@@ -640,8 +640,13 @@ const BASE_CONOCIMIENTO = [
 
     { id:'doc3', cat:'documentacion', titulo:'¿Cómo veo el contrato u otros documentos que sube un socio?', tags:['contrato','socio','documento','ver','privado','buscar'],
       resp:'En Documentación → pestaña <strong>Por socio</strong>, buscas al socio por su nombre y se listan los archivos que él haya subido desde su app.',
-      pasos:['Entra a Documentación → pestaña Por socio','Escribe el nombre del socio en el buscador','Toca el socio para ver sus documentos','Abre cada archivo para revisarlo o descargarlo'],
+      pasos:['Entra a Documentación → pestaña Por socio','Arriba verás cuántos socios tienen documentación y cuántos no','Escribe el nombre del socio en el buscador, o usa los filtros Todos / Con / Sin','Toca el socio para ver sus documentos','Abre cada archivo para revisarlo o descargarlo'],
       nota:'Si un socio no tiene documentos, es porque aún no ha subido ninguno desde su app (Perfil → Mis Documentos).' },
+
+    { id:'doc4', cat:'documentacion', titulo:'¿Cómo sé QUIÉN tiene documentación cargada y a quién le falta?', tags:['quién','quien','tiene','falta','documentos','documentación','pendiente','contrato','revisar','control'],
+      resp:'En Documentación → pestaña <strong>Por socio</strong>, arriba de la lista sale el resumen: <strong>cuántos de cuántos socios tienen documentación</strong>, cuántos la subieron ellos mismos y a cuántos les falta. Y cada socio de la lista lleva su marca al lado.',
+      pasos:['Entra a Documentación → pestaña Por socio','Lee el resumen de arriba: "X de Y socios con documentación"','Usa el filtro "Sin" para ver de una sola vez a quién le falta todo','Usa "Con" para ver solo a los que ya tienen','En cada socio, la marca verde 📄 dice cuántos archivos tiene, cuántos subió él, cuántos le enviaste tú, y de cuándo es el último'],
+      nota:'La marca distingue dos cosas que no son lo mismo: lo que <strong>subió el socio</strong> desde su app (su contrato, sus papeles) y lo que <strong>le enviaste tú</strong> desde acá. Un socio puede figurar "con documentos" solo porque le mandaste algo, sin haber subido nada suyo — por eso el resumen dice aparte cuántos la subieron ellos.' },
 
     // ═══════════════════════════════════════════════════════
     // CERTIFICADOS

@@ -232,6 +232,28 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-04 — Documentación: quién tiene papeles cargados y a quién le falta (SW v156)
+
+La pestaña **Documentación → Por socio** mostraba 33 nombres iguales. Para saber si alguien tenía su contrato había que entrar socio por socio: 33 toques para una pregunta que se responde de un vistazo.
+
+**Ahora, arriba de la lista:** «📄 *X* de *Y* socios con documentación», cuántos la subieron ellos mismos desde su app y a cuántos no les llegó nada. Debajo, tres filtros — **Todos · Con · Sin** — con su cuenta cada uno. El filtro **«Sin»** responde directo la pregunta de a quién hay que ir a pedirle los papeles.
+
+**Y en cada socio de la lista**, una marca al lado del nombre: verde **📄 3** con el detalle de **cuántos subió el socio** y **cuántos le enviaste tú**, más la fecha del último; o un **«Sin documentos»** gris si no hay nada.
+
+**La distinción importa:** un socio puede figurar «con documentos» solo porque administración le mandó algo, sin haber subido nada suyo. Por eso el resumen cuenta aparte los que la subieron ellos, y la marca separa «del socio» de «enviados».
+
+**Una sola consulta para los 33**, pidiendo tres columnas (`socio_id, subido_por, created_at`) en vez de los documentos enteros: con 500 archivos, traerlos completos sería mover megas para contar filas. Se refresca sola al enviar o eliminar un documento.
+
+**Si la consulta falla**, lo dice en vez de mentir con ceros, y la lista de socios sigue ahí para entrar igual.
+
+**De paso, tres grises ilegibles** que ya estaban ahí: el área del socio (`· Mesas`) estaba en 2,56:1 sobre blanco. Los tres pasaron a tonos que el tema oscuro ya sabe dar vuelta.
+
+**Ayuda:** sección nueva **«¿Cómo sé QUIÉN tiene documentación cargada y a quién le falta?»** y actualizada la de «¿Cómo veo el contrato…?».
+
+**Verificación:** 23 comprobaciones — el resumen con sus tres números; que sea una sola consulta y solo con las columnas necesarias; la marca de cada socio distinguiendo subidos de enviados y la fecha del último; los tres filtros; filtro y búsqueda combinados; que el resumen se esconda al entrar a un socio y vuelva al salir; y que un error de consulta no rompa la pantalla. Más contraste medido en los tres temas: los 13 textos de la sección sobre 4.5:1.
+
+**Archivos:** `js/documentacion.js`, `js/help.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-10-03 — Horarios: «Pedir vacaciones» junto al cambio de vista (SW horarios v24)
 
 En la app del socio, el botón **🏖️ Pedir vacaciones** iba solo y de ancho completo arriba de todo, y empujaba el calendario —que es a lo que se entra— fuera de la pantalla.
