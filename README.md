@@ -232,6 +232,40 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-05 — Horarios: quién trabaja hoy, con su horario (SW horarios v25)
+
+La pregunta de todos los días —**«¿quién entra hoy y a qué hora?»**— no tenía dónde responderse: había que abrir el calendario socio por socio y armar la lista a mano.
+
+**Apartado nuevo, arriba del todo en Calendario:** 🕐 **Quién trabaja el día**. Abre en **hoy**, y con el selector de fecha (o las flechas ‹ ›, o el botón **Hoy**) se ve **cualquier otro día**.
+
+**Agrupado por horario, no por nombre**, que es como se mira una dotación:
+
+```
+20:30 a 04:30                    6
+   Ana Rojas
+   Carlos Perez
+   …
+16:00 a 00:00                    4
+   …
+```
+
+Dentro de cada turno los nombres van alfabéticos, con su foto. Arriba, el resumen: **cuántos trabajan, cuántos están libres y cuántos quedaron sin turno**; y debajo, qué día es —*Lunes 5 de octubre*— marcando si es **hoy** y si es **feriado**.
+
+**Los que no trabajan van al final, plegados**, y separados por motivo: un **Libre** de ciclo no es lo mismo que un **LXF**, unas **🏖️ Vacaciones** o un **🎂 Cumpleaños**.
+
+**Dos casos que antes se escondían:**
+
+- **Turno sin hora cargada** (el genérico «Trabaja»): sale aparte, al final de los que trabajan, diciendo *«sin hora de entrada cargada»* en vez de aparentar un horario que no existe.
+- **Sin turno asignado**: el socio que no está en ningún grupo y ese día no tiene nada cargado. Antes simplemente no figuraba en ninguna parte.
+
+**Una sola consulta por día** para los 33 socios, no una por cabeza. El turno de cada uno sale del mismo motor que el calendario (`turnoDeSocioEnFecha`), así que la excepción del día manda sobre el ciclo del grupo — exactamente como en el resto de la app.
+
+**Contraste, de paso:** el celeste de los horarios (`#38bdf8`) y los verdes/ámbar de los resúmenes estaban pensados solo para fondo oscuro y en tema claro quedaban entre **1,7:1 y 2,3:1**. Son familias que la app usa en varias pantallas, no solo acá, así que el arreglo alcanza a todas.
+
+**Verificación:** 32 comprobaciones — que abra en hoy y lo diga; el agrupado por horario con su cuenta; que la excepción del día le gane al ciclo; los libres plegados y separados por motivo; el sin-turno y el sin-hora; cambiar de fecha con el selector, las flechas y el botón Hoy; que sea **una sola consulta**; y el día en que no trabaja nadie. Más contraste medido en los tres temas: 25/25 sobre 4.5:1 en cada uno.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-04 — Bóveda parte en 2 puntos: la regla estaba escrita pero no siempre se aplicaba (SW v159)
 
 La regla es la de siempre: **todos parten en 4 puntos** y suman **+2 por año cumplido** hasta el tope de su área. **Bóveda es la única excepción: parte en 2, con tope 10.**

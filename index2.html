@@ -145,7 +145,16 @@
   body.tema-claro [style*="#7f1d1d"]{ background:#fee2e2 !important; }
   body.tema-claro [style*="#3f2d0a"]{ background:#fef3c7 !important; }
   body.tema-claro [style*="color:#7dd3fc"]{ color:#0369a1 !important; }
-  body.tema-claro [style*="color:#fecaca"]{ color:#991b1b !important; }
+  body.tema-claro [style*="color:#fecaca"],
+  body.tema-claro [style*="color:#fca5a5"]{ color:#991b1b !important; }
+  /* El celeste de los horarios y los verdes/ámbar de los resúmenes estaban
+     pensados para fondo oscuro: sobre blanco quedaban entre 1,7:1 y 2,3:1.
+     Son familias que la app usa en varias pantallas, no solo acá. */
+  body.tema-claro [style*="color:#38bdf8"]{ color:#0369a1 !important; }
+  body.tema-claro .text-emerald-300,
+  body.tema-claro .text-emerald-400{ color:#047857 !important; }
+  body.tema-claro .text-amber-300,
+  body.tema-claro .text-amber-400{ color:#92400e !important; }
   body.tema-claro [style*="color:#fcd34d"],
   body.tema-claro [style*="color:#fde68a"],
   body.tema-claro [style*="color:#fbbf24"]{ color:#92400e !important; }
@@ -336,6 +345,31 @@
   <div class="flex-1 overflow-y-auto p-4 pb-24">
     <!-- PANEL: CALENDARIO -->
     <div id="panCalendario" class="sup-panel active">
+
+      <!-- Quién trabaja HOY (o el día que se elija), con su horario.
+           Va primero porque es la pregunta de todos los días: hasta ahora
+           había que abrir socio por socio para armarla a mano. -->
+      <div class="card mb-4" style="overflow:hidden">
+        <div style="padding:11px 13px;">
+          <div class="flex items-center gap-2 mb-2">
+            <span style="font-size:1.05em">🕐</span>
+            <div class="flex-1 min-w-0">
+              <div class="font-bold text-sm">Quién trabaja el día</div>
+              <div id="diaResumen" class="text-[11px] text-slate-400" style="margin-top:1px">…</div>
+            </div>
+            <button onclick="diaHoy()" class="btn-ghost" style="font-size:11px;padding:4px 9px;flex-shrink:0">Hoy</button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="diaMover(-1)" class="btn-ghost" style="padding:5px 10px;flex-shrink:0">‹</button>
+            <input id="diaFecha" type="date" class="fld" style="flex:1;min-width:0;margin:0;padding:6px 8px;font-size:12px;"
+                   onchange="diaRender()">
+            <button onclick="diaMover(1)" class="btn-ghost" style="padding:5px 10px;flex-shrink:0">›</button>
+          </div>
+          <div id="diaEtiqueta" class="text-[11px] text-slate-400 mt-2"></div>
+        </div>
+        <div id="diaLista" style="border-top:1px solid #293449;padding:11px 13px"></div>
+      </div>
+
       <!-- Quién tiene turnos y a quién le faltan, para el mes elegido -->
       <div class="card mb-4" style="overflow:hidden">
         <button onclick="covToggle()" style="width:100%;display:flex;align-items:center;gap:9px;padding:11px 13px;background:none;border:none;cursor:pointer;text-align:left;color:inherit;font-family:inherit;">
@@ -1492,7 +1526,7 @@ function socioMes(delta){ socioViewDate=new Date(socioViewDate.getFullYear(), so
 function socioIrHoy(){ socioViewDate=new Date(); renderSocioApp(); }
 
 // ══════════ App Supervisor ══════════
-function renderSuper(){ supTab('Calendario'); supLlenarSelectSocios(); renderTurnos(); renderGrupos(); renderAsignaciones(); covRender(); }
+function renderSuper(){ supTab('Calendario'); supLlenarSelectSocios(); renderTurnos(); renderGrupos(); renderAsignaciones(); covRender(); diaHoy(); }
 function supTab(pan){
   document.querySelectorAll('#appSuper .tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.pan===pan));
   document.querySelectorAll('#appSuper .sup-panel').forEach(p=>p.classList.remove('active'));
@@ -1500,6 +1534,9 @@ function supTab(pan){
   if(pan==='Accesos') accRender();
   if(pan==='Vacaciones') vacPanelInit();
   if(pan==='Cumple') cumplePanelInit();
+  // Al volver al calendario se refresca el día: puede haber cambiado algo
+  // en Turnos o en Vacaciones mientras tanto.
+  if(pan==='Calendario') diaRender();
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1720,6 +1757,179 @@ function supToggleVista(){
 //
 // Se listan primero los que faltan, que es sobre lo que hay que actuar.
 // ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
+// QUIÉN TRABAJA EL DÍA
+//
+// La pregunta de todos los días —«¿quién entra hoy y a qué hora?»— no
+// tenía dónde responderse: había que abrir el calendario socio por socio
+// y armar la lista a mano.
+//
+// Se agrupa POR TURNO, no por nombre: lo que el supervisor mira es la
+// dotación de cada horario («a las 20:30 entran 6»), y dentro de cada
+// turno los nombres van alfabéticos. Los que no trabajan quedan al final,
+// plegados y separados por motivo: un libre de ciclo no es lo mismo que
+// unas vacaciones ni que un cumpleaños.
+//
+// El turno de cada socio sale del mismo motor que el calendario
+// (turnoDeSocioEnFecha): la excepción del día manda sobre el ciclo del
+// grupo. Las excepciones se traen en UNA consulta para todos.
+// ══════════════════════════════════════════════════════════════════════
+let diaDate = new Date();
+
+function diaMover(delta){
+  const f = document.getElementById('diaFecha');
+  const base = (f && f.value) ? new Date(f.value + 'T12:00:00') : new Date();
+  base.setDate(base.getDate() + delta);
+  diaDate = base;
+  if(f) f.value = fechaISO(base);
+  diaRender();
+}
+function diaHoy(){
+  diaDate = new Date();
+  const f = document.getElementById('diaFecha');
+  if(f) f.value = fechaISO(diaDate);
+  diaRender();
+}
+
+const DIA_SEMANA = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+// En qué canasto va cada socio ese día.
+function _diaClasificar(t){
+  if(t === undefined) return { tipo:'sinturno' };                 // sin grupo ni excepción
+  if(t === null)      return { tipo:'sinturno' };                 // grupo sin ciclo
+  if(t.id === CUMPLE_TURNO) return { tipo:'libre', etq:'🎂 Cumpleaños', orden:3 };
+  if(t.id === 't_vac15' || t.id === 't_vac6' || /vacac/i.test(t.nombre||''))
+    return { tipo:'libre', etq:'🏖️ Vacaciones', orden:2 };
+  if(t.es_libre){
+    const n = String(t.nombre||'').trim();
+    return { tipo:'libre', etq: /^libre$/i.test(n) || !n ? 'Libre' : n, orden: /^libre$/i.test(n)||!n ? 1 : 1.5 };
+  }
+  const ini = (t.hora_inicio||'').substring(0,5), fin = (t.hora_fin||'').substring(0,5);
+  if(ini && fin) return { tipo:'trabaja', ini, fin, clave: ini+'-'+fin };
+  // Turno de trabajo sin horario cargado: trabaja, pero no se sabe a qué hora.
+  return { tipo:'trabaja', ini:'', fin:'', clave:'zz-sinhorario', nombre: String(t.nombre||'Trabaja') };
+}
+
+async function diaRender(){
+  const cont = document.getElementById('diaLista');
+  const res  = document.getElementById('diaResumen');
+  const etq  = document.getElementById('diaEtiqueta');
+  const inp  = document.getElementById('diaFecha');
+  if(!cont) return;
+  if(inp && !inp.value) inp.value = fechaISO(diaDate);
+  const iso = (inp && inp.value) ? inp.value : fechaISO(diaDate);
+  const d = new Date(iso + 'T12:00:00');
+  diaDate = d;
+
+  const hoyISO = fechaISO(new Date());
+  if(etq){
+    const partes = [DIA_SEMANA[d.getDay()] + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()].toLowerCase()];
+    if(iso === hoyISO) partes.push('<b class="text-sky-300">hoy</b>');
+    if(esFeriado(d))   partes.push('<b class="text-amber-300">feriado</b>');
+    etq.innerHTML = partes.join(' · ');
+  }
+
+  if(!(sociosMesas||[]).length){
+    cont.innerHTML = '<div class="text-slate-500 text-xs text-center py-3">No hay socios cargados.</div>';
+    if(res) res.textContent = '—';
+    return;
+  }
+  cont.innerHTML = '<div class="text-slate-500 text-xs text-center py-3">Calculando…</div>';
+
+  // Una consulta para los 33, no 33 consultas.
+  const exc = {};
+  try{
+    const {data} = await db.from('horarios_excepciones').select('socio_id,turno_id')
+      .eq('fecha', iso).in('socio_id', sociosMesas.map(s=>s.id));
+    (data||[]).forEach(e=>{ exc[e.socio_id] = e.turno_id; });
+  }catch(e){
+    cont.innerHTML = '<div class="text-xs text-center py-3" style="color:#fca5a5">No se pudieron traer los turnos del día.</div>';
+    return;
+  }
+
+  const porTurno = {}, libres = {}, sinTurno = [];
+  sociosMesas.forEach(s=>{
+    const t = turnoDeSocioEnFecha(s.id, d, exc[s.id] !== undefined ? { [iso]: exc[s.id] } : undefined);
+    const c = _diaClasificar(t);
+    const nombre = `${s.nombre} ${s.apellido}`.trim();
+    if(c.tipo === 'trabaja'){
+      (porTurno[c.clave] = porTurno[c.clave] || { ini:c.ini, fin:c.fin, nombre:c.nombre, socios:[] })
+        .socios.push({ s, nombre });
+    } else if(c.tipo === 'libre'){
+      (libres[c.etq] = libres[c.etq] || { orden:c.orden, socios:[] }).socios.push({ s, nombre });
+    } else {
+      sinTurno.push({ s, nombre });
+    }
+  });
+
+  const claves = Object.keys(porTurno).sort();   // 'zz-sinhorario' queda al final
+  const nTrabajan = claves.reduce((n,k)=>n+porTurno[k].socios.length, 0);
+  const nLibres = Object.keys(libres).reduce((n,k)=>n+libres[k].socios.length, 0);
+
+  if(res) res.innerHTML = `<b class="text-emerald-300">${nTrabajan}</b> trabaja${nTrabajan===1?'':'n'}`
+    + (nLibres ? ` · <b class="text-slate-300">${nLibres}</b> libre${nLibres===1?'':'s'}` : '')
+    + (sinTurno.length ? ` · <b class="text-amber-300">${sinTurno.length}</b> sin turno` : '');
+
+  const fila = o => `<div class="flex items-center gap-2" style="padding:3px 0;">
+      ${_avatarSocio(o.s, 24)}
+      <span class="text-xs flex-1 min-w-0 truncate">${esc(o.nombre)}</span>
+    </div>`;
+
+  let html = '';
+  if(!nTrabajan){
+    html += '<div class="text-xs text-slate-400 py-1">Nadie trabaja este día.</div>';
+  }
+  claves.forEach(k=>{
+    const g = porTurno[k];
+    g.socios.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+    const titulo = g.ini
+      ? `<span style="color:#38bdf8">${g.ini}</span> <span class="text-slate-500">a</span> <span style="color:#38bdf8">${g.fin}</span>`
+      : `<span style="color:#fbbf24">${esc(g.nombre||'Sin horario cargado')}</span> <span class="text-slate-500 font-normal">— sin hora de entrada cargada</span>`;
+    html += `<div class="mb-3">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="text-xs font-extrabold flex-1 min-w-0">${titulo}</div>
+        <span class="text-[11px] text-slate-400" style="flex-shrink:0">${g.socios.length}</span>
+      </div>
+      ${g.socios.map(fila).join('')}
+    </div>`;
+  });
+
+  if(sinTurno.length){
+    sinTurno.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+    html += `<div class="mb-3">
+      <div class="text-xs font-extrabold mb-1" style="color:#fbbf24">Sin turno asignado · ${sinTurno.length}</div>
+      <div class="text-[11px] text-slate-400 mb-1">No están en ningún grupo y ese día no tienen nada cargado.</div>
+      ${sinTurno.map(fila).join('')}
+    </div>`;
+  }
+
+  if(nLibres){
+    const ks = Object.keys(libres).sort((a,b)=>libres[a].orden - libres[b].orden);
+    html += `<div style="border-top:1px dashed #293449;padding-top:9px;margin-top:4px;">
+      <button onclick="diaLibresToggle()" class="btn-ghost w-full" style="font-size:11px;padding:6px;">
+        <span id="diaLibresFlecha">▸</span> No trabajan · ${nLibres}</button>
+      <div id="diaLibresBox" style="display:none;margin-top:8px;">
+        ${ks.map(k=>{
+          libres[k].socios.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+          return `<div class="mb-2">
+            <div class="text-[11px] font-bold text-slate-400 mb-1">${esc(k)} · ${libres[k].socios.length}</div>
+            ${libres[k].socios.map(fila).join('')}</div>`;
+        }).join('')}
+      </div></div>`;
+  }
+
+  cont.innerHTML = html;
+}
+
+function diaLibresToggle(){
+  const b = document.getElementById('diaLibresBox');
+  const f = document.getElementById('diaLibresFlecha');
+  if(!b) return;
+  const abierto = b.style.display === 'none';
+  b.style.display = abierto ? 'block' : 'none';
+  if(f) f.textContent = abierto ? '▾' : '▸';
+}
+
 function covToggle(){
   covAbierto=!covAbierto;
   document.getElementById('covCuerpo').style.display = covAbierto?'block':'none';
@@ -3546,6 +3756,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=6"></script>
+<script src="js/version-horarios.js?v=7"></script>
 </body>
 </html>
