@@ -330,6 +330,12 @@
     <div id="socioSinGrupo" class="hidden mt-6 card p-5 text-center text-sm text-slate-400">
       Aún no tienes un grupo asignado. Pídele al <b>supervisor</b> que te asigne a un grupo de turnos.
     </div>
+    <!-- Cambiar el PIN propio. Va abajo del todo, fuera del camino de lo que
+         se viene a mirar todos los días, pero sin tener que pedírselo a nadie. -->
+    <div class="mt-6 pt-4" style="border-top:1px solid #293449;">
+      <button onclick="socioCambiarPin()" class="btn-ghost w-full" style="font-size:12px;padding:9px;">🔑 Cambiar mi PIN</button>
+      <div class="text-[11px] text-slate-500 text-center mt-2">Si lo olvidas, pídele al supervisor que te lo reinicie y creas uno nuevo al entrar.</div>
+    </div>
   </div>
 </div>
 
@@ -1015,6 +1021,47 @@ async function pinOlvideClave(){
 }
 
 // Cambio de clave desde adentro: pide la ACTUAL antes de aceptar la nueva.
+// ══════════════════════════════════════════════════════════════════════
+// EL SOCIO CAMBIA SU PROPIO PIN
+//
+// Mismo camino que el del supervisor: confirma con el PIN que usa hoy,
+// escribe el nuevo y lo repite. Se pide el actual aunque la sesión ya esté
+// abierta porque el teléfono puede quedar prestado o desbloqueado, y
+// cambiar la clave de otro con dos toques no debería ser posible.
+//
+// Solo se toca la columna `pin`. `pin_inicial` queda como está: es lo que
+// el panel de Accesos mira para saber quién ya creó su clave.
+//
+// Si la olvida del todo, el camino es el supervisor: en Accesos puede
+// reiniciarle el PIN y el socio crea uno nuevo al entrar.
+// ══════════════════════════════════════════════════════════════════════
+async function socioCambiarPin(){
+  if(!sesion || sesion.rol!=='socio') return;
+  const id = sesion.id;
+  const {data, error} = await db.from('horarios_pins').select('pin').eq('usuario', id).maybeSingle();
+  if(error){ toast('No se pudo consultar tu PIN: '+error.message,'#dc2626'); return; }
+  if(!data || !data.pin){ toast('Todavía no tienes un PIN creado','#dc2626'); return; }
+  const inicial = (sesion.nombre||'?').charAt(0);
+  const volver = () => show('appSocio');
+
+  abrirPin({ modo:'verify', titulo:'Tu PIN actual', sub:'Confirma con el que usas hoy', avatar:inicial,
+    pinReal:data.pin,
+    onOk:()=>{
+      abrirPin({ modo:'create', titulo:'Tu nuevo PIN', sub:'4 dígitos', avatar:'🆕',
+        onOk:(pin1)=>{
+          abrirPin({ modo:'create', titulo:'Repite el nuevo PIN', sub:'Para confirmar que no hubo un dedazo', avatar:'🔁',
+            onOk:async(pin2)=>{
+              if(pin1!==pin2){ toast('Los PIN no coinciden','#dc2626'); return volver(); }
+              if(pin1===String(data.pin)){ toast('Ese es el PIN que ya tenías','#dc2626'); return volver(); }
+              const {error}=await db.from('horarios_pins').update({pin:pin1}).eq('usuario', id);
+              if(error) toast('No se pudo guardar: '+error.message,'#dc2626');
+              else toast('✅ PIN cambiado');
+              volver();
+            }});
+        }});
+    }});
+}
+
 async function supCambiarClave(){
   const {data}=await db.from('horarios_pins').select('pin').eq('usuario','SUPERVISOR').maybeSingle();
   if(!data || !data.pin){ toast('Todavía no hay clave creada','#dc2626'); return; }
@@ -3773,6 +3820,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=9"></script>
+<script src="js/version-horarios.js?v=10"></script>
 </body>
 </html>

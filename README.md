@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-05 — Horarios: el socio puede cambiar su propio PIN (SW horarios v28)
+
+El supervisor podía cambiar su clave desde adentro; el socio no. Si quería cambiarlo tenía que pedirle al supervisor que se lo **reiniciara** —borrándolo— y crear uno nuevo al entrar.
+
+Ahora, abajo del todo en la app del socio, hay **🔑 Cambiar mi PIN**. Va al final, fuera del camino de lo que se viene a mirar todos los días, pero sin depender de nadie.
+
+**El mismo camino que el del supervisor:** confirma con el PIN que usa hoy, escribe el nuevo y lo repite. **Se pide el actual aunque la sesión ya esté abierta**, a propósito: el teléfono puede quedar prestado o desbloqueado, y cambiarle la clave a otro con dos toques no debería ser posible.
+
+**Detalles que importan:** solo se toca la columna `pin` — `pin_inicial` queda como está, porque es lo que el panel de Accesos mira para saber quién ya creó su clave. Si los dos nuevos no coinciden, o si pone el mismo que ya tenía, **no se escribe nada** y se dice por qué. Si la escritura falla, **no dice que lo cambió**. Y volver atrás devuelve a su app sin cerrarle la sesión.
+
+Debajo del botón, una línea recuerda el camino para el olvido total: pedirle al supervisor que lo reinicie.
+
+**Verificación:** 25 comprobaciones — que pida el actual y lo rechace si está mal; el cambio completo, guardando solo el `pin` del socio de la sesión y dejando `pin_inicial` intacto; que después el viejo ya no sirva y el nuevo sí; los dos nuevos distintos; el mismo que ya tenía; el error de guardado; que cancelar no cierre la sesión; y que con sesión de supervisor esta función no haga nada.
+
+**Nota que ya estaba en el código y sigue valiendo:** los PIN de esta app se guardan en texto plano en `horarios_pins`. Sirven para separar roles en un teléfono compartido, no para proteger datos sensibles — la plata y los saldos viven en la app principal, no acá.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-05 — Pedidos de vacaciones: «row-level security policy» al anotar (SW horarios v27)
 
 Al anotar que un socio pidió un mes saltaba en pantalla:
