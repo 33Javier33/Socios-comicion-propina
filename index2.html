@@ -135,7 +135,10 @@
   body.tema-claro .text-sky-100,
   body.tema-claro .text-sky-300,
   body.tema-claro .text-sky-400{ color:#0369a1 !important; }
-  body.tema-claro .bg-slate-800{ background:#e2e8f0 !important; }
+  /* La única bg-slate-800 de la app es la hoja del modal. En claro era un
+     gris #e2e8f0, más oscuro que las tarjetas, y encima de él los grises y
+     verdes del texto caían por debajo de 4,5:1. Va blanca, como las tarjetas. */
+  body.tema-claro .bg-slate-800{ background:#ffffff !important; }
   /* Los encabezados con degradado son oscuros en los tres temas: el texto
      blanco que llevan encima se mantiene como está. */
 
@@ -346,29 +349,10 @@
     <!-- PANEL: CALENDARIO -->
     <div id="panCalendario" class="sup-panel active">
 
-      <!-- Quién trabaja HOY (o el día que se elija), con su horario.
-           Va primero porque es la pregunta de todos los días: hasta ahora
-           había que abrir socio por socio para armarla a mano. -->
-      <div class="card mb-4" style="overflow:hidden">
-        <div style="padding:11px 13px;">
-          <div class="flex items-center gap-2 mb-2">
-            <span style="font-size:1.05em">🕐</span>
-            <div class="flex-1 min-w-0">
-              <div class="font-bold text-sm">Quién trabaja el día</div>
-              <div id="diaResumen" class="text-[11px] text-slate-400" style="margin-top:1px">…</div>
-            </div>
-            <button onclick="diaHoy()" class="btn-ghost" style="font-size:11px;padding:4px 9px;flex-shrink:0">Hoy</button>
-          </div>
-          <div class="flex items-center gap-2">
-            <button onclick="diaMover(-1)" class="btn-ghost" style="padding:5px 10px;flex-shrink:0">‹</button>
-            <input id="diaFecha" type="date" class="fld" style="flex:1;min-width:0;margin:0;padding:6px 8px;font-size:12px;"
-                   onchange="diaRender()">
-            <button onclick="diaMover(1)" class="btn-ghost" style="padding:5px 10px;flex-shrink:0">›</button>
-          </div>
-          <div id="diaEtiqueta" class="text-[11px] text-slate-400 mt-2"></div>
-        </div>
-        <div id="diaLista" style="border-top:1px solid #293449;padding:11px 13px"></div>
-      </div>
+      <!-- Quién trabaja hoy. Abre en un modal y no desplegado acá: ocupaba
+           media pantalla y empujaba «Ver calendario de un socio» fuera de la
+           vista, cuando lo normal es mirar el día y cerrar. -->
+      <button onclick="diaModal()" class="btn-primary w-full mb-4" style="padding:11px;">🕐 Quién trabaja hoy</button>
 
       <!-- Quién tiene turnos y a quién le faltan, para el mes elegido -->
       <div class="card mb-4" style="overflow:hidden">
@@ -1526,7 +1510,7 @@ function socioMes(delta){ socioViewDate=new Date(socioViewDate.getFullYear(), so
 function socioIrHoy(){ socioViewDate=new Date(); renderSocioApp(); }
 
 // ══════════ App Supervisor ══════════
-function renderSuper(){ supTab('Calendario'); supLlenarSelectSocios(); renderTurnos(); renderGrupos(); renderAsignaciones(); covRender(); diaHoy(); }
+function renderSuper(){ supTab('Calendario'); supLlenarSelectSocios(); renderTurnos(); renderGrupos(); renderAsignaciones(); covRender(); }
 function supTab(pan){
   document.querySelectorAll('#appSuper .tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.pan===pan));
   document.querySelectorAll('#appSuper .sup-panel').forEach(p=>p.classList.remove('active'));
@@ -1534,9 +1518,6 @@ function supTab(pan){
   if(pan==='Accesos') accRender();
   if(pan==='Vacaciones') vacPanelInit();
   if(pan==='Cumple') cumplePanelInit();
-  // Al volver al calendario se refresca el día: puede haber cambiado algo
-  // en Turnos o en Vacaciones mientras tanto.
-  if(pan==='Calendario') diaRender();
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1775,6 +1756,30 @@ function supToggleVista(){
 // grupo. Las excepciones se traen en UNA consulta para todos.
 // ══════════════════════════════════════════════════════════════════════
 let diaDate = new Date();
+
+// Se abre en modal: la lista de 33 socios agrupada por turno es alta, y
+// desplegada dentro del panel dejaba «Ver calendario de un socio» fuera de
+// la pantalla. Los ids son los mismos que usa diaRender(), que no sabe ni
+// le importa dónde está pintando.
+function diaModal(){
+  abrirModal(`<div class="flex items-center gap-2 mb-2">
+      <span style="font-size:1.15em">🕐</span>
+      <div class="flex-1 min-w-0">
+        <h3 class="font-extrabold">Quién trabaja el día</h3>
+        <div id="diaResumen" class="text-[11px] text-slate-400" style="margin-top:1px">…</div>
+      </div>
+      <button onclick="diaHoy()" class="btn-ghost" style="font-size:11px;padding:4px 9px;flex-shrink:0">Hoy</button>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="diaMover(-1)" class="btn-ghost" style="padding:5px 10px;flex-shrink:0">‹</button>
+      <input id="diaFecha" type="date" class="fld" style="flex:1;min-width:0;margin:0;padding:6px 8px;font-size:12px;"
+             onchange="diaRender()">
+      <button onclick="diaMover(1)" class="btn-ghost" style="padding:5px 10px;flex-shrink:0">›</button>
+    </div>
+    <div id="diaEtiqueta" class="text-[11px] text-slate-400 mt-2 mb-1"></div>
+    <div id="diaLista" style="border-top:1px solid #293449;padding-top:10px;margin-top:8px;"></div>`);
+  diaHoy();
+}
 
 function diaMover(delta){
   const f = document.getElementById('diaFecha');
@@ -3756,6 +3761,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=7"></script>
+<script src="js/version-horarios.js?v=8"></script>
 </body>
 </html>

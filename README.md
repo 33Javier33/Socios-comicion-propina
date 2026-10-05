@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-05 — Horarios: «Quién trabaja hoy» pasa a ser un botón con modal (SW horarios v26)
+
+Desplegada dentro del panel, la lista ocupaba media pantalla y empujaba **«Ver calendario de un socio»** fuera de la vista. Lo normal es mirar el día y cerrar, no tenerlo abierto todo el rato.
+
+Ahora en Calendario hay **un botón**, **🕐 Quién trabaja hoy**, y la vista se abre **en un modal**. Adentro está exactamente lo mismo: abre en hoy, el selector de fecha con sus flechas y el botón **Hoy**, el agrupado por horario, los que no trabajan plegados al final y el sin-turno. Se cierra tocando fuera.
+
+**Contraste, de paso:** la hoja del modal era en tema claro un gris `#e2e8f0`, **más oscuro que las tarjetas**, y encima de él varios textos caían por debajo de 4,5:1 (el «a» entre las horas y la nota de «sin hora de entrada cargada», en 3,86:1). Va blanca como las tarjetas — y eso alcanza a **todos los modales de Horarios**, no solo a este.
+
+**Verificación:** las mismas 32 comprobaciones de ayer, más que en el panel quede el botón y no la lista desplegada, y que al tocarlo se abra el modal. Contraste medido en los tres temas: 25/25 sobre 4.5:1 en cada uno. Las ocho suites de Horarios siguen en verde.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-05 — Horarios: quién trabaja hoy, con su horario (SW horarios v25)
 
 La pregunta de todos los días —**«¿quién entra hoy y a qué hora?»**— no tenía dónde responderse: había que abrir el calendario socio por socio y armar la lista a mano.
