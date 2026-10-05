@@ -321,6 +321,11 @@
     <div class="flex justify-center gap-3 mb-2"><span class="pin-dot" id="pd0"></span><span class="pin-dot" id="pd1"></span><span class="pin-dot" id="pd2"></span><span class="pin-dot" id="pd3"></span></div>
     <p id="pinError" class="text-sm text-red-400 h-5 mb-2"></p>
     <button id="pinOlvide" onclick="pinOlvideClave()" style="display:none;background:none;border:none;color:#7dd3fc;font-size:12.5px;font-weight:700;text-decoration:underline;cursor:pointer;margin-bottom:10px;">¿Olvidaste la clave?</button>
+    <!-- Entrar con huella o rostro. Solo aparece si ESTE teléfono la tiene
+         registrada para quien está entrando; el PIN de abajo siempre queda. -->
+    <button id="pinHuella" onclick="bioIntentarDesdePin()" style="display:none;align-items:center;justify-content:center;gap:7px;
+            margin:0 auto 12px;padding:9px 18px;border-radius:12px;border:1px solid #38bdf855;background:#0c4a6e;
+            color:#7dd3fc;font-size:13px;font-weight:800;cursor:pointer;">👆 Entrar con huella o rostro</button>
     <div class="grid grid-cols-3 gap-3 max-w-[280px] mx-auto">
       <button class="keypad-btn" onclick="pinTecla('1')">1</button>
       <button class="keypad-btn" onclick="pinTecla('2')">2</button>
@@ -375,8 +380,9 @@
          Antes el botón de vacaciones iba solo y ancho arriba de todo, y
          empujaba el calendario —que es a lo que se entra— fuera de la vista. -->
     <div class="flex items-center gap-2 mb-2 fila-socio">
-      <button onclick="socioPedirModal()" class="btn-ghost">🏖️ Pedir vacaciones</button>
-      <button onclick="socioCambiarPin()" class="btn-ghost" title="Cambiar mi PIN">🔑 Mi PIN</button>
+      <button onclick="socioPedirModal()" class="btn-ghost" title="Pedir vacaciones">🏖️ Vacaciones</button>
+      <button onclick="socioCambiarPin()" class="btn-ghost" title="Cambiar mi PIN">🔑 PIN</button>
+      <button id="socioHuella" onclick="socioHuellaToggle()" class="btn-ghost" style="display:none">👆 Huella</button>
       <button id="socioVistaBtn" onclick="socioToggleVista()" class="btn-ghost" style="margin-left:auto;">📋 Lista</button>
     </div>
     <div id="socioCalCab" class="grid grid-cols-7 gap-1.5 mb-1 text-center text-[10px] font-bold text-slate-500">
@@ -582,6 +588,7 @@
             <div id="accClaveInfo" class="text-[11px] text-slate-400">…</div>
           </div>
           <button onclick="supCambiarClave()" class="btn-ghost text-xs" style="flex-shrink:0">Cambiar</button>
+          <button id="supHuella" onclick="supHuellaToggle()" class="btn-ghost text-xs" style="flex-shrink:0;display:none">👆 Huella</button>
         </div>
       </div>
       <div id="accUltimos" class="mb-4"></div>
@@ -886,7 +893,7 @@ async function socioElegido(id){
   const nombre=`${s.nombre} ${s.apellido}`;
   if(data && data.pin){
     abrirPin({modo:'verify', titulo:'Ingresa tu PIN', sub:nombre, avatar:(s.nombre||'?').charAt(0), pinReal:data.pin,
-      onOk:()=>entrarSocio(s)});
+      usuarioBio:id, onOk:()=>entrarSocio(s)});
   } else {
     abrirPin({modo:'create', titulo:'Crea tu PIN', sub:'Será tu clave para entrar', avatar:(s.nombre||'?').charAt(0),
       onOk:async(pin)=>{ await db.from('horarios_pins').upsert({usuario:id,pin,pin_inicial:pin}); entrarSocio(s); }});
@@ -914,7 +921,7 @@ async function irSupervisor(){
   ]);
   if(data && data.pin){
     abrirPin({modo:'verify', titulo:'PIN de Supervisor', sub:'Acceso de gestión', avatar:'🛡️', pinReal:data.pin,
-      recuperable: !!rec, onOk:entrarSuper});
+      recuperable: !!rec, usuarioBio:'SUPERVISOR', onOk:entrarSuper});
   } else {
     // La PRIMERA clave queda guardada aparte como clave de recuperación y no
     // se sobrescribe nunca: es la que permite volver a entrar si se olvidan
@@ -1018,6 +1025,7 @@ function abrirPin(ctx){
   document.getElementById('pinError').textContent='';
   const ol=document.getElementById('pinOlvide');
   if(ol) ol.style.display = ctx.recuperable ? 'inline-block' : 'none';
+  bioPintarEnPin(ctx.usuarioBio || '');
   pinPintar(); show('scrPin');
 }
 function pinPintar(){ for(let i=0;i<4;i++){ document.getElementById('pd'+i).classList.toggle('on', i<pinBuffer.length); } }
@@ -1036,6 +1044,148 @@ function pinValidar(){
     else { document.getElementById('pinError').textContent='PIN incorrecto'; pinBuffer=''; pinPintar(); }
   } else { // create
     const pin=pinBuffer; pinCtx.onOk(pin); }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ENTRAR CON HUELLA O ROSTRO  (opcional, además del PIN)
+//
+// CÓMO FUNCIONA
+// Se usa WebAuthn con el sensor del propio teléfono. Al activarlo, el
+// teléfono crea una credencial y acá se guarda SOLO SU IDENTIFICADOR, en
+// este dispositivo. Para entrar, se le pide al teléfono que la use: él
+// pide la huella o el rostro, y si coincide, se entra.
+//
+// QUÉ NO ES, para que quede dicho
+// No hay un servidor que verifique la firma: esto es un CANDADO LOCAL. En
+// Horarios eso no cambia nada, porque el PIN ya se compara en el propio
+// navegador. Lo que sí hace es que la huella NO reemplaza al PIN como
+// secreto: para activarla hay que entrar antes con el PIN, y el PIN sigue
+// estando siempre disponible abajo.
+//
+// Es por teléfono: si el socio cambia de equipo, entra con su PIN y la
+// activa de nuevo ahí. Y se puede apagar cuando quiera.
+// ══════════════════════════════════════════════════════════════════════
+const BIO_KEY = 'hor_biometria';
+
+function bioSoportada(){
+  return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create);
+}
+async function bioHaySensor(){
+  if(!bioSoportada()) return false;
+  try{ return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); }
+  catch(e){ return false; }
+}
+function _bioTodas(){ try{ return JSON.parse(localStorage.getItem(BIO_KEY)||'{}'); }catch(e){ return {}; } }
+function bioDe(usuario){ const t=_bioTodas(); return t[usuario] || null; }
+function _bioGuardar(usuario, credId){
+  try{ const t=_bioTodas(); t[usuario]={ credId, desde:Date.now() }; localStorage.setItem(BIO_KEY, JSON.stringify(t)); }catch(e){}
+}
+function bioOlvidar(usuario){
+  try{ const t=_bioTodas(); delete t[usuario]; localStorage.setItem(BIO_KEY, JSON.stringify(t)); }catch(e){}
+}
+const _b64u = {
+  aTexto: buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+  aBuf: s => { const b=atob(String(s).replace(/-/g,'+').replace(/_/g,'/'));
+    const u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u.buffer; }
+};
+function _bioReto(){ const u=new Uint8Array(32); crypto.getRandomValues(u); return u.buffer; }
+
+// Registrar. Solo se llama con la sesión ya abierta, o sea: después del PIN.
+async function bioRegistrar(usuario, nombre){
+  if(!bioSoportada()) throw new Error('Este teléfono no admite huella ni rostro');
+  const cred = await navigator.credentials.create({ publicKey:{
+    challenge: _bioReto(),
+    rp: { name:'Horarios — Mesas' },
+    user: { id: new TextEncoder().encode(String(usuario)), name: String(nombre||usuario), displayName: String(nombre||usuario) },
+    pubKeyCredParams: [{type:'public-key', alg:-7},{type:'public-key', alg:-257}],
+    authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred' },
+    timeout: 60000, attestation:'none'
+  }});
+  if(!cred) throw new Error('No se pudo registrar');
+  _bioGuardar(usuario, _b64u.aTexto(cred.rawId));
+  return true;
+}
+
+// Pedir la huella/rostro. true si el teléfono la dio por buena.
+async function bioVerificar(usuario){
+  const g = bioDe(usuario);
+  if(!g || !bioSoportada()) return false;
+  const as = await navigator.credentials.get({ publicKey:{
+    challenge: _bioReto(),
+    allowCredentials: [{ type:'public-key', id: _b64u.aBuf(g.credId) }],
+    userVerification:'required', timeout: 60000
+  }});
+  return !!as;
+}
+
+// ── El botón dentro de la pantalla del PIN ──
+// Aparece solo si ESTE teléfono tiene huella registrada para ese usuario.
+function bioPintarEnPin(usuario){
+  const b = document.getElementById('pinHuella');
+  if(!b) return;
+  const hay = !!bioDe(usuario) && bioSoportada();
+  b.style.display = hay ? 'inline-flex' : 'none';
+  b.dataset.usuario = usuario || '';
+}
+async function bioIntentarDesdePin(){
+  const b = document.getElementById('pinHuella');
+  const usuario = b ? b.dataset.usuario : '';
+  if(!usuario || !pinCtx || pinCtx.modo!=='verify') return;
+  const err = document.getElementById('pinError');
+  try{
+    if(await bioVerificar(usuario)){ pinCtx.onOk('(huella)'); }
+    else if(err) err.textContent = 'No se reconoció';
+  }catch(e){
+    if(err) err.textContent = (e && e.name==='NotAllowedError') ? 'Se canceló' : 'No se pudo leer la huella';
+  }
+}
+
+// ── Activarla o apagarla desde adentro ──
+async function bioToggle(usuario, nombre, alTerminar){
+  if(!bioSoportada()){ toast('Este teléfono no admite huella ni rostro','#dc2626'); return; }
+  if(bioDe(usuario)){
+    if(!confirm('¿Dejar de entrar con huella o rostro en este teléfono?\n\nSeguirás entrando con tu PIN.')) return;
+    bioOlvidar(usuario); toast('Huella desactivada'); if(alTerminar) alTerminar(); return;
+  }
+  if(!(await bioHaySensor())){
+    toast('Este teléfono no tiene huella ni rostro configurados','#dc2626'); return;
+  }
+  try{
+    await bioRegistrar(usuario, nombre);
+    toast('👆 Listo: ya puedes entrar con huella o rostro');
+  }catch(e){
+    toast(e && e.name==='NotAllowedError' ? 'Se canceló' : ('No se pudo activar: '+((e&&e.message)||'')), '#dc2626');
+  }
+  if(alTerminar) alTerminar();
+}
+
+async function bioPintarBtnSocio(){
+  const b = document.getElementById('socioHuella');
+  if(!b) return;
+  if(!bioSoportada() || !(await bioHaySensor())){ b.style.display='none'; return; }
+  b.style.display = '';
+  const on = !!bioDe(sesion && sesion.id);
+  b.textContent = on ? '👆 Huella ✓' : '👆 Huella';
+  b.title = on ? 'Entrar con huella está activado — tocar para desactivar' : 'Entrar con huella o rostro en este teléfono';
+  b.style.opacity = on ? '1' : '0.75';
+}
+function socioHuellaToggle(){
+  if(!sesion || sesion.rol!=='socio') return;
+  bioToggle(sesion.id, sesion.nombre, bioPintarBtnSocio);
+}
+
+async function bioPintarBtnSuper(){
+  const b = document.getElementById('supHuella');
+  if(!b) return;
+  if(!bioSoportada() || !(await bioHaySensor())){ b.style.display='none'; return; }
+  b.style.display = '';
+  const on = !!bioDe('SUPERVISOR');
+  b.textContent = on ? '👆 Huella ✓' : '👆 Huella';
+  b.title = on ? 'Entrar con huella está activado — tocar para desactivar' : 'Entrar con huella o rostro en este teléfono';
+}
+function supHuellaToggle(){
+  if(!sesion || sesion.rol!=='super') return;
+  bioToggle('SUPERVISOR', 'Supervisor', bioPintarBtnSuper);
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1655,6 +1805,7 @@ async function renderSocioApp(){
   if(_foto) _foto.innerHTML = _avatarSocio(_yo || {nombre:sesion.nombre}, 46);
   notifPintarBtn();
   notifRevisar();   // sin await: los avisos no deben demorar el pintado
+  bioPintarBtnSocio();
   const gid=asignaciones[sesion.id]; const g=gid?gruposMap[gid]:null;
   etiquetaMes(document.getElementById('socioMesLabel'), socioViewDate, 'socioIrHoy');
   const exc=await excepcionesDe(sesion.id, socioViewDate);
@@ -1797,7 +1948,7 @@ function supTab(pan){
   document.querySelectorAll('#appSuper .tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.pan===pan));
   document.querySelectorAll('#appSuper .sup-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('pan'+pan).classList.add('active');
-  if(pan==='Accesos') accRender();
+  if(pan==='Accesos'){ accRender(); bioPintarBtnSuper(); }
   if(pan==='Vacaciones') vacPanelInit();
   if(pan==='Cumple') cumplePanelInit();
 }
@@ -4055,6 +4206,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=12"></script>
+<script src="js/version-horarios.js?v=13"></script>
 </body>
 </html>

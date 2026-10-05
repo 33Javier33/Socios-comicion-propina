@@ -232,6 +232,22 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-05 — Horarios: entrar con huella o rostro, en vez del PIN (SW horarios v31)
+
+**Optativo, y el PIN nunca se va.** En la pantalla de ingreso aparece **👆 Entrar con huella o rostro** solo si **ese teléfono** la tiene registrada para quien entra; el teclado del PIN sigue debajo, intacto.
+
+**Se activa desde adentro, después de entrar con el PIN.** El socio tiene el botón **👆 Huella** en la fila de sus acciones; el supervisor, en **Accesos**, junto a «Cambiar» la clave. Cada uno tiene su propia credencial y se apaga cuando quiera.
+
+**Qué se guarda:** solo el **identificador** de la credencial que crea el teléfono, en ese teléfono. La huella nunca sale del sensor ni la ve la app. Si el socio cambia de equipo, entra con su PIN y la activa de nuevo allá.
+
+**Qué NO es, dicho claro:** no hay un servidor que verifique la firma — es un **candado local**. En Horarios eso no cambia el nivel de seguridad, porque **el PIN ya se compara en el propio navegador**. Lo que sí garantiza el diseño es que la huella **no reemplaza al PIN como secreto**: para activarla hay que entrar antes con el PIN correcto en ese dispositivo.
+
+**La fila del socio pasó a cuatro botones** y a 390, 375 y 320 px se salía de la pantalla. En vez de dejarla romper, los dos textos más largos se acortaron: **🏖️ Vacaciones** y **🔑 PIN** (el nombre completo quedó en el *tooltip*). Medido a 430, 414, 393, 390, 375, 360 y 320 px: entra en todos.
+
+**Verificación:** 24 comprobaciones con un **sensor biométrico virtual** del navegador, o sea con la huella probada de verdad — que sin activarla todo siga igual; que se registre y quede guardado solo el identificador; que con la huella entre sin teclear el PIN; que **si la huella no coincide NO entre** y se quede en el PIN; que el PIN siga funcionando con la huella activada; apagarla; que socio y supervisor tengan credenciales distintas y cada uno entre a lo suyo; y que sin sensor el botón ni se ofrezca.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-05 — Horarios: texto invisible en tema claro, avisos del turno y la foto del socio (SW horarios v30)
 
 **1. En tema claro, la lista de sugerencias era texto invisible.** Al buscar un socio en Vacaciones, los nombres salían en **1,00:1** — azul marino sobre azul marino.
