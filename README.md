@@ -232,6 +232,31 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-05 — Horarios: texto invisible en tema claro, avisos del turno y la foto del socio (SW horarios v30)
+
+**1. En tema claro, la lista de sugerencias era texto invisible.** Al buscar un socio en Vacaciones, los nombres salían en **1,00:1** — azul marino sobre azul marino.
+
+La causa es una trampa vieja conocida: las reglas del tema buscan el color **tal como está escrito** en el atributo (`[style*="background:#0f172a"]`), y en cuanto JavaScript toca **una sola** propiedad del elemento —`cont.style.display='block'`— el navegador reescribe el atributo entero y convierte `#0f172a` en `rgb(15, 23, 42)`. Desde ahí el selector deja de calzar y el recuadro se queda oscuro. Pasa en **toda lista que se muestre y se esconda por JS**, no solo en esa.
+
+El arreglo: los mismos colores, duplicados en su forma `rgb()`, para los tres temas. Y de paso el gris chico (`text-slate-500`, los LU/MA/MI del calendario y las ayudas) subió un tono: estaba en 4,34:1.
+
+**Barrido completo en tema claro**, panel por panel —Calendario, Turnos, Grupos, Asignar, Vacaciones con las sugerencias abiertas, Cumple y Accesos—: **nada por debajo de 4.5:1**.
+
+**2. La campanita del socio.** En su cabecera hay ahora un **🔕 / 🔔** que él activa cuando quiere. Avisa:
+
+- al empezar el día, **qué turno tiene** («Hoy entras a las 20:30 · Tu turno es de 20:30 a 04:30»), o que está **libre**, de **vacaciones** o que es su **🎂 cumpleaños**;
+- **tres horas antes de entrar** («Entras en 3 horas · A las 20:30»).
+
+Nunca avisa dos veces lo mismo: cada aviso lleva su llave del día, anotada en el teléfono.
+
+**Hasta dónde llega, dicho claro:** esto **no es push de servidor**. No hay nada del lado del servidor que conozca los turnos —viven en Supabase— ni que despierte el teléfono a una hora. Lo que hay es: un temporizador propio mientras la app está abierta; el disparo de lo vencido al abrirla; y, donde el teléfono lo soporta (`periodicSync`: Android con la app instalada en la pantalla de inicio), el Service Worker revisa cada tanto el plan del día que la página le dejó guardado y avisa con la app cerrada. **En iPhone los avisos llegan cuando el socio abre la app.** Para que lleguen siempre con la app cerrada hace falta un servidor que mande push, y eso es trabajo aparte.
+
+**3. La foto del socio** va arriba, junto a su nombre, en la cabecera de su app. Si no tiene, su inicial, igual que en la lista de socios.
+
+**Verificación:** 25 comprobaciones de los avisos (la campanita y sus dos estados; el plan de cada tipo de día —turno, libre, LXF, vacaciones, cumpleaños, turno sin hora y día sin nada—; que el previo caiga exactamente tres horas antes; que al abrir la app salga lo vencido y quede anotado; que abrir de nuevo no repita; que apagada no moleste; que el plan quede guardado para el Service Worker sin lo ya avisado) más la foto con y sin imagen. El barrido de contraste y las doce suites de Horarios, en verde.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-05 — Horarios: «Mi PIN» sube a la fila de los botones (SW horarios v29)
 
 Abajo del todo el botón quedaba perdido: después del calendario, de la leyenda y de un separador. Ahora va **🔑 Mi PIN** en la misma fila que **🏖️ Pedir vacaciones** y **📋 Lista**, sobre el calendario, donde está el resto de lo que el socio puede hacer.

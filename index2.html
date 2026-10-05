@@ -179,6 +179,50 @@
   body.tema-negro [style*="background:#0f172a"]{ background:#141414 !important; }
   body.tema-negro [style*="background:#334155"]{ background:#1e1e1e !important; }
 
+  /* ══════════════════════════════════════════════════════════════════
+     LOS MISMOS COLORES, PERO EN rgb()
+     Las reglas de arriba buscan el color tal como está ESCRITO en el
+     atributo. En cuanto JavaScript toca una sola propiedad del elemento
+     —`cont.style.display='block'`, por ejemplo— el navegador vuelve a
+     escribir TODO el atributo y de paso convierte `#0f172a` en
+     `rgb(15, 23, 42)`. A partir de ahí el selector deja de calzar y el
+     recuadro se queda oscuro.
+     Eso es lo que pasaba con la lista de sugerencias al buscar un socio:
+     fondo azul marino con el texto también oscuro encima — 1,00:1, o sea
+     invisible. Pasa en TODA lista que se muestre y se esconda por JS.
+     ══════════════════════════════════════════════════════════════════ */
+  body.tema-claro [style*="background: rgb(30, 41, 59)"],
+  body.tema-claro [style*="background: rgb(15, 23, 42)"],
+  body.tema-claro [style*="background-color: rgb(30, 41, 59)"],
+  body.tema-claro [style*="background-color: rgb(15, 23, 42)"]{ background:#ffffff !important; }
+  body.tema-claro [style*="background: rgb(51, 65, 85)"],
+  body.tema-claro [style*="background-color: rgb(51, 65, 85)"]{ background:#e2e8f0 !important; }
+  body.tema-claro [style*="rgb(12, 74, 110)"]{ background:#e0f2fe !important; }
+  body.tema-claro [style*="rgb(127, 29, 29)"]{ background:#fee2e2 !important; }
+  body.tema-claro [style*="rgb(63, 45, 10)"]{ background:#fef3c7 !important; }
+  body.tema-claro [style*="color: rgb(125, 211, 252)"]{ color:#0369a1 !important; }
+  body.tema-claro [style*="color: rgb(254, 202, 202)"],
+  body.tema-claro [style*="color: rgb(252, 165, 165)"]{ color:#991b1b !important; }
+  body.tema-claro [style*="color: rgb(56, 189, 248)"]{ color:#0369a1 !important; }
+  body.tema-claro [style*="color: rgb(252, 211, 77)"],
+  body.tema-claro [style*="color: rgb(253, 230, 138)"],
+  body.tema-claro [style*="color: rgb(251, 191, 36)"]{ color:#92400e !important; }
+  body.tema-claro [style*="color: rgb(110, 231, 183)"]{ color:#047857 !important; }
+  body.tema-claro [style*="color: rgb(203, 213, 225)"],
+  body.tema-claro [style*="color: rgb(226, 232, 240)"]{ color:#334155 !important; }
+
+  body.tema-negro [style*="background: rgb(30, 41, 59)"],
+  body.tema-negro [style*="background: rgb(15, 23, 42)"],
+  body.tema-negro [style*="background-color: rgb(30, 41, 59)"],
+  body.tema-negro [style*="background-color: rgb(15, 23, 42)"]{ background:#141414 !important; }
+  body.tema-negro [style*="background: rgb(51, 65, 85)"],
+  body.tema-negro [style*="background-color: rgb(51, 65, 85)"]{ background:#1e1e1e !important; }
+
+  /* El gris chico de las ayudas y los encabezados del calendario (LU, MA…)
+     quedaba en 4,34:1 sobre el fondo de la página. Un tono más abajo. */
+  body.tema-claro .text-slate-500,
+  body.tema-claro .text-slate-600{ color:#475569 !important; }
+
   /* ── Selector de tema (☀️ 🌙 ⚫) ── */
   /* Va fijo y no colgando del botón: hay DOS cabeceras (socio y supervisor)
      y así se usa un solo panel para las dos, en vez de duplicarlo. */
@@ -298,8 +342,13 @@
 <div id="appSocio" class="screen flex-col min-h-[100dvh]">
   <div class="p-5 pt-8" style="background:linear-gradient(135deg,#0369a1,#0284c7);">
     <div class="flex items-center justify-between">
-      <div><div class="text-xs text-sky-100/80">Mis turnos</div><div id="socioNombreHdr" class="text-lg font-extrabold text-white">...</div><div id="socioGrupoHdr" class="text-xs text-sky-100/80 mt-0.5"></div></div>
+      <div class="flex items-center gap-3 min-w-0">
+        <!-- Su foto, si la tiene. La misma que ve el supervisor en la lista. -->
+        <div id="socioFotoHdr" style="flex-shrink:0"></div>
+        <div class="min-w-0"><div class="text-xs text-sky-100/80">Mis turnos</div><div id="socioNombreHdr" class="text-lg font-extrabold text-white truncate">...</div><div id="socioGrupoHdr" class="text-xs text-sky-100/80 mt-0.5"></div></div>
+      </div>
       <div class="flex items-center gap-2">
+        <button id="socioCampana" onclick="notifToggle()" class="text-sky-100/90 text-xs bg-white/15 rounded-lg px-3 py-2" title="Activar los avisos de tu turno">🔕</button>
         <div style="position:relative;">
           <button onclick="temaPickerH_toggle(event)" class="tema-btn-h text-sky-100/90 text-xs bg-white/15 rounded-lg px-3 py-2" title="Tema de la app">🌙</button>
         </div>
@@ -1420,9 +1469,192 @@ function pintarListaMes(cont, date, socioId, excepciones, onDayClick){
   cont.innerHTML=`<div class="pl-tabla">${filas}</div>`;
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// AVISOS DEL TURNO (la campanita del socio)
+//
+// QUÉ AVISA, del lado del socio y solo si él lo activa:
+//   · al empezar el día, qué turno tiene (o que está libre, de vacaciones
+//     o de cumpleaños);
+//   · TRES HORAS ANTES de entrar.
+//
+// HASTA DÓNDE LLEGA, dicho claro: esto NO es push de servidor. No hay nada
+// del lado del servidor que conozca los turnos —viven en Supabase— ni que
+// despierte el teléfono a una hora. Lo que hay es:
+//   · mientras la app está abierta, un temporizador propio;
+//   · al abrirla, se dispara lo que ya venció y no se había avisado;
+//   · si el teléfono soporta `periodicSync` (Android con la app instalada
+//     en la pantalla de inicio), el Service Worker revisa cada tanto el
+//     plan del día que la página le dejó guardado y avisa aunque la app
+//     esté cerrada.
+// En iPhone, y en Android sin instalar la app, los avisos llegan cuando el
+// socio abre la app. Para que lleguen siempre con la app cerrada hace falta
+// un servidor que mande push, y eso es trabajo aparte.
+//
+// Nunca se avisa dos veces lo mismo: cada aviso tiene su llave del día y
+// queda anotada en el teléfono.
+// ══════════════════════════════════════════════════════════════════════
+const NOTIF_ON_KEY   = 'hor_notif_on';
+const NOTIF_HECHAS   = 'hor_notif_hechas';
+const NOTIF_CACHE    = 'horarios-plan-avisos';
+const NOTIF_HORAS_ANTES = 3;
+let _notifTimers = [];
+
+function notifSoportado(){ return 'Notification' in window && 'serviceWorker' in navigator; }
+function notifActiva(){
+  try{ return localStorage.getItem(NOTIF_ON_KEY)==='1' && Notification.permission==='granted'; }catch(e){ return false; }
+}
+function _notifHechas(){ try{ return JSON.parse(localStorage.getItem(NOTIF_HECHAS)||'{}'); }catch(e){ return {}; } }
+function _notifMarcar(k){
+  try{
+    const h=_notifHechas(); h[k]=1;
+    // Se limpia lo viejo: la llave lleva la fecha adelante.
+    const hoy=fechaISO(new Date());
+    Object.keys(h).forEach(x=>{ if(x.substring(0,10) < hoy) delete h[x]; });
+    localStorage.setItem(NOTIF_HECHAS, JSON.stringify(h));
+  }catch(e){}
+}
+
+function notifPintarBtn(){
+  const b=document.getElementById('socioCampana');
+  if(!b) return;
+  if(!notifSoportado()){ b.style.display='none'; return; }
+  const on=notifActiva();
+  b.textContent = on ? '🔔' : '🔕';
+  b.title = on ? 'Avisos activados — tocar para desactivar' : 'Activar los avisos de tu turno';
+  b.style.opacity = on ? '1' : '0.55';
+}
+
+async function notifToggle(){
+  if(!notifSoportado()){
+    toast('Este teléfono no admite avisos','#dc2626'); return;
+  }
+  if(notifActiva()){
+    try{ localStorage.setItem(NOTIF_ON_KEY,'0'); }catch(e){}
+    _notifLimpiarTimers();
+    notifPintarBtn(); toast('Avisos desactivados');
+    return;
+  }
+  let perm = Notification.permission;
+  if(perm !== 'granted') perm = await Notification.requestPermission();
+  if(perm !== 'granted'){
+    toast(perm==='denied'
+      ? 'Los avisos están bloqueados: actívalos en los ajustes del navegador para este sitio'
+      : 'No se activaron los avisos', '#dc2626');
+    notifPintarBtn(); return;
+  }
+  try{ localStorage.setItem(NOTIF_ON_KEY,'1'); }catch(e){}
+  notifPintarBtn();
+  toast('🔔 Avisos activados');
+  await notifRevisar(true);
+}
+
+function _notifLimpiarTimers(){ _notifTimers.forEach(t=>clearTimeout(t)); _notifTimers=[]; }
+
+async function _notifMostrar(titulo, cuerpo, tag){
+  try{
+    const reg = await navigator.serviceWorker.getRegistration();
+    const opc = { body:cuerpo, tag, icon:'/img/horarios-192.png', badge:'/img/horarios-192.png' };
+    if(reg && reg.showNotification) await reg.showNotification(titulo, opc);
+    else new Notification(titulo, opc);
+  }catch(e){ console.warn('[aviso]', e); }
+}
+
+// El plan del día: qué avisar y a qué hora. Devuelve [{ llave, cuando, titulo, cuerpo }].
+async function notifPlanDelDia(){
+  if(!sesion || sesion.rol!=='socio') return [];
+  const hoy = new Date();
+  const iso = fechaISO(hoy);
+  const exc = await excepcionesDe(sesion.id, hoy);
+  const t = turnoDeSocioEnFecha(sesion.id, hoy, exc);
+  const plan = [];
+  const aviso = (llave, cuando, titulo, cuerpo) => plan.push({ llave: iso+'|'+llave, cuando, titulo, cuerpo });
+
+  // El resumen del día: a primera hora, o apenas se abre la app si ya pasó.
+  const manana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 9, 0, 0);
+
+  if(!t){
+    aviso('dia', manana, 'Hoy no tienes turno cargado', 'Revisa con el supervisor si corresponde.');
+    return plan;
+  }
+  if(t.id === CUMPLE_TURNO){
+    aviso('dia', manana, '🎂 ¡Feliz cumpleaños!', 'Hoy tienes el día libre por tu cumpleaños.');
+    return plan;
+  }
+  if(t.id==='t_vac15' || t.id==='t_vac6' || /vacac/i.test(t.nombre||'')){
+    aviso('dia', manana, '🏖️ Estás de vacaciones', 'Hoy no trabajas.');
+    return plan;
+  }
+  if(t.es_libre){
+    const n=String(t.nombre||'').trim();
+    aviso('dia', manana, 'Hoy tienes libre', (/^libre$/i.test(n)||!n) ? 'Que lo disfrutes.' : n);
+    return plan;
+  }
+
+  const ini=(t.hora_inicio||'').substring(0,5), fin=(t.hora_fin||'').substring(0,5);
+  if(!ini){
+    aviso('dia', manana, 'Hoy trabajas', (t.nombre||'Turno') + ' — sin hora de entrada cargada.');
+    return plan;
+  }
+  aviso('dia', manana, 'Hoy entras a las ' + ini, fin ? ('Tu turno es de ' + ini + ' a ' + fin + '.') : 'Que tengas buen turno.');
+
+  const [hh, mm] = ini.split(':').map(Number);
+  const entrada = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), hh, mm, 0);
+  const antes = new Date(entrada.getTime() - NOTIF_HORAS_ANTES*3600000);
+  aviso('antes', antes, 'Entras en ' + NOTIF_HORAS_ANTES + ' horas',
+        'A las ' + ini + (fin ? ' (hasta las ' + fin + ')' : '') + '.');
+  return plan;
+}
+
+// Dispara lo vencido, programa lo que falta y le deja el plan al Service
+// Worker por si puede revisarlo con la app cerrada.
+async function notifRevisar(forzar){
+  if(!notifActiva() || !sesion || sesion.rol!=='socio') return;
+  _notifLimpiarTimers();
+  let plan = [];
+  try{ plan = await notifPlanDelDia(); }catch(e){ return; }
+  const hechas = _notifHechas();
+  const ahora = Date.now();
+
+  plan.forEach(a=>{
+    if(hechas[a.llave]) return;
+    const falta = a.cuando.getTime() - ahora;
+    // Ya pasó la hora: se avisa igual al abrir, salvo que sea de ayer.
+    if(falta <= 0){
+      _notifMostrar(a.titulo, a.cuerpo, a.llave); _notifMarcar(a.llave); return;
+    }
+    // Más de 6 horas por delante: no se deja un temporizador tan largo, se
+    // vuelve a revisar la próxima vez que se abra la app.
+    if(falta > 6*3600000) return;
+    _notifTimers.push(setTimeout(()=>{
+      if(!notifActiva()) return;
+      _notifMostrar(a.titulo, a.cuerpo, a.llave); _notifMarcar(a.llave);
+    }, falta));
+  });
+
+  // El plan, guardado donde el Service Worker lo pueda leer.
+  try{
+    const pendientes = plan.filter(a=>!_notifHechas()[a.llave])
+      .map(a=>({ llave:a.llave, cuando:a.cuando.getTime(), titulo:a.titulo, cuerpo:a.cuerpo }));
+    const c = await caches.open(NOTIF_CACHE);
+    await c.put('/plan', new Response(JSON.stringify({ guardado:Date.now(), avisos:pendientes }),
+      { headers:{'Content-Type':'application/json'} }));
+    const reg = await navigator.serviceWorker.getRegistration();
+    if(reg && 'periodicSync' in reg){
+      try{ await reg.periodicSync.register('horarios-avisos', { minInterval: 2*3600000 }); }catch(e){}
+    }
+  }catch(e){}
+}
+
 // ══════════ App Socio ══════════
 async function renderSocioApp(){
   document.getElementById('socioNombreHdr').textContent=sesion.nombre;
+  // La foto del socio arriba, junto a su nombre. Si no tiene, _avatarSocio
+  // pinta su inicial, que es lo que ya se ve en la lista de socios.
+  const _yo=(sociosMesas||[]).find(x=>x.id===sesion.id);
+  const _foto=document.getElementById('socioFotoHdr');
+  if(_foto) _foto.innerHTML = _avatarSocio(_yo || {nombre:sesion.nombre}, 46);
+  notifPintarBtn();
+  notifRevisar();   // sin await: los avisos no deben demorar el pintado
   const gid=asignaciones[sesion.id]; const g=gid?gruposMap[gid]:null;
   etiquetaMes(document.getElementById('socioMesLabel'), socioViewDate, 'socioIrHoy');
   const exc=await excepcionesDe(sesion.id, socioViewDate);
@@ -3823,6 +4055,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=11"></script>
+<script src="js/version-horarios.js?v=12"></script>
 </body>
 </html>
