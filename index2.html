@@ -464,6 +464,7 @@
           <div id="supMesLabel" class="font-extrabold text-base flex-1 text-center"></div>
           <button onclick="supMes(1)" class="btn-ghost">›</button>
           <button id="supVistaBtn" onclick="supToggleVista()" class="btn-ghost text-xs" title="Cambiar entre grilla del mes y lista día por día">📋 Lista</button>
+          <button onclick="supImprimir()" class="btn-ghost text-xs" title="Imprimir el mes de este socio">🖨</button>
         </div>
         <div id="supCalCab" class="grid grid-cols-7 gap-1.5 mb-1 text-center text-[10px] font-bold text-slate-500"><div>LU</div><div>MA</div><div>MI</div><div>JU</div><div>VI</div><div>SÁ</div><div>DO</div></div>
         <div id="supCal" class="grid grid-cols-7 gap-1.5"></div>
@@ -2153,6 +2154,94 @@ async function supRenderCal(){
   }
   leyendaMes(document.getElementById('supLeyenda'), supViewDate, supSocioSel, exc);
 }
+// ══════════════════════════════════════════════════════════════════════
+// IMPRIMIR EL MES DE UN SOCIO
+//
+// Sale con la forma de la hoja de papel que se usa hoy: el NOMBRE arriba,
+// el mes debajo, y una fila por día — día de la semana, número y turno.
+// El texto de cada día es EXACTAMENTE el mismo que muestra la vista de
+// lista (`_turnoPartes` + `_horasTurno`): si la pantalla dice
+// «7,5 Hrs 20:30 a 04:30», el papel dice lo mismo.
+//
+// Se imprime en blanco y negro aunque la app esté en tema oscuro: una hoja
+// con fondo azul marino gasta tinta y se lee peor.
+// ══════════════════════════════════════════════════════════════════════
+function _supFilasImpresion(date, socioId, exc){
+  const DIAS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  return celdasMes(date).filter(Boolean).map(d=>{
+    const t=turnoDeSocioEnFecha(socioId,d,exc);
+    const p=_turnoPartes(t);
+    let txt;
+    if(!p) txt='—';
+    else if(p.libre) txt=p.etqLargo||p.etq;
+    else if(p.etq) txt=p.etq;
+    else { const h=_horasTurno(t); txt=(h?h+' Hrs ':'')+p.ini+' a '+p.fin; }
+    // El LIBRE llano va en negro, como en la hoja de papel. Un LXF, unas
+    // vacaciones o un cumpleaños NO: son libres igual, pero distintos, y en
+    // el papel se distinguen. Van en gris, con su nombre completo.
+    const llano = !!(p&&p.libre) && /^libre$/i.test(String(txt||'').trim());
+    return { dia:DIAS[d.getDay()], num:d.getDate(), txt,
+             libre:!!(p&&p.libre), llano, feriado:esFeriado(d) };
+  });
+}
+
+async function supImprimir(){
+  const socioId = document.getElementById('supVerSocio').value;
+  if(!socioId) return toast('Elige primero un socio','#dc2626');
+  const s = (sociosMesas||[]).find(x=>x.id===socioId);
+  if(!s) return;
+  toast('Preparando la hoja…');
+  const exc = await excepcionesDe(socioId, supViewDate);
+  const filas = _supFilasImpresion(supViewDate, socioId, exc);
+  const nombre = `${s.nombre} ${s.apellido}`.trim().toUpperCase();
+  const mes = (MESES[supViewDate.getMonth()] + ' ' + supViewDate.getFullYear()).toUpperCase();
+  const trabajados = filas.filter(f=>!f.libre && f.txt!=='—').length;
+  const libres = filas.filter(f=>f.libre).length;
+
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8">
+  <title>${esc(nombre)} — ${esc(mes)}</title>
+  <style>
+    @page{ margin:12mm; }
+    *{ box-sizing:border-box; }
+    body{ font-family:Arial,Helvetica,sans-serif; color:#000; background:#fff; margin:0; }
+    .hoja{ width:74mm; margin:0 auto; }
+    h1{ font-size:13pt; text-align:center; margin:0; letter-spacing:.04em; }
+    h2{ font-size:9.5pt; text-align:center; margin:1mm 0 3mm; font-weight:normal; letter-spacing:.14em; }
+    table{ width:100%; border-collapse:collapse; }
+    td{ border:0.4pt solid #000; padding:1.1mm 1.6mm; font-size:8.6pt; }
+    td.sem{ width:22mm; }
+    td.num{ width:8mm; text-align:center; font-weight:bold; }
+    td.tur{ text-align:center; font-weight:bold; }
+    tr.libre td.tur{ letter-spacing:.1em; }
+    tr.llano td{ background:#000; color:#fff; }
+    tr.esp td{ background:#d9d9d9; }
+    tr.fer td.sem{ font-style:italic; }
+    .pie{ margin-top:4mm; font-size:7.5pt; text-align:center; }
+    .firmas{ margin-top:12mm; display:flex; gap:8mm; }
+    .firmas div{ flex:1; border-top:0.4pt solid #000; padding-top:1.5mm; font-size:7.5pt; text-align:center; }
+    @media print{ .noimp{ display:none; } }
+    .noimp{ text-align:center; margin:6mm 0; }
+    .noimp button{ font:inherit; font-size:11pt; font-weight:bold; padding:3mm 8mm; cursor:pointer; }
+  </style></head><body>
+  <div class="noimp"><button onclick="window.print()">🖨 Imprimir</button></div>
+  <div class="hoja">
+    <h1>${esc(nombre)}</h1>
+    <h2>${esc(mes)}</h2>
+    <table><tbody>
+      ${filas.map(f=>`<tr class="${f.libre?'libre':''} ${f.llano?'llano':(f.libre?'esp':'')} ${f.feriado?'fer':''}">
+        <td class="sem">${esc(f.dia)}</td><td class="num">${f.num}</td><td class="tur">${esc(f.txt)}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="pie">${trabajados} día${trabajados===1?'':'s'} con turno · ${libres} libre${libres===1?'':'s'}</div>
+    <div class="firmas"><div>Socio</div><div>Supervisor</div></div>
+  </div>
+  <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 250); };<\/script>
+  </body></html>`;
+
+  const v = window.open('', '_blank');
+  if(!v){ toast('El navegador bloqueó la ventana de impresión','#dc2626'); return; }
+  v.document.open(); v.document.write(html); v.document.close();
+}
+
 function supToggleVista(){
   supVista = (supVista==='mes') ? 'lista' : 'mes';
   const b=document.getElementById('supVistaBtn');
@@ -4206,6 +4295,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=13"></script>
+<script src="js/version-horarios.js?v=14"></script>
 </body>
 </html>

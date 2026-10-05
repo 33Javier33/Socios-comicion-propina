@@ -232,6 +232,31 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-05 — Horarios: imprimir el mes de un socio (SW horarios v32)
+
+Botón **🖨** en la barra del calendario del supervisor, junto al de **Mes/Lista**. Con un socio elegido, abre la hoja del mes que se está mirando, lista para imprimir.
+
+**Sale con la forma de la hoja de papel que se usa hoy:** el **NOMBRE** arriba en mayúsculas, el **MES** debajo, y una fila por día — día de la semana · número · turno:
+
+```
+CARLOS PEREZ
+SEPTIEMBRE 2026
+  Martes     1    LIBRE            ← en negro
+  Jueves     3    7,5 Hrs 20:30 a 04:30
+  Martes     8    4,5 Hrs 18:30 a 23:30
+  Sábado    19    LXF (7,5)        ← en gris
+```
+
+**El texto de cada día es exactamente el mismo que muestra la vista de lista en pantalla** — sale del mismo `_turnoPartes` + `_horasTurno`, así que papel y pantalla no se pueden contradecir. Hay una comprobación que lo verifica día por día.
+
+**Tres detalles tomados de la hoja original:** el **LIBRE llano va en negro**; el **LXF**, las vacaciones y el cumpleaños van en **gris**, porque son libres pero no son lo mismo y en el papel se distinguen; y los **feriados** llevan el día de la semana en cursiva. Abajo, el resumen del mes y dos líneas de firma, **Socio** y **Supervisor**.
+
+**Se imprime en blanco y negro aunque la app esté en tema oscuro:** una hoja con fondo azul marino gasta tinta y se lee peor. La ventana se abre con el diálogo de impresión listo, y con un botón por si el navegador lo bloquea.
+
+**Verificación:** 24 comprobaciones — que el botón esté junto al de Mes/Lista; que sin socio elegido avise y no abra nada; el nombre, el mes y los 30 días; los turnos con su formato de horas; los LIBRE en negro y el LXF en gris; el resumen y las firmas; que el papel coincida día por día con la lista de la pantalla; que salga en blanco y negro sin arrastrar el tema; y que al cambiar de mes imprima el que se está mirando.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-05 — Horarios: entrar con huella o rostro, en vez del PIN (SW horarios v31)
 
 **Optativo, y el PIN nunca se va.** En la pantalla de ingreso aparece **👆 Entrar con huella o rostro** solo si **ese teléfono** la tiene registrada para quien entra; el teclado del PIN sigue debajo, intacto.
