@@ -2378,6 +2378,16 @@ async function _vacLimpiarTramo(socioId, desde, hasta){
 const MESES_N = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 let _pedidosHay = null;   // null = sin comprobar, false = la tabla no existe
 
+// Postgres contesta "new row violates row-level security policy" y punto:
+// quien lee eso en el celular no tiene cómo saber qué hacer. Si el error es
+// de RLS, se dice en castellano y se nombra el archivo que lo arregla.
+function _pedError(que, error){
+  const m = String((error && error.message) || error || '');
+  if (/row-level security|row level security|violates row-level/i.test(m))
+    return que + ': falta darle permiso a la tabla de pedidos. Aplica migracion-pedidos-vacaciones-rls.sql en Supabase.';
+  return que + ': ' + (m || 'error desconocido');
+}
+
 async function pedidosConsultar(filtro){
   try{
     let q = db.from('horarios_vacaciones_pedidos').select('*');
@@ -2410,8 +2420,8 @@ async function vacProximas(){
   const pedidos = await pedidosConsultar();
   if(pedidos === null){
     cont.innerHTML = `<div class="card p-3" style="border:1px solid #92400e;">
-      <div class="text-xs font-bold" style="color:#fcd34d;">⚠️ Falta crear la tabla de pedidos</div>
-      <div class="text-[11px] text-slate-400 mt-1">Está el archivo <b>migracion-pedidos-vacaciones.sql</b> en el repositorio: pégalo en Supabase → SQL Editor y vuelve a entrar. El resto de Horarios funciona igual.</div></div>`;
+      <div class="text-xs font-bold" style="color:#fcd34d;">⚠️ No se puede leer la tabla de pedidos</div>
+      <div class="text-[11px] text-slate-400 mt-1">Si todavía no la creaste, está <b>migracion-pedidos-vacaciones.sql</b> en el repositorio: pégalo en Supabase → SQL Editor.<br>Si ya la creaste y aun así sale esto, le faltan los permisos: aplica <b>migracion-pedidos-vacaciones-rls.sql</b>. El resto de Horarios funciona igual.</div></div>`;
     return;
   }
 
@@ -2506,15 +2516,17 @@ async function pedidoResponder(id, estado){
     motivo = String(motivo).trim();
     if(!motivo) return toast('Escribe el motivo','#dc2626');
   }
-  await db.from('horarios_vacaciones_pedidos')
+  const {error}=await db.from('horarios_vacaciones_pedidos')
     .update({ estado, motivo, resuelto_en:new Date().toISOString() }).eq('id', id);
+  if(error) return toast(_pedError('No se pudo responder', error),'#dc2626');
   toast(estado==='aceptado' ? 'Pedido aceptado' : 'Pedido rechazado');
   vacProximas();
 }
 
 async function pedidoBorrar(id){
   if(!confirm('¿Borrar este pedido?')) return;
-  await db.from('horarios_vacaciones_pedidos').delete().eq('id', id);
+  const {error}=await db.from('horarios_vacaciones_pedidos').delete().eq('id', id);
+  if(error) return toast(_pedError('No se pudo borrar', error),'#dc2626');
   toast('Pedido borrado'); vacProximas();
 }
 
@@ -2548,7 +2560,7 @@ async function pedidoAnotar(){
     id:uid('ped'), socio_id:socioId, anio:y, mes:m, tipo,
     estado:'aceptado', origen:'supervisor'
   },{onConflict:'socio_id,anio,mes'});
-  if(error) return toast('No se pudo anotar: '+error.message,'#dc2626');
+  if(error) return toast(_pedError('No se pudo anotar', error),'#dc2626');
   cerrarModal(); toast('Pedido anotado'); vacProximas();
 }
 
@@ -2592,7 +2604,7 @@ async function socioPedir(){
     id:uid('ped'), socio_id:sesion.id, anio:y, mes:m, tipo,
     estado:'pendiente', origen:'socio', motivo:null, resuelto_en:null
   },{onConflict:'socio_id,anio,mes'});
-  if(error) return toast('No se pudo enviar: '+error.message,'#dc2626');
+  if(error) return toast(_pedError('No se pudo enviar', error),'#dc2626');
   toast('Pedido enviado al supervisor');
   socioPedirModal();
 }
@@ -3761,6 +3773,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=8"></script>
+<script src="js/version-horarios.js?v=9"></script>
 </body>
 </html>

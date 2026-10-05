@@ -232,6 +232,31 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-05 — Pedidos de vacaciones: «row-level security policy» al anotar (SW horarios v27)
+
+Al anotar que un socio pidió un mes saltaba en pantalla:
+
+> `No se pudo anotar: new row violates row-level security policy for table "horarios_vacaciones_pedidos"`
+
+**Qué pasaba.** La tabla quedó con **RLS activado y sin ninguna política**. Con RLS encendido y cero políticas, Postgres le niega todo a la llave pública que usa la app. Y lo hace de dos maneras distintas:
+
+- los **INSERT/UPDATE fallan** con ese error;
+- los **SELECT no fallan: devuelven cero filas**. Eso es lo peor, porque la sección se ve vacía y parece que no hay pedidos, en vez de avisar que algo está mal.
+
+**El arreglo** está en **`migracion-pedidos-vacaciones-rls.sql`** (nuevo, en la raíz): enciende RLS explícitamente y crea las cuatro políticas (leer, insertar, actualizar, borrar) para la llave pública. Se puede volver a correr sin problema. La migración original también las trae ahora, para que una instalación nueva no repita el tropiezo.
+
+**Queda dicho con todas sus letras:** esas políticas dejan la tabla **abierta** a cualquiera con la llave pública, igual que el resto de las `horarios_*` que la app ya usa. No es un candado — es dejarla como sus hermanas para que la app funcione. Cerrar de verdad el conjunto `horarios_*` es otra tarea, y antes hay que decidir cómo se identifica cada socio contra Supabase: hoy la app entra con PIN propio, no con usuarios de Supabase Auth.
+
+**Del lado de la app, tres cosas:**
+
+- El error ya no se muestra crudo. Si es de RLS, dice **«falta darle permiso a la tabla de pedidos»** y **nombra el archivo** que lo arregla.
+- **Aceptar, rechazar y borrar un pedido no miraban el error**: decían *«Pedido aceptado»* aunque no hubieran guardado nada. Ahora avisan.
+- El aviso de la sección pasó de *«Falta crear la tabla»* a **«No se puede leer la tabla de pedidos»**, con los dos caminos: crearla, o darle permisos si ya existe.
+
+**Verificación:** 18 comprobaciones — el caso exacto de la pantalla; que no guarde nada y deje el modal abierto para reintentar; que aceptar y borrar dejen de cantar victoria; el mismo mensaje del lado del socio; el aviso con los dos archivos; y que con los permisos puestos todo funcione normal.
+
+**Archivos:** `migracion-pedidos-vacaciones-rls.sql` (nuevo), `migracion-pedidos-vacaciones.sql`, `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-05 — Horarios: «Quién trabaja hoy» pasa a ser un botón con modal (SW horarios v26)
 
 Desplegada dentro del panel, la lista ocupaba media pantalla y empujaba **«Ver calendario de un socio»** fuera de la vista. Lo normal es mirar el día y cerrar, no tenerlo abierto todo el rato.

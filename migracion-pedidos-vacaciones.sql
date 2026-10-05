@@ -44,3 +44,28 @@ create index if not exists horarios_vac_pedidos_mes
 
 comment on table public.horarios_vacaciones_pedidos is
     'Intención de vacaciones: el socio pide un MES con anticipación. No marca el calendario; eso lo hace el supervisor con horarios_vacaciones.';
+
+-- ── Políticas de acceso ───────────────────────────────────────────────
+-- Van acá sí o sí. Si el proyecto tiene RLS activado (por defecto o a
+-- mano) y la tabla no trae políticas, Postgres niega todo a la llave
+-- pública: los INSERT fallan con "new row violates row-level security
+-- policy" y los SELECT devuelven CERO filas sin avisar.
+--
+-- Dejan la tabla abierta igual que el resto de las `horarios_*`. No es un
+-- candado; cerrar el conjunto es otra tarea (ver el comentario largo en
+-- migracion-pedidos-vacaciones-rls.sql).
+alter table public.horarios_vacaciones_pedidos enable row level security;
+
+drop policy if exists horarios_vac_pedidos_leer       on public.horarios_vacaciones_pedidos;
+drop policy if exists horarios_vac_pedidos_insertar   on public.horarios_vacaciones_pedidos;
+drop policy if exists horarios_vac_pedidos_actualizar on public.horarios_vacaciones_pedidos;
+drop policy if exists horarios_vac_pedidos_borrar     on public.horarios_vacaciones_pedidos;
+
+create policy horarios_vac_pedidos_leer       on public.horarios_vacaciones_pedidos
+    for select to anon, authenticated using (true);
+create policy horarios_vac_pedidos_insertar   on public.horarios_vacaciones_pedidos
+    for insert to anon, authenticated with check (true);
+create policy horarios_vac_pedidos_actualizar on public.horarios_vacaciones_pedidos
+    for update to anon, authenticated using (true) with check (true);
+create policy horarios_vac_pedidos_borrar     on public.horarios_vacaciones_pedidos
+    for delete to anon, authenticated using (true);
