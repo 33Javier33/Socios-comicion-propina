@@ -115,6 +115,12 @@
   @media (max-width:340px){ .tab-btn{ font-size:8px; letter-spacing:-0.2px; } }
   .tab-btn.active{ color:#38bdf8; }
   .sup-panel{ display:none; }
+  /* Los tres botones sobre el calendario del socio. En pantallas angostas se
+     aprietan en vez de partirse en dos líneas: a 320px (un iPhone SE) con el
+     padding de siempre no entraban y la fila se apilaba. */
+  .fila-socio > button{ font-size:12px; padding:6px 10px; white-space:nowrap; flex-shrink:0; }
+  .fila-socio > button:first-child{ min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  @media (max-width:360px){ .fila-socio{ gap:5px !important; } .fila-socio > button{ font-size:11px; padding:6px 7px; } }
   .sup-panel.active{ display:block; }
   .chip{ display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:20px; font-size:12px; font-weight:700; }
   ::-webkit-scrollbar{ width:0; }
@@ -310,16 +316,19 @@
       <div id="socioMesLabel" class="font-extrabold text-base"></div>
       <button onclick="socioMes(1)" class="btn-ghost">›</button>
     </div>
-    <!-- Dos cosas en la misma fila, sobre el calendario:
+    <!-- Tres cosas en la misma fila, sobre el calendario:
          · Pedir vacaciones con anticipación: avisa el MES, no marca fechas.
            Las fechas las pone el supervisor cuando corresponda.
+         · Cambiar el PIN propio, sin tener que pedírselo a nadie. Abajo del
+           todo quedaba perdido, después del calendario y la leyenda.
          · Las dos formas de ver el mes, la misma opción que tiene el
            supervisor: la grilla de siempre o la lista con forma de planilla.
          Antes el botón de vacaciones iba solo y ancho arriba de todo, y
          empujaba el calendario —que es a lo que se entra— fuera de la vista. -->
-    <div class="flex items-center justify-between gap-2 mb-2">
-      <button onclick="socioPedirModal()" class="btn-ghost" style="font-size:12px;padding:6px 11px;min-width:0;">🏖️ Pedir vacaciones</button>
-      <button id="socioVistaBtn" onclick="socioToggleVista()" class="btn-ghost" style="font-size:12px;padding:6px 11px;flex-shrink:0;">📋 Lista</button>
+    <div class="flex items-center gap-2 mb-2 fila-socio">
+      <button onclick="socioPedirModal()" class="btn-ghost">🏖️ Pedir vacaciones</button>
+      <button onclick="socioCambiarPin()" class="btn-ghost" title="Cambiar mi PIN">🔑 Mi PIN</button>
+      <button id="socioVistaBtn" onclick="socioToggleVista()" class="btn-ghost" style="margin-left:auto;">📋 Lista</button>
     </div>
     <div id="socioCalCab" class="grid grid-cols-7 gap-1.5 mb-1 text-center text-[10px] font-bold text-slate-500">
       <div>LU</div><div>MA</div><div>MI</div><div>JU</div><div>VI</div><div>SÁ</div><div>DO</div>
@@ -329,12 +338,6 @@
     <div id="socioLeyenda" class="mt-5"></div>
     <div id="socioSinGrupo" class="hidden mt-6 card p-5 text-center text-sm text-slate-400">
       Aún no tienes un grupo asignado. Pídele al <b>supervisor</b> que te asigne a un grupo de turnos.
-    </div>
-    <!-- Cambiar el PIN propio. Va abajo del todo, fuera del camino de lo que
-         se viene a mirar todos los días, pero sin tener que pedírselo a nadie. -->
-    <div class="mt-6 pt-4" style="border-top:1px solid #293449;">
-      <button onclick="socioCambiarPin()" class="btn-ghost w-full" style="font-size:12px;padding:9px;">🔑 Cambiar mi PIN</button>
-      <div class="text-[11px] text-slate-500 text-center mt-2">Si lo olvidas, pídele al supervisor que te lo reinicie y creas uno nuevo al entrar.</div>
     </div>
   </div>
 </div>
@@ -3820,6 +3823,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=10"></script>
+<script src="js/version-horarios.js?v=11"></script>
 </body>
 </html>

@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-05 — Horarios: «Mi PIN» sube a la fila de los botones (SW horarios v29)
+
+Abajo del todo el botón quedaba perdido: después del calendario, de la leyenda y de un separador. Ahora va **🔑 Mi PIN** en la misma fila que **🏖️ Pedir vacaciones** y **📋 Lista**, sobre el calendario, donde está el resto de lo que el socio puede hacer.
+
+Hace exactamente lo mismo que ayer; solo cambió de lugar, y se fue la línea de ayuda que lo acompañaba abajo.
+
+**A 320 px la fila se partía en dos líneas** con tres botones. En vez de acortar los textos, la fila se aprieta sola bajo 360 px (letra 11 px, menos relleno, menos separación). Medido a 430, 414, 393, 390, 375, 360 y 320 px: una sola línea en todos, sin recortes ni solapes.
+
+**Verificación:** las 25 comprobaciones de ayer siguen pasando, más dos nuevas — que el botón esté en la fila junto a los otros dos y que no quede ninguno suelto abajo. Las once suites de Horarios en verde.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-05 — Horarios: el socio puede cambiar su propio PIN (SW horarios v28)
 
 El supervisor podía cambiar su clave desde adentro; el socio no. Si quería cambiarlo tenía que pedirle al supervisor que se lo **reiniciara** —borrándolo— y crear uno nuevo al entrar.
