@@ -232,6 +232,25 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-06 — Horarios: tres columnas en el computador (SW horarios v33)
+
+La app se escribió para el teléfono: una columna, todo apilado. En una pantalla ancha eso dejaba dos tercios vacíos y obligaba a rodar para ver lo que cabía de una.
+
+**Desde 1024 px, cuatro paneles se reparten en tres columnas:**
+
+- **🗓️ Calendario** — el **calendario a la izquierda** (la columna más ancha), **«Quién tiene turnos»** al medio y **«Quién trabaja hoy»** a la derecha, desplegado en vez de botón.
+- **🏖️ Vacaciones** — el formulario de agendar, lo ya agendado de ese socio, y «quién sale y cuándo». Con las tres a la vista, los botones de sub-vista **sobran y se esconden**.
+- **🎂 Cumpleaños** — quién cumple este mes, la lista con las fechas, y los que todavía no tienen fecha.
+- **🔐 Accesos** — la clave de supervisor, los últimos ingresos, y quién ya creó su PIN.
+
+**El teléfono no cambió en nada.** El HTML conserva su orden y las columnas se colocan por CSS, así que en pantalla angosta todo sigue apilado exactamente como estaba: «Quién trabaja hoy» vuelve a ser un botón con modal, y Vacaciones vuelve a mostrar una sub-vista a la vez con sus botones.
+
+**Un detalle que costó:** en Vacaciones y en Accesos había que fijar la **fila** además de la columna. En el HTML «quién sale y cuándo» viene **antes** que el formulario —porque en el teléfono ese es el orden correcto— y sin decirle la fila, el navegador las repartía en dos filas distintas en vez de ponerlas lado a lado.
+
+**Verificación:** 24 comprobaciones midiendo **la posición real en pantalla**, no el CSS — a 1440 px: que cada panel sea una grilla, que las columnas queden en el orden pedido, a la misma altura, y que el calendario sea la más ancha; a 430 px: que siga apilado, en el orden de siempre, con el modal y las sub-vistas funcionando como antes. Las quince suites de Horarios, en verde.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-05 — Horarios: imprimir el mes de un socio (SW horarios v32)
 
 Botón **🖨** en la barra del calendario del supervisor, junto al de **Mes/Lista**. Con un socio elegido, abre la hoja del mes que se está mirando, lista para imprimir.
