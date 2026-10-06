@@ -232,6 +232,27 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-06 — Horarios: guía completa, con «?» repartidos por la app (SW horarios v36)
+
+**12 temas escritos para alguien que nunca usó una app así.** Nada de «excepción de ciclo» ni «sub-vista»: se dice qué se ve, qué se toca y qué pasa.
+
+**Dónde está el «?»:**
+
+- **Antes de entrar** — en la primera pantalla, un botón **«❓ ¿Cómo funciona esto? — Guía»**. Quien nunca lo usó necesita leer *antes* de entrar, no después.
+- **En la pantalla del PIN** — lleva derecho a «Cómo entrar».
+- **En la cabecera**, al lado de la campanita: el socio y el supervisor tienen cada uno su **❓**.
+- **Repartidos por las secciones** — ocho signos más en el supervisor (Ver calendario, cargar la planilla, Turnos, Grupos, Asignar, Vacaciones, Cumpleaños, Accesos) y uno junto a los botones del socio.
+
+**Cada «?» abre derecho el tema de esa pantalla, no la portada:** quien está perdido en una pantalla no quiere leer un índice. Adentro hay un «‹ Temas» para ver el resto.
+
+**Cada uno ve lo suyo:** el socio no ve los temas del supervisor y al revés. Los comunes —cómo entrar, la huella, cambiar el PIN— están en los dos. Antes de entrar solo salen los comunes.
+
+**Los temas:** cómo entrar (qué es el PIN, qué hacer si se olvida, la ⭐) · entrar con la huella · tus turnos · los avisos de tu turno · pedir vacaciones · cambiar tu PIN · el calendario del supervisor · cargar la planilla del mes · turnos y grupos · dar vacaciones · cumpleaños · accesos.
+
+**Verificación:** 26 comprobaciones — que se llegue desde la primera pantalla, desde el PIN, desde las dos cabeceras y desde cada sección; que cada «?» apunte a un tema **que existe** y que su título sea una pregunta, no un tecnicismo; que socio y supervisor vean solo lo suyo; que ningún tema quede vacío, **que ninguno tenga palabras de programador** y que ninguno sea un ladrillo. Contraste medido en los tres temas: 17/17 sobre 4.5:1.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-06 — Horarios: vista de mosaico en Turnos, Grupos y Asignar (SW horarios v35)
 
 Las tres listas eran **una tarjeta por fila**. En el computador eso es una columna flaca con mucho aire al lado y mucho rodar para ver seis turnos o treinta socios.

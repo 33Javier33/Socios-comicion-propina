@@ -122,6 +122,21 @@
      mismas tarjetas van más compactas y en rejilla: cuatro columnas en el
      computador, dos en tablet y una en el teléfono.
      ══════════════════════════════════════════════════════════════════ */
+  /* El signo de pregunta: redondo, discreto, pero visible en los tres temas. */
+  .ayuda{ display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+          width:21px; height:21px; border-radius:50%; border:1px solid #38bdf866;
+          background:#0c4a6e; color:#7dd3fc; font-size:12px; font-weight:800;
+          line-height:1; cursor:pointer; padding:0; }
+  .ayuda:hover{ background:#0369a1; color:#fff; }
+  .guia-texto{ font-size:13px; line-height:1.6; color:var(--h-text); }
+  .guia-texto p{ margin:0 0 9px; }
+  .guia-texto ul{ margin:0 0 9px; padding-left:18px; }
+  .guia-texto li{ margin-bottom:4px; }
+  .guia-texto b{ color:var(--h-text); }
+  .guia-texto u{ text-decoration:underline; }
+  .guia-texto pre{ background:var(--h-field); border:1px solid var(--h-border); border-radius:9px;
+                   padding:9px 11px; font-size:11.5px; line-height:1.45; overflow-x:auto; margin:0 0 9px; }
+
   .mosaico{ display:grid; gap:10px; grid-template-columns:1fr; }
   .mosaico > *{ min-width:0; margin-bottom:0 !important; }
   @media (min-width:560px){ .mosaico{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
@@ -339,7 +354,10 @@
   <div class="w-full max-w-sm text-center">
     <div class="w-20 h-20 rounded-3xl bg-sky-500/15 border border-sky-500/30 mx-auto mb-5 flex items-center justify-center text-4xl">🗓️</div>
     <h1 class="text-2xl font-extrabold mb-1">Horarios Mesas</h1>
-    <p class="text-sm text-slate-400 mb-8">Turnos del equipo de Mesas — Comisión Propina</p>
+    <p class="text-sm text-slate-400 mb-3">Turnos del equipo de Mesas — Comisión Propina</p>
+    <!-- La guía, a la vista desde el primer momento: quien nunca usó esto
+         necesita el "?" antes de entrar, no después. -->
+    <button onclick="guiaAbrir()" class="btn-ghost w-full mb-6" style="font-size:13px;padding:9px;">❓ ¿Cómo funciona esto? — Guía</button>
     <!-- Acceso directo al socio marcado con ⭐ en la lista. Lleva derecho al
          PIN: es un atajo al usuario, NO a la clave. -->
     <div id="accesoDirecto" style="display:none" class="mb-3"></div>
@@ -385,7 +403,10 @@
 <!-- ══════════ PIN ══════════ -->
 <div id="scrPin" class="screen flex-col items-center justify-center min-h-[100dvh] p-6">
   <div class="w-full max-w-sm text-center">
-    <button onclick="pinCancelar()" class="text-slate-400 text-sm mb-6 self-start block">‹ Volver</button>
+    <div class="flex items-center justify-between mb-6">
+      <button onclick="pinCancelar()" class="text-slate-400 text-sm">‹ Volver</button>
+      <button class="ayuda" onclick="guiaAbrir('entrar')" title="¿Qué es el PIN?">?</button>
+    </div>
     <div id="pinAvatar" class="w-16 h-16 rounded-2xl bg-sky-500/15 border border-sky-500/30 mx-auto mb-4 flex items-center justify-center text-2xl font-bold text-sky-300">?</div>
     <h2 id="pinTitulo" class="text-xl font-extrabold mb-1">Ingresa tu PIN</h2>
     <p id="pinSub" class="text-sm text-slate-400 mb-6">4 dígitos</p>
@@ -424,6 +445,7 @@
         <div class="min-w-0"><div class="text-xs text-sky-100/80">Mis turnos</div><div id="socioNombreHdr" class="text-lg font-extrabold text-white truncate">...</div><div id="socioGrupoHdr" class="text-xs text-sky-100/80 mt-0.5"></div></div>
       </div>
       <div class="flex items-center gap-2">
+        <button onclick="guiaAbrir()" class="text-sky-100/90 text-xs bg-white/15 rounded-lg px-3 py-2" title="Guía de la app">❓</button>
         <button id="socioCampana" onclick="notifToggle()" class="text-sky-100/90 text-xs bg-white/15 rounded-lg px-3 py-2" title="Activar los avisos de tu turno">🔕</button>
         <div style="position:relative;">
           <button onclick="temaPickerH_toggle(event)" class="tema-btn-h text-sky-100/90 text-xs bg-white/15 rounded-lg px-3 py-2" title="Tema de la app">🌙</button>
@@ -455,6 +477,7 @@
       <button onclick="socioCambiarPin()" class="btn-ghost" title="Cambiar mi PIN">🔑 PIN</button>
       <button id="socioHuella" onclick="socioHuellaToggle()" class="btn-ghost" style="display:none">👆 Huella</button>
       <button id="socioVistaBtn" onclick="socioToggleVista()" class="btn-ghost" style="margin-left:auto;">📋 Lista</button>
+      <button class="ayuda" onclick="guiaAbrir('socio-calendario')" title="¿Qué veo acá?">?</button>
     </div>
     <div id="socioCalCab" class="grid grid-cols-7 gap-1.5 mb-1 text-center text-[10px] font-bold text-slate-500">
       <div>LU</div><div>MA</div><div>MI</div><div>JU</div><div>VI</div><div>SÁ</div><div>DO</div>
@@ -473,6 +496,7 @@
   <div class="p-4 pt-7 flex items-center justify-between" style="background:linear-gradient(135deg,#4338ca,#6366f1);">
     <div><div class="text-xs text-indigo-100/80">Supervisor</div><div class="text-lg font-extrabold text-white">Gestión de Horarios</div></div>
     <div class="flex items-center gap-2">
+      <button onclick="guiaAbrir()" class="text-indigo-100/90 text-xs bg-white/15 rounded-lg px-3 py-2" title="Guía de la app">❓</button>
       <div style="position:relative;">
         <button onclick="temaPickerH_toggle(event)" class="tema-btn-h text-indigo-100/90 text-xs bg-white/15 rounded-lg px-3 py-2" title="Tema de la app">🌙</button>
       </div>
@@ -520,7 +544,7 @@
 
       <div class="col col-cal">
       <div class="card p-3 mb-4">
-        <label class="text-xs text-slate-400 font-semibold">Ver calendario de un socio</label>
+        <label class="text-xs text-slate-400 font-semibold">Ver calendario de un socio <button class="ayuda" onclick="guiaAbrir('sup-calendario')" title="¿Cómo funciona esta pantalla?">?</button></label>
         <!-- El id del socio elegido vive en un campo oculto; arriba va el
              buscador. Con 33 socios, una lista desplegable en el teléfono
              obliga a rodar hasta encontrar el nombre. -->
@@ -539,7 +563,8 @@
         <!-- Los dos de importar, uno al lado del otro. El texto se parte en
              dos líneas dentro de cada botón en vez de acortarse: "de un
              socio" y "de todos" es justo lo que hay que distinguir. -->
-        <div class="imp-par mt-2">
+        <div class="text-[11px] text-slate-400 mt-3 mb-1 flex items-center gap-2">Cargar la planilla del mes <button class="ayuda" onclick="guiaAbrir('sup-importar')" title="¿Cómo cargo la planilla?">?</button></div>
+        <div class="imp-par">
           <button onclick="plModal()" class="btn-ghost">📸 Importar planilla<br>de un socio</button>
           <button onclick="plMasivoModal()" class="btn-ghost">📥 Importar planilla<br>de TODOS</button>
         </div>
@@ -563,7 +588,7 @@
 
     <!-- PANEL: TURNOS -->
     <div id="panTurnos" class="sup-panel">
-      <div class="flex items-center justify-between mb-3 gap-2"><h3 class="font-extrabold">Turnos</h3>
+      <div class="flex items-center justify-between mb-3 gap-2"><h3 class="font-extrabold flex items-center gap-2">Turnos <button class="ayuda" onclick="guiaAbrir('sup-turnos')" title="¿Qué es un turno?">?</button></h3>
         <div class="flex gap-2">
           <button class="btn-ghost text-sm px-3 py-2 mos-btn" onclick="supMosaicoToggle()" title="Cambiar entre lista y mosaico">🔲</button>
           <button onclick="importModal()" class="btn-ghost text-sm px-3 py-2">⬇️ Importar JSON</button>
@@ -574,7 +599,7 @@
 
     <!-- PANEL: GRUPOS -->
     <div id="panGrupos" class="sup-panel">
-      <div class="flex items-center justify-between mb-3 gap-2"><h3 class="font-extrabold">Grupos y ciclos</h3>
+      <div class="flex items-center justify-between mb-3 gap-2"><h3 class="font-extrabold flex items-center gap-2">Grupos y ciclos <button class="ayuda" onclick="guiaAbrir('sup-turnos')" title="¿Qué es un grupo?">?</button></h3>
         <div class="flex gap-2">
           <button class="btn-ghost text-sm px-3 py-2 mos-btn" onclick="supMosaicoToggle()" title="Cambiar entre lista y mosaico">🔲</button>
           <button onclick="grupoModal()" class="btn-primary text-sm px-3 py-2">+ Nuevo grupo</button>
@@ -585,7 +610,7 @@
 
     <!-- PANEL: SOCIOS -->
     <div id="panSocios" class="sup-panel">
-      <div class="flex items-center justify-between mb-3 gap-2"><h3 class="font-extrabold">Asignar socios a grupos</h3>
+      <div class="flex items-center justify-between mb-3 gap-2"><h3 class="font-extrabold flex items-center gap-2">Asignar socios a grupos <button class="ayuda" onclick="guiaAbrir('sup-turnos')" title="¿Para qué sirve asignar?">?</button></h3>
         <button class="btn-ghost text-sm px-3 py-2 mos-btn" onclick="supMosaicoToggle()" title="Cambiar entre lista y mosaico">🔲</button>
       </div>
       <input id="asigBuscar" oninput="renderAsignaciones()" placeholder="🔍 Buscar socio..." class="fld mb-3">
@@ -598,7 +623,7 @@
          estaba el socio y encontrar su mini-calendario entre los del grupo.
          Acá se elige el socio directo. -->
     <div id="panVacaciones" class="sup-panel col3">
-      <h3 class="font-extrabold mb-2 col-ancho">🏖️ Vacaciones</h3>
+      <h3 class="font-extrabold mb-2 col-ancho flex items-center gap-2">🏖️ Vacaciones <button class="ayuda" onclick="guiaAbrir('sup-vacaciones')" title="¿Cómo doy vacaciones?">?</button></h3>
       <div class="flex gap-2 mb-3 col-ancho vac-tabs">
         <button id="vacSub1" onclick="vacSubVista('agendar')" class="btn-primary flex-1" style="font-size:12px;padding:7px;">📅 Agendar</button>
         <button id="vacSub2" onclick="vacSubVista('proximas')" class="btn-ghost flex-1" style="font-size:12px;padding:7px;">📋 Quién sale y cuándo</button>
@@ -664,7 +689,7 @@
     <!-- PANEL: CUMPLEAÑOS -->
     <div id="panCumple" class="sup-panel col3">
       <div class="flex items-center justify-between mb-1 col-ancho">
-        <h3 class="font-extrabold">🎂 Cumpleaños</h3>
+        <h3 class="font-extrabold flex items-center gap-2">🎂 Cumpleaños <button class="ayuda" onclick="guiaAbrir('sup-cumple')" title="¿Cómo funciona el día libre de cumpleaños?">?</button></h3>
         <button onclick="cumplePanelInit()" class="btn-ghost text-xs">🔄 Actualizar</button>
       </div>
       <p class="text-xs text-slate-400 mb-3 col-ancho">Carga la fecha de cada socio y la app le marca sola el día libre de su cumpleaños en el calendario.</p>
@@ -674,7 +699,7 @@
     <!-- PANEL: ACCESOS -->
     <div id="panAccesos" class="sup-panel col3">
       <div class="flex items-center justify-between mb-3 col-ancho">
-        <h3 class="font-extrabold">Accesos</h3>
+        <h3 class="font-extrabold flex items-center gap-2">Accesos <button class="ayuda" onclick="guiaAbrir('sup-accesos')" title="¿Qué se ve acá?">?</button></h3>
         <button onclick="accRender()" class="btn-ghost text-xs">🔄 Actualizar</button>
       </div>
       <!-- Clave del supervisor: cambiarla desde adentro -->
@@ -4418,6 +4443,135 @@ async function plGuardar(){
 }
 
 // ── Modal ──
+// ══════════════════════════════════════════════════════════════════════
+// LA GUÍA
+//
+// Está escrita para alguien que nunca usó una app así. Nada de "excepción
+// de ciclo" ni "sub-vista": se dice qué se ve, qué se toca y qué pasa.
+//
+// Se entra por cualquier "?" de la app. Cada "?" abre DERECHO el tema que
+// corresponde a esa pantalla, no la portada: quien está perdido en una
+// pantalla no quiere leer un índice.
+// ══════════════════════════════════════════════════════════════════════
+const GUIA = [
+  { id:'entrar', para:'todos', icono:'🚪', titulo:'Cómo entrar',
+    cuerpo:`<p><b>La primera pantalla</b> pregunta quién eres. Hay dos botones:</p>
+      <ul><li><b>👤 Soy Socio</b> — para ver tus turnos.</li>
+      <li><b>🛡️ Soy Supervisor</b> — para armar y repartir los turnos de todos.</li></ul>
+      <p>Si eres socio, después aparece la lista con los nombres. Busca el tuyo y tócalo.</p>
+      <p><b>El PIN</b> son 4 números que tú eliges. La <u>primera vez</u> que entras, la app te los pide para crearlos: elige unos que te acuerdes y escríbelos. De ahí en adelante son los que usas siempre.</p>
+      <p><b>¿Se te olvidó?</b> Pídele al supervisor que te lo reinicie. La próxima vez que entres, creas uno nuevo.</p>
+      <p><b>La ⭐ estrella</b> al lado de tu nombre deja tu nombre guardado en <u>este</u> teléfono, para no tener que buscarlo cada vez. El PIN te lo sigue pidiendo igual.</p>` },
+
+  { id:'huella', para:'todos', icono:'👆', titulo:'Entrar con la huella',
+    cuerpo:`<p>Si tu teléfono abre con huella o con tu cara, puedes usar eso en vez de escribir el PIN.</p>
+      <p><b>Para activarlo:</b> entra primero con tu PIN y toca el botón <b>👆 Huella</b>. El teléfono te va a pedir tu huella una vez, para reconocerte.</p>
+      <p>Desde ahí, al entrar te va a aparecer el botón <b>👆 Entrar con huella o rostro</b>. El teclado del PIN sigue abajo por si prefieres escribirlo.</p>
+      <p><b>Es solo en ese teléfono.</b> Si cambias de equipo, entras con tu PIN y lo activas de nuevo allá. Y se puede apagar cuando quieras, con el mismo botón.</p>` },
+
+  { id:'socio-calendario', para:'socio', icono:'🗓️', titulo:'Tus turnos',
+    cuerpo:`<p>Al entrar, arriba de todo ves <b>lo que te toca hoy</b>. Más abajo está el mes completo.</p>
+      <p><b>Los colores:</b> cada turno tiene el suyo. Los días <b>LIBRE</b> salen marcados aparte. Abajo del calendario hay una leyenda que dice qué es cada color.</p>
+      <p><b>Las flechas ‹ ›</b> arriba cambian de mes. El botón del medio con el nombre del mes te devuelve a hoy.</p>
+      <p><b>📋 Lista / 🗓 Mes:</b> el botón cambia la forma de ver. La <b>lista</b> se parece a la hoja de papel: un día por fila, con la hora de entrada y salida. El <b>mes</b> es la cuadrícula de siempre.</p>
+      <p>Si dice <i>«Aún no tienes un grupo asignado»</i>, avísale al supervisor: te falta que te pongan en un grupo de turnos.</p>` },
+
+  { id:'avisos', para:'socio', icono:'🔔', titulo:'Los avisos de tu turno',
+    cuerpo:`<p>La <b>campanita</b> arriba a la derecha prende los avisos. Tócala una vez y acepta cuando el teléfono te pregunte.</p>
+      <p><b>Qué te avisa:</b></p>
+      <ul><li>Al empezar el día, <b>a qué hora entras</b> — o que estás libre, de vacaciones o que es tu cumpleaños.</li>
+      <li><b>Tres horas antes</b> de entrar.</li></ul>
+      <p>Para apagarlos, tócala de nuevo. La campana se ve <b>🔔</b> cuando están prendidos y <b>🔕</b> cuando no.</p>
+      <p><b>Importante:</b> para que los avisos te lleguen con la app cerrada, en Android tienes que <b>instalar la app</b> en la pantalla de inicio. En iPhone te llegan cuando abres la app.</p>` },
+
+  { id:'socio-vacaciones', para:'socio', icono:'🏖️', titulo:'Pedir vacaciones',
+    cuerpo:`<p>El botón <b>🏖️ Vacaciones</b> sirve para <b>avisar con tiempo</b> qué mes quieres salir. Por ejemplo: en enero dices que quieres salir en noviembre.</p>
+      <p><b>Esto no marca tus días todavía.</b> Es un aviso para que el supervisor lo sepa con anticipación y pueda ordenar los turnos. Él decide y después marca las fechas.</p>
+      <p>Eliges el <b>mes</b> y qué piensas tomar: los 15 días hábiles, los 6 adicionales, los dos, o «todavía no lo sé».</p>
+      <p>Abajo ves tus pedidos y en qué están: <b>Pendiente</b> (el supervisor no ha respondido), <b>Aceptado</b> o <b>Rechazado</b> — y si fue rechazado, el motivo.</p>` },
+
+  { id:'pin', para:'todos', icono:'🔑', titulo:'Cambiar tu PIN',
+    cuerpo:`<p>El botón <b>🔑 PIN</b> cambia tu clave cuando quieras.</p>
+      <p>Te pide <b>el PIN que usas hoy</b> — aunque ya estés adentro, a propósito: así nadie que te agarre el teléfono desbloqueado te lo puede cambiar.</p>
+      <p>Después escribes el nuevo <b>dos veces</b>, para asegurarse de que no hubo un dedazo.</p>
+      <p>Si los dos no coinciden, o pones el mismo que ya tenías, la app te avisa y no cambia nada.</p>` },
+
+  { id:'sup-calendario', para:'super', icono:'🗓️', titulo:'Calendario: el día a día',
+    cuerpo:`<p>Esta es la pantalla donde más vas a estar. Tiene tres cosas:</p>
+      <p><b>🕐 Quién trabaja hoy</b> — la respuesta a «¿quién entra y a qué hora?». Están agrupados por horario: a las 20:30 entran estos, a las 16:00 estos otros. Puedes mirar <b>cualquier otro día</b> con el selector de fecha o las flechas. Los que no trabajan quedan abajo, plegados.</p>
+      <p><b>📊 Quién tiene turnos</b> — del mes elegido, quién ya tiene sus turnos cargados y a quién le faltan. Lo que hay que revisar sale primero.</p>
+      <p><b>Ver calendario de un socio</b> — escribes su nombre y se abre su mes. Ahí puedes <b>tocar un día</b> para cambiarle el turno solo ese día, y con el <b>🖨</b> imprimir su mes en una hoja.</p>` },
+
+  { id:'sup-importar', para:'super', icono:'📸', titulo:'Cargar la planilla del mes',
+    cuerpo:`<p>En vez de poner turno por turno, puedes cargar la planilla que ya tienes hecha. Hay dos botones:</p>
+      <p><b>📸 Importar planilla de un socio</b> — le sacas una foto a su columna, o pegas las filas como texto.</p>
+      <p><b>📥 Importar planilla de TODOS</b> — pegas la planilla completa de una vez. El truco es poner <b>el nombre del socio en una línea sola</b> antes de sus días:</p>
+      <pre>Carlos Perez
+Jueves   1   7,5 Hrs 20:30 a 04:30
+Viernes  2   LIBRE
+
+Laura Trocel
+Jueves   1   LIBRE</pre>
+      <p><b>Nunca guarda a ciegas.</b> Primero te muestra qué entendió de cada socio: verde si está todo bien, ámbar si hay días que no entendió, y <b>rojo si ese nombre no corresponde a ningún socio</b> — ese no se guarda. Los días dudosos los arreglas ahí mismo antes de confirmar.</p>` },
+
+  { id:'sup-turnos', para:'super', icono:'⏰', titulo:'Turnos y grupos',
+    cuerpo:`<p><b>Un turno</b> es un horario con nombre y color: «Noche, de 20:30 a 04:30». También hay turnos <b>libres</b>, que no tienen hora.</p>
+      <p><b>Un grupo</b> es una rotación. Le dices qué turnos se repiten y en qué orden —por ejemplo: Noche, Noche, Libre— y desde qué fecha empieza. Todos los socios de ese grupo siguen esa rotación sola, sin que tengas que cargar día por día.</p>
+      <p>En <b>🧩 Asignar</b> pones a cada socio en su grupo. Desde ahí también puedes <b>reiniciar el PIN</b> de alguien que lo olvidó.</p>
+      <p>El botón <b>🔲</b> arriba cambia la forma de ver: en lista, o en <b>mosaico</b> con varias tarjetas por fila, que en el computador entra mucho más.</p>` },
+
+  { id:'sup-vacaciones', para:'super', icono:'🏖️', titulo:'Dar vacaciones',
+    cuerpo:`<p><b>📅 Agendar:</b> eliges al socio, marcas <b>el primer día</b> que sale y la app cuenta los días sola en el calendario.</p>
+      <ul><li><b>15 días hábiles</b> — salta fines de semana y feriados.</li>
+      <li><b>6 días adicionales</b> — corridos, sin saltar nada.</li></ul>
+      <p>Antes de guardar te muestra <b>qué días se van a tomar y cuándo vuelve</b>. Recién al confirmar se marca.</p>
+      <p><b>📋 Quién sale y cuándo:</b> de este mes en adelante, quién ya tiene fechas marcadas y quién solo <b>pidió el mes</b>. Arriba destaca quiénes salen el mes que viene, que es lo que hay que alcanzar a armar. Al final, a quién le falta salir este año.</p>
+      <p>Los pedidos de los socios se <b>aceptan o rechazan</b> ahí mismo. Al rechazar se te pide el motivo, y el socio lo ve en su app.</p>` },
+
+  { id:'sup-cumple', para:'super', icono:'🎂', titulo:'Cumpleaños',
+    cuerpo:`<p>Cargas la fecha de nacimiento de cada socio y la app le <b>marca sola el día libre</b> de su cumpleaños en el calendario.</p>
+      <p>Marca el <b>próximo</b> cumpleaños, no el de este año si ya pasó: marcar un día que ya se trabajó sería borrar un turno real.</p>
+      <p><b>Si ese día ya lo tenía libre</b> (por su rotación, por feriado o porque está de vacaciones), el libre no se pierde: te pregunta si lo pasa al siguiente día que trabaja.</p>
+      <p>Arriba ves quién cumple este mes. El botón <b>🎂 Marcar los libres que falten</b> los pone todos de una pasada.</p>` },
+
+  { id:'sup-accesos', para:'super', icono:'🔐', titulo:'Accesos',
+    cuerpo:`<p>Acá ves <b>quién entró y cuándo</b>, y quién de los socios ya creó su PIN.</p>
+      <p><b>Nunca se muestra el PIN de nadie</b>, ni el tuyo. Solo si existe o no.</p>
+      <p>Desde acá cambias <b>tu clave de supervisor</b> y activas la <b>huella</b> en este dispositivo.</p>
+      <p>La <b>primera clave</b> que creaste queda guardada aparte como clave de recuperación: si olvidas la de ahora, con esa vuelves a entrar.</p>` }
+];
+
+let _guiaVuelve = null;
+
+function guiaAbrir(id){
+  const esSuper = sesion && sesion.rol === 'super';
+  const esSocio = sesion && sesion.rol === 'socio';
+  const temas = GUIA.filter(t => t.para === 'todos'
+    || (esSuper && t.para === 'super') || (esSocio && t.para === 'socio')
+    || (!sesion && t.para !== 'super' && t.para !== 'socio'));
+  const lista = temas.length ? temas : GUIA;
+
+  if(id){
+    const t = GUIA.find(x => x.id === id);
+    if(t){
+      abrirModal(`<div class="flex items-center gap-2 mb-3">
+          <button onclick="guiaAbrir()" class="btn-ghost text-xs" style="padding:4px 9px;flex-shrink:0">‹ Temas</button>
+          <h3 class="font-extrabold flex-1 min-w-0">${t.icono} ${esc(t.titulo)}</h3>
+        </div>
+        <div class="guia-texto">${t.cuerpo}</div>
+        <button onclick="cerrarModal()" class="btn-primary w-full mt-4">Entendido</button>`);
+      return;
+    }
+  }
+  abrirModal(`<h3 class="font-extrabold mb-1">❓ Guía de la app</h3>
+    <p class="text-xs text-slate-400 mb-3">Toca el tema que quieras. Está escrito simple, sin palabras raras.</p>
+    ${lista.map(t=>`<button onclick="guiaAbrir('${t.id}')" class="card p-3 mb-2 w-full text-left flex items-center gap-3"
+        style="cursor:pointer">
+        <span style="font-size:1.25em;flex-shrink:0">${t.icono}</span>
+        <span class="flex-1 min-w-0 text-sm font-bold">${esc(t.titulo)}</span>
+        <span class="text-slate-500">›</span></button>`).join('')}`);
+}
+
 function abrirModal(html){ document.getElementById('modalContent').innerHTML=html; document.getElementById('modalBox').classList.add('active'); }
 function cerrarModal(){ document.getElementById('modalBox').classList.remove('active'); }
 
@@ -4518,6 +4672,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=17"></script>
+<script src="js/version-horarios.js?v=18"></script>
 </body>
 </html>
