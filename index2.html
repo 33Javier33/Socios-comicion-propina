@@ -115,6 +115,28 @@
   @media (max-width:340px){ .tab-btn{ font-size:8px; letter-spacing:-0.2px; } }
   .tab-btn.active{ color:#38bdf8; }
   .sup-panel{ display:none; }
+  /* ══════════════════════════════════════════════════════════════════
+     MOSAICO
+     Las listas de Turnos, Grupos y Asignar son una tarjeta por fila: en el
+     computador eso es una columna flaca y mucho rodar. En mosaico las
+     mismas tarjetas van más compactas y en rejilla: cuatro columnas en el
+     computador, dos en tablet y una en el teléfono.
+     ══════════════════════════════════════════════════════════════════ */
+  .mosaico{ display:grid; gap:10px; grid-template-columns:1fr; }
+  .mosaico > *{ min-width:0; margin-bottom:0 !important; }
+  @media (min-width:560px){ .mosaico{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (min-width:900px){ .mosaico{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  @media (min-width:1200px){ .mosaico{ grid-template-columns:repeat(4,minmax(0,1fr)); } }
+  /* La tarjeta compacta: todo en vertical y los botones abajo del todo, así
+     todas quedan del mismo alto aunque el contenido varíe. */
+  .mos-card{ display:flex; flex-direction:column; gap:6px; padding:11px; }
+  .mos-card .mos-pie{ margin-top:auto; display:flex; gap:6px; }
+  .mos-card .mos-pie > *{ flex:1; }
+  .mos-card .mos-nom{ font-weight:800; font-size:13px; line-height:1.25; }
+  .mos-card .mos-sub{ font-size:11px; }
+  .mos-card .mos-gente{ font-size:10.5px; line-height:1.35; display:-webkit-box;
+                        -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+
   /* Los dos botones de importar, lado a lado y del mismo alto. */
   .imp-par{ display:flex; gap:8px; }
   .imp-par > button{ flex:1 1 0; min-width:0; font-size:12px; line-height:1.3; padding:8px 6px; text-align:center; }
@@ -541,8 +563,9 @@
 
     <!-- PANEL: TURNOS -->
     <div id="panTurnos" class="sup-panel">
-      <div class="flex items-center justify-between mb-3"><h3 class="font-extrabold">Turnos</h3>
+      <div class="flex items-center justify-between mb-3 gap-2"><h3 class="font-extrabold">Turnos</h3>
         <div class="flex gap-2">
+          <button class="btn-ghost text-sm px-3 py-2 mos-btn" onclick="supMosaicoToggle()" title="Cambiar entre lista y mosaico">🔲</button>
           <button onclick="importModal()" class="btn-ghost text-sm px-3 py-2">⬇️ Importar JSON</button>
           <button onclick="turnoModal()" class="btn-primary text-sm px-3 py-2">+ Nuevo</button>
         </div></div>
@@ -551,15 +574,20 @@
 
     <!-- PANEL: GRUPOS -->
     <div id="panGrupos" class="sup-panel">
-      <div class="flex items-center justify-between mb-3"><h3 class="font-extrabold">Grupos y ciclos</h3>
-        <button onclick="grupoModal()" class="btn-primary text-sm px-3 py-2">+ Nuevo grupo</button></div>
+      <div class="flex items-center justify-between mb-3 gap-2"><h3 class="font-extrabold">Grupos y ciclos</h3>
+        <div class="flex gap-2">
+          <button class="btn-ghost text-sm px-3 py-2 mos-btn" onclick="supMosaicoToggle()" title="Cambiar entre lista y mosaico">🔲</button>
+          <button onclick="grupoModal()" class="btn-primary text-sm px-3 py-2">+ Nuevo grupo</button>
+        </div></div>
       <p class="text-[11px] text-slate-500 mb-3">Un grupo rota por un <b>ciclo</b> de turnos (ej. Mañana, Mañana, Tarde, Libre) desde una fecha base. Todos sus socios siguen ese ciclo.</p>
       <div id="gruposLista" class="space-y-3"></div>
     </div>
 
     <!-- PANEL: SOCIOS -->
     <div id="panSocios" class="sup-panel">
-      <h3 class="font-extrabold mb-3">Asignar socios a grupos</h3>
+      <div class="flex items-center justify-between mb-3 gap-2"><h3 class="font-extrabold">Asignar socios a grupos</h3>
+        <button class="btn-ghost text-sm px-3 py-2 mos-btn" onclick="supMosaicoToggle()" title="Cambiar entre lista y mosaico">🔲</button>
+      </div>
       <input id="asigBuscar" oninput="renderAsignaciones()" placeholder="🔍 Buscar socio..." class="fld mb-3">
       <div id="asigLista" class="space-y-2"></div>
     </div>
@@ -2704,9 +2732,53 @@ async function supQuitarExcepcion(iso){
 }
 
 // ── Turnos ──
+// ══════════════════════════════════════════════════════════════════════
+// MOSAICO — Turnos, Grupos y Asignar en rejilla
+//
+// Las tres listas eran una tarjeta por fila. En el computador eso es una
+// columna flaca con mucho aire al lado y mucho rodar. En mosaico la misma
+// información va más compacta, en cuatro columnas.
+//
+// Es una opción, no un reemplazo: el interruptor está en cada panel y la
+// elección queda guardada en el teléfono. La lista de siempre sigue ahí.
+// ══════════════════════════════════════════════════════════════════════
+let supMosaico = (()=>{ try{ return localStorage.getItem('hor_mosaico')==='1'; }catch(e){ return false; } })();
+
+function supMosaicoPintarBtns(){
+  document.querySelectorAll('.mos-btn').forEach(b=>{
+    b.textContent = supMosaico ? '☰' : '🔲';
+    b.title = supMosaico ? 'Volver a la lista' : 'Ver en mosaico';
+  });
+}
+function supMosaicoToggle(){
+  supMosaico = !supMosaico;
+  try{ localStorage.setItem('hor_mosaico', supMosaico?'1':'0'); }catch(e){}
+  supMosaicoPintarBtns();
+  renderTurnos(); renderGrupos(); renderAsignaciones();
+}
+// La misma caja sirve para las dos vistas: cambia su clase, no su contenido.
+function _mosClase(cont, clasesLista){
+  cont.className = supMosaico ? 'mosaico' : clasesLista;
+}
+
 function renderTurnos(){
   const c=document.getElementById('turnosLista');
-  if(!turnos.length){ c.innerHTML='<div class="text-slate-500 text-sm text-center py-6">Sin turnos. Crea el primero.</div>'; return; }
+  supMosaicoPintarBtns();
+  _mosClase(c, 'space-y-2');
+  if(!turnos.length){ c.className=''; c.innerHTML='<div class="text-slate-500 text-sm text-center py-6">Sin turnos. Crea el primero.</div>'; return; }
+  if(supMosaico){
+    c.innerHTML=turnos.map(t=>`<div class="card mos-card">
+      <div class="flex items-center gap-2">
+        <span class="w-4 h-4 rounded-full flex-shrink-0" style="background:${t.color}"></span>
+        <div class="mos-nom truncate">${esc(t.nombre)}</div>
+      </div>
+      <div class="mos-sub text-slate-400">${t.es_libre?'Día libre':(t.hora_inicio?`${t.hora_inicio} – ${t.hora_fin}`:'Sin horario')}</div>
+      <div class="mos-pie">
+        <button onclick="turnoModal('${t.id}')" class="btn-ghost text-xs" style="padding:5px">✎</button>
+        <button onclick="turnoBorrar('${t.id}')" class="btn-ghost text-xs" style="padding:5px;background:#7f1d1d;color:#fecaca;">🗑</button>
+      </div></div>`).join('');
+    return;
+  }
   c.innerHTML=turnos.map(t=>`<div class="card p-3 flex items-center gap-3">
     <span class="w-5 h-5 rounded-full flex-shrink-0" style="background:${t.color}"></span>
     <div class="flex-1 min-w-0"><div class="font-bold text-sm">${esc(t.nombre)}</div><div class="text-xs text-slate-400">${t.es_libre?'Día libre':(t.hora_inicio?`${t.hora_inicio} – ${t.hora_fin}`:'Sin horario')}</div></div>
@@ -2751,7 +2823,33 @@ async function turnoBorrar(id){
 // ── Grupos ──
 function renderGrupos(){
   const c=document.getElementById('gruposLista');
-  if(!grupos.length){ c.innerHTML='<div class="text-slate-500 text-sm text-center py-6">Sin grupos. Crea el primero.</div>'; return; }
+  supMosaicoPintarBtns();
+  _mosClase(c, 'space-y-3');
+  if(!grupos.length){ c.className=''; c.innerHTML='<div class="text-slate-500 text-sm text-center py-6">Sin grupos. Crea el primero.</div>'; return; }
+  if(supMosaico){
+    c.innerHTML=grupos.map(g=>{
+      const miembros=sociosMesas.filter(s=>asignaciones[s.id]===g.id);
+      const libres=g.dias_libres||(g.ciclo||[]).filter(t=>{const x=turnosMap[t];return x&&x.es_libre;}).length;
+      const trab=g.dias_trabajo||((g.ciclo||[]).length-libres);
+      return `<div class="card mos-card">
+        <div class="flex items-center gap-2" onclick="grupoCalendarios('${g.id}')" style="cursor:pointer;">
+          <span class="w-4 h-4 rounded-full flex-shrink-0" style="background:${g.color}"></span>
+          <div class="mos-nom truncate">${esc(g.nombre)}</div>
+        </div>
+        <div class="mos-sub text-slate-400">${miembros.length} socio(s) · desde ${esc(String(g.fecha_base||''))}</div>
+        <div class="flex flex-wrap gap-1">
+          <span class="chip" style="background:#10b98122;color:#10b981;font-size:10px;padding:1px 7px">🌴 ${libres}</span>
+          <span class="chip" style="background:#0ea5e922;color:#38bdf8;font-size:10px;padding:1px 7px">💼 ${trab}</span>
+        </div>
+        <div class="mos-gente text-slate-500">${miembros.length?miembros.map(s=>esc(s.nombre+' '+s.apellido)+(esPartTime(s)?' (PT)':'')).join(', '):'Sin socios asignados'}</div>
+        <div class="mos-pie">
+          <button onclick="grupoCalendarios('${g.id}')" class="btn-primary text-xs" style="padding:5px;flex:2">📅</button>
+          <button onclick="grupoModal('${g.id}')" class="btn-ghost text-xs" style="padding:5px">✎</button>
+          <button onclick="grupoBorrar('${g.id}')" class="btn-ghost text-xs" style="padding:5px;background:#7f1d1d;color:#fecaca;">🗑</button>
+        </div></div>`;
+    }).join('');
+    return;
+  }
   c.innerHTML=grupos.map(g=>{
     const miembros=sociosMesas.filter(s=>asignaciones[s.id]===g.id);
     const libres=g.dias_libres||(g.ciclo||[]).filter(t=>{const x=turnosMap[t];return x&&x.es_libre;}).length;
@@ -3505,8 +3603,23 @@ async function grupoBorrar(id){
 function renderAsignaciones(){
   const term=(document.getElementById('asigBuscar').value||'').toLowerCase();
   const c=document.getElementById('asigLista');
+  supMosaicoPintarBtns();
+  _mosClase(c, 'space-y-2');
   const list=sociosMesas.filter(s=>`${s.nombre} ${s.apellido}`.toLowerCase().includes(term));
   const optGrupos='<option value="">— sin grupo —</option>'+grupos.map(g=>`<option value="${g.id}">${esc(g.nombre)}</option>`).join('');
+  if(supMosaico){
+    c.innerHTML=list.map(s=>{
+      const gid=asignaciones[s.id]||'';
+      return `<div class="card mos-card">
+        <div class="mos-nom truncate">${esc(s.nombre)} ${esc(s.apellido)}</div>
+        <div class="mos-sub text-slate-400 flex items-center gap-1">${badgeContrato(s)} ${esc(s.area)}</div>
+        <select class="fld" style="width:100%;padding:5px 7px;font-size:11px;margin:0;" onchange="asignar('${s.id}',this.value)">${optGrupos.replace(`value="${gid}"`,`value="${gid}" selected`)}</select>
+        <div class="mos-pie">
+          <button onclick="resetPinSocio('${s.id}','${esc(s.nombre)} ${esc(s.apellido)}')" title="Reiniciar PIN del socio" class="btn-ghost text-xs" style="padding:5px">🔑 PIN</button>
+        </div></div>`;
+    }).join('');
+    return;
+  }
   c.innerHTML=list.map(s=>{
     const gid=asignaciones[s.id]||'';
     return `<div class="card p-3 flex items-center gap-2">
@@ -4405,6 +4518,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=16"></script>
+<script src="js/version-horarios.js?v=17"></script>
 </body>
 </html>

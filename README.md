@@ -232,6 +232,26 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-06 — Horarios: vista de mosaico en Turnos, Grupos y Asignar (SW horarios v35)
+
+Las tres listas eran **una tarjeta por fila**. En el computador eso es una columna flaca con mucho aire al lado y mucho rodar para ver seis turnos o treinta socios.
+
+**Opción nueva: 🔲 Mosaico.** Hay un interruptor en cada uno de los tres paneles. En mosaico, la misma información va en tarjetas compactas y en rejilla: **cuatro columnas** en el computador, tres en pantallas medianas, dos en tablet y una en el teléfono.
+
+**Es una opción, no un reemplazo:** la lista de siempre sigue ahí a un toque, y la elección **queda guardada** — al volver a entrar, la app aparece como se dejó.
+
+**La información no se recorta, se reacomoda:**
+
+- **Turnos** — color, nombre, horario, y editar/borrar abajo.
+- **Grupos** — nombre, cuántos socios y desde cuándo, los chips de libres y trabajo, los nombres de los socios (hasta tres líneas) y sus tres botones.
+- **Asignar** — nombre, contrato y área, el selector de grupo completo **con el grupo que ya tenía marcado**, y el botón de reiniciar el PIN.
+
+Las tarjetas de una misma fila quedan **del mismo alto**, con los botones abajo del todo, aunque el contenido varíe.
+
+**Verificación:** 26 comprobaciones midiendo la posición real en pantalla — que arranque en lista; que al encender haya exactamente 4 tarjetas por fila en los tres paneles y todas del mismo alto; que el selector de grupo conserve sus opciones y la elegida; que se pueda volver a la lista; que la elección sobreviva a recargar la app; que sin datos no rompa; y que en el teléfono quede en una columna sin salirse de la pantalla.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-06 — Horarios: los dos botones de importar, lado a lado (SW horarios v34)
 
 Iban uno debajo del otro, de ancho completo, ocupando dos filas en la tarjeta de «Ver calendario de un socio». Ahora comparten fila, del mismo ancho y del mismo alto.
