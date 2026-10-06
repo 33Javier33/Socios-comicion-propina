@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-06 — Horarios: los dos botones de importar, lado a lado (SW horarios v34)
+
+Iban uno debajo del otro, de ancho completo, ocupando dos filas en la tarjeta de «Ver calendario de un socio». Ahora comparten fila, del mismo ancho y del mismo alto.
+
+De paso quedaron más claros: **«📸 Importar planilla de un socio»** y **«📥 Importar planilla de TODOS»**. El texto se parte en dos líneas dentro de cada botón en vez de acortarse — *de un socio* y *de todos* es justo lo que hay que distinguir, y es lo que antes quedaba escondido al final de una etiqueta larga.
+
+**Verificación:** medidos a 1440, 430, 414, 393, 375, 360 y 320 px — los dos en la misma fila, mismo ancho, mismo alto, sin recortes y sin salirse de la pantalla.
+
+**Archivos:** `index2.html`, `sw2.js`, `js/version-horarios.js`.
+
 #### 2026-10-06 — Horarios: tres columnas en el computador (SW horarios v33)
 
 La app se escribió para el teléfono: una columna, todo apilado. En una pantalla ancha eso dejaba dos tercios vacíos y obligaba a rodar para ver lo que cabía de una.

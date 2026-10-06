@@ -115,6 +115,10 @@
   @media (max-width:340px){ .tab-btn{ font-size:8px; letter-spacing:-0.2px; } }
   .tab-btn.active{ color:#38bdf8; }
   .sup-panel{ display:none; }
+  /* Los dos botones de importar, lado a lado y del mismo alto. */
+  .imp-par{ display:flex; gap:8px; }
+  .imp-par > button{ flex:1 1 0; min-width:0; font-size:12px; line-height:1.3; padding:8px 6px; text-align:center; }
+  @media (max-width:360px){ .imp-par{ gap:6px; } .imp-par > button{ font-size:11px; padding:8px 4px; } }
   /* Los tres botones sobre el calendario del socio. En pantallas angostas se
      aprietan en vez de partirse en dos líneas: a 320px (un iPhone SE) con el
      padding de siempre no entraban y la fila se apilaba. */
@@ -510,8 +514,13 @@
         </div>
         <div id="supSugerencias" style="display:none;margin-top:6px;max-height:230px;overflow-y:auto;
              border:1px solid #293449;border-radius:10px;background:#0f172a;"></div>
-        <button onclick="plModal()" class="btn-ghost w-full mt-2 text-sm">📸 Importar planilla del mes (foto o texto)</button>
-        <button onclick="plMasivoModal()" class="btn-ghost w-full mt-2 text-sm">📥 Importar la planilla de TODOS de una vez</button>
+        <!-- Los dos de importar, uno al lado del otro. El texto se parte en
+             dos líneas dentro de cada botón en vez de acortarse: "de un
+             socio" y "de todos" es justo lo que hay que distinguir. -->
+        <div class="imp-par mt-2">
+          <button onclick="plModal()" class="btn-ghost">📸 Importar planilla<br>de un socio</button>
+          <button onclick="plMasivoModal()" class="btn-ghost">📥 Importar planilla<br>de TODOS</button>
+        </div>
       </div>
       <div id="supCalWrap" class="hidden">
         <div class="flex items-center justify-between mb-3 gap-2">
@@ -4396,6 +4405,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=15"></script>
+<script src="js/version-horarios.js?v=16"></script>
 </body>
 </html>
