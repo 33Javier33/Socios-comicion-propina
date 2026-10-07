@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-07 — «Socios Eliminados» no se encontraba (SW v166)
+
+El botón estaba, pero mal puesto: era uno gris chico entre cinco botones de colores de la barra de filtros del buscador, dentro de Gestión de Socios. Es una **sección**, no un filtro, y ahí no la encontraba nadie.
+
+Ahora **🗄️ Socios Eliminados** está en la **barra de secciones de arriba**, al lado de 🔍 Auditoría — que es donde uno busca un registro de lo que pasó. El botón de Gestión de Socios se mantiene, pero ahora destacado en vez de gris.
+
+**Archivos:** `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-10-07 — Respaldo de socios eliminados (SW v165)
 
 **No existía.** Al eliminar un socio pasaba una de dos cosas, y ninguna dejaba dónde mirar:

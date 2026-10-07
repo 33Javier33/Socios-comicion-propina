@@ -140,6 +140,7 @@
             <button class="nav-btn" data-tab="notas" onclick="switchTab('notas')">📝 Notas Admin</button>
             <button class="nav-btn" data-tab="config" onclick="switchTab('config')">⚙️ Configuración</button>
             <button class="nav-btn" data-tab="auditoria" onclick="switchTab('auditoria')">🔍 Auditoría</button>
+            <button class="nav-btn" onclick="elim_abrir()">🗄️ Socios Eliminados</button>
             <button class="nav-btn" data-tab="carpetas" onclick="switchTab('carpetas')">📁 Carpetas</button>
             <button class="nav-btn" data-tab="materiales" onclick="switchTab('materiales')">📦 Materiales</button>
             <button class="nav-btn" data-tab="dineros" onclick="switchTab('dineros')">💵 Dineros Sobrantes</button>
@@ -497,7 +498,7 @@
                     </div>
                     <!-- El respaldo de los que ya no están. -->
                     <div style="display:flex; gap:6px; margin-top:6px;">
-                        <button onclick="elim_abrir()" style="flex:1; padding:6px 8px; border:1px solid #cbd5e1; background:white; color:#475569; border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">🗄️ Socios eliminados</button>
+                        <button onclick="elim_abrir()" style="flex:1; padding:6px 8px; border:1px solid #64748b; background:#64748b; color:white; border-radius:7px; font-size:0.75em; font-weight:700; cursor:pointer; transition:0.2s;">🗄️ Socios eliminados</button>
                     </div>
                     <!-- Filtros por área y contrato. Se combinan entre sí, con los
                          botones de arriba y con el buscador: todo se aplica junto. -->
