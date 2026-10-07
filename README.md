@@ -232,6 +232,34 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-07 — Puntos: la política de entrega y renovación, aplicada de verdad (SW v161)
+
+La regla que estaba en el código **no cumplía ninguno de los tres casos** de la política. Solo le cambiaba el día a 15 dejando el mismo mes de ingreso. Resultado:
+
+| Ingreso | Política dice | La app daba |
+|---|---|---|
+| 4 de septiembre | **15 de octubre** | 15 de septiembre — un mes antes |
+| 1 de octubre | **15 de noviembre** | 15 de octubre — un mes antes |
+| 23 de octubre | **15 de diciembre** | 15 de octubre — **antes de haber entrado** |
+
+**La política, como quedó implementada:**
+
+- **Primera entrega** — el **primer día 15 que ocurre en o después** de cumplir el primer mes completo de contrato. Si al cumplir el mes todavía no pasa el 15, recibe ese mismo 15; si ya pasó, espera al siguiente.
+- **Renovación anual** — el **15 del mes en que ingresó**, todos los años. El aniversario se ancla al mes de **ingreso**, aunque los primeros puntos hayan llegado uno o dos meses después.
+- **El primer aniversario que cuenta** es el primero posterior a la primera entrega: en el caso C, el 15 de octubre de ese año queda *antes* de recibir nada, así que el primer aumento es el 15 de octubre del año siguiente.
+
+**Detalles que estaban esperando para fallar:** quien entra un **31 de enero** cumple el mes el 28 de febrero —no el 3 de marzo, que es lo que daría JavaScript sin acotar— y recibe el 15 de marzo. Y diciembre cruza el año correctamente.
+
+**`FechaInicioPuntos` sigue mandando** cuando está cargada: es la salida manual para los casos que no siguen la regla.
+
+**El panel 🏆 de escalamientos usa la misma regla**, y ahora dice que el aumento cae el **día 15**, no el día de ingreso.
+
+**También se alineó propi.solicitada:** el socio contaba sus años por el día exacto de ingreso, así que en el mes del aniversario podía ver un número distinto al de la comisión durante dos semanas.
+
+**Verificación:** 30 comprobaciones — los tres ejemplos de la política, uno por uno, con su fecha de primera entrega y su mes de renovación; los bordes (entrar un 15, un 16, un 31 de enero, en diciembre); el conteo de aumentos día por día alrededor de cada aniversario; que un socio recién ingresado no tenga puntos; que el override manual siga mandando; y que el panel de escalamientos coincida.
+
+**Archivos:** `js/constants.js`, `js/api.js`, `js/socios.js`, `js/help.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-10-07 — Arqueo: «Total Puntos del Período» decía cualquier cosa (SW v160)
 
 El número estaba mal por **tres razones a la vez**:

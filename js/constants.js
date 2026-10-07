@@ -149,3 +149,76 @@ function reglaPuntosArea(area) {
     else if (a.includes('cambista')) tope = 8;
     return { base: PUNTOS_BASE_NORMAL, tope };
 }
+
+// ══════════════════════════════════════════════════════════════════
+// CUÁNDO EMPIEZAN Y CUÁNDO SUBEN LOS PUNTOS
+//
+// La política, tal cual:
+//   · PRIMERA ENTREGA — el día 15 que cae al cumplir el primer mes
+//     completo de contrato. Dicho exacto: el PRIMER día 15 que ocurre
+//     EN O DESPUÉS de la fecha en que cumple un mes.
+//   · RENOVACIÓN ANUAL — el día 15 del mes en que ingresó, todos los
+//     años. El aniversario se ancla al mes de INGRESO, no al mes en que
+//     le llegaron los primeros puntos.
+//
+// Los tres ejemplos de la política:
+//   A) Ingresa 4 sep  → cumple 1 mes el 4 oct  → primeros puntos 15 oct
+//                       → sube cada 15 de septiembre.
+//   B) Ingresa 1 oct  → cumple 1 mes el 1 nov  → primeros puntos 15 nov
+//                       → sube cada 15 de octubre.
+//   C) Ingresa 23 oct → cumple 1 mes el 23 nov → primeros puntos 15 dic
+//                       → sube cada 15 de octubre.
+//
+// En A el día del cumplimiento (4) es anterior al 15, así que el 15 de
+// ese mismo mes todavía sirve. En C el día (23) ya pasó el 15, así que
+// hay que esperar al 15 siguiente. Esa es toda la diferencia.
+//
+// El primer aniversario que CUENTA es el primero posterior a la primera
+// entrega: en C, el 15 de octubre de 2025 queda antes de recibir nada,
+// así que el primer aumento es el 15 de octubre del año siguiente.
+// ══════════════════════════════════════════════════════════════════
+
+// Cumplir un mes. Si el día no existe en el mes siguiente (31 de enero),
+// se toma el último de ese mes, no el 3 de marzo que daría JavaScript.
+function fechaCumpleUnMes(anio, mes0, dia) {
+    const ultimo = new Date(anio, mes0 + 2, 0).getDate();
+    return new Date(anio, mes0 + 1, Math.min(dia, ultimo));
+}
+
+// El primer día 15 en o después de `d`.
+function primerDia15Desde(d) {
+    return d.getDate() <= 15
+        ? new Date(d.getFullYear(), d.getMonth(), 15)
+        : new Date(d.getFullYear(), d.getMonth() + 1, 15);
+}
+
+// Todo lo que hay que saber de una fecha de ingreso.
+// Devuelve { primeraEntrega: Date, mesAniversario: 0-11, anioIngreso,
+//            primerAniversario: Date }
+function reglaPuntosFechas(fechaIngresoISO) {
+    const p = String(fechaIngresoISO || '').substring(0, 10).split('-').map(Number);
+    if (p.length !== 3 || !p[0] || !p[1] || !p[2]) return null;
+    const [anio, mes, dia] = p;
+    const mes0 = mes - 1;
+    const primeraEntrega = primerDia15Desde(fechaCumpleUnMes(anio, mes0, dia));
+    // El aniversario vive en el mes de INGRESO. El primero que cuenta es
+    // el primero que cae después de haber recibido los primeros puntos.
+    let primerAniversario = new Date(anio, mes0, 15);
+    while (primerAniversario <= primeraEntrega) {
+        primerAniversario = new Date(primerAniversario.getFullYear() + 1, mes0, 15);
+    }
+    return { primeraEntrega, mesAniversario: mes0, anioIngreso: anio, primerAniversario };
+}
+
+// Cuántos aumentos anuales lleva a la fecha `hoy`.
+function aniosPuntosA(fechaIngresoISO, hoy) {
+    const r = reglaPuntosFechas(fechaIngresoISO);
+    if (!r) return 0;
+    const h = hoy || new Date();
+    if (h < r.primerAniversario) return 0;
+    let n = h.getFullYear() - r.primerAniversario.getFullYear() + 1;
+    // Todavía no llega el 15 del mes aniversario de ESTE año.
+    if (h.getMonth() < r.mesAniversario ||
+        (h.getMonth() === r.mesAniversario && h.getDate() < 15)) n--;
+    return Math.max(0, n);
+}

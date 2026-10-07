@@ -448,12 +448,15 @@ function verificarEscalamientos() {
         const areaNorm = (socio.area || '').toLowerCase();
         if (areaNorm.includes('gastos')) return;
 
+        // El aumento cae SIEMPRE el día 15 del mes de ingreso (política de
+        // puntos). `mesAniversario` lo calcula api.js con esa regla; si por
+        // alguna razón no viniera, se cae al mes de la fecha base.
         const fechaBase = (socio.fechaInicioPuntos && socio.fechaInicioPuntos !== socio.fechaIngreso)
             ? socio.fechaInicioPuntos : socio.fechaIngreso;
         const partes     = fechaBase.split('-');
         const anioIngreso = parseInt(partes[0]);
-        const mesIngreso  = parseInt(partes[1]) - 1;
-        const diaIngreso  = parseInt(partes[2]);
+        const mesIngreso  = Number.isInteger(socio.mesAniversario) ? socio.mesAniversario : (parseInt(partes[1]) - 1);
+        const diaIngreso  = 15;
 
         const max = calcularPuntosMaximos(socio.area);
 
@@ -468,7 +471,7 @@ function verificarEscalamientos() {
         if (socio.puntos >= max) return;
 
         if (mesIngreso === mesPasado) {
-            const aniosCumplidos  = anioPasado - anioIngreso;
+            const aniosCumplidos = aniosPuntosA(socio.fechaIngreso, new Date(anioPasado, mesPasado, 15));
             if (aniosCumplidos >= 1) {
                 const puntosAntes   = calcularPuntosPorAnios(aniosCumplidos - 1, socio.area);
                 const puntosDespues = calcularPuntosPorAnios(aniosCumplidos, socio.area);
@@ -483,7 +486,7 @@ function verificarEscalamientos() {
         }
 
         if (mesIngreso === mesActual) {
-            const aniosCumpleEsteMes = anioActual - anioIngreso;
+            const aniosCumpleEsteMes = aniosPuntosA(socio.fechaIngreso, new Date(anioActual, mesActual, 15));
             if (aniosCumpleEsteMes >= 1) {
                 const puntosAntes   = calcularPuntosPorAnios(aniosCumpleEsteMes - 1, socio.area);
                 const puntosDespues = calcularPuntosPorAnios(aniosCumpleEsteMes, socio.area);
@@ -503,7 +506,7 @@ function verificarEscalamientos() {
         }
 
         if (mesIngreso === proxMes) {
-            const aniosCumpleProx = proxAnio - anioIngreso;
+            const aniosCumpleProx = aniosPuntosA(socio.fechaIngreso, new Date(proxAnio, proxMes, 15));
             if (aniosCumpleProx >= 1) {
                 const puntosAntes   = calcularPuntosPorAnios(aniosCumpleProx - 1, socio.area);
                 const puntosDespues = calcularPuntosPorAnios(aniosCumpleProx, socio.area);

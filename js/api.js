@@ -95,30 +95,47 @@ function procesarSocioDesdeGoogle(s) {
     const fechaStr = s.FechaIngreso;
     if(!fechaStr) return { ...s, anios: 0, puntos: 0, puntosActivos: false, visible: false };
 
-    // ── Obtener fecha_inicio_puntos y normalizarla al día 15 ──
-    const fechaPuntosRaw = (s.FechaInicioPuntos && s.FechaInicioPuntos.trim()) ? s.FechaInicioPuntos.trim() : fechaStr;
-    const partesPuntosRaw = fechaPuntosRaw.split('-');
-    // Forzar día 15 (regla del día 15)
-    const año15  = parseInt(partesPuntosRaw[0]);
-    const mes15  = parseInt(partesPuntosRaw[1]) - 1; // 0-indexed
-    const fechaPuntosStr = año15 + '-' + String(parseInt(partesPuntosRaw[1])).padStart(2,'0') + '-15';
+    // ── Cuándo empiezan los puntos y cuándo suben ──
+    // Sale de reglaPuntosFechas (js/constants.js), que aplica la política:
+    // primera entrega = el primer día 15 al cumplir un mes de contrato;
+    // aumento = cada 15 del mes de INGRESO.
+    //
+    // Antes esto solo le cambiaba el día a 15 dejando el mismo mes, y no
+    // cumplía ninguno de los tres casos de la política: a quien entraba el
+    // 4 de septiembre le daba puntos el 15 de septiembre (un mes antes), y
+    // a quien entraba el 23 de octubre se los daba el 15 de octubre — o
+    // sea, ANTES de haber entrado.
+    //
+    // `FechaInicioPuntos`, si viene cargada, sigue mandando: es la salida
+    // manual para los casos que no siguen la regla. Se usa tal cual, solo
+    // normalizada al 15 de su mes.
+    const _hayOverride = !!(s.FechaInicioPuntos && String(s.FechaInicioPuntos).trim()
+                            && String(s.FechaInicioPuntos).trim() !== String(fechaStr).trim());
+    const _reglaFechas = reglaPuntosFechas(_hayOverride ? String(s.FechaInicioPuntos).trim() : fechaStr);
+    if (!_reglaFechas) return { ...s, anios: 0, puntos: 0, puntosActivos: false, visible: false };
 
-    // Construir fecha de inicio de puntos siempre en día 15
-    const fechaParaPuntos = new Date(año15, mes15, 15);
+    let fechaParaPuntos, mes15, año15, anios;
     const fechaActual = new Date();
+    if (_hayOverride) {
+        // Override: ese mes, día 15, y de ahí los aniversarios cada año.
+        const q = String(s.FechaInicioPuntos).trim().substring(0,10).split('-').map(Number);
+        año15 = q[0]; mes15 = q[1] - 1;
+        fechaParaPuntos = new Date(año15, mes15, 15);
+        anios = fechaActual.getFullYear() - año15;
+        if (fechaActual.getMonth() < mes15 ||
+            (fechaActual.getMonth() === mes15 && fechaActual.getDate() < 15)) anios--;
+        if (anios < 0) anios = 0;
+    } else {
+        fechaParaPuntos = _reglaFechas.primeraEntrega;
+        mes15 = _reglaFechas.mesAniversario;
+        año15 = _reglaFechas.anioIngreso;
+        anios = aniosPuntosA(fechaStr, fechaActual);
+    }
+    const fechaPuntosStr = fechaParaPuntos.getFullYear() + '-'
+        + String(fechaParaPuntos.getMonth() + 1).padStart(2, '0') + '-15';
 
-    // ── Regla 2: visible solo si hoy >= día 15 del mes de inicio ──
+    // Los puntos recién existen desde la primera entrega.
     const visible = fechaActual >= fechaParaPuntos;
-
-    // ── Regla 3: años = ciclos completos de 12 meses desde el día 15 ──
-    // El aumento ocurre exactamente el día 15 de cada año aniversario
-    let anios = fechaActual.getFullYear() - año15;
-    // Retroceder 1 año si aún no llegó el día 15 de este año
-    if (
-        fechaActual.getMonth() < mes15 ||
-        (fechaActual.getMonth() === mes15 && fechaActual.getDate() < 15)
-    ) { anios--; }
-    if (anios < 0) anios = 0;
 
     const puntosActivos = visible; // puntos activos solo si ya pasó el día 15
     const areaNorm = (s.Area || '').toLowerCase().trim();
@@ -138,5 +155,5 @@ function procesarSocioDesdeGoogle(s) {
     // puntosFinales: usa el valor guardado en Supabase si es positivo; 0 y null se tratan como "sin dato" → usa fórmula
     const ptsSB = Number(s.Puntos);
     const puntosFinales = (Number.isFinite(ptsSB) && ptsSB > 0) ? ptsSB : puntosMaxPosible;
-    return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: areaNorm, contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios, puntos: puntosFinales, puntosMaxPosible, puntosActivos, visible, rut: s.Rut || "", fotoUrl: s.FotoUrl || "", correo: s.Correo || "" };
+    return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: areaNorm, contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios, puntos: puntosFinales, puntosMaxPosible, puntosActivos, visible, mesAniversario: mes15, rut: s.Rut || "", fotoUrl: s.FotoUrl || "", correo: s.Correo || "" };
 }
