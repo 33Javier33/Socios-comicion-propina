@@ -608,20 +608,9 @@ function aq_fechaReferenciaPeriodo() {
 }
 
 function aq_calcularPeriodoActual() {
-    const hoy = aq_fechaReferenciaPeriodo();
-    const anio = hoy.getFullYear();
-    const mes  = hoy.getMonth();
-
-    let inicio, fin;
-    if (hoy.getDate() >= 15) {
-        inicio = new Date(anio, mes, 15);
-        fin    = new Date(anio, mes + 1, 14);
-    } else {
-        inicio = new Date(anio, mes - 1, 15);
-        fin    = new Date(anio, mes, 14);
-    }
-    const fmt = d => d.toISOString().split('T')[0];
-    return { inicio: fmt(inicio), fin: fmt(fin) };
+    // Delegado a periodoActivoISO (js/constants.js): el arqueo y el alcance de
+    // los socios tienen que estar hablando del MISMO período, siempre.
+    return periodoActivoISO();
 }
 
 function aq_filtrarAnticiposPeriodo(objetoAnticipos) {

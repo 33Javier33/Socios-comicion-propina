@@ -232,6 +232,27 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-07 — Anticipos: el socio solo percibe desde que le corren los puntos (SW v162)
+
+La misma política que ya se aplicó en Gestión de Socios, ahora donde se reparte la plata.
+
+**El problema:** el alcance sumaba **todos** los días del mapa de puntos, sin mirar dos cosas:
+
+- **desde cuándo percibe ese socio** — quien entró el 23 de octubre recién percibe desde el 15 de diciembre, pero se le estaban contando los días anteriores;
+- **el período** — el mapa guarda *todo lo cargado*, no solo el período en curso, así que días de meses anteriores entraban al alcance.
+
+**Ahora los dos recortes se aplican siempre:** solo los días del período 15 → 14, y solo desde la fecha en que a ese socio le empiezan los puntos.
+
+**Un solo cálculo para toda la app.** Había **ocho** lugares haciendo su propia suma —la ficha del socio, el modal, los informes, los resúmenes, el cierre— y cada uno con pequeñas diferencias. Ahora todos pasan por `alcanceDeSocio` / `sumaValorPuntoSocio` (`js/constants.js`). Si cada pantalla hiciera su propia suma, tarde o temprano dirían números distintos — que es exactamente lo que pasaba.
+
+**El arqueo y el alcance comparten el período.** `aq_calcularPeriodoActual()` ahora delega en `periodoActivoISO()`: el «Total Puntos del Período» del arqueo y lo que percibe un socio antiguo tienen que ser el mismo número, y hay una comprobación que lo verifica.
+
+**Lo que no cambió:** las ausencias siguen restando igual, y los días Part-Time siguen contando solo los asignados. Una ausencia en días que el socio todavía no percibía, lógicamente, no le quita nada.
+
+**Verificación:** 21 comprobaciones — el socio de siempre suma los 7 días del período y no el del mes anterior; el que entró hace poco no percibe nada y su alcance es 0; el que empieza el 1 de octubre percibe solo de ahí en adelante; las ausencias antes y después de su fecha de inicio; Part-Time con y sin fecha previa; **que el informe de un socio dé el mismo alcance que la ficha**; que arqueo y alcance hablen del mismo período y den el mismo total; y que sin datos no se caiga.
+
+**Archivos:** `js/constants.js`, `js/anticipos.js`, `js/arqueo.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-10-07 — Puntos: la política de entrega y renovación, aplicada de verdad (SW v161)
 
 La regla que estaba en el código **no cumplía ninguno de los tres casos** de la política. Solo le cambiaba el día a 15 dejando el mismo mes de ingreso. Resultado:

@@ -143,25 +143,15 @@ async function verEstadoFinanciero(id) {
             const movimientos = Object.values(agrupados);
             movimientos.forEach(m => sumaPedidos += m.montoTotal);
 
+            // El alcance sale de alcanceDeSocio (js/constants.js): solo los días
+            // del período y solo desde que ESTE socio percibe.
             let alcance = 0;
             if(socio.contrato === 'Part-Time') {
-                let dias = globalDiasPT[id] || [];
+                const dias = globalDiasPT[id] || [];
                 document.getElementById('resumenDiasCount').innerText = dias.length;
-                let sumaValor = 0;
-                dias.forEach(d => {
-                    if(!fechasAusencia.has(d) && globalMapaPuntosDia[d]) {
-                        sumaValor += globalMapaPuntosDia[d];
-                    }
-                });
-                alcance = sumaValor * socio.puntos;
+                alcance = alcanceDeSocio(socio, fechasAusencia, dias);
             } else {
-                let sumaValorTotal = 0;
-                for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
-                    if (!fechasAusencia.has(dia) && valor !== null) {
-                        sumaValorTotal += valor;
-                    }
-                }
-                alcance = sumaValorTotal * socio.puntos;
+                alcance = alcanceDeSocio(socio, fechasAusencia, null);
             }
 
             const saldoReal = (alcance + saldoAnt) - sumaPedidos;
@@ -837,23 +827,12 @@ async function cargarHistorialSocio(id) {
             const ptsSocio = parseFloat(document.getElementById('gestionSocioPuntos').value) || 0;
             let alcance = 0;
 
-            if (socio.contrato === 'Part-Time') {
-                let sumaValorPuntosPT = 0;
-                selectedDaysPT.forEach(dia => {
-                    if(!fechasAusencia.has(dia) && globalMapaPuntosDia[dia] !== null && globalMapaPuntosDia[dia]) {
-                        sumaValorPuntosPT += globalMapaPuntosDia[dia];
-                    }
-                });
-                alcance = sumaValorPuntosPT * ptsSocio;
-            } else {
-                let sumaValorTotal = 0;
-                for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
-                    if (!fechasAusencia.has(dia) && valor !== null) {
-                        sumaValorTotal += valor;
-                    }
-                }
-                alcance = sumaValorTotal * ptsSocio;
-            }
+            // Mismo cálculo que todas las demás pantallas: período + fecha
+            // desde la que percibe este socio.
+            const _socioAlc = { ...socio, puntos: ptsSocio };
+            alcance = (socio.contrato === 'Part-Time')
+                ? alcanceDeSocio(_socioAlc, fechasAusencia, selectedDaysPT)
+                : alcanceDeSocio(_socioAlc, fechasAusencia, null);
 
             const saldoReal = (alcance + saldoAnterior) - sumaTotalPedido;
 
@@ -2241,10 +2220,10 @@ async function cierresMes_calcularSocio(socio) {
             }
         });
         if (socio.contrato === 'Part-Time') {
-            (globalDiasPT[socio.id] || []).forEach(d => { if (!fechasAusencia.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
+            alcance = sumaValorPuntoSocio(socio, fechasAusencia, globalDiasPT[socio.id] || []);
             alcance *= socio.puntos;
         } else {
-            for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) { if (!fechasAusencia.has(dia)) alcance += valor; }
+            alcance = sumaValorPuntoSocio(socio, fechasAusencia, null);
             alcance *= socio.puntos;
         }
         const saldoReal = alcance + saldoAnterior - sumaPedido;
@@ -2507,17 +2486,8 @@ async function ejecutarCierreTodos() {
                     });
                 }
 
-                let alcance = 0;
-                if (socio.contrato === 'Part-Time') {
-                    const dias = globalDiasPT[socio.id] || [];
-                    dias.forEach(d => { if (!fechasAusencia.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
-                    alcance *= socio.puntos;
-                } else {
-                    for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
-                        if (!fechasAusencia.has(dia)) alcance += valor;
-                    }
-                    alcance *= socio.puntos;
-                }
+                const alcance = alcanceDeSocio(socio, fechasAusencia,
+                    socio.contrato === 'Part-Time' ? (globalDiasPT[socio.id] || []) : null);
 
                 saldoReal = alcance + saldoAnterior - sumaPedido;
                 ({ aPagar, remanente } = repartirSaldo(saldoReal));
@@ -2717,9 +2687,9 @@ async function calcularRemanenteVivo() {
 
         let alcance = 0;
         if (socio.contrato === 'Part-Time') {
-            (diasPT[socio.id] || globalDiasPT[socio.id] || []).forEach(d => { if (!aus.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
+            alcance = sumaValorPuntoSocio(socio, aus, diasPT[socio.id] || globalDiasPT[socio.id] || []);
         } else {
-            for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) { if (!aus.has(dia)) alcance += (Number(valor) || 0); }
+            alcance = sumaValorPuntoSocio(socio, aus, null);
         }
         alcance *= pts;
         const saldoReal = alcance + (saldos[socio.id] || 0) - sumaAnt;
@@ -3132,16 +3102,8 @@ function _calcSaldoRealSocio(socio, data) {
             }
         });
     }
-    let alcance = 0;
-    if (socio.contrato === 'Part-Time') {
-        (globalDiasPT[socio.id] || []).forEach(d => { if (!fechasAusencia.has(d) && globalMapaPuntosDia[d]) alcance += globalMapaPuntosDia[d]; });
-        alcance *= socio.puntos;
-    } else {
-        for (const [dia, valor] of Object.entries(globalMapaPuntosDia)) {
-            if (!fechasAusencia.has(dia) && valor) alcance += valor;
-        }
-        alcance *= socio.puntos;
-    }
+    const alcance = alcanceDeSocio(socio, fechasAusencia,
+        socio.contrato === 'Part-Time' ? (globalDiasPT[socio.id] || []) : null);
     const saldoReal = alcance + saldoAnterior - sumaPedido;
     // Gastos Comisión: retira todo → a pagar es el saldo completo y remanente 0.
     const { aPagar, remanente } = repartirSaldo(saldoReal, _esGastoComision(socio.area));
