@@ -232,6 +232,29 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-07 — Respaldo de socios eliminados (SW v165)
+
+**No existía.** Al eliminar un socio pasaba una de dos cosas, y ninguna dejaba dónde mirar:
+
+- **sin movimientos** → se borraba **de verdad** y solo quedaba una línea en la auditoría;
+- **con movimientos** → se desactivaba y su historial seguía en las tablas, pero **no había pantalla que lo mostrara**.
+
+**Ahora, antes de tocar nada**, se guarda una foto completa: la ficha de gestión (nombre, RUT, correo, área, contrato, puntos, fechas, y lo calculado como años y fecha de inicio de puntos) y **todos sus movimientos** — anticipos, ausencias y extras, retiros, historial de anticipos, cierres de mes, saldos, días Part-Time, documentos, turnos y vacaciones.
+
+**La sección:** botón **🗄️ Socios eliminados** en Gestión de Socios. Cada respaldo muestra su ficha, cuándo se eliminó y quién lo hizo; **👁 Ver todo** abre el detalle con el desglose de cuántos registros tenía de cada cosa, y **⬇ Descargar** baja el respaldo entero como archivo.
+
+**Lo que más importa de este cambio:** si el respaldo **no se puede guardar**, un socio sin movimientos **ya no se borra**. No se elimina lo que después no se va a poder recuperar. Uno con movimientos sí se da de baja —su historial no se pierde de todos modos— pero la app avisa que no quedó respaldado.
+
+**Para lo que ya estaba borrado**, el botón **🔎 Buscar los que faltan** arma el respaldo de dos grupos: los socios **dados de baja** desde antes, y los **huérfanos** — movimientos cuyo `socio_id` ya no está en la tabla de socios. De estos últimos no queda ficha, pero sí sus anticipos y ausencias, y eso se guarda. Correrlo dos veces no duplica nada.
+
+**Si un respaldo no pudo leer alguna tabla**, lo dice en el detalle en vez de callarlo: es preferible un respaldo con huecos declarados a uno que esconde lo que no pudo leer.
+
+**Falta aplicar la migración:** **`migracion-socios-eliminados.sql`**, en la raíz. Supabase → SQL Editor → pegar → Run. Trae sus políticas de acceso, para no repetir el tropiezo de los pedidos de vacaciones. Si falta, la sección lo avisa y los borrados irreversibles quedan bloqueados.
+
+**Verificación:** 29 comprobaciones — que el respaldo se tome **antes** de borrar y guarde ficha y movimientos; los dos modos de borrado; que sin la tabla **se niegue a borrar** lo irrecuperable pero sí dé de baja lo que conserva historial; el aviso de la sección; la lista, el detalle y la descarga con su nombre de archivo; y la recuperación de dados de baja y huérfanos, sin duplicar al repetirla.
+
+**Archivos:** `migracion-socios-eliminados.sql` (nuevo), `js/eliminados.js` (nuevo), `js/supabase-config.js`, `js/socios.js`, `js/help.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-10-07 — Los chips nuevos se salían de la pantalla en el teléfono (SW v164)
 
 Los chips que agregué ayer a la ficha del socio llevaban `white-space:nowrap`. Con la frase completa, **«⏳ Empieza a percibir el 15 de noviembre de 2026 · faltan 40 días» medía 467 px** — más que el ancho de cualquier teléfono.

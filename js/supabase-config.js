@@ -1475,7 +1475,23 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     if (count) { movimientos += count; detalleTablas[t] = count; }
                 }
 
-                let modo;
+                let modo = (movimientos === 0) ? 'eliminado' : 'desactivado';
+
+                // EL RESPALDO VA ANTES DE TOCAR NADA. Si se tomara después,
+                // en el caso de borrado de verdad ya no habría qué fotografiar.
+                let respaldado = false;
+                if (typeof elim_guardar === 'function') {
+                    try { respaldado = await elim_guardar(sid, modo); } catch (e) { respaldado = false; }
+                }
+                // Sin respaldo no se borra lo que no se puede recuperar. Un
+                // socio con movimientos solo se desactiva, así que ahí se puede
+                // seguir; uno sin movimientos desaparecería para siempre.
+                if (!respaldado && modo === 'eliminado') {
+                    return _mockOk({ status: 'error',
+                        message: 'No se pudo guardar el respaldo del socio, así que no se eliminó. '
+                               + 'Si falta la tabla, aplica migracion-socios-eliminados.sql en Supabase.' });
+                }
+
                 if (movimientos === 0) {
                     const { error } = await dbSoc.from('socios').delete().eq('id', sid);
                     if (error) throw error;
@@ -1490,10 +1506,10 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                     detalle: `Socio: ${nombre} | ${modo === 'eliminado'
                         ? 'eliminado (sin movimientos)'
                         : 'desactivado — conserva ' + movimientos + ' registro(s) de historial'}`,
-                    datos: { socio_id: sid, nombre, modo, movimientos, tablas: detalleTablas }
+                    datos: { socio_id: sid, nombre, modo, movimientos, tablas: detalleTablas, respaldado }
                 });
                 _origFetch(url, options).catch(() => {});   // la planilla, en segundo plano
-                return _mockOk({ status: 'success', modo, movimientos, nombre });
+                return _mockOk({ status: 'success', modo, movimientos, nombre, respaldado });
             } catch (e) {
                 console.error('[sb] deleteSocio:', e.message);
                 return _origFetch(url, options);           // si Supabase falla, que lo intente el GAS

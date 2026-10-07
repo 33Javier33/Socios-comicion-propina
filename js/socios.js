@@ -328,12 +328,15 @@ function prepararEdicion(id) {
 }
 
 async function eliminarSocio(id) {
-    if (!confirm('¿Eliminar socio?\n\nSi tiene movimientos registrados no se borra: se da de baja y desaparece de las listas, pero su historial se conserva.')) return;
+    if (!confirm('¿Eliminar socio?\n\nAntes de borrar se guarda un respaldo completo —su ficha y todos sus movimientos— en «🗄️ Socios eliminados».\n\nSi tiene movimientos registrados no se borra: se da de baja y desaparece de las listas, pero su historial se conserva.')) return;
     toggleLoader(true, "Eliminando...");
     try {
         const res = await callApiSocios('deleteSocio', { socioId: id });
+        if (res && res.status === 'error') { showToast(res.message || 'No se pudo eliminar', 'error'); toggleLoader(false); return; }
         // El aviso dice lo que REALMENTE pasó: borrado de verdad o dado de baja.
-        if (res && res.modo === 'desactivado') {
+        if (res && res.respaldado === false) {
+            showToast('Se eliminó, pero NO se pudo guardar el respaldo', 'error');
+        } else if (res && res.modo === 'desactivado') {
             showToast(`${res.nombre || 'Socio'} dado de baja · conserva ${res.movimientos} registro(s) de historial`, 'success');
         } else {
             showToast('Socio eliminado', 'success');
