@@ -669,6 +669,90 @@ function antAntToggleMes(mesId) {
     if (icon) icon.textContent = open ? '▼' : '▲';
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// LA FICHA DEL SOCIO: DESDE CUÁNDO ESTÁ Y DESDE CUÁNDO PERCIBE
+//
+// Un socio nuevo mostraba «Alcance $0» sin ninguna explicación, al lado de
+// un «Total punto actual» de $19.084. Parecía un error de la app y no lo
+// era: todavía no le corren los puntos. Faltaba decirlo.
+//
+// Se muestra: cuándo ingresó y cuánto lleva, desde cuándo percibe (o
+// cuánto falta, si aún no), y cuándo es su próximo aumento.
+// ══════════════════════════════════════════════════════════════════════
+function _gaFecha(iso) {
+    const p = String(iso || '').substring(0, 10).split('-');
+    if (p.length !== 3) return '';
+    const M = ['enero','febrero','marzo','abril','mayo','junio','julio',
+               'agosto','septiembre','octubre','noviembre','diciembre'];
+    return parseInt(p[2], 10) + ' de ' + (M[parseInt(p[1], 10) - 1] || '') + ' de ' + p[0];
+}
+function _gaAntiguedadTexto(iso) {
+    const d = new Date(String(iso).substring(0, 10) + 'T12:00:00');
+    if (isNaN(d.getTime())) return '';
+    const h = new Date();
+    let meses = (h.getFullYear() - d.getFullYear()) * 12 + (h.getMonth() - d.getMonth());
+    if (h.getDate() < d.getDate()) meses--;
+    if (meses < 0) meses = 0;
+    const a = Math.floor(meses / 12), m = meses % 12;
+    if (!a && !m) return 'recién ingresó';
+    const pa = a ? (a + (a === 1 ? ' año' : ' años')) : '';
+    const pm = m ? (m + (m === 1 ? ' mes' : ' meses')) : '';
+    return [pa, pm].filter(Boolean).join(' y ');
+}
+function _gaDiasHasta(iso) {
+    const d = new Date(String(iso).substring(0, 10) + 'T12:00:00');
+    const h = new Date(); const hoy = new Date(h.getFullYear(), h.getMonth(), h.getDate());
+    return Math.round((d - hoy) / 86400000);
+}
+
+function gest_renderAntiguedad(socio) {
+    const el = document.getElementById('detAntiguedad');
+    if (!el) return;
+    if (!socio || !socio.fechaIngreso) { el.innerHTML = ''; return; }
+
+    const chip = (texto, color, fondo) =>
+        '<span style="display:inline-block;background:' + fondo + ';color:' + color
+        + ';border-radius:20px;padding:2px 9px;font-size:0.76em;font-weight:700;'
+        + 'margin:0 5px 5px 0;white-space:nowrap;">' + texto + '</span>';
+
+    let html = chip('📅 Ingresó el ' + _gaFecha(socio.fechaIngreso)
+        + (_gaAntiguedadTexto(socio.fechaIngreso) ? ' · ' + _gaAntiguedadTexto(socio.fechaIngreso) : ''),
+        '#1e40af', '#dbeafe');
+
+    const inicio = socio.fechaInicioPuntos;
+    if (inicio) {
+        const faltan = _gaDiasHasta(inicio);
+        html += (faltan > 0)
+            // Todavía no percibe: es la explicación del alcance en $0.
+            ? chip('⏳ Empieza a percibir el ' + _gaFecha(inicio)
+                   + ' · faltan ' + faltan + (faltan === 1 ? ' día' : ' días'), '#92400e', '#fef3c7')
+            : chip('⭐ Percibe desde el ' + _gaFecha(inicio), '#166534', '#dcfce7');
+    }
+
+    // El próximo aumento, si todavía no está en el tope de su área.
+    try {
+        const tope = (typeof calcularPuntosMaximos === 'function') ? calcularPuntosMaximos(socio.area) : null;
+        if (tope !== null && Number(socio.puntos) < tope && Number.isInteger(socio.mesAniversario)) {
+            const M = ['enero','febrero','marzo','abril','mayo','junio','julio',
+                       'agosto','septiembre','octubre','noviembre','diciembre'];
+            const h = new Date();
+            let anio = h.getFullYear();
+            if (h.getMonth() > socio.mesAniversario
+                || (h.getMonth() === socio.mesAniversario && h.getDate() >= 15)) anio++;
+            const prox = anio + '-' + String(socio.mesAniversario + 1).padStart(2, '0') + '-15';
+            // Si todavía no percibe, el primer aumento no puede ser antes de eso.
+            if (!inicio || prox > inicio) {
+                html += chip('⬆️ Sube a ' + Math.min(Number(socio.puntos) + 2, tope)
+                    + ' pts el 15 de ' + M[socio.mesAniversario] + ' de ' + anio, '#6b21a8', '#ede9fe');
+            }
+        } else if (tope !== null && Number(socio.puntos) >= tope) {
+            html += chip('🏆 Tope de su área: ' + tope + ' pts', '#7c2d12', '#ffedd5');
+        }
+    } catch (e) {}
+
+    el.innerHTML = html;
+}
+
 async function cargarHistorialSocio(id) {
     _antAntReset();
     const _secAnt = document.getElementById('seccionAnticiposAnt');
@@ -2796,6 +2880,7 @@ function seleccionarSocio(id) {
     if (typeof gest_renderCorreo === 'function') gest_renderCorreo(socio);
     if (typeof gest_renderFoto === 'function') gest_renderFoto(socio);
     document.getElementById('detPuntos').textContent = socio.puntos;
+    gest_renderAntiguedad(socio);
     document.getElementById('cardAusencias').style.display = (socio.contrato === 'Planta') ? 'block' : 'none';
     // Las opciones (anticipo / ausencia) arrancan minimizadas con cada socio
     panelPlegable_colapsarTodas();

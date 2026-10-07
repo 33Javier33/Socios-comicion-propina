@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-07 — Anticipos: la ficha del socio dice desde cuándo está y desde cuándo percibe (SW v163)
+
+Un socio nuevo mostraba **«Alcance (teórico) $0»** al lado de un «Total punto actual» de $19.084, sin ninguna explicación. Parecía un error de la app y no lo era: **todavía no le corren los puntos**. Faltaba decirlo.
+
+Debajo del área, el RUT y el correo, la ficha ahora trae tres datos en chips:
+
+- **📅 Ingresó el 4 de marzo de 2022 · 4 años y 7 meses** — la fecha de ingreso y cuánto lleva.
+- **⭐ Percibe desde el 15 de abril de 2022** — o, si todavía no, **⏳ Empieza a percibir el 15 de noviembre de 2026 · faltan 40 días** en ámbar, que es justo la explicación del alcance en $0.
+- **⬆️ Sube a 12 pts el 15 de marzo de 2027** — el próximo aumento, con su fecha exacta. Si ya está en el tope, **🏆 Tope de su área: 20 pts** y no promete un aumento que no va a llegar.
+
+Las fechas salen de la misma política que se aplicó en Gestión de Socios, así que la ficha y el cálculo del alcance no pueden contradecirse.
+
+**Verificación:** 17 comprobaciones — el socio antiguo con sus tres chips; el caso exacto de la foto (alcance 0 **y** la ficha explicándolo); el que está en el tope; Bóveda con su tope propio de 10; el próximo aumento cayendo en el mes de ingreso; que sin fecha de ingreso no invente nada. Más contraste medido en los tres temas.
+
+**Un color que se arregló midiendo:** el chip del próximo aumento usaba un morado (`#5b21b6`) que el tema oscuro no sabe dar vuelta — el fondo se oscurecía y el texto quedaba morado sobre morado, en **1,74:1**. Pasó a `#6b21a8`, que sí está en la familia que el tema mapea.
+
+**Archivos:** `js/anticipos.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-10-07 — Anticipos: el socio solo percibe desde que le corren los puntos (SW v162)
 
 La misma política que ya se aplicó en Gestión de Socios, ahora donde se reparte la plata.
