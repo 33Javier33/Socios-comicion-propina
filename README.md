@@ -232,6 +232,28 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-07 — Arqueo: «Total Puntos del Período» decía cualquier cosa (SW v160)
+
+El número estaba mal por **tres razones a la vez**:
+
+1. **Sumaba toda la historia.** El rótulo dice «del período» y traía los puntos de **todos los meses cargados desde siempre**.
+2. **Usaba el divisor equivocado.** Tomaba el del **primer registro** del día y, si ese no traía, usaba **1**. Dividir por 1 en vez de por ~20 infla el día veinte veces. Y peor: los días **sin divisor** —que todavía no tienen punto noche— entraban igual, con su monto completo contado como puntos.
+3. **Se calculaba una sola vez**, al abrir el arqueo. Entraba una recaudación nueva y el número se quedaba pegado.
+
+**Ahora sale de `globalMapaPuntosDia`**, que es exactamente el mismo mapa que usan los anticipos y el alcance de cada socio: monto del día ÷ divisor del día (el mayor si hay varios), y `null` cuando el día no tiene divisor, en cuyo caso **no suma**. Si el arqueo y Anticipos dieran números distintos, uno de los dos estaría mintiendo — hay una comprobación que verifica que coinciden.
+
+**Se recalcula solo** cada vez que se recargan las recaudaciones: entra una nueva, o se corrige un divisor, y el número se mueve sin tocar nada.
+
+**Debajo del total ahora dice de dónde sale:** *«3 días con divisor · 15/09 al 14/10»*, y si falta alguno, *«1 sin divisor, no suman»* en ámbar. Un total que baja porque un día quedó sin divisor no debería parecer un error.
+
+También se aclaró el otro rótulo: el recuadro verde de Datos Esperados decía solo «TOTAL Puntos» entre datos del **último día**, y se leía como el total de esa noche. Ahora dice **«TOTAL Puntos del período»**.
+
+**Verificación:** 22 comprobaciones — el mapa por día; que un día sin divisor quede en `null` y no en su monto; que sume solo el período y deje fuera los meses anteriores; que **el período lo manda la última recaudación cargada, no el calendario** (regla de la app, ahora fijada por una prueba); que la pantalla muestre el número y la nota; que se mueva solo al entrar una recaudación y al corregir un divisor; que **coincida con el cálculo de los socios**; que no le pida nada a la nube; y que sin datos dé 0.
+
+**Nota aparte:** `test_arqueo.js` falla en «Cuadra: contado + anticipos = esperado» — comprobé que **ya fallaba antes de este cambio** (es la prueba la que no entrega el esperado, no la app).
+
+**Archivos:** `js/arqueo.js`, `js/recaudacion.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-10-06 — Horarios: guía completa, con «?» repartidos por la app (SW horarios v36)
 
 **12 temas escritos para alguien que nunca usó una app así.** Nada de «excepción de ciclo» ni «sub-vista»: se dice qué se ve, qué se toca y qué pasa.

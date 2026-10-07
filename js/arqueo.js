@@ -538,21 +538,57 @@ function aq_mostrarAvisoSinVerificar(sinVerificar, totalFaltante) {
     if (det) det.innerHTML = lineas.join('<br>');
 }
 
-async function aq_fetchPuntosHistorial() {
-    try {
-        const res = await fetch(AQ_URL_GET + '?action=get');
-        const json = await res.json();
-        let totalPts = 0, grouped = {};
-        json.data.forEach(r => {
-            const d = r.fecha.split(' ')[0];
-            if(!grouped[d]) grouped[d] = { total: 0, div: r.divisor || 1 };
-            grouped[d].total += r.monto;
-        });
-        Object.keys(grouped).forEach(d => { totalPts += grouped[d].total / grouped[d].div; });
-        document.getElementById('aq-suma-total-puntos').textContent = Math.round(totalPts).toLocaleString();
-        document.getElementById('aq-division-result').textContent = Math.round(totalPts).toLocaleString();
-    } catch(e) {}
+// ══════════════════════════════════════════════════════════════════════
+// TOTAL PUNTOS DEL PERÍODO
+//
+// Esto decía cualquier cosa, por tres razones a la vez:
+//
+//   1. Sumaba TODA la historia. El rótulo dice «del período» y traía los
+//      puntos de todos los meses cargados desde siempre.
+//   2. Tomaba el divisor del PRIMER registro del día y, si ese no traía,
+//      usaba 1. Dividir por 1 en vez de por ~20 infla el día veinte veces.
+//      Peor: días sin divisor —que no tienen punto noche todavía— entraban
+//      igual, con su monto completo como si fueran puntos.
+//   3. Se recalculaba una sola vez, dentro de aq_fetchEsperadoData. Si
+//      entraba una recaudación nueva, el número se quedaba pegado.
+//
+// Ahora sale de `globalMapaPuntosDia`, que es EXACTAMENTE el mismo mapa que
+// usan los anticipos y el alcance de cada socio: monto del día ÷ divisor del
+// día (el mayor si hay varios), y `null` cuando el día todavía no tiene
+// divisor, en cuyo caso no suma. Si acá y en Anticipos salieran números
+// distintos, uno de los dos estaría mintiendo.
+// ══════════════════════════════════════════════════════════════════════
+function aq_totalPuntosPeriodo() {
+    const { inicio, fin } = aq_calcularPeriodoActual();
+    let total = 0, dias = 0, sinDivisor = 0;
+    Object.entries(globalMapaPuntosDia || {}).forEach(([fecha, valor]) => {
+        if (fecha < inicio || fecha > fin) return;
+        if (valor === null || valor === undefined) { sinDivisor++; return; }
+        total += valor; dias++;
+    });
+    return { total, dias, sinDivisor, inicio, fin };
 }
+
+function aq_pintarPuntosPeriodo() {
+    const r = aq_totalPuntosPeriodo();
+    const txt = Math.round(r.total).toLocaleString('es-CL');
+    const elA = document.getElementById('aq-suma-total-puntos');
+    const elB = document.getElementById('aq-division-result');
+    if (elA) elA.textContent = txt;
+    if (elB) elB.textContent = txt;
+    // Se dice de cuántos días sale y si falta algún divisor: un total que
+    // baja porque un día quedó sin divisor no debería parecer un error.
+    const pie = document.getElementById('aq-puntos-periodo-nota');
+    if (pie) {
+        const f = x => { const p = String(x).split('-'); return p.length === 3 ? p[2] + '/' + p[1] : x; };
+        pie.innerHTML = `${r.dias} día${r.dias === 1 ? '' : 's'} con divisor · ${f(r.inicio)} al ${f(r.fin)}`
+            + (r.sinDivisor ? ` · <b style="color:#b45309">${r.sinDivisor} sin divisor, no suman</b>` : '');
+    }
+    return r;
+}
+
+// Se mantiene el nombre viejo porque lo llama aq_fetchEsperadoData.
+function aq_fetchPuntosHistorial() { aq_pintarPuntosPeriodo(); }
 
 // Fecha de referencia para determinar el período activo (regla del día 15).
 // Usa la ÚLTIMA recaudación cargada en vez de "hoy": así el período NO se

@@ -150,6 +150,10 @@ function procesarDatosRecaudacion(datos, silent) {
         sumaPuntosGlobal += puntoNoche;
     });
     globalValorPuntoTotal = sumaPuntosGlobal;
+    // El arqueo muestra el total de puntos del período a partir de este mismo
+    // mapa. Antes se calculaba una sola vez al abrir el arqueo y se quedaba
+    // pegado: entraba una recaudación nueva y el número no se movía.
+    if (typeof aq_pintarPuntosPeriodo === 'function') { try { aq_pintarPuntosPeriodo(); } catch(e){} }
 
     if(silent) return;
 
