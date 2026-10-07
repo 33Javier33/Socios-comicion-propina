@@ -522,10 +522,10 @@
                     <input type="hidden" id="gestionSocioRemanente" value="0">
                     
                     <div class="detail-header">
-                        <div style="display:flex; align-items:flex-start; gap:12px;">
-                            <div id="detFotoWrap"></div>
-                            <div>
-                                <h2 id="detNombre" style="margin:0; color:var(--primary);">Nombre Socio</h2>
+                        <div style="display:flex; align-items:flex-start; gap:12px; min-width:0; flex:1;">
+                            <div id="detFotoWrap" style="flex-shrink:0"></div>
+                            <div style="min-width:0; flex:1;">
+                                <h2 id="detNombre" style="margin:0; color:var(--primary); overflow-wrap:anywhere;">Nombre Socio</h2>
                                 <span id="detContrato" class="card-contract" style="font-size:1em; margin-top:5px;">PLANTA</span>
                                 <div style="margin-top:5px; color:#7f8c8d;" id="detArea">Área</div>
                                 <div style="margin-top:3px; color:#7f8c8d; font-size:0.85em;" id="detRut"></div>
@@ -2377,7 +2377,7 @@
     <script src="js/qr-socios.js?v=2"></script>
     <script src="js/socios.js?v=47"></script>
     <script src="js/puntos.js?v=32"></script>
-    <script src="js/anticipos.js?v=66"></script>
+    <script src="js/anticipos.js?v=67"></script>
     <script src="js/desglose-anticipos.js?v=39"></script>
     <script src="js/meses-anteriores.js?v=33"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>

@@ -710,14 +710,19 @@ function gest_renderAntiguedad(socio) {
     if (!el) return;
     if (!socio || !socio.fechaIngreso) { el.innerHTML = ''; return; }
 
+    // SIN `white-space:nowrap`: con la frase completa el chip medía 467px y
+    // estiraba toda la ficha más allá del ancho del teléfono — el número de
+    // puntos quedaba fuera de la pantalla y la página se podía arrastrar de
+    // lado. Que la frase se parta en dos líneas no molesta a nadie.
     const chip = (texto, color, fondo) =>
-        '<span style="display:inline-block;background:' + fondo + ';color:' + color
-        + ';border-radius:20px;padding:2px 9px;font-size:0.76em;font-weight:700;'
-        + 'margin:0 5px 5px 0;white-space:nowrap;">' + texto + '</span>';
+        '<span style="display:inline-block;max-width:100%;background:' + fondo + ';color:' + color
+        + ';border-radius:14px;padding:3px 10px;font-size:0.76em;font-weight:700;'
+        + 'line-height:1.35;margin:0 5px 5px 0;">' + texto + '</span>';
 
     let html = chip('📅 Ingresó el ' + _gaFecha(socio.fechaIngreso)
         + (_gaAntiguedadTexto(socio.fechaIngreso) ? ' · ' + _gaAntiguedadTexto(socio.fechaIngreso) : ''),
         '#1e40af', '#dbeafe');
+
 
     const inicio = socio.fechaInicioPuntos;
     if (inicio) {
@@ -725,7 +730,7 @@ function gest_renderAntiguedad(socio) {
         html += (faltan > 0)
             // Todavía no percibe: es la explicación del alcance en $0.
             ? chip('⏳ Empieza a percibir el ' + _gaFecha(inicio)
-                   + ' · faltan ' + faltan + (faltan === 1 ? ' día' : ' días'), '#92400e', '#fef3c7')
+                   + '<br>faltan ' + faltan + (faltan === 1 ? ' día' : ' días'), '#92400e', '#fef3c7')
             : chip('⭐ Percibe desde el ' + _gaFecha(inicio), '#166534', '#dcfce7');
     }
 

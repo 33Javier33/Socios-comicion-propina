@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-07 — Los chips nuevos se salían de la pantalla en el teléfono (SW v164)
+
+Los chips que agregué ayer a la ficha del socio llevaban `white-space:nowrap`. Con la frase completa, **«⏳ Empieza a percibir el 15 de noviembre de 2026 · faltan 40 días» medía 467 px** — más que el ancho de cualquier teléfono.
+
+Eso estiraba la ficha entera a 532 px: el **número de puntos quedaba fuera de la pantalla**, el contenido se veía corrido hacia la izquierda y la página se podía arrastrar de lado. Es un error mío de la versión anterior.
+
+**Arreglado:** los chips se parten en dos líneas en vez de estirar la ficha, el bloque del nombre puede encogerse (`min-width:0`), y un nombre muy largo corta en vez de empujar.
+
+**Medido a 320, 360, 375, 390, 414, 430 y 1440 px:** la página mide exactamente lo que mide la pantalla y **cero elementos** quedan fuera, en todos los anchos.
+
+**Archivos:** `js/anticipos.js`, `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-10-07 — Anticipos: la ficha del socio dice desde cuándo está y desde cuándo percibe (SW v163)
 
 Un socio nuevo mostraba **«Alcance (teórico) $0»** al lado de un «Total punto actual» de $19.084, sin ninguna explicación. Parecía un error de la app y no lo era: **todavía no le corren los puntos**. Faltaba decirlo.
