@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-08 — El número de versión de abajo iba uno atrás (SW v168)
+
+`js/version.js` guarda un `VERSION_FALLBACK`: el número que se muestra cuando todavía no hay Service Worker que responda (primera visita, modo incógnito). Había quedado en **166** mientras `sw.js` ya iba en v167, así que en esas primeras visitas la app decía tener una versión que no era.
+
+Ahora los dos van juntos en **168**. Si se vuelve a subir una versión, hay que mover **los dos**: `CACHE` en `sw.js` y `VERSION_FALLBACK` en `js/version.js`.
+
+**Archivos:** `sw.js`, `js/version.js`, `index.html`.
+
 #### 2026-10-08 — El detalle de un socio eliminado se lee, ya no es un JSON (SW v167)
 
 En Socios Eliminados → **👁 Ver todo** → **🧾 Ver el detalle** aparecía el JSON crudo del respaldo: `{"socio_id":"12","monto":45000,...}`. Servía para comprobar que el dato estaba guardado, pero no para leerlo.
