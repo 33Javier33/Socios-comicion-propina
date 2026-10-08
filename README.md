@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-08 — La ficha ADMIN también en la pantalla de ingreso (SW v171)
+
+El ingreso mostraba un cuadrado azul con el emoji **💰** adentro — puesto cuando la app no tenía ícono propio. Ahora muestra **la ficha ADMIN**, la misma que queda en la pantalla de inicio del teléfono, así el ingreso y el ícono instalado se reconocen como lo mismo.
+
+Cambios en `.login-logo`: de cuadrado de 72 px con esquinas redondeadas a **círculo de 88 px**; se le sacó el degradado azul de fondo (el PNG ya trae el suyo y es transparente por fuera del aro) y la sombra pasó del azul `rgba(52,152,219,…)` al **rojo de la ficha** `rgba(142,49,48,0.38)`, que es el mismo color del aro.
+
+Se revisó en los tres temas —claro, oscuro y negro—, en teléfono y en computador. La clase `.login-logo` solo se usa acá: Horarios (`index2.html`) no la toca.
+
+**Archivos:** `index.html`, `styles.css`, `sw.js`, `js/version.js`.
+
 #### 2026-10-08 — Aviso: el ícono cambió, hay que reinstalar la app (SW v170)
 
 Se cambió el ícono y en los teléfonos no pasó nada. **No es una falla:** cambiar los íconos del manifiesto **no cambia el que está pegado en la pantalla de inicio**. El teléfono copió el ícono el día que se instaló la app y se queda con esa copia.

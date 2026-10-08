@@ -1030,11 +1030,15 @@
         }
         @keyframes loginIn { from { opacity:0; transform: translateY(30px) scale(0.95); } to { opacity:1; transform: translateY(0) scale(1); } }
         @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+        /* ── Ficha del ingreso ──
+           Antes era un cuadrado azul con el emoji 💰 adentro. Ahora es la
+           ficha de la app: redonda, sin fondo propio —el PNG ya trae el suyo
+           y es transparente por fuera del aro— y con la sombra en el rojo de
+           la ficha, no en el azul del cuadrado que ya no está. */
         .login-logo {
-            width: 72px; height: 72px; border-radius: 18px; margin: 0 auto 20px;
-            background: linear-gradient(135deg, var(--secondary), var(--primary));
-            display: flex; align-items: center; justify-content: center;
-            font-size: 2em; box-shadow: 0 8px 20px rgba(52,152,219,0.35);
+            width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 20px;
+            display: block; object-fit: contain;
+            box-shadow: 0 8px 22px rgba(142,49,48,0.38);
         }
         /* ── Logo de marca ──
            PNG de fondo transparente: se apoya sobre el fondo de la app.

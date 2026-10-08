@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/icono-cpn-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=120">
+    <link rel="stylesheet" href="styles.css?v=121">
     <script>
         // El tema se aplica ANTES de pintar nada. Si esperara a auth.js, abrir
         // con tema oscuro daría un fogonazo blanco. Como acá todavía no existe
@@ -38,7 +38,10 @@
     <!-- ===== LOGIN OVERLAY ===== -->
     <div id="loginOverlay">
         <div class="login-box">
-            <div class="login-logo">💰</div>
+            <!-- La ficha de la app, no un emoji: es la misma que queda en la
+                 pantalla de inicio del teléfono, así el ingreso y el ícono
+                 instalado se reconocen como lo mismo. -->
+            <img src="img/icono-cpn-192.png" alt="Fondo Solidario" class="login-logo" width="88" height="88">
             <div class="login-title">Fondo Solidario</div>
             <div class="login-sub">Sistema Integral de Comisión Propina</div>
 
