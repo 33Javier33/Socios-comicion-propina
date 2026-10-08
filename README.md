@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-08 — Ícono propio: la ficha «ADMIN · CONTROL» (SW v169)
+
+Esta app y la de Recaudaciones usaban **el mismo ícono** —la marca del desarrollador—, así que instaladas las dos en el mismo teléfono no había cómo distinguirlas.
+
+Ahora la de administración tiene el suyo: la **ficha circular roja con el signo peso, la flecha, el engranaje y la palabra ADMIN**, recortada justo en el borde del aro y con todo lo de afuera transparente. Se reemplazaron los tres archivos del manifiesto (192, 512 y el *maskable* de 512). Es también el ícono que sale en las **notificaciones push**, porque el Service Worker usa `img/icono-cpn-192.png`.
+
+El *maskable* va aparte: la ficha al **80 %** del lienzo sobre el rojo del aro (`#8e3130`), que es la zona segura de Android. Así, recorte el sistema un círculo, un cuadrado redondeado o una gota, la ficha nunca queda cortada.
+
+**Horarios (`index2.html`) no se tocó:** sigue con `img/horarios-192.png` y `horarios-512.png`, que son suyos y están en `manifest2.json`.
+
+Los nombres de archivo (`icono-cpn-*.png`) se dejaron tal cual: cambiarlos obligaba a tocar el manifiesto, el `index.html`, `js/utils.js` y la lista de caché del Service Worker sin ganar nada.
+
+**Archivos:** `img/icono-cpn-192.png`, `img/icono-cpn-512.png`, `img/icono-cpn-maskable-512.png`, `sw.js`, `js/version.js`, `index.html`.
+
 #### 2026-10-08 — El número de versión de abajo iba uno atrás (SW v168)
 
 `js/version.js` guarda un `VERSION_FALLBACK`: el número que se muestra cuando todavía no hay Service Worker que responda (primera visita, modo incógnito). Había quedado en **166** mientras `sw.js` ya iba en v167, así que en esas primeras visitas la app decía tener una versión que no era.
