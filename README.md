@@ -232,6 +232,33 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-08 — Aviso: el ícono cambió, hay que reinstalar la app (SW v170)
+
+Se cambió el ícono y en los teléfonos no pasó nada. **No es una falla:** cambiar los íconos del manifiesto **no cambia el que está pegado en la pantalla de inicio**. El teléfono copió el ícono el día que se instaló la app y se queda con esa copia.
+
+| Dónde | Qué pasa con el ícono viejo |
+|---|---|
+| Pestaña del navegador | Se actualiza **solo**, apenas se recarga |
+| Android, app instalada | Chrome revisa el manifiesto **como mucho una vez al día** y programa la actualización por su cuenta: puede demorar **días**, y a veces no ocurre |
+| iPhone, app instalada | **No cambia nunca.** Safari copia el ícono al agregar a inicio y ahí queda |
+| Computador, app instalada | Tampoco cambia hasta reinstalar |
+
+La única forma segura es **sacar la app de la pantalla de inicio y volver a agregarla** — no se pierde nada: ni los datos, ni la sesión, ni lo que está en la nube. Y eso no hay código que lo haga solo: tiene que hacerlo la persona.
+
+Por eso ahora la app **avisa**. Sale una ventana **una sola vez**, con los pasos para Android y para iPhone, y solo a quien cumpla las tres condiciones:
+
+- tiene la app **instalada** (en el navegador el ícono ya se actualizó solo, no hay nada que explicar);
+- **ya la venía usando** antes del cambio;
+- no la cerró antes con «Entendido».
+
+La decisión de si corresponde o no se toma **una sola vez**, la primera vez que corre este código en el teléfono, y queda guardada. Si se preguntara en cada arranque, alguien que instale la app de aquí en adelante —que ya recibe el ícono nuevo— terminaría viendo el aviso igual en cuanto juntara datos de uso.
+
+> **Cuidado al elegir las claves que delatan el uso previo.** `fondo_tema` y `fondo_dark_mode` las escribe la app sola al abrirse por primera vez, así que un teléfono recién estrenado también las tiene. Solo sirven claves que aparecen cuando alguien de verdad entró y trabajó: `fondo_responsables`, `fondo_cache_all_data`, `_rec_last_seen`, `_rec_bell_seen`, `_conex_seen`, `arqueoBackupHistorial_List`.
+
+El aviso espera 2,6 s antes de salir, para no encimarse con el banner de «Nueva versión disponible». Es código con fecha de vencimiento: pasado el **31-03-2027** no se muestra más y el bloque se puede borrar entero.
+
+**Archivos:** `index.html`, `sw.js`, `js/version.js`.
+
 #### 2026-10-08 — Ícono propio: la ficha «ADMIN · CONTROL» (SW v169)
 
 Esta app y la de Recaudaciones usaban **el mismo ícono** —la marca del desarrollador—, así que instaladas las dos en el mismo teléfono no había cómo distinguirlas.
