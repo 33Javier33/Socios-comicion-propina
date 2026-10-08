@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-08 — El detalle de un socio eliminado se lee, ya no es un JSON (SW v167)
+
+En Socios Eliminados → **👁 Ver todo** → **🧾 Ver el detalle** aparecía el JSON crudo del respaldo: `{"socio_id":"12","monto":45000,...}`. Servía para comprobar que el dato estaba guardado, pero no para leerlo.
+
+Ahora ese botón abre el respaldo **armado para leerse**:
+
+- **Su ficha completa** — todos los campos que tenía el socio al momento del borrado, no solo el resumen: RUT, correo, teléfono, área, contrato, puntos, fecha de ingreso, lo que haya.
+- **Lo que la app calculaba de él** — el inicio de puntos y los años cumplidos. Solo sale lo que **no** repite la ficha.
+- **Sus movimientos** — un bloque por cada grupo (Anticipos, Ausencias y extras, Retiros, Cierres de mes, Días Part-Time, Turnos, Vacaciones, Documentos…), cada uno con su cuenta de registros y, si tiene montos, **la suma** en el título. Los bloques de más de 25 registros arrancan plegados.
+- Las columnas salen **en castellano** (`fecha_cierre` → «Fecha de cierre»), las fechas como `08-10-2026`, los montos con signo peso y separador de miles, el **desglose de billetes** como `20.000 × 2 · 10.000 × 1`, los estados como se dicen (`en_sobre` → «En sobre»), y las tablas con más de una fila traen **el total al pie**.
+- El `socio_id` no se repite en cada fila: ya está arriba, en la ficha.
+- Un registro de **muchos campos** (un cierre de mes, un documento) no se mete en una tabla que no cabe: va campo por campo, uno debajo del otro. Las tablas de cuatro o más columnas avisan en el teléfono que se corren de lado.
+- Si del socio **no quedó ficha** (los huérfanos recuperados), lo dice en vez de mostrar un hueco, y sus movimientos salen igual. Si al armar el respaldo alguna tabla no se pudo leer, se nombra con su error.
+
+El JSON sigue estando: quedó abajo, chico, como **«Ver los datos técnicos (JSON)»**, y desde ahí se vuelve al detalle legible. La descarga del respaldo completo no cambió.
+
+**Archivos:** `js/eliminados.js`, `index.html`, `sw.js`.
+
 #### 2026-10-07 — «Socios Eliminados» no se encontraba (SW v166)
 
 El botón estaba, pero mal puesto: era uno gris chico entre cinco botones de colores de la barra de filtros del buscador, dentro de Gestión de Socios. Es una **sección**, no un filtro, y ahí no la encontraba nadie.
