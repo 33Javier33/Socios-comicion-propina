@@ -1,7 +1,7 @@
 // Nombre base de la caché de ESTA app y número de respaldo (el del código).
 // Solo se usan si el Service Worker no puede decir su propia versión.
 const CACHE_BASE = 'fondo-admin-';
-const VERSION_FALLBACK = 171;
+const VERSION_FALLBACK = 172;
 
 // ══════════════════════════════════════════════════════════════════════
 // VERSIÓN QUE SE ESTÁ VIENDO

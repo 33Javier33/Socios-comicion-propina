@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/icono-cpn-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=121">
+    <link rel="stylesheet" href="styles.css?v=122">
     <script>
         // El tema se aplica ANTES de pintar nada. Si esperara a auth.js, abrir
         // con tema oscuro daría un fogonazo blanco. Como acá todavía no existe
@@ -1336,18 +1336,18 @@
                 <button onclick="document.getElementById('modalMantenimiento').style.display='flex'" class="btn-action" style="background:#e2e8f0;color:#475569;width:auto;padding:8px 14px;font-weight:700;">⚙️ Mantenimiento</button>
             </div>
             <!-- Filtro collapsible -->
-            <div id="rec-filtro-toggle" onclick="rec_toggleFiltroPanel()" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f8f9fa;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;margin-bottom:10px;user-select:none;transition:border-color 0.2s,border-radius 0.2s;">
-                <span style="font-size:0.88em;font-weight:700;color:#374151;">🔍 Filtrar</span>
+            <div id="rec-filtro-toggle" onclick="rec_toggleFiltroPanel()" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid;border-radius:10px;cursor:pointer;margin-bottom:10px;user-select:none;transition:border-color 0.2s,border-radius 0.2s;">
+                <span class="rf-titulo" style="font-size:0.88em;font-weight:700;">🔍 Filtrar</span>
                 <span id="rec-filtro-badge" style="display:none;background:var(--primary);color:white;font-size:0.68em;font-weight:700;padding:2px 8px;border-radius:20px;"></span>
-                <span id="rec-filtro-chevron" style="margin-left:auto;color:#7f8c8d;font-size:0.78em;transition:transform 0.2s;">▼</span>
+                <span id="rec-filtro-chevron" class="rf-chevron" style="margin-left:auto;font-size:0.78em;transition:transform 0.2s;">▼</span>
             </div>
-            <div id="rec-filtro-panel" style="display:none;background:#f8f9fa;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:14px;margin-bottom:18px;margin-top:-4px;">
+            <div id="rec-filtro-panel" style="display:none;border:1px solid;border-top:none;border-radius:0 0 12px 12px;padding:14px;margin-bottom:18px;margin-top:-4px;">
                 <!-- Mini calendario -->
                 <div style="margin-bottom:14px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                        <button onclick="event.stopPropagation();recFiltroCalCambiar(-1)" style="background:none;border:1px solid #ddd;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:0.85em;color:#374151;">◀</button>
-                        <span id="recFiltroCalMesAnio" style="font-weight:700;font-size:0.85em;color:#374151;"></span>
-                        <button onclick="event.stopPropagation();recFiltroCalCambiar(1)" style="background:none;border:1px solid #ddd;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:0.85em;color:#374151;">▶</button>
+                        <button class="rf-nav" onclick="event.stopPropagation();recFiltroCalCambiar(-1)" style="border-radius:6px;padding:3px 10px;cursor:pointer;font-size:0.85em;">◀</button>
+                        <span id="recFiltroCalMesAnio" class="rf-mes" style="font-weight:700;font-size:0.85em;"></span>
+                        <button class="rf-nav" onclick="event.stopPropagation();recFiltroCalCambiar(1)" style="border-radius:6px;padding:3px 10px;cursor:pointer;font-size:0.85em;">▶</button>
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">
                         <div class="rfcal-hdr">L</div><div class="rfcal-hdr">M</div><div class="rfcal-hdr">M</div><div class="rfcal-hdr">J</div><div class="rfcal-hdr">V</div><div class="rfcal-hdr">S</div><div class="rfcal-hdr">D</div>
@@ -1356,7 +1356,7 @@
                 </div>
                 <!-- Tipo -->
                 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
-                    <span style="font-size:0.72em;color:#7f8c8d;font-weight:700;text-transform:uppercase;white-space:nowrap;">Tipo:</span>
+                    <span class="rf-etq" style="font-size:0.72em;font-weight:700;text-transform:uppercase;white-space:nowrap;">Tipo:</span>
                     <button class="rec-filtro-chip activo" data-tipo="" onclick="rec_setTipo('',this)">Todos</button>
                     <button class="rec-filtro-chip" data-tipo="SalaDeJuegos" onclick="rec_setTipo('SalaDeJuegos',this)">🎰 Sala</button>
                     <button class="rec-filtro-chip" data-tipo="EfectivoMDA" onclick="rec_setTipo('EfectivoMDA',this)">💵 MDA Ef.</button>
@@ -1365,14 +1365,14 @@
                 </div>
                 <!-- Divisor -->
                 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
-                    <span style="font-size:0.72em;color:#7f8c8d;font-weight:700;text-transform:uppercase;white-space:nowrap;">Divisor:</span>
+                    <span class="rf-etq" style="font-size:0.72em;font-weight:700;text-transform:uppercase;white-space:nowrap;">Divisor:</span>
                     <button class="rec-filtro-chip" id="chipSinDivisor" onclick="rec_toggleSinDivisor(this)">⚠️ Sin divisor</button>
                     <button class="rec-filtro-chip" id="chipConDivisor" onclick="rec_toggleConDivisor(this)">✅ Con divisor</button>
                 </div>
                 <!-- Info + Limpiar -->
                 <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <div id="rec-filtro-info" style="font-size:0.78em;color:#7f8c8d;min-height:14px;"></div>
-                    <button onclick="event.stopPropagation();rec_limpiarFiltros()" style="background:none;border:1px solid #ddd;border-radius:8px;padding:5px 12px;font-size:0.8em;color:#7f8c8d;cursor:pointer;white-space:nowrap;">✕ Limpiar</button>
+                    <div id="rec-filtro-info" class="rf-info" style="font-size:0.78em;min-height:14px;"></div>
+                    <button class="rf-limpiar" onclick="event.stopPropagation();rec_limpiarFiltros()" style="border-radius:8px;padding:5px 12px;font-size:0.8em;cursor:pointer;white-space:nowrap;">✕ Limpiar</button>
                 </div>
             </div>
 

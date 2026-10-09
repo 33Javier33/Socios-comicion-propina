@@ -232,6 +232,25 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-09 — El calendario del filtro de Recaudación era ilegible en tema oscuro (SW v172)
+
+Al abrir **🔍 Filtrar** en Recaudación, el encabezado se ponía oscuro pero **el panel se quedaba blanco**, con los números del calendario en gris clarito encima. Imposible de leer.
+
+**La causa.** El panel se abre con `panel.style.display = 'block'`. Asignar **una sola** propiedad hace que el navegador vuelva a escribir **todo** el atributo `style`, y al hacerlo convierte los colores: `background:#f8f9fa` pasa a ser `background: rgb(248, 249, 250)`. Las reglas del tema oscuro buscaban el hexadecimal —`body.dark-mode [style*="background:#f8f9fa"]`— y dejaban de encontrarlo. El encabezado, que nunca pasa por `.style`, conservaba su hexadecimal y sí se oscurecía: de ahí que una mitad quedara oscura y la otra blanca.
+
+**El arreglo.** Los colores del filtro salieron de los atributos `style=` y viven en CSS con variables por tema (`--rf-*`). Ahora el tema no depende de cómo el navegador decidió escribir el atributo.
+
+**De paso aparecieron dos cosas más:**
+
+- **En tema oscuro no se notaba qué filtro estaba puesto.** La regla `body.dark-mode .rec-filtro-chip` tiene más especificidad que `.rec-filtro-chip.activo`, así que le ganaba y el chip encendido se veía igual que los apagados. Se eliminó esa regla: con variables, el tema lo deciden los valores y no quién gana la pelea de selectores.
+- **Los colores encendidos no cumplían contraste** con el texto blanco encima: `#3498db` daba 3,15:1, `#e74c3c` 3,82:1 y `#27ae60` 2,87:1. Ahora son `#1b6fa8`, `#c0392b` y `#1e7e45` → **5,4 · 5,4 · 5,1**.
+
+También se oscurecieron los grises del calendario, que ya eran flojos en tema claro: los días sin recaudación pasaron de `#cbd5e1` (1,5:1) a `#64748b` (4,5:1), y las letras L M M J V S D de `#94a3b8` a `#475569` (7,2:1). El día elegido dejó de usar `var(--primary)`, que en tema oscuro es celeste claro y con número blanco daba 1,8:1.
+
+Medido elemento por elemento en los **tres temas**: 54 textos por tema, el peor 4,51:1. Se barrieron además todas las pestañas buscando otros paneles con el mismo defecto — no hay ninguno; el filtro de Anticipos, que usa `style.cssText`, sí recibe el tema.
+
+**Archivos:** `index.html`, `styles.css`, `sw.js`, `js/version.js`.
+
 #### 2026-10-08 — La ficha ADMIN también en la pantalla de ingreso (SW v171)
 
 El ingreso mostraba un cuadrado azul con el emoji **💰** adentro — puesto cuando la app no tenía ícono propio. Ahora muestra **la ficha ADMIN**, la misma que queda en la pantalla de inicio del teléfono, así el ingreso y el ícono instalado se reconocen como lo mismo.

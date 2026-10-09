@@ -399,12 +399,92 @@
         @media (max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .stat-card { padding: 14px 12px; } .stat-value { font-size: 1.1em; } }
 
         /* Calendario filtro recaudación */
-        .rfcal-hdr { text-align:center; font-size:0.65em; font-weight:700; color:#94a3b8; padding:2px 0; }
+        /* ══════════════════════════════════════════════════════════════
+           FILTRO DE RECAUDACIÓN (encabezado 🔍 Filtrar + panel con el
+           minicalendario)
+
+           Los colores viven ACÁ y no en atributos `style=` por un motivo
+           concreto: el panel se abre con `panel.style.display='block'`, y
+           asignar una sola propiedad hace que el navegador vuelva a
+           escribir TODO el atributo. Así `background:#f8f9fa` se convierte
+           en `background: rgb(248, 249, 250)`, y las reglas del tema
+           oscuro que buscaban el hexadecimal —`[style*="background:#f8f9fa"]`—
+           dejaban de encontrarlo. Resultado: el encabezado se ponía oscuro
+           y el panel se quedaba blanco, con los números del calendario en
+           gris clarito encima. Ilegible.
+
+           Con clases y variables el tema no depende de cómo el navegador
+           decidió escribir el atributo.
+           ══════════════════════════════════════════════════════════════ */
+        :root {
+            --rf-bg:      #f8f9fa;   /* fondo del encabezado y del panel */
+            --rf-bd:      #e2e8f0;   /* borde del panel */
+            --rf-bd2:     #cbd5e1;   /* borde de los botones ◀ ▶ y Limpiar */
+            --rf-fuerte:  #1f2937;   /* mes, año, flechas */
+            --rf-suave:   #475569;   /* etiquetas Tipo:/Divisor:, info, Limpiar */
+            --rf-apagado: #64748b;   /* días sin recaudación: secundarios, pero legibles */
+            --rf-has-bg:  #dbeafe;   /* día con datos */
+            --rf-has-fg:  #1d4ed8;
+            --rf-has-bg2: #bfdbfe;   /* el mismo, al pasar por encima */
+            /* Día elegido: azul oscuro y no var(--primary). En tema oscuro
+               --primary es celeste claro (#93c5fd) y el número blanco encima
+               quedaba en 1,8:1, invisible. Este da 6,7:1. */
+            --rf-sel-bg:  #1d4ed8;
+            --rf-chip-bg: #ffffff;   /* chips Tipo:/Divisor: apagados */
+            --rf-chip-fg: #475569;
+            --rf-chip-bd: #cbd5e1;
+            --rf-chip-on:      #1b6fa8;   /* encendido (5,4:1 con el blanco) */
+            --rf-chip-on-warn: #c0392b;   /* ⚠️ Sin divisor (5,4:1) */
+            --rf-chip-on-ok:   #1e7e45;   /* ✅ Con divisor (5,1:1) */
+        }
+        body.dark-mode {
+            --rf-bg:      #1e293b;
+            --rf-bd:      #334155;
+            --rf-bd2:     #475569;
+            --rf-fuerte:  #e2e8f0;
+            --rf-suave:   #cbd5e1;
+            --rf-apagado: #94a3b8;
+            --rf-has-bg:  #1e3a5f;
+            --rf-has-fg:  #93c5fd;
+            --rf-has-bg2: #254a75;
+            --rf-sel-bg:  #2563eb;
+            /* El chip apagado va más claro que el panel; si fuera del mismo
+               tono se perdería contra el fondo. */
+            --rf-chip-bg: #334155;
+            --rf-chip-fg: #e2e8f0;
+            --rf-chip-bd: #475569;
+            --rf-chip-on:      #2563eb;
+            --rf-chip-on-warn: #dc2626;
+            --rf-chip-on-ok:   #15803d;
+        }
+        body.tema-negro.dark-mode {
+            --rf-bg:      #141414;
+            --rf-bd:      #2d2d2d;
+            --rf-bd2:     #3f3f3f;
+            --rf-has-bg:  #16304d;
+            --rf-has-bg2: #1e3f66;
+            --rf-chip-bg: #262626;
+            --rf-chip-bd: #3f3f3f;
+        }
+
+        #rec-filtro-toggle,
+        #rec-filtro-panel { background: var(--rf-bg) !important; border-color: var(--rf-bd) !important; }
+        .rf-titulo  { color: var(--rf-fuerte); }
+        .rf-chevron { color: var(--rf-suave); }
+        .rf-nav     { background: none; border: 1px solid var(--rf-bd2); color: var(--rf-fuerte); }
+        .rf-nav:hover { border-color: var(--secondary); color: var(--secondary); }
+        .rf-mes     { color: var(--rf-fuerte); }
+        .rf-etq     { color: var(--rf-suave); }
+        .rf-info    { color: var(--rf-suave); }
+        .rf-limpiar { background: none; border: 1px solid var(--rf-bd2); color: var(--rf-suave); }
+        .rf-limpiar:hover { border-color: var(--danger); color: var(--danger); }
+
+        .rfcal-hdr { text-align:center; font-size:0.65em; font-weight:700; color:var(--rf-suave); padding:2px 0; }
         .rfcal-day { text-align:center; padding:5px 2px; border-radius:6px; font-size:0.75em; font-weight:600; min-height:26px; display:flex; align-items:center; justify-content:center; }
-        .rfcal-has { background:#dbeafe; color:#1d4ed8; cursor:pointer; }
-        .rfcal-has:hover { background:#bfdbfe; }
-        .rfcal-sel { background:var(--primary); color:white !important; cursor:pointer; }
-        .rfcal-empty { color:#cbd5e1; }
+        .rfcal-has { background:var(--rf-has-bg); color:var(--rf-has-fg); cursor:pointer; }
+        .rfcal-has:hover { background:var(--rf-has-bg2); }
+        .rfcal-sel { background:var(--rf-sel-bg); color:#fff !important; cursor:pointer; }
+        .rfcal-empty { color:var(--rf-apagado); }
         #rec-filtro-toggle.filtro-activo { border-color:var(--primary); border-bottom-left-radius:0; border-bottom-right-radius:0; }
         #rec-filtro-toggle.panel-abierto:not(.filtro-activo) { border-bottom-left-radius:0; border-bottom-right-radius:0; }
 
@@ -553,12 +633,25 @@
         .ayuda-formula { background:#fff3cd; border-left:3px solid #f39c12; border-radius:0 6px 6px 0; padding:8px 12px; margin:8px 0; font-family:monospace; font-size:0.85em; }
         .ayuda-highlight { background:#fff3cd; border-radius:2px; padding:0 2px; }
 
-        /* ── Filtros recaudación ── */
-        .rec-filtro-chip { padding:5px 11px; border:1px solid #ddd; border-radius:20px; background:white; color:#555; font-size:0.78em; font-weight:700; cursor:pointer; transition:0.15s; font-family:'DM Sans',sans-serif; }
-        .rec-filtro-chip:hover { border-color:#3498db; color:#3498db; }
-        .rec-filtro-chip.activo { background:#3498db; color:white; border-color:#3498db; }
-        .rec-filtro-chip.activo-warn { background:#e74c3c; color:white; border-color:#e74c3c; }
-        .rec-filtro-chip.activo-ok { background:#27ae60; color:white; border-color:#27ae60; }
+        /* ── Filtros recaudación ──
+           Todo por variables (ver el bloque del filtro, más arriba). Antes
+           había además un `body.dark-mode .rec-filtro-chip` que, por tener
+           más especificidad que `.activo`, le ganaba al chip encendido: en
+           tema oscuro el filtro puesto se veía igual que los apagados y no
+           había forma de saber cuál estaba aplicado. Con variables, el tema
+           lo deciden los valores y no quién gana la pelea de selectores.
+
+           Los tonos encendidos son más oscuros que los de antes porque con
+           blanco encima el #3498db daba 3,15:1, el #e74c3c 3,82:1 y el
+           #27ae60 2,87:1. Ahora dan 5,4 · 5,4 · 5,1. */
+        .rec-filtro-chip { padding:5px 11px; border:1px solid var(--rf-chip-bd); border-radius:20px; background:var(--rf-chip-bg); color:var(--rf-chip-fg); font-size:0.78em; font-weight:700; cursor:pointer; transition:0.15s; font-family:'DM Sans',sans-serif; }
+        .rec-filtro-chip:hover { border-color:var(--rf-chip-on); color:var(--rf-chip-on); }
+        .rec-filtro-chip.activo      { background:var(--rf-chip-on);      color:#fff; border-color:var(--rf-chip-on); }
+        .rec-filtro-chip.activo-warn { background:var(--rf-chip-on-warn); color:#fff; border-color:var(--rf-chip-on-warn); }
+        .rec-filtro-chip.activo-ok   { background:var(--rf-chip-on-ok);   color:#fff; border-color:var(--rf-chip-on-ok); }
+        .rec-filtro-chip.activo:hover,
+        .rec-filtro-chip.activo-warn:hover,
+        .rec-filtro-chip.activo-ok:hover { color:#fff; }
 
         /* ── Stats modal ── */
         .stats-tab-btn { padding:6px 14px; border:none; border-radius:7px; background:#f0f4f8; color:#555; font-weight:700; font-size:0.82em; cursor:pointer; white-space:nowrap; transition:0.15s; font-family:'DM Sans',sans-serif; }
@@ -836,8 +929,6 @@
         body.dark-mode .date-point-badge { background:#1e3a5f; color:#93c5fd; }
 
         /* Filtros */
-        body.dark-mode .rec-filtro-chip { background:#1e293b; color:#94a3b8; border-color:#334155; }
-        body.dark-mode .rec-filtro-chip:hover { border-color:#3b82f6; color:#93c5fd; }
 
         /* Ayuda */
         body.dark-mode .ayuda-tag { background:#1e293b; color:#94a3b8; border-color:#334155; }
