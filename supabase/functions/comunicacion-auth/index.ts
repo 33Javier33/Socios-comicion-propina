@@ -83,14 +83,18 @@ Deno.serve(async (req) => {
     // ── Comprobar la clave de administración ──────────────────────────
     // Se pide para todo lo que cambia quién entra. No se guarda en ningún
     // archivo: la escribe la persona y acá se compara contra el hash.
-    async function esAdmin(): Promise<boolean> {
-        const pass = String(body.adminPass || '');
-        if (!pass) return false;
+    // Devuelve 'ok', 'mala' o 'sin-configurar'. Se distingue el último a
+    // propósito: si la clave nunca se puso, decir «incorrecta» manda a
+    // buscar un error donde no lo hay.
+    async function esAdmin(): Promise<'ok' | 'mala' | 'sin-configurar'> {
         const { data } = await admin.from('config_seguridad')
             .select('valor').eq('clave', 'comunicacion_admin_hash').maybeSingle();
-        if (!data || !data.valor) return false;
-        return igualesSeguro(await sha256(pass), String(data.valor));
+        if (!data || !data.valor) return 'sin-configurar';
+        const pass = String(body.adminPass || '');
+        if (!pass) return 'mala';
+        return igualesSeguro(await sha256(pass), String(data.valor)) ? 'ok' : 'mala';
     }
+    const NO_CONFIG = 'Falta poner la clave de administración: ejecuta paso2b-clave-admin.sql en Supabase.';
 
     // ── El supervisor entra ───────────────────────────────────────────
     if (accion === 'verificar') {
@@ -114,7 +118,9 @@ Deno.serve(async (req) => {
 
     // ── La administración fija la clave de un área ────────────────────
     if (accion === 'fijar') {
-        if (!await esAdmin()) return json({ ok: false, reason: 'clave de administración incorrecta' });
+        const _a = await esAdmin();
+        if (_a === 'sin-configurar') return json({ ok: false, reason: NO_CONFIG });
+        if (_a !== 'ok') return json({ ok: false, reason: 'clave de administración incorrecta' });
         const pin = String(body.pin || '');
         if (!area) return json({ ok: false, reason: 'falta el área' });
         if (!/^\d{4,8}$/.test(pin)) return json({ ok: false, reason: 'el PIN son 4 a 8 dígitos' });
@@ -131,7 +137,9 @@ Deno.serve(async (req) => {
 
     // ── La administración le quita el acceso a un área ────────────────
     if (accion === 'quitar') {
-        if (!await esAdmin()) return json({ ok: false, reason: 'clave de administración incorrecta' });
+        const _a = await esAdmin();
+        if (_a === 'sin-configurar') return json({ ok: false, reason: NO_CONFIG });
+        if (_a !== 'ok') return json({ ok: false, reason: 'clave de administración incorrecta' });
         if (!area) return json({ ok: false, reason: 'falta el área' });
         const { error } = await admin.from('comunicacion_pins').delete().eq('area', area);
         if (error) return json({ ok: false, reason: error.message });
@@ -140,7 +148,9 @@ Deno.serve(async (req) => {
 
     // ── Qué áreas tienen clave (nunca cuál) ───────────────────────────
     if (accion === 'estado') {
-        if (!await esAdmin()) return json({ ok: false, reason: 'clave de administración incorrecta' });
+        const _a = await esAdmin();
+        if (_a === 'sin-configurar') return json({ ok: false, reason: NO_CONFIG });
+        if (_a !== 'ok') return json({ ok: false, reason: 'clave de administración incorrecta' });
         const { data } = await admin.from('comunicacion_pins').select('area, sin_estrenar');
         return json({ ok: true, areas: (data || []).map(r => ({ area: r.area, sinEstrenar: !!r.sin_estrenar })) });
     }

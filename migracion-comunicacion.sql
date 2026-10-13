@@ -112,17 +112,19 @@ create policy nuevos_ing_actualizar on public.nuevos_ingresos
 
 
 -- ══════════════════════════════════════════════════════════════════════
--- 3. LA CLAVE DE ADMINISTRACIÓN
+-- 3. DÓNDE VIVIRÁ LA CLAVE DE ADMINISTRACIÓN
 --
--- Es la que se pide en socios-comicion para fijar o quitar los PIN de
--- área. NO va en el código: en diario.propi quedó escrita en
--- `js/diario-pins.js`, en un repositorio público, así que cualquiera
--- puede leerla y ponerle o quitarle el PIN a quien quiera. Acá se guarda
--- solo el hash y la clave la escribe la persona cada vez.
+-- Es la que pide socios-comicion para fijar o quitar los PIN de las
+-- áreas. Acá se crea SOLO la tabla, vacía.
 --
--- ⚠️ CAMBIA 'CAMBIA-ESTA-CLAVE' POR LA TUYA ANTES DE EJECUTAR.
---    Elige algo largo, que no uses en otra parte, y no la escribas en
---    ningún archivo del repositorio.
+-- La clave se pone en un archivo aparte —`paso2b-clave-admin.sql`—
+-- donde lo único que hay que editar está en la primera línea. Se separó
+-- a propósito: si viniera acá con un valor de ejemplo y alguien pegara
+-- este archivo tal cual, la clave de administración del sistema sería
+-- una palabra publicada en el repositorio.
+--
+-- Mientras no se ejecute ese paso, la pantalla de claves no deja entrar
+-- y dice que falta configurarla.
 -- ══════════════════════════════════════════════════════════════════════
 
 create table if not exists public.config_seguridad (
@@ -133,17 +135,13 @@ create table if not exists public.config_seguridad (
 alter table public.config_seguridad enable row level security;
 revoke all on public.config_seguridad from anon;   -- cerrada, como los PIN
 
-insert into public.config_seguridad (clave, valor)
-values ('comunicacion_admin_hash', encode(digest('CAMBIA-ESTA-CLAVE', 'sha256'), 'hex'))
-on conflict (clave) do update set valor = excluded.valor;
--- Si `digest` no existe:  create extension if not exists pgcrypto;  y repite.
-
 
 -- ══════════════════════════════════════════════════════════════════════
 -- COMPROBAR QUE QUEDÓ
 -- ══════════════════════════════════════════════════════════════════════
 --   select count(*) from public.nuevos_ingresos;
 --   select area, sin_estrenar from public.comunicacion_pins;
+--   select clave from public.config_seguridad;   -- vacío hasta el paso 2b
 --   select policyname, cmd from pg_policies where tablename = 'nuevos_ingresos';
 --
 -- Y que las cerradas están de verdad cerradas (deben dar 0 filas o error
