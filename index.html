@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/icono-cpn-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=123">
+    <link rel="stylesheet" href="styles.css?v=122">
     <script>
         // El tema se aplica ANTES de pintar nada. Si esperara a auth.js, abrir
         // con tema oscuro daría un fogonazo blanco. Como acá todavía no existe
@@ -144,7 +144,6 @@
             <button class="nav-btn" data-tab="config" onclick="switchTab('config')">⚙️ Configuración</button>
             <button class="nav-btn" data-tab="auditoria" onclick="switchTab('auditoria')">🔍 Auditoría</button>
             <button class="nav-btn" onclick="elim_abrir()">🗄️ Socios Eliminados</button>
-            <button class="nav-btn" onclick="ni_abrir()" style="position:relative;">📥 Nuevos Ingresos<span id="niBadge" style="display:none;position:absolute;top:-5px;right:-6px;background:#dc2626;color:#fff;font-size:0.62em;font-weight:800;min-width:17px;height:17px;line-height:17px;text-align:center;border-radius:9px;padding:0 4px;box-shadow:0 1px 3px rgba(0,0,0,0.3);">0</span></button>
             <button class="nav-btn" data-tab="carpetas" onclick="switchTab('carpetas')">📁 Carpetas</button>
             <button class="nav-btn" data-tab="materiales" onclick="switchTab('materiales')">📦 Materiales</button>
             <button class="nav-btn" data-tab="dineros" onclick="switchTab('dineros')">💵 Dineros Sobrantes</button>
@@ -1602,42 +1601,6 @@
         <!-- MODAL: SOCIOS ELIMINADOS ─────────────────────────────────────
              El respaldo de lo que se borró. La foto se toma ANTES de borrar,
              así que no depende de que los registros sigan vivos. -->
-        <!-- ══════ NUEVOS INGRESOS (lo que mandan las áreas desde index3.html) ══════ -->
-        <div id="modalNuevosIngresos" class="modal" style="z-index:10001;">
-            <div class="modal-content" style="max-width:720px;">
-                <div class="modal-header">
-                    <h2>📥 Nuevos Ingresos al Fondo</h2>
-                    <span class="close-modal" onclick="ni_cerrar()">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <p style="font-size:0.83em;color:#475569;line-height:1.6;margin-bottom:12px;">
-                        Lo que avisan los supervisores desde <b>Comunicación</b> (<code>/index3.html</code>).
-                        Al aprobar se crea el socio; al rechazar queda el motivo, que el área puede ver.
-                    </p>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
-                        <button class="ni-filtro activo" onclick="ni_setFiltro('pendiente',this)">Por revisar</button>
-                        <button class="ni-filtro" onclick="ni_setFiltro('aprobado',this)">Aprobados</button>
-                        <button class="ni-filtro" onclick="ni_setFiltro('rechazado',this)">Rechazados</button>
-                        <button class="ni-filtro" onclick="ni_setFiltro('todos',this)">Todos</button>
-                        <button onclick="ni_render(true)" class="btn-card" style="margin-left:auto;font-size:0.76em;padding:4px 10px;">Actualizar</button>
-                        <button onclick="ni_abrirClaves()" class="btn-card" style="font-size:0.76em;padding:4px 10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;">🔑 Claves de las áreas</button>
-                    </div>
-                    <div id="niLista"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quién entra a Comunicación y con qué clave -->
-        <div id="modalClavesAreas" class="modal" style="z-index:10002;">
-            <div class="modal-content" style="max-width:520px;">
-                <div class="modal-header">
-                    <h2>🔑 Claves de las áreas</h2>
-                    <span class="close-modal" onclick="ni_cerrarClaves()">&times;</span>
-                </div>
-                <div class="modal-body" id="niClavesBody"></div>
-            </div>
-        </div>
-
         <div id="modalEliminados" class="modal">
             <div class="modal-content" style="max-width:720px;">
                 <div class="modal-header">
@@ -2484,7 +2447,6 @@
     <script src="js/pt-dias.js?v=36"></script>
     <script src="js/conexiones-log.js?v=4"></script>
 <script src="js/mensajes-admin.js?v=48"></script>
-    <script src="js/nuevos-ingresos.js?v=2"></script>
     <script src="js/app-init.js?v=102"></script>
 
 <!-- ══════════════════════════════════════════

@@ -93,33 +93,6 @@
           "value": "no-cache, must-revalidate"
         }
       ]
-    },
-    {
-      "source": "/index3.html",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/manifest3.json",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/sw3.js",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
     }
   ]
 }

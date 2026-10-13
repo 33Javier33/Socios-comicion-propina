@@ -1638,14 +1638,3 @@
     text-security: disc;
     letter-spacing: 3px;
 }
-
-        /* ── Filtros de Nuevos Ingresos ──
-           Mismos colores que los chips del filtro de Recaudación, que ya
-           están medidos: el encendido va en azul oscuro porque el #3498db
-           con texto blanco encima daba 3,15:1. */
-        .ni-filtro { padding:5px 12px; border:1px solid var(--rf-chip-bd); border-radius:20px;
-                     background:var(--rf-chip-bg); color:var(--rf-chip-fg); font-size:0.78em;
-                     font-weight:700; cursor:pointer; transition:0.15s; font-family:'DM Sans',sans-serif; }
-        .ni-filtro:hover { border-color:var(--rf-chip-on); color:var(--rf-chip-on); }
-        .ni-filtro.activo { background:var(--rf-chip-on); color:#fff; border-color:var(--rf-chip-on); }
-        .ni-filtro.activo:hover { color:#fff; }
