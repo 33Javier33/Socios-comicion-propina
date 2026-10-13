@@ -232,6 +232,41 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-13 — Comunicación con Áreas: index3.html (SW v173)
+
+Una tercera app en este mismo repositorio, montada igual que Horarios: **`index3.html`**, con su `manifest3.json`, su `sw3.js` acotado a `/index3` y su ícono propio (ficha azul, para no confundirla con la roja de administración ni con la de Recaudaciones).
+
+**Para qué.** Los supervisores de área —Máquinas, Bóveda y las que se agreguen— avisan desde ahí de la gente que entra al Fondo Solidario. Lo que mandan llega a socios-comicion, a la sección nueva **📥 Nuevos Ingresos**, donde la administración lo revisa:
+
+- **Aprobar** → se crea el socio en `socios` con los datos del aviso, con id correlativo y 0 puntos (los puntos los pone la política, no el aviso), y el aviso queda enlazado al socio creado.
+- **Rechazar** → queda con su motivo, que el área ve en su propia pantalla.
+- **Nada se borra nunca.** Un aviso resuelto conserva qué se decidió, cuándo y quién — que es justamente lo que sirve después.
+
+**Quién entra y con qué clave** se administra desde la misma sección, en **🔑 Claves de las áreas**. Las áreas salen de los socios que ya existen, así que sumar un área es solo darle su clave: no hay que tocar código.
+
+**Sobre la seguridad, que acá se hizo distinto a propósito.** En esta base hay dos tablas —`horarios_pins` y `credenciales`— con el PIN en **texto plano** y abiertas al rol `anon`: con la clave pública, que está en el código y el repositorio es público, cualquiera se los lleva todos. Y en `js/diario-pins.js` hay una clave de administración **escrita en el código** (`pinadm_…`), con la que cualquiera puede ponerle o quitarle el PIN a cualquier socio de diario.propi.
+
+Comunicación no repite nada de eso:
+
+| | Cómo quedó |
+|---|---|
+| El PIN del área | Solo como **hash**, en `comunicacion_pins`, tabla **cerrada a `anon`** (RLS activo y cero políticas) |
+| Dónde se compara | En la Edge Function `comunicacion-auth`, con `service_role`. Nunca en el navegador |
+| La clave de administración | **No está en ningún archivo.** Se escribe cada vez y se compara contra un hash en `config_seguridad` |
+| Ver un PIN | No se puede, ni desde administración: solo saber si un área tiene clave, ponerla o quitarla |
+
+El hash del PIN lleva el área dentro, así que dos áreas con el mismo PIN no quedan con el mismo hash. La comparación es en tiempo constante, para no filtrar por el tiempo de respuesta cuántos caracteres se acertaron.
+
+**Falta aplicarlo en Supabase** (pide respaldo antes, como siempre):
+
+1. `migracion-comunicacion.sql` → SQL Editor. **Cambia `CAMBIA-ESTA-CLAVE`** por la tuya antes de ejecutar.
+2. `supabase/functions/comunicacion-auth/index.ts` → Edge Functions → Deploy, nombre exacto `comunicacion-auth`, con `verify_jwt = false`.
+
+Hasta que eso esté, la sección avisa qué falta y la app de las áreas no puede mandar nada.
+
+**Archivos:** `index3.html`, `manifest3.json`, `sw3.js`, `img/comunicacion-192.png`, `img/comunicacion-512.png`, `migracion-comunicacion.sql`, `supabase/functions/comunicacion-auth/index.ts`, `js/nuevos-ingresos.js`, `index.html`, `styles.css`, `sw.js`, `js/version.js`.
+
+
 #### 2026-10-09 — El calendario del filtro de Recaudación era ilegible en tema oscuro (SW v172)
 
 Al abrir **🔍 Filtrar** en Recaudación, el encabezado se ponía oscuro pero **el panel se quedaba blanco**, con los números del calendario en gris clarito encima. Imposible de leer.
