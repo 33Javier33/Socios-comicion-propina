@@ -232,6 +232,34 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-14 — El comprobante restaba dos veces, y ahora avisa si el término quedó corto (SW v177)
+
+Dos cosas, y la segunda es la importante.
+
+**1. El desglose estaba mal.** La hoja mostraba «Descuentos por ausencia» y «Días desde el término de contrato» como líneas que restaban, pero `sumaValorPuntoSocio` (en `js/constants.js`) **salta los días de ausencia**, y el término de contrato se registra justamente como una ausencia por día. O sea: **el alcance ya venía descontado** y la hoja lo restaba otra vez. Los números no cuadraban con el total.
+
+Ahora el desglose es la fórmula real de `cierresMes_calcularSocio`, sin agregarle nada:
+
+```
+Alcance del período        (solo los días que alcanzó a trabajar)
++ Saldo del período anterior
+− Anticipos que ya recibió
+= Debe recibir
+```
+
+**2. El término de contrato se marca a mano, y puede quedar corto.** El rango lo escribe una persona en Anticipos y Ausencias, día por día. Si no llega hasta el final del período, **los días que faltan siguen sumando al alcance** y el socio cobra de más. Eso no se ve por ninguna parte: el monto sale alto y parece correcto.
+
+El comprobante ahora lo revisa y lo dice:
+
+> **Revisa esto antes de pagar.** El término de contrato está marcado hasta el **02-10-2026**, pero el período llega al **14-10-2026**. Quedan **12 días sin marcar**, y esos días **todavía suman** al alcance de arriba: el monto puede estar más alto de lo que corresponde.
+
+El período se deduce de la fecha del término (15 de un mes al 14 del siguiente), no del estado actual de la app: un respaldo puede ser de hace meses.
+
+> **Lo que esto no hace:** no corrige el monto. El dato correcto no está en el respaldo — hay que completar los días en Anticipos y Ausencias, volver a cerrar el período y reimprimir. Corregirlo acá en silencio sería tapar un dato incompleto con una cuenta inventada.
+
+**Archivos:** `js/eliminados.js`, `index.html`, `sw.js`, `js/version.js`.
+
+
 #### 2026-10-14 — Comprobante de salida, para imprimir (SW v176)
 
 En **Socios Eliminados**, cada respaldo tiene ahora un botón **🖨 Comprobante**: una hoja A4 lista para firmar con los datos del socio, el motivo de la salida y lo que debe recibir.

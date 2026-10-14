@@ -634,19 +634,45 @@ function _elimFechaLarga(iso) {
     return p[2] + ' de ' + M[p[1] - 1] + ' de ' + p[0];
 }
 
+// El período del fondo va del 15 de un mes al 14 del siguiente. Se deduce
+// de la fecha, sin depender del estado actual de la app: el respaldo puede
+// ser de hace meses.
+function _elimPeriodoDe(iso) {
+    const p = String(iso || '').substring(0, 10).split('-').map(Number);
+    if (p.length !== 3 || !p[0]) return null;
+    const a = p[0], m = p[1] - 1, d = p[2];
+    const f = x => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0')
+                 + '-' + String(x.getDate()).padStart(2, '0');
+    return d >= 15
+        ? { inicio: f(new Date(a, m, 15)),     fin: f(new Date(a, m + 1, 14)) }
+        : { inicio: f(new Date(a, m - 1, 15)), fin: f(new Date(a, m, 14)) };
+}
+
 // Qué dice el respaldo sobre cómo y cuándo se fue, y cuánto le queda.
+//
+// OJO CON EL ALCANCE: `sumaValorPuntoSocio` (js/constants.js) SALTA los días
+// de ausencia, y el término de contrato se registra justamente como una
+// ausencia por día. O sea, el alcance que quedó guardado en el cierre YA
+// viene sin esos días. Restarlos otra vez en el comprobante sería contarlos
+// dos veces — que es lo que hacía la primera versión de esta hoja.
+//
+// La cuenta real, tal como la hace `cierresMes_calcularSocio`:
+//     saldoReal = alcance + saldoAnterior − anticipos
+//     aPagar    = saldoReal redondeado hacia abajo al millar
+//     remanente = lo que sobra, y pasa al período siguiente
 function _elimSalida(d) {
     const t = (d && d.tablas) || {};
     const extras = Array.isArray(t.extras) ? t.extras : [];
     const esAus  = e => String(e.tipo || '').toLowerCase().includes('ausencia');
-    const esTC   = e => String(e.detalle || '').trim().toLowerCase() === 'término de contrato'
-                     || String(e.detalle || '').trim().toLowerCase() === 'termino de contrato';
+    const esTC   = e => {
+        const x = String(e.detalle || '').trim().toLowerCase();
+        return x === 'término de contrato' || x === 'termino de contrato';
+    };
+    const soloFecha = e => String(e.fecha || '').substring(0, 10);
 
     const tc = extras.filter(e => esAus(e) && esTC(e))
-                     .sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || '')));
+                     .sort((a, b) => soloFecha(a).localeCompare(soloFecha(b)));
 
-    // El cierre de mes es la cuenta que hizo la app. Se prefiere el del
-    // historial si hay varios: es el del período que corresponde.
     const cierres = []
         .concat(Array.isArray(t.cierres_mes) ? t.cierres_mes : [])
         .concat(Array.isArray(t.cierres_mes_historial) ? t.cierres_mes_historial : []);
@@ -657,21 +683,41 @@ function _elimSalida(d) {
 
     const anticipos = Array.isArray(t.anticipos) ? t.anticipos : [];
     const totalAnt  = anticipos.reduce((s, a) => s + (Number(a.monto) || 0), 0);
-    const otrosEx   = extras.filter(e => !esAus(e));
-    const totalEx   = otrosEx.reduce((s, e) => s + (Number(e.monto) || 0), 0);
-    const ausencias = extras.filter(e => esAus(e) && !esTC(e));
-    const totalAus  = ausencias.reduce((s, e) => s + (Number(e.monto) || 0), 0);
-    const totalTC   = tc.reduce((s, e) => s + (Number(e.monto) || 0), 0);
     const saldo     = (Array.isArray(t.saldos_socio) && t.saldos_socio[0])
                       ? Number(t.saldos_socio[0].monto) || 0 : null;
 
+    // ── ¿El término cubre hasta el final del período? ────────────────
+    // El rango lo escribe una persona a mano. Si se queda corto, los días
+    // que faltan SIGUEN sumando al alcance y el socio cobra de más. Esto
+    // lo revisa y lo dice; no lo corrige solo, porque el dato correcto no
+    // está acá.
+    let cobertura = null;
+    if (tc.length) {
+        const desde = soloFecha(tc[0]);
+        const per = _elimPeriodoDe(desde);
+        if (per) {
+            const marcados = new Set(extras.filter(esAus).map(soloFecha));
+            const faltan = [];
+            const cur = new Date(desde + 'T12:00:00');
+            const fin = new Date(per.fin + 'T12:00:00');
+            while (cur <= fin) {
+                const k = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0')
+                        + '-' + String(cur.getDate()).padStart(2, '0');
+                if (!marcados.has(k)) faltan.push(k);
+                cur.setDate(cur.getDate() + 1);
+            }
+            cobertura = { periodo: per, ultimoMarcado: soloFecha(tc[tc.length - 1]),
+                          faltan: faltan, completo: faltan.length === 0 };
+        }
+    }
+
     return {
         porTerminoContrato: tc.length > 0,
-        fechaTermino: tc.length ? String(tc[0].fecha || '').substring(0, 10) : null,
+        fechaTermino: tc.length ? soloFecha(tc[0]) : null,
         diasTermino: tc.length,
+        cobertura: cobertura,
         cierre: cierre,
         anticipos: anticipos, totalAnt: totalAnt,
-        totalEx: totalEx, totalAus: totalAus, totalTC: totalTC,
         saldo: saldo
     };
 }
@@ -710,34 +756,54 @@ function elim_imprimir(id) {
           + '</div>';
 
     // ── Lo que debe recibir ──────────────────────────────────────────
+    // La fórmula es la de cierresMes_calcularSocio, sin agregarle nada:
+    //   alcance + saldo anterior − anticipos = saldo del período
+    // El alcance YA viene sin los días de ausencia ni los del término, así
+    // que esos NO se vuelven a restar acá.
     let cuentaHtml, totalHtml;
     const c = sal.cierre;
     if (c) {
-        const alcance = Number(c.alcance) || 0;
+        const alcance  = Number(c.alcance) || 0;
         const saldoAnt = Number(c.saldo_anterior) || 0;
-        const antTot = (c.anticipos_total != null) ? Number(c.anticipos_total) : sal.totalAnt;
-        const aPagar = Number(c.a_pagar) || 0;
+        const antTot   = (c.anticipos_total != null) ? Number(c.anticipos_total) : sal.totalAnt;
+        const aPagar   = Number(c.a_pagar) || 0;
+        const rema     = Number(c.remanente) || 0;
         cuentaHtml =
-              '<tr><td>Alcance del período' + (c.periodo ? ' (' + esc(c.periodo) + ')' : '') + '</td>'
+              '<tr><td>Alcance del período' + (c.periodo ? ' (' + esc(c.periodo) + ')' : '')
+            +     '<div class="ayuda">Solo los días que alcanzó a trabajar: los días de ausencia y '
+            +     'los posteriores al término ya están descontados.</div></td>'
             +     '<td class="n">' + _elimPlata(alcance) + '</td></tr>'
-            + (saldoAnt ? '<tr><td>Saldo del período anterior</td><td class="n">' + _elimPlata(saldoAnt) + '</td></tr>' : '')
-            + (sal.totalEx ? '<tr><td>Extras</td><td class="n">' + _elimPlata(sal.totalEx) + '</td></tr>' : '')
-            + (sal.totalAus ? '<tr><td>Descuentos por ausencia</td><td class="n">' + _elimPlata(sal.totalAus) + '</td></tr>' : '')
-            + (sal.totalTC ? '<tr><td>Días desde el término de contrato</td><td class="n">' + _elimPlata(sal.totalTC) + '</td></tr>' : '')
-            + '<tr><td>Anticipos ya recibidos</td><td class="n">' + _elimPlata(-Math.abs(antTot)) + '</td></tr>'
-            + (Number(c.remanente) ? '<tr><td>Remanente</td><td class="n">' + _elimPlata(c.remanente) + '</td></tr>' : '');
-        totalHtml = '<div class="total"><span>Debe recibir</span><span>' + _elimPlata(aPagar) + '</span></div>';
+            + (saldoAnt ? '<tr><td>Saldo que venía del período anterior</td><td class="n">'
+                          + _elimPlata(saldoAnt) + '</td></tr>' : '')
+            + '<tr><td>Anticipos que ya recibió</td><td class="n">'
+            +     _elimPlata(-Math.abs(antTot)) + '</td></tr>';
+        totalHtml = '<div class="total"><span>Debe recibir</span><span>' + _elimPlata(aPagar) + '</span></div>'
+            + (rema ? '<div class="sub-total"><span>Remanente, pasa al período siguiente</span><span>'
+                      + _elimPlata(rema) + '</span></div>' : '');
     } else {
         cuentaHtml =
-              '<tr><td>Anticipos ya recibidos</td><td class="n">' + _elimPlata(-Math.abs(sal.totalAnt)) + '</td></tr>'
-            + (sal.totalEx ? '<tr><td>Extras</td><td class="n">' + _elimPlata(sal.totalEx) + '</td></tr>' : '')
-            + (sal.totalAus ? '<tr><td>Descuentos por ausencia</td><td class="n">' + _elimPlata(sal.totalAus) + '</td></tr>' : '')
-            + (sal.totalTC ? '<tr><td>Días desde el término de contrato</td><td class="n">' + _elimPlata(sal.totalTC) + '</td></tr>' : '')
-            + (sal.saldo != null ? '<tr><td>Saldo registrado</td><td class="n">' + _elimPlata(sal.saldo) + '</td></tr>' : '');
+              '<tr><td>Anticipos que ya recibió</td><td class="n">'
+            +     _elimPlata(-Math.abs(sal.totalAnt)) + '</td></tr>'
+            + (sal.saldo != null ? '<tr><td>Saldo registrado</td><td class="n">'
+                                   + _elimPlata(sal.saldo) + '</td></tr>' : '');
         totalHtml = '<div class="falta">El <b>alcance del período</b> no quedó guardado en este respaldo, '
             + 'así que el total a recibir no se puede calcular acá. Tómalo del cierre del período en '
             + 'Anticipos y Ausencias y complétalo a mano antes de firmar.</div>';
     }
+
+    // ── Aviso si el término no cubre todo el período ─────────────────
+    const cob = sal.cobertura;
+    const avisoCobertura = (cob && !cob.completo)
+        ? '<div class="alerta">'
+          + '<b>Revisa esto antes de pagar.</b> El término de contrato está marcado hasta el '
+          + '<b>' + esc(_elimFechaCorta(cob.ultimoMarcado)) + '</b>, pero el período llega al '
+          + '<b>' + esc(_elimFechaCorta(cob.periodo.fin)) + '</b>. Quedan <b>' + cob.faltan.length
+          + ' día' + (cob.faltan.length === 1 ? '' : 's') + ' sin marcar</b>, y esos días '
+          + '<b>todavía suman</b> al alcance de arriba: el monto puede estar más alto de lo que corresponde.<br>'
+          + 'Complétalos en Anticipos y Ausencias (ausencia por Término de Contrato hasta el '
+          + esc(_elimFechaCorta(cob.periodo.fin)) + '), vuelve a cerrar el período y reimprime esta hoja.'
+          + '</div>'
+        : '';
 
     const filasAnt = sal.anticipos.slice()
         .sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || '')))
@@ -767,6 +833,11 @@ function elim_imprimir(id) {
 + 'justify-content:space-between;font-size:13pt;font-weight:900;text-transform:uppercase;}'
 + '.falta{border:1.5px dashed #777;padding:3mm 4mm;margin-top:3mm;font-size:9pt;'
 + 'color:#333;line-height:1.55;}'
++ '.alerta{border:2px solid #000;background:#eee;padding:3.5mm 4.5mm;margin:3mm 0;'
++ 'font-size:9pt;line-height:1.6;}'
++ '.ayuda{font-size:8pt;color:#555;font-weight:400;margin-top:1mm;line-height:1.4;}'
++ '.sub-total{display:flex;justify-content:space-between;font-size:10pt;'
++ 'color:#444;margin-top:1.5mm;padding:0 1mm;}'
 + '.firmas{margin-top:auto;padding-top:14mm;display:flex;justify-content:space-around;'
 + 'page-break-inside:avoid;}'
 + '.fb{text-align:center;width:44%;}.fe{height:15mm;}'
@@ -805,6 +876,7 @@ function elim_imprimir(id) {
 + '<h2>Motivo de la salida</h2>'
 + motivoHtml
 
++ avisoCobertura
 + '<h2>Lo que debe recibir</h2><table><tbody>'
 + cuentaHtml
 + '</tbody></table>'
