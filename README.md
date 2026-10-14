@@ -232,6 +232,30 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-14 — Informe detallado de salida + una sola boleta (SW v180)
+
+Al imprimir desde **Socios Eliminados** ahora salen **dos documentos** en vez de dos boletas iguales:
+
+**1. Informe de salida de socio** — hoja carta, para archivar. Es el respaldo de la comisión y contesta lo que la boleta no alcanza a contestar: **por qué da ese monto**.
+
+| Sección | Qué trae |
+|---|---|
+| Identificación del socio | Nombre, RUT, ID, área, contrato, ingreso (en palabras), inicio de puntos, puntos, sube puntos, años cumplidos |
+| Motivo y fecha de la salida | El término con su fecha larga y cuántos días quedaron congelados · período liquidado · cómo quedó registrado · quién tomó el respaldo y cuándo |
+| Cómo se calculó | Valor punto → × puntos → **alcance** → + saldo anterior → − anticipos → **saldo real** → **total a cobrar** y remanente, con el redondeo al millar explicado |
+| **Origen de las cifras** | Si fueron recalculadas al imprimir o tomadas del cierre guardado, y por qué |
+| **Día a día del período** | Cada día de recaudación con su valor punto, marcado **Trabajado** o **Congelado · Término de Contrato**, y lo que aporta. Los congelados en rojo y sin aporte |
+| Movimientos | Anticipos numerados y ausencias agrupadas, con fecha, detalle y monto |
+| Firmas | Socio saliente y Comisión de Propina |
+
+La tabla día a día es la parte que hacía falta: se ve de un vistazo que Ignacio suma **15 días trabajados** (15/09 al 29/09, $892 cada uno) y tiene **15 congelados** (30/09 al 14/10, que no aportan), y que la columna cierra justo en los **$107.015** del alcance.
+
+**2. La boleta de recibo** — los mismos 80 mm de siempre, ahora en **una sola copia** (antes salían dos idénticas, «ADMINISTRADOR» y «SOCIO», y una se iba a la basura).
+
+Van como **dos trabajos de impresión separados** —primero el informe, 1,5 s después la boleta— porque son papeles distintos (carta y 80 mm) y suelen ir a impresoras distintas. Mismo patrón que `imprimirReciboSocio()`. Los dos comparten el mismo folio `SAL-…`.
+
+`test_comprobante_salida.js`: 108 comprobaciones.
+
 #### 2026-10-14 — El comprobante de salida recalcula el congelamiento en vez de creerle al cierre guardado (SW v179)
 
 **El error.** El comprobante de salida leía el `alcance` de la tabla `cierres_mes`. Esa tabla es **una foto del momento en que se cerró el mes**, y el término de contrato casi siempre se registra *después*: primero se cierra el período para todos (el cierre masivo), y recién cuando el socio se va se le marca el congelamiento. La foto quedó tomada **cuando el socio todavía figuraba trabajando**, así que su alcance es el del mes completo.
