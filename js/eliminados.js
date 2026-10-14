@@ -840,6 +840,100 @@ function _elimAlcanceVivo(r, d, sal, puntos, per) {
     };
 }
 
+// Todo lo que hay que saber de un socio eliminado, en números.
+//
+// Lo usan el comprobante individual Y el informe general. Está en una
+// sola función a propósito: cuando el cálculo vivía repartido, las dos
+// hojas terminaban diciendo cosas distintas del mismo socio.
+function _elimCalculo(r) {
+    const d    = (r && r.datos) || {};
+    const f    = d.ficha || {};
+    const t    = d.tablas || {};
+    const calc = d.calculado || {};
+    const sal  = _elimSalida(d);
+
+    const nombre   = ((r.nombre || f.nombre || '') + ' ' + (r.apellido || f.apellido || '')).trim().toUpperCase();
+    const area     = String(r.area || f.area || '').toUpperCase();
+    const contrato = String(r.contrato || f.tipo_contrato || f.contrato || '').toUpperCase();
+    const fIng     = String(r.fecha_ingreso || f.fecha_ingreso || '').substring(0, 10);
+    const fIni     = String(f.fecha_inicio_puntos || '').substring(0, 10);
+    const anioIng  = fIng ? fIng.split('-')[0] : '\u2014';
+    // Solo se muestra cuando difiere del ingreso: si son iguales, repetir
+    // la misma fecha con otro nombre confunde al que lee la hoja.
+    const fipLabel = (fIni && fIni !== fIng) ? fIni.split('-').reverse().join('/') : null;
+    const puntos   = Number(r.puntos != null ? r.puntos
+                          : (f.puntos != null ? f.puntos : calc.puntos)) || 0;
+
+    const MESES_C = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+    let subePuntos = '\u2014';
+    const base = (fIni && fIni !== fIng) ? fIni : fIng;
+    const bp = base ? base.split('-') : null;
+    if (bp && bp.length === 3 && MESES_C[parseInt(bp[1], 10) - 1]) {
+        subePuntos = bp[2] + ' DE ' + MESES_C[parseInt(bp[1], 10) - 1];
+    }
+
+    // El período, deducido de la fecha (15 -> 14). No se usa el período
+    // activo de la app: el respaldo puede ser de hace meses y la hoja
+    // tiene que decir el período del socio, no el de hoy.
+    const c = sal.cierre;
+    const perRef = sal.fechaTermino
+                || (c && String(c.fecha_cierre || '').substring(0, 10))
+                || String(r.eliminado_en || '').substring(0, 10);
+    const per = _elimPeriodoDe(perRef);
+    const periodoStr = per ? (_elimDdMmAaaa(per.inicio) + ' AL ' + _elimDdMmAaaa(per.fin)) : '\u2014';
+
+    // EL ALCANCE: se recalcula, no se cree lo guardado.
+    //
+    // El cierre guardado en `cierres_mes` es una foto del momento en que
+    // se cerró el mes, y el término de contrato casi siempre se registra
+    // DESPUÉS: primero se cierra el período para todos -el cierre masivo-
+    // y recién cuando el socio se va se le marca el congelamiento. Esa
+    // foto quedó tomada cuando el socio todavía figuraba trabajando, así
+    // que su `alcance` es el del mes completo.
+    //
+    // El recibo real nunca tuvo ese problema porque NO lee la foto:
+    // recalcula al imprimir con `sumaValorPuntoSocio`, que salta los días
+    // de ausencia. Acá se hace exactamente lo mismo.
+    const vivo = _elimAlcanceVivo(r, d, sal, puntos, per);
+    // Sin recálculo se usa lo guardado, pero solo si realmente hay algo:
+    // `alcance` es una columna opcional y un cierre viejo puede traerla en
+    // null. Imprimir «$0» como alcance sería peor que decir que falta.
+    const alcanceGuardado = (c && c.alcance != null && isFinite(Number(c.alcance)))
+        ? Number(c.alcance) : null;
+    const alcance = vivo.ok ? vivo.alcance : alcanceGuardado;
+    const valorPunto = vivo.ok
+        ? vivo.valorPunto
+        : ((alcance != null && puntos > 0) ? Math.round(alcance / puntos) : null);
+
+    // La cuenta, la de `cierresMes_calcularSocio`:
+    //     SALDO REAL = alcance + saldo anterior - anticipos
+    //     TOTAL A COBRAR / REMANENTE = repartirSaldo(saldo real)
+    let cuenta = null;
+    if (alcance != null) {
+        const saldoAnt = c ? (Number(c.saldo_anterior) || 0) : 0;
+        // Los anticipos se archivan cuando el socio cobra, así que la tabla
+        // del respaldo puede venir vacía aunque sí hubo. El cierre guarda el
+        // total que efectivamente se descontó: ese manda.
+        const antTot = (c && c.anticipos_total != null) ? Number(c.anticipos_total) : sal.totalAnt;
+        const saldoReal = alcance + saldoAnt - antTot;
+        const esGC = (typeof _esGastoComision === 'function') && _esGastoComision(r.area || f.area);
+        const rep = (typeof repartirSaldo === 'function')
+            ? repartirSaldo(saldoReal, esGC)
+            : { aPagar: Math.floor(Math.max(0, saldoReal) / 1000) * 1000,
+                remanente: saldoReal - Math.floor(Math.max(0, saldoReal) / 1000) * 1000 };
+        cuenta = { alcance: alcance, saldoAnt: saldoAnt, antTot: antTot,
+                   saldoReal: saldoReal, aPagar: rep.aPagar, remanente: rep.remanente,
+                   todoALaMano: !!esGC };
+    }
+
+    return { r: r, d: d, f: f, t: t, calc: calc, sal: sal, cierre: c,
+             nombre: nombre, area: area, contrato: contrato,
+             fIng: fIng, fIni: fIni, anioIng: anioIng, fipLabel: fipLabel,
+             puntos: puntos, subePuntos: subePuntos,
+             per: per, periodoStr: periodoStr,
+             vivo: vivo, alcance: alcance, valorPunto: valorPunto, cuenta: cuenta };
+}
+
 // ══════════════════════════════════════════════════════════════════════
 // COMPROBANTE DE SALIDA
 //
@@ -863,77 +957,14 @@ function _elimAlcanceVivo(r, d, sal, puntos, per) {
 function elim_imprimir(id) {
     const r = (_elimLista || []).find(x => x.id === id);
     if (!r) return;
-    const d    = r.datos || {};
-    const f    = d.ficha || {};
-    const t    = d.tablas || {};
-    const calc = d.calculado || {};
-    const sal  = _elimSalida(d);
-    const esc  = _elimEsc;
-
-    // ── Datos del socio ──────────────────────────────────────────────
-    const nombre   = ((r.nombre || f.nombre || '') + ' ' + (r.apellido || f.apellido || '')).trim().toUpperCase();
-    const area     = String(r.area || f.area || '').toUpperCase();
-    const contrato = String(r.contrato || f.tipo_contrato || f.contrato || '').toUpperCase();
-    const fIng     = String(r.fecha_ingreso || f.fecha_ingreso || '').substring(0, 10);
-    const fIni     = String(f.fecha_inicio_puntos || '').substring(0, 10);
-    const anioIng  = fIng ? fIng.split('-')[0] : '—';
-    // Solo se muestra cuando difiere del ingreso: si son iguales, repetir
-    // la misma fecha con otro nombre confunde al que lee la hoja.
-    const fipLabel = (fIni && fIni !== fIng) ? fIni.split('-').reverse().join('/') : null;
-    const puntos   = Number(r.puntos != null ? r.puntos
-                          : (f.puntos != null ? f.puntos : calc.puntos)) || 0;
-
-    const MESES_C = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
-    let subePuntos = '—';
-    const base = (fIni && fIni !== fIng) ? fIni : fIng;
-    const bp = base ? base.split('-') : null;
-    if (bp && bp.length === 3 && MESES_C[parseInt(bp[1], 10) - 1]) {
-        subePuntos = bp[2] + ' DE ' + MESES_C[parseInt(bp[1], 10) - 1];
-    }
-
-    // ── El período, deducido de la fecha (15 → 14) ───────────────────
-    // No se usa el período activo de la app: el respaldo puede ser de
-    // hace meses y la hoja tiene que decir el período del socio, no el
-    // de hoy.
-    const c = sal.cierre;
-    const perRef = sal.fechaTermino
-                || (c && String(c.fecha_cierre || '').substring(0, 10))
-                || String(r.eliminado_en || '').substring(0, 10);
-    const per = _elimPeriodoDe(perRef);
-    const periodoStr = per ? (_elimDdMmAaaa(per.inicio) + ' AL ' + _elimDdMmAaaa(per.fin)) : '—';
-
-    // ── EL ALCANCE: se recalcula, no se cree lo guardado ─────────────
-    //
-    // Acá estaba el error. El cierre guardado en `cierres_mes` es una foto
-    // del momento en que se cerró el mes, y el término de contrato casi
-    // siempre se registra DESPUÉS: primero se cierra el período para todos
-    // —el cierre masivo— y recién cuando el socio se va se le marca el
-    // congelamiento. Esa foto quedó tomada cuando el socio todavía
-    // figuraba trabajando, así que su `alcance` es el del mes completo.
-    //
-    // El recibo real nunca tuvo ese problema porque NO lee la foto: vuelve
-    // a calcular en el momento de imprimir, con `sumaValorPuntoSocio`, que
-    // salta los días de ausencia. Por eso el recibo de Ignacio Marín dice
-    // «VALOR PUNTO (HASTA 30/09/2026)» y la hoja de salida decía otra cosa.
-    //
-    // Entonces esta hoja hace exactamente lo mismo que el recibo: recalcula
-    // con la misma función, pasándole las ausencias del respaldo. Dos
-    // papeles, un solo cálculo.
-    //
-    // Solo se puede recalcular si la recaudación cargada cubre el período
-    // del socio. Si se fue hace meses, el mapa de puntos de hoy es de otro
-    // período y recalcular daría un número inventado: ahí sí se usa lo
-    // guardado, y la hoja dice de dónde salió cada cifra.
-    const vivo = _elimAlcanceVivo(r, d, sal, puntos, per);
-    // Sin recálculo se usa lo guardado, pero solo si realmente hay algo:
-    // `alcance` es una columna opcional y un cierre viejo puede traerla en
-    // null. Imprimir «$0» como alcance sería peor que decir que falta.
-    const alcanceGuardado = (c && c.alcance != null && isFinite(Number(c.alcance)))
-        ? Number(c.alcance) : null;
-    const alcance = vivo.ok ? vivo.alcance : alcanceGuardado;
-    const valorPunto = vivo.ok
-        ? vivo.valorPunto
-        : ((alcance != null && puntos > 0) ? Math.round(alcance / puntos) : null);
+    const esc = _elimEsc;
+    const K = _elimCalculo(r);
+    const d = K.d, f = K.f, t = K.t, calc = K.calc, sal = K.sal, c = K.cierre;
+    const nombre = K.nombre, area = K.area, contrato = K.contrato;
+    const fIng = K.fIng, anioIng = K.anioIng, fipLabel = K.fipLabel;
+    const puntos = K.puntos, subePuntos = K.subePuntos;
+    const per = K.per, periodoStr = K.periodoStr;
+    const vivo = K.vivo, alcance = K.alcance, valorPunto = K.valorPunto, cuenta = K.cuenta;
 
     const fila = (e, v) => '<div class="row"><label>' + esc(e) + '</label><span>' + v + '</span></div>';
 
@@ -1002,34 +1033,17 @@ function elim_imprimir(id) {
     // congelado al día del término:
     //     SALDO REAL = alcance + saldo anterior − anticipos
     //     TOTAL A COBRAR / REMANENTE = repartirSaldo(saldo real)
-    let detalleHtml, avisoCierre = '', cuenta = null;
-    if (alcance != null) {
-        const saldoAnt = c ? (Number(c.saldo_anterior) || 0) : 0;
-        // Los anticipos se archivan cuando el socio cobra, así que la tabla
-        // del respaldo puede venir vacía aunque sí hubo. El cierre guarda el
-        // total que efectivamente se descontó: ese manda.
-        const antTot = (c && c.anticipos_total != null) ? Number(c.anticipos_total) : sal.totalAnt;
-        const saldoReal = alcance + saldoAnt - antTot;
-        const esGC = (typeof _esGastoComision === 'function') && _esGastoComision(r.area || f.area);
-        const rep = (typeof repartirSaldo === 'function')
-            ? repartirSaldo(saldoReal, esGC)
-            : { aPagar: Math.floor(Math.max(0, saldoReal) / 1000) * 1000,
-                remanente: saldoReal - Math.floor(Math.max(0, saldoReal) / 1000) * 1000 };
-        // El informe detallado rehace la misma cuenta, así que se guarda
-        // acá en vez de recalcularla: un solo lugar donde pueda estar mal.
-        cuenta = { alcance: alcance, saldoAnt: saldoAnt, antTot: antTot,
-                   saldoReal: saldoReal, aPagar: rep.aPagar, remanente: rep.remanente,
-                   todoALaMano: !!esGC };
-
+    let detalleHtml, avisoCierre = '';
+    if (cuenta) {
         detalleHtml =
-              fila('BRUTO (Alcance)', _elimPlata(alcance))
-            + fila('ANTICIPOS', _elimPlata(antTot))
-            + fila('SALDO ANTERIOR', _elimPlata(saldoAnt))
-            + '<div class="row bold"><label>SALDO REAL</label><strong>' + _elimPlata(saldoReal) + '</strong></div>'
+              fila('BRUTO (Alcance)', _elimPlata(cuenta.alcance))
+            + fila('ANTICIPOS', _elimPlata(cuenta.antTot))
+            + fila('SALDO ANTERIOR', _elimPlata(cuenta.saldoAnt))
+            + '<div class="row bold"><label>SALDO REAL</label><strong>' + _elimPlata(cuenta.saldoReal) + '</strong></div>'
             + '<div class="divider"></div>'
             + '<div class="total-cobrar"><div class="total-label">TOTAL A COBRAR</div>'
-            +   '<div class="total-monto">' + _elimPlata(rep.aPagar) + '</div></div>'
-            + fila('REMANENTE', _elimPlata(rep.remanente));
+            +   '<div class="total-monto">' + _elimPlata(cuenta.aPagar) + '</div></div>'
+            + fila('REMANENTE', _elimPlata(cuenta.remanente));
 
         // Si el cierre guardado dice otra cosa, se muestra la diferencia.
         // Casi siempre es esto: se cerró el mes ANTES de marcar el término,
@@ -1477,6 +1491,221 @@ function _elimInformeHTML(x) {
         + '<div class="pie">Folio ' + esc(x.folio) + ' · Informe generado el ' + esc(x.fechaHoyVis)
         +   ' · Sistema Fondo Solidario</div>'
         + '</body></html>';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// INFORME GENERAL DE SOCIOS ELIMINADOS
+//
+// Una hoja con todos los que salieron, no de a uno. Lo que se mira
+// primero es QUIÉNES se fueron por término de contrato y desde cuándo:
+// por eso esos van arriba, con su fecha, y aparte va el resto.
+//
+// Los montos salen de `_elimCalculo()`, el mismo cálculo del comprobante
+// individual — si acá dice $107.000, el comprobante de ese socio tiene
+// que decir $107.000.
+// ══════════════════════════════════════════════════════════════════════
+function elim_informeGeneral() {
+    const lista = _elimLista || [];
+    if (!lista.length) {
+        if (typeof showToast === 'function') showToast('No hay socios eliminados para informar', 'warning');
+        return;
+    }
+
+    // Si hay algo escrito en el buscador, el informe sale de lo que se
+    // está viendo: imprimir otra cosa de la que está en pantalla confunde.
+    const term = (document.getElementById('elimBuscar')?.value || '').toLowerCase().trim();
+    const vis = lista.filter(r => !term
+        || ((r.nombre || '') + ' ' + (r.apellido || '') + ' ' + (r.rut || '') + ' ' + (r.socio_id || ''))
+            .toLowerCase().includes(term));
+    if (!vis.length) {
+        if (typeof showToast === 'function') showToast('El filtro no deja ningún socio', 'warning');
+        return;
+    }
+
+    const esc = _elimEsc;
+    const K = vis.map(_elimCalculo);
+
+    // Los de término de contrato primero, por fecha de término; después el
+    // resto, por fecha de salida. Los dos grupos de lo más nuevo a lo más viejo.
+    const conTC = K.filter(k => k.sal.porTerminoContrato)
+                   .sort((a, b) => String(b.sal.fechaTermino).localeCompare(String(a.sal.fechaTermino)));
+    const sinTC = K.filter(k => !k.sal.porTerminoContrato)
+                   .sort((a, b) => String(b.r.eliminado_en || '').localeCompare(String(a.r.eliminado_en || '')));
+
+    const modoTxt = m => m === 'desactivado' ? 'Dado de baja'
+                       : m === 'recuperado' ? 'Recuperado' : 'Eliminado';
+
+    // ── Una fila de la tabla ─────────────────────────────────────────
+    const filaSocio = (k, conFechaTermino) => {
+        const pagar = k.cuenta ? _elimPlata(k.cuenta.aPagar) : '<span class="pend">por calcular</span>';
+        const rema  = k.cuenta && k.cuenta.remanente ? _elimPlata(k.cuenta.remanente) : '—';
+        // Cuando el total sale de la foto del cierre y no del recálculo,
+        // se marca: puede no tener el congelamiento aplicado.
+        const marca = (k.cuenta && !k.vivo.ok) ? '<span class="aster" title="del cierre guardado">*</span>' : '';
+        return '<tr>'
+            + '<td><b>' + esc(k.nombre) + '</b>'
+            +   (k.r.rut ? '<br><span class="sub">' + esc(k.r.rut) + '</span>' : '') + '</td>'
+            + '<td>' + esc(k.area || '—') + '<br><span class="sub">' + esc(k.contrato || '—') + '</span></td>'
+            + '<td class="c">' + (k.puntos || '—') + '</td>'
+            + '<td>' + esc(_elimDdMmAaaa(k.fIng)) + '</td>'
+            + (conFechaTermino
+                ? '<td class="tc"><b>' + esc(_elimDdMmAaaa(k.sal.fechaTermino)) + '</b>'
+                  + '<br><span class="sub">' + k.sal.diasTermino + ' día'
+                  + (k.sal.diasTermino === 1 ? '' : 's') + ' congelados</span></td>'
+                : '<td>' + esc(modoTxt(k.r.modo)) + '<br><span class="sub">'
+                  + esc(_elimFechaCorta(k.r.eliminado_en)) + '</span></td>')
+            + '<td class="sub">' + esc(k.periodoStr) + '</td>'
+            + '<td class="n">' + pagar + marca + '</td>'
+            + '<td class="n sub">' + rema + '</td>'
+            + '</tr>';
+    };
+
+    const tabla = (titulo, grupo, conFechaTermino, nota) => {
+        if (!grupo.length) return '';
+        const suma = grupo.reduce((s, k) => s + (k.cuenta ? k.cuenta.aPagar : 0), 0);
+        const faltan = grupo.filter(k => !k.cuenta).length;
+        return '<h2>' + esc(titulo) + ' <span class="cuantos">' + grupo.length + '</span></h2>'
+            + (nota ? '<p class="nota">' + nota + '</p>' : '')
+            + '<table><thead><tr>'
+            +   '<th>Socio</th><th>Área / contrato</th><th class="c">Pts</th><th>Ingreso</th>'
+            +   '<th>' + (conFechaTermino ? 'Término de contrato' : 'Salida') + '</th>'
+            +   '<th>Período</th><th class="n">A cobrar</th><th class="n">Remanente</th>'
+            + '</tr></thead><tbody>'
+            + grupo.map(k => filaSocio(k, conFechaTermino)).join('')
+            + '</tbody><tfoot><tr>'
+            +   '<td colspan="6"><b>Total del grupo</b>'
+            +     (faltan ? ' <span class="sub">(' + faltan + ' sin calcular, no suman)</span>' : '')
+            +   '</td>'
+            +   '<td class="n"><b>' + _elimPlata(suma) + '</b></td><td></td>'
+            + '</tr></tfoot></table>';
+    };
+
+    // ── Resumen de arriba ────────────────────────────────────────────
+    const totalPagar = K.reduce((s, k) => s + (k.cuenta ? k.cuenta.aPagar : 0), 0);
+    const sinCalcular = K.filter(k => !k.cuenta).length;
+    const deLaFoto = K.filter(k => k.cuenta && !k.vivo.ok).length;
+    const porRevisar = K.filter(k => k.sal.cobertura && !k.sal.cobertura.completo);
+
+    const resumen = '<div class="resumen">'
+        + '<div class="rb"><div class="rn">' + K.length + '</div><div class="rl">socios en el informe</div></div>'
+        + '<div class="rb tc"><div class="rn">' + conTC.length + '</div><div class="rl">por término de contrato</div></div>'
+        + '<div class="rb"><div class="rn">' + sinTC.length + '</div><div class="rl">otras salidas</div></div>'
+        + '<div class="rb"><div class="rn">' + _elimPlata(totalPagar) + '</div><div class="rl">total a cobrar</div></div>'
+        + '</div>';
+
+    // ── Lo que hay que mirar antes de pagar ──────────────────────────
+    let avisos = '';
+    if (porRevisar.length) {
+        avisos += '<div class="alerta"><b>Términos de contrato que no cubren todo el período ('
+            + porRevisar.length + ').</b> A estos socios el congelamiento les quedó corto, '
+            + 'así que los días sin marcar <b>todavía suman</b> y el monto puede estar más alto '
+            + 'de lo que corresponde:<ul>'
+            + porRevisar.map(k => '<li><b>' + esc(k.nombre) + '</b> — marcado hasta el '
+                + esc(_elimDdMmAaaa(k.sal.cobertura.ultimoMarcado)) + ', el período llega al '
+                + esc(_elimDdMmAaaa(k.sal.cobertura.periodo.fin)) + ' ('
+                + k.sal.cobertura.faltan.length + ' día'
+                + (k.sal.cobertura.faltan.length === 1 ? '' : 's') + ' sin marcar)</li>').join('')
+            + '</ul>Complétalos en Anticipos y Ausencias y vuelve a cerrar el período.</div>';
+    }
+    if (deLaFoto) {
+        avisos += '<div class="alerta"><b>' + deLaFoto + ' socio'
+            + (deLaFoto === 1 ? '' : 's') + ' con el monto tomado del cierre guardado <span class="aster">*</span>.</b> '
+            + 'Son de períodos que la recaudación cargada ya no cubre, así que no se pudieron '
+            + 'recalcular. Si a alguno de ellos se le cerró el mes antes de marcarle el término, '
+            + 'ese monto es el del mes completo: compáralo con su recibo antes de pagar.</div>';
+    }
+    if (sinCalcular) {
+        avisos += '<div class="alerta"><b>' + sinCalcular + ' socio'
+            + (sinCalcular === 1 ? '' : 's') + ' sin monto.</b> No se pudo recalcular y tampoco quedó '
+            + 'el alcance en el respaldo. Tómalo del cierre del período en Anticipos y Ausencias.</div>';
+    }
+
+    const M = ['enero','febrero','marzo','abril','mayo','junio','julio',
+               'agosto','septiembre','octubre','noviembre','diciembre'];
+    const hoy = new Date();
+    const lugarFecha = 'Puerto Varas, ' + hoy.getDate() + ' de ' + M[hoy.getMonth()] + ' de ' + hoy.getFullYear();
+    const fechaHoyVis = String(hoy.getDate()).padStart(2, '0') + '/'
+        + String(hoy.getMonth() + 1).padStart(2, '0') + '/' + hoy.getFullYear();
+
+    const html = '<html><head><meta charset="UTF-8"><title>Informe de socios eliminados</title><style>'
+        + '*{margin:0;padding:0;box-sizing:border-box;}'
+        + 'body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#000;background:#fff;'
+        +   'padding:12mm 12mm;line-height:1.4;}'
+        + 'h1{font-size:16pt;font-weight:900;letter-spacing:1px;text-align:center;}'
+        + '.sub-h{text-align:center;font-size:9pt;color:#333;font-weight:600;margin-bottom:1mm;}'
+        + '.lugar{text-align:right;font-size:9pt;color:#555;margin-bottom:3mm;}'
+        + '.filtro{text-align:center;font-size:8.5pt;color:#b91c1c;font-weight:700;margin-bottom:2mm;}'
+        + 'h2{font-size:10.5pt;font-weight:900;text-transform:uppercase;letter-spacing:0.8px;'
+        +   'border-bottom:1.5px solid #000;padding-bottom:2px;margin:6mm 0 2mm;}'
+        + 'h2 .cuantos{background:#000;color:#fff;border-radius:10px;padding:0 7px;font-size:8.5pt;'
+        +   'margin-left:4px;letter-spacing:0;}'
+        + '.resumen{display:flex;gap:3mm;margin:3mm 0 4mm;}'
+        + '.rb{flex:1;border:1.5px solid #000;padding:2.5mm;text-align:center;}'
+        + '.rb.tc{background:#f2f2f2;}'
+        + '.rn{font-size:15pt;font-weight:900;line-height:1.1;}'
+        + '.rl{font-size:7.5pt;color:#444;text-transform:uppercase;letter-spacing:0.4px;margin-top:1mm;}'
+        + 'table{width:100%;border-collapse:collapse;margin-bottom:2mm;}'
+        + 'th{background:#eee;text-align:left;font-size:7.5pt;text-transform:uppercase;letter-spacing:0.4px;'
+        +   'border-bottom:1.5px solid #000;padding:2.5px 5px;}'
+        + 'td{padding:3px 5px;font-size:8.5pt;border-bottom:1px solid #e5e5e5;vertical-align:top;}'
+        + 'td.c,th.c{text-align:center;}td.n,th.n{text-align:right;white-space:nowrap;}'
+        + 'td.tc{color:#b91c1c;}'
+        + '.sub{color:#777;font-size:7.5pt;}'
+        + '.pend{color:#b91c1c;font-style:italic;font-size:7.5pt;}'
+        + '.aster{color:#b91c1c;font-weight:900;}'
+        + 'tbody tr:nth-child(even){background:#f8f8f8;}'
+        + 'tfoot td{border-top:1.5px solid #000;border-bottom:none;background:#fff;font-size:9pt;padding-top:3px;}'
+        + '.alerta{border:1.5px solid #000;background:#eee;padding:2.5mm 3.5mm;margin:2.5mm 0;font-size:8.5pt;}'
+        + '.alerta ul{margin:1.5mm 0 1.5mm 5mm;}.alerta li{margin-bottom:0.8mm;}'
+        + '.nota{font-size:8pt;color:#555;margin-bottom:1.5mm;}'
+        + '.firmas{display:flex;justify-content:space-around;margin-top:14mm;page-break-inside:avoid;}'
+        + '.fb{text-align:center;width:40%;}'
+        + '.fl{border-top:1.5px solid #000;padding-top:3px;font-size:9pt;font-weight:700;text-transform:uppercase;}'
+        + '.fs{font-size:8pt;color:#555;}'
+        + '.pie{font-size:7.5pt;color:#666;text-align:center;margin-top:6mm;'
+        +   'border-top:1px dashed #ccc;padding-top:2mm;}'
+        + '@media print{@page{size:A4 landscape;margin:0;}body{padding:10mm;}'
+        +   'h2{page-break-after:avoid;}tr{page-break-inside:avoid;}thead{display:table-header-group;}}'
+        + '</style></head><body>'
+
+        + '<h1>INFORME DE SOCIOS ELIMINADOS</h1>'
+        + '<div class="sub-h">Fondo Solidario de Propina · Casino de Puerto Varas · Ley 17312 del 29/07/70</div>'
+        + (term ? '<div class="filtro">Filtrado por «' + esc(term) + '» — no es la lista completa</div>' : '')
+        + '<div class="lugar">' + esc(lugarFecha) + '</div>'
+        + resumen
+        + avisos
+        + tabla('Salidas por término de contrato', conTC, true,
+                'La fecha es el primer día congelado: desde ahí el socio deja de percibir la recaudación.')
+        + tabla('Otras salidas', sinTC, false,
+                'Sin registro de término de contrato en el respaldo. Si alguna lo fue, déjalo anotado '
+                + 'en Anticipos y Ausencias para que quede en este informe.')
+        + '<div class="firmas">'
+        +   '<div class="fb"><div style="height:12mm"></div><div class="fl">' + esc(_elimQuien()) + '</div>'
+        +     '<div class="fs">Comisión de Propina</div></div>'
+        +   '<div class="fb"><div style="height:12mm"></div><div class="fl">Visto bueno</div>'
+        +     '<div class="fs">Presidencia</div></div>'
+        + '</div>'
+        + '<div class="pie">' + K.length + ' socio' + (K.length === 1 ? '' : 's')
+        +   ' · Informe generado el ' + esc(fechaHoyVis) + ' · Sistema Fondo Solidario</div>'
+        + '</body></html>';
+
+    const fileName = 'Informe socios eliminados ' + fechaHoyVis.replace(/\//g, '-');
+    if (typeof printHTML === 'function') {
+        printHTML(html, fileName);
+    } else {
+        const win = window.open('', '_blank', 'width=1100,height=900');
+        if (!win) {
+            if (typeof showToast === 'function') showToast('El navegador bloqueó la ventana. Permite las ventanas emergentes.', 'warning');
+            return;
+        }
+        win.document.write(html);
+        win.document.close();
+    }
+
+    if (typeof sbAuditLog === 'function') sbAuditLog('Informe Socios Eliminados', {
+        detalle: K.length + ' socios · ' + conTC.length + ' por término de contrato · total '
+            + _elimPlata(totalPagar) + (term ? ' · filtrado por «' + term + '»' : '')
+    });
 }
 
 function elim_exportar(id) {

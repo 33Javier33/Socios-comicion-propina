@@ -232,6 +232,28 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-14 — Informe general de socios eliminados, con el término de contrato al frente (SW v181)
+
+Botón **🖨 Informe de todos** en Socios Eliminados: una hoja A4 **horizontal** con todos los que salieron, no de a uno.
+
+**El término de contrato es lo primero que se ve.** Los que salieron por término van en su **propia sección, arriba**, ordenados por fecha de término, con la **fecha del primer día congelado** y **cuántos días** quedaron congelados. El resto va en «Otras salidas» con su modo de baja.
+
+Arriba, cuatro cifras: cuántos socios, **cuántos por término de contrato**, cuántas otras salidas y el **total a cobrar**.
+
+Por socio: nombre, RUT, área, contrato, puntos, ingreso, término (o modo de salida), período, **a cobrar** y remanente. Cada grupo cierra con su subtotal.
+
+**Y marca lo que hay que mirar antes de pagar**, que es para lo que sirve un informe consolidado:
+
+- **Términos que no cubren todo el período** — los nombra uno por uno, con hasta cuándo está marcado el congelamiento, hasta dónde llega el período y cuántos días faltan. Esos días *todavía suman*, así que el monto puede estar más alto de lo que corresponde.
+- **Montos tomados del cierre guardado** (marcados con `*`) — socios de períodos que la recaudación cargada ya no cubre. Si a alguno se le cerró el mes antes de marcarle el término, ese monto es el del mes completo.
+- **Socios sin monto** — salen como «por calcular» y **no suman al total**. El subtotal del grupo dice cuántos quedaron fuera.
+
+Si el buscador tiene texto, el informe sale con lo que se está viendo y lo dice en la hoja («Filtrado por «…» — no es la lista completa»), para que nadie confunda un listado parcial con el total.
+
+**Refactor que lo hace confiable.** Los montos salen de un nuevo **`_elimCalculo()`**, que ahora es el único lugar donde se calcula: lo usan el informe general **y** el comprobante individual. Antes el cálculo vivía dentro de `elim_imprimir()`; duplicarlo para el informe habría sido la tercera vez en esta sesión que dos copias de la misma regla terminan diciendo cosas distintas. La prueba lo verifica explícitamente: imprime el informe y el comprobante de Ignacio y compara que los dos digan $107.000.
+
+`test_informe_general.js`: 51 comprobaciones. `test_comprobante_salida.js` sigue en 108.
+
 #### 2026-10-14 — Informe detallado de salida + una sola boleta (SW v180)
 
 Al imprimir desde **Socios Eliminados** ahora salen **dos documentos** en vez de dos boletas iguales:
