@@ -232,6 +232,27 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-14 — Fechas en Mensajes: ya se sabe cuándo se envió cada uno (SW v183)
+
+El hilo mostraba **solo la hora**. Un mensaje de hace tres semanas decía «14:32» y no había forma de saber de cuándo era. Y la lista de socios no decía nada, así que para encontrar una conversación había que ir abriéndolas una por una.
+
+**En el hilo:** un separador cada vez que cambia el día — **Hoy**, **Ayer**, o la fecha con su día de la semana (*«Lunes, 12 de octubre»*). El año aparece **solo cuando no es el actual**: ponerlo siempre es ruido, y no ponerlo nunca confunde en enero. Un separador por día, no uno por mensaje. La hora sigue en cada burbuja, y ahora el dato exacto —día, mes, año y hora— queda en el `title`, a un cursor de distancia.
+
+**En la lista de socios:** cuándo se movió cada conversación, con la convención de siempre — la **hora** si fue hoy, **Ayer**, o la fecha corta (`09/10`, y con año si es de otro). En rojo cuando hay mensajes sin leer. El socio sin conversación no muestra nada, en vez de una fecha inventada.
+
+**Y se ordenan por lo más reciente.** Antes, dentro de los que conversan, el orden era alfabético; en una lista de decenas de socios eso es justamente lo que hacía difícil encontrar la conversación que se movió. Ahora: primero los que tienen respuestas sin leer, después los demás **por fecha del último mensaje**, y al final los que nunca escribieron.
+
+Detalles de implementación:
+
+- Todo trabaja en **hora de Chile** (`America/Santiago`), con `formatToParts` para que el huso del equipo no corra la fecha al comparar días.
+- Acepta tanto `2026-10-14T09:30:00Z` como el formato `2026-10-14 09:30:00` sin la «T», que antes quedaba sin parsear.
+- Una fecha vacía o ilegible devuelve cadena vacía en vez de «Invalid Date».
+
+`test_msg_fechas.js`: 29 comprobaciones. Dos cosas que encontró y se arreglaron:
+
+1. En tema oscuro la píldora del separador quedaba del **mismo color que el fondo del hilo** (`#243040` las dos): solo la delataba su borde de 1px. Ahora es un tono más claro (`#334155`).
+2. La propia prueba se estaba engañando: `getComputedStyle` devuelve un objeto **vivo**, y leía los colores después de quitar la clase `dark-mode`, o sea medía el tema claro. Ahora copia los valores antes de tocar nada, y verifica explícitamente que la medición se hizo en oscuro.
+
 #### 2026-10-14 — La fecha de inicio de puntos no se guardaba (SW v182)
 
 **El síntoma.** En Gestión de Socios se editaba la fecha de inicio de puntos, salía «Socio actualizado», y al rato volvía la anterior.

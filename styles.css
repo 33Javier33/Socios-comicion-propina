@@ -874,6 +874,12 @@
         body.dark-mode #notaEditor { background:#1e293b !important; border-color:#334155 !important; color:#e2e8f0 !important; }
         body.dark-mode .nota-toolbar { background:#243040 !important; border-color:#334155 !important; }
         body.dark-mode .nota-toolbar button { background:#1e293b !important; border-color:#334155 !important; color:#cbd5e1 !important; }
+        body.dark-mode .msg-dia-sep { color:#94a3b8 !important; }
+        /* Un tono MÁS CLARO que el fondo del hilo (#243040): con el mismo
+           color la píldora se perdía y solo la delataba su borde. */
+        body.dark-mode .msg-dia-sep span { background:#334155 !important; border-color:#475569 !important; color:#e2e8f0 !important; }
+        body.dark-mode .msg-lista-fecha { color:#8b97a6 !important; }
+        body.dark-mode .msg-lista-fecha.nuevo { color:#f87171 !important; }
         body.dark-mode .vp-puntos { color:#94a3b8 !important; }
 
         /* Bordes claros → oscuro */
@@ -1587,6 +1593,37 @@
     color: #1d4ed8;
 }
 .nota-sep { width: 1px; height: 18px; background: #cbd5e1; margin: 0 4px; }
+
+/* ── Fechas en Mensajes ──
+   El hilo mostraba solo la hora, así que no se sabía de cuándo era cada
+   mensaje. Un separador por día, como en cualquier chat. */
+.msg-dia-sep {
+    align-self: center;
+    text-align: center;
+    margin: 10px 0 4px;
+    font-size: 0.68em;
+    color: #64748b;
+    cursor: default;
+}
+.msg-dia-sep span {
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    padding: 3px 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+/* Cuándo se movió por última vez cada conversación, en la lista. */
+.msg-lista-fecha {
+    flex-shrink: 0;
+    align-self: flex-start;
+    font-size: 0.68em;
+    color: #94a3b8;
+    white-space: nowrap;
+    padding-top: 2px;
+    cursor: default;
+}
+.msg-lista-fecha.nuevo { color: #dc2626; font-weight: 800; }
 
 #notaEditor {
     min-height: 92px;

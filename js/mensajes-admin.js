@@ -15,6 +15,84 @@ function _msgEsc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, m =>
         ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
+// ── Fechas de los mensajes ────────────────────────────────────────────
+// El hilo mostraba solo la hora, así que un mensaje de hace tres semanas
+// decía «14:32» y no había forma de saber de cuándo era. Todo lo de acá
+// trabaja en hora de Chile, igual que el resto de la app.
+const _MSG_TZ = 'America/Santiago';
+
+function _msgFechaObj(ts) {
+    if (!ts) return null;
+    let d = new Date(ts);
+    // Algunos registros vienen como 'YYYY-MM-DD HH:MM:SS' (sin la T).
+    if (isNaN(d.getTime())) d = new Date(String(ts).replace(' ', 'T'));
+    return isNaN(d.getTime()) ? null : d;
+}
+
+// El día del mensaje como 'AAAA-MM-DD', para comparar días sin que el
+// huso horario del equipo corra la fecha.
+function _msgDiaKey(ts) {
+    const d = _msgFechaObj(ts);
+    if (!d) return '';
+    try {
+        const p = new Intl.DateTimeFormat('es-CL',
+            { timeZone: _MSG_TZ, year: 'numeric', month: '2-digit', day: '2-digit' })
+            .formatToParts(d).reduce((a, x) => (a[x.type] = x.value, a), {});
+        return p.year + '-' + p.month + '-' + p.day;
+    } catch (e) {
+        const n = x => String(x).padStart(2, '0');
+        return d.getFullYear() + '-' + n(d.getMonth() + 1) + '-' + n(d.getDate());
+    }
+}
+
+function _msgHora(ts) {
+    const d = _msgFechaObj(ts);
+    if (!d) return '';
+    try { return d.toLocaleTimeString('es-CL', { timeZone: _MSG_TZ, hour: '2-digit', minute: '2-digit', hour12: false }); }
+    catch (e) { const n = x => String(x).padStart(2, '0'); return n(d.getHours()) + ':' + n(d.getMinutes()); }
+}
+
+// El separador entre días del hilo: «Hoy», «Ayer» o la fecha con su día
+// de la semana. El año solo aparece cuando no es el actual — ponerlo
+// siempre es ruido, y no ponerlo nunca confunde en enero.
+function _msgDiaEtiqueta(ts) {
+    const k = _msgDiaKey(ts);
+    if (!k) return '';
+    const hoy = _msgDiaKey(Date.now());
+    if (k === hoy) return 'Hoy';
+    if (k === _msgDiaKey(Date.now() - 86400000)) return 'Ayer';
+    const d = _msgFechaObj(ts);
+    const opt = { timeZone: _MSG_TZ, weekday: 'long', day: 'numeric', month: 'long' };
+    if (k.slice(0, 4) !== hoy.slice(0, 4)) opt.year = 'numeric';
+    try {
+        const txt = d.toLocaleDateString('es-CL', opt);
+        return txt.charAt(0).toUpperCase() + txt.slice(1);
+    } catch (e) { return k.split('-').reverse().join('/'); }
+}
+
+// Para la lista de conversaciones, donde solo cabe una pincelada:
+// la hora si es de hoy, «Ayer», o la fecha corta.
+function _msgFechaCorta(ts) {
+    const k = _msgDiaKey(ts);
+    if (!k) return '';
+    const hoy = _msgDiaKey(Date.now());
+    if (k === hoy) return _msgHora(ts);
+    if (k === _msgDiaKey(Date.now() - 86400000)) return 'Ayer';
+    const [a, m, dd] = k.split('-');
+    return (a === hoy.slice(0, 4)) ? (dd + '/' + m) : (dd + '/' + m + '/' + a.slice(2));
+}
+
+// La fecha completa, para el `title`: siempre se puede confirmar el dato
+// exacto dejando el cursor encima.
+function _msgFechaLarga(ts) {
+    const d = _msgFechaObj(ts);
+    if (!d) return '';
+    try {
+        return d.toLocaleString('es-CL', { timeZone: _MSG_TZ, weekday: 'long',
+            day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+    } catch (e) { return String(ts); }
+}
+
 function _msgAdminSeenKey(id) { return '_msgadmin_seen_' + id; }
 function _msgAdminSeen(id) { return parseInt(localStorage.getItem(_msgAdminSeenKey(id))) || 0; }
 function _msgAdminMarcarVisto(id) { localStorage.setItem(_msgAdminSeenKey(id), Date.now()); }
@@ -36,8 +114,12 @@ async function msgAdmin_cargarResumen() {
         (data || []).forEach(m => {
             if (m.estado === 'DELETED') return;
             const k = String(m.socio_id);
-            if (!msgAdminPorSocio[k]) msgAdminPorSocio[k] = { total: 0, ultimaSocioTs: 0, ultimoTexto: '', ultimoAutor: '' };
+            if (!msgAdminPorSocio[k]) msgAdminPorSocio[k] = { total: 0, ultimaSocioTs: 0, ultimoTexto: '', ultimoAutor: '', ultimoTs: 0 };
             msgAdminPorSocio[k].total++;
+            // Cuándo se movió la conversación por última vez, la haya movido
+            // el socio o la administración: es lo que va en la lista.
+            const tsAny = new Date(String(m.created_at || '').replace(' ', 'T')).getTime();
+            if (tsAny && tsAny > msgAdminPorSocio[k].ultimoTs) msgAdminPorSocio[k].ultimoTs = tsAny;
             if (m.remitente === 'SOCIO') {
                 const ts = new Date(m.created_at).getTime();
                 if (ts > msgAdminPorSocio[k].ultimaSocioTs) {
@@ -296,8 +378,12 @@ function msgAdmin_renderLista() {
             // Primero los que tienen respuestas sin leer, luego con conversación
             const ua = msgAdmin_hayNoLeidos(a.id) ? 1 : 0, ub = msgAdmin_hayNoLeidos(b.id) ? 1 : 0;
             if (ua !== ub) return ub - ua;
-            const ca = msgAdminPorSocio[String(a.id)] ? 1 : 0, cb = msgAdminPorSocio[String(b.id)] ? 1 : 0;
+            const ra = msgAdminPorSocio[String(a.id)], rb = msgAdminPorSocio[String(b.id)];
+            const ca = ra ? 1 : 0, cb = rb ? 1 : 0;
             if (ca !== cb) return cb - ca;
+            // Entre los que conversan, el más reciente arriba: buscar a alguien
+            // en una lista alfabética de 60 socios es justamente lo que costaba.
+            if (ra && rb && ra.ultimoTs !== rb.ultimoTs) return rb.ultimoTs - ra.ultimoTs;
             return `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`);
         });
 
@@ -310,12 +396,19 @@ function msgAdmin_renderLista() {
         const badge = noLeido
             ? '<span style="background:#dc2626;color:white;font-size:0.62em;font-weight:800;padding:1px 6px;border-radius:8px;margin-left:5px;">NUEVO</span>'
             : (tieneConv ? '<span style="margin-left:5px;">💬</span>' : '');
+        // Cuándo fue lo último de esta conversación. Sin esto había que
+        // abrir socio por socio para saber cuál se movió.
+        const res = msgAdminPorSocio[String(s.id)];
+        const cuando = (res && res.ultimoTs)
+            ? `<div class="msg-lista-fecha${noLeido ? ' nuevo' : ''}" title="Último mensaje: ${_msgEsc(_msgFechaLarga(res.ultimoTs))}">${_msgEsc(_msgFechaCorta(res.ultimoTs))}</div>`
+            : '';
         return `<div onclick="msgAdmin_abrir('${_msgEsc(s.id)}')" style="display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid ${activo ? '#0284c7' : '#eef2f6'};background:${activo ? '#e0f2fe' : 'white'};border-radius:10px;margin-bottom:6px;cursor:pointer;">
             ${avatarHTML(s.fotoUrl, s.nombre, 34)}
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:700;font-size:0.86em;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_msgEsc(s.nombre)} ${_msgEsc(s.apellido)}${badge}</div>
                 <div style="font-size:0.72em;color:#94a3b8;">${_msgEsc((s.area || '').toUpperCase())}</div>
             </div>
+            ${cuando}
         </div>`;
     }).join('');
 }
@@ -364,8 +457,17 @@ function msgAdmin_renderHilo() {
         cont.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:0.85em;padding:24px;">Aún no hay mensajes. Escribe el primero 👇</div>';
         return;
     }
-    const _hora = ts => { try { return new Date(ts).toLocaleTimeString('es-CL', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { return ''; } };
+    // Un separador cada vez que cambia el día. Sin esto, la hora sola no
+    // dice nada: «14:32» puede ser de hoy o del mes pasado.
+    let diaPrevio = '';
     cont.innerHTML = msgAdminHilo.map(m => {
+        const dia = _msgDiaKey(m.created_at);
+        let sep = '';
+        if (dia && dia !== diaPrevio) {
+            diaPrevio = dia;
+            sep = `<div class="msg-dia-sep" title="${_msgEsc(_msgFechaLarga(m.created_at))}">`
+                + `<span>${_msgEsc(_msgDiaEtiqueta(m.created_at))}</span></div>`;
+        }
         const esAdmin = m.remitente === 'ADMIN';
         const align = esAdmin ? 'flex-end' : 'flex-start';
         const bg = esAdmin ? '#0284c7' : 'white';
@@ -375,12 +477,12 @@ function msgAdmin_renderHilo() {
         const fotoHtml = m.foto_url
             ? `<img src="${(m.foto_url + '').replace(/"/g, '%22')}" onclick="verFotoGrande('${(m.foto_url + '').replace(/'/g, '%27')}')" style="max-width:170px;max-height:190px;border-radius:9px;margin-top:${m.mensaje ? '5px' : '0'};object-fit:cover;cursor:zoom-in;display:block;">`
             : '';
-        return `<div style="align-self:${align};max-width:80%;">
+        return `${sep}<div style="align-self:${align};max-width:80%;">
             <div style="background:${bg};color:${col};border:${border};border-radius:12px;padding:8px 11px;box-shadow:0 1px 2px rgba(0,0,0,0.08);">
                 ${autor}
                 ${m.mensaje ? `<div style="font-size:0.9em;line-height:1.4;word-break:break-word;white-space:pre-wrap;">${_msgEsc(m.mensaje)}</div>` : ''}
                 ${fotoHtml}
-                <div style="font-size:0.62em;color:${esAdmin ? 'rgba(255,255,255,0.75)' : '#94a3b8'};text-align:right;margin-top:3px;">${_hora(m.created_at)}</div>
+                <div title="${_msgEsc(_msgFechaLarga(m.created_at))}" style="font-size:0.62em;color:${esAdmin ? 'rgba(255,255,255,0.75)' : '#94a3b8'};text-align:right;margin-top:3px;cursor:default;">${_msgEsc(_msgHora(m.created_at))}</div>
             </div>
         </div>`;
     }).join('');
