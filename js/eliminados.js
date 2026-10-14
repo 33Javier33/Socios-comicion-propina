@@ -855,8 +855,8 @@ function _elimCalculo(r) {
     const nombre   = ((r.nombre || f.nombre || '') + ' ' + (r.apellido || f.apellido || '')).trim().toUpperCase();
     const area     = String(r.area || f.area || '').toUpperCase();
     const contrato = String(r.contrato || f.tipo_contrato || f.contrato || '').toUpperCase();
-    const fIng     = String(r.fecha_ingreso || f.fecha_ingreso || '').substring(0, 10);
-    const fIni     = String(f.fecha_inicio_puntos || '').substring(0, 10);
+    const fIng     = String(r.fecha_ingreso || f.fecha_ingreso || calc.fechaIngreso || '').substring(0, 10);
+    const fIni     = String(f.fecha_inicio_puntos || calc.fechaInicioPuntos || '').substring(0, 10);
     const anioIng  = fIng ? fIng.split('-')[0] : '\u2014';
     // Solo se muestra cuando difiere del ingreso: si son iguales, repetir
     // la misma fecha con otro nombre confunde al que lee la hoja.
@@ -1504,8 +1504,10 @@ function _elimInformeHTML(x) {
 // individual — si acá dice $107.000, el comprobante de ese socio tiene
 // que decir $107.000.
 // ══════════════════════════════════════════════════════════════════════
-function elim_informeGeneral() {
-    const lista = _elimLista || [];
+async function elim_informeGeneral() {
+    // Carga la lista si todavía no está: así el botón funciona aunque se
+    // apriete antes de que termine de cargar la pantalla.
+    const lista = await elim_cargar(false) || [];
     if (!lista.length) {
         if (typeof showToast === 'function') showToast('No hay socios eliminados para informar', 'warning');
         return;
@@ -1536,6 +1538,7 @@ function elim_informeGeneral() {
                        : m === 'recuperado' ? 'Recuperado' : 'Eliminado';
 
     // ── Una fila de la tabla ─────────────────────────────────────────
+    let nFila = 0;
     const filaSocio = (k, conFechaTermino) => {
         const pagar = k.cuenta ? _elimPlata(k.cuenta.aPagar) : '<span class="pend">por calcular</span>';
         const rema  = k.cuenta && k.cuenta.remanente ? _elimPlata(k.cuenta.remanente) : '—';
@@ -1543,6 +1546,7 @@ function elim_informeGeneral() {
         // se marca: puede no tener el congelamiento aplicado.
         const marca = (k.cuenta && !k.vivo.ok) ? '<span class="aster" title="del cierre guardado">*</span>' : '';
         return '<tr>'
+            + '<td class="c sub">' + (++nFila) + '</td>'
             + '<td><b>' + esc(k.nombre) + '</b>'
             +   (k.r.rut ? '<br><span class="sub">' + esc(k.r.rut) + '</span>' : '') + '</td>'
             + '<td>' + esc(k.area || '—') + '<br><span class="sub">' + esc(k.contrato || '—') + '</span></td>'
@@ -1567,13 +1571,13 @@ function elim_informeGeneral() {
         return '<h2>' + esc(titulo) + ' <span class="cuantos">' + grupo.length + '</span></h2>'
             + (nota ? '<p class="nota">' + nota + '</p>' : '')
             + '<table><thead><tr>'
-            +   '<th>Socio</th><th>Área / contrato</th><th class="c">Pts</th><th>Ingreso</th>'
+            +   '<th class="c">#</th><th>Socio</th><th>Área / contrato</th><th class="c">Pts</th><th>Ingreso</th>'
             +   '<th>' + (conFechaTermino ? 'Término de contrato' : 'Salida') + '</th>'
             +   '<th>Período</th><th class="n">A cobrar</th><th class="n">Remanente</th>'
             + '</tr></thead><tbody>'
             + grupo.map(k => filaSocio(k, conFechaTermino)).join('')
             + '</tbody><tfoot><tr>'
-            +   '<td colspan="6"><b>Total del grupo</b>'
+            +   '<td colspan="7"><b>Total del grupo</b>'
             +     (faltan ? ' <span class="sub">(' + faltan + ' sin calcular, no suman)</span>' : '')
             +   '</td>'
             +   '<td class="n"><b>' + _elimPlata(suma) + '</b></td><td></td>'
@@ -1769,180 +1773,5 @@ async function elim_recuperar() {
         if (typeof showToast === 'function') showToast('No se pudo completar: ' + (e.message || e), 'error');
     } finally {
         if (typeof toggleLoader === 'function') toggleLoader(false);
-    }
-}
-
-// ══════════════════════════════════════════════════════════════════════
-// INFORME GENERAL DE SOCIOS ELIMINADOS
-//
-// Muestra una nómina/tabla imprimible de los socios eliminados respaldados
-// con sus datos clave:
-//   · Nombre del socio, RUT, Área y Contrato
-//   · Fecha de Ingreso
-//   · Fecha de Término de Contrato
-//   · Período del Cierre del Mes
-//   · Monto Cobrado al cerrar su mes (Total a cobrar)
-//   · Estado/Modo y Fecha de eliminación
-// ══════════════════════════════════════════════════════════════════════
-async function elim_informeGeneral() {
-    const lista = await elim_cargar(false);
-    if (!lista || !lista.length) {
-        if (typeof showToast === 'function') showToast('No hay socios eliminados respaldados para generar informe', 'error');
-        return;
-    }
-
-    const term = (document.getElementById('elimBuscar')?.value || '').toLowerCase().trim();
-    const vis = lista.filter(r => !term
-        || ((r.nombre || '') + ' ' + (r.apellido || '') + ' ' + (r.rut || '') + ' ' + (r.socio_id || ''))
-            .toLowerCase().includes(term));
-
-    if (!vis.length) {
-        if (typeof showToast === 'function') showToast('No hay socios eliminados que coincidan con la búsqueda', 'error');
-        return;
-    }
-
-    const hoy = new Date();
-    const _pad = n => String(n).padStart(2, '0');
-    const fechaHoyVis = _pad(hoy.getDate()) + '/' + _pad(hoy.getMonth() + 1) + '/' + hoy.getFullYear();
-    const fechaNom = hoy.getFullYear() + '-' + _pad(hoy.getMonth() + 1) + '-' + _pad(hoy.getDate());
-    const fileName = 'Informe Socios Eliminados ' + fechaNom;
-    const esc = _elimEsc;
-
-    let totalCobradoGeneral = 0;
-    let conCobroN = 0;
-
-    const filasHtml = vis.map((r, i) => {
-        const d = r.datos || {};
-        const f = d.ficha || {};
-        const calc = d.calculado || {};
-        const sal = _elimSalida(d);
-
-        const nombre = ((r.nombre || f.nombre || '') + ' ' + (r.apellido || f.apellido || '')).trim().toUpperCase() || ('ID: ' + r.socio_id);
-        const rut = r.rut || f.rut || '—';
-        const area = String(r.area || f.area || '—').toUpperCase();
-        const contrato = String(r.contrato || f.tipo_contrato || f.contrato || '—').toUpperCase();
-
-        const fIng = String(r.fecha_ingreso || f.fecha_ingreso || calc.fechaIngreso || '').substring(0, 10);
-        const fIngVis = fIng ? _elimDdMmAaaa(fIng) : '—';
-
-        const fTermVis = sal.fechaTermino ? _elimDdMmAaaa(sal.fechaTermino) : '—';
-
-        const c = sal.cierre;
-        const perRef = sal.fechaTermino
-                    || (c && String(c.fecha_cierre || '').substring(0, 10))
-                    || String(r.eliminado_en || '').substring(0, 10);
-        const per = _elimPeriodoDe(perRef);
-        const periodoStr = per ? (_elimDdMmAaaa(per.inicio) + ' al ' + _elimDdMmAaaa(per.fin)) : (c && c.periodo ? String(c.periodo) : '—');
-
-        const puntos = Number(r.puntos != null ? r.puntos : (f.puntos != null ? f.puntos : calc.puntos)) || 0;
-        const vivo = _elimAlcanceVivo(r, d, sal, puntos, per);
-        const alcanceGuardado = (c && c.alcance != null && isFinite(Number(c.alcance))) ? Number(c.alcance) : null;
-        const alcance = vivo.ok ? vivo.alcance : alcanceGuardado;
-
-        let montoCobrado = null;
-        if (alcance != null) {
-            const saldoAnt = c ? (Number(c.saldo_anterior) || 0) : 0;
-            const antTot = (c && c.anticipos_total != null) ? Number(c.anticipos_total) : sal.totalAnt;
-            const saldoReal = alcance + saldoAnt - antTot;
-            const esGC = (typeof _esGastoComision === 'function') && _esGastoComision(r.area || f.area);
-            const rep = (typeof repartirSaldo === 'function')
-                ? repartirSaldo(saldoReal, esGC)
-                : { aPagar: Math.floor(Math.max(0, saldoReal) / 1000) * 1000, remanente: saldoReal - Math.floor(Math.max(0, saldoReal) / 1000) * 1000 };
-            montoCobrado = rep.aPagar;
-        } else if (c && c.a_pagar != null && isFinite(Number(c.a_pagar))) {
-            montoCobrado = Number(c.a_pagar);
-        }
-
-        if (montoCobrado !== null && montoCobrado >= 0) {
-            totalCobradoGeneral += montoCobrado;
-            conCobroN++;
-        }
-
-        const montoStr = (montoCobrado !== null) ? _elimPlata(montoCobrado) : '—';
-        const txtModo = r.modo === 'desactivado' ? 'Dado de baja' : (r.modo === 'recuperado' ? 'Recuperado' : 'Eliminado');
-
-        return '<tr>'
-            + '<td class="c">' + (i + 1) + '</td>'
-            + '<td><b>' + esc(nombre) + '</b><br><small style="color:#64748b;">RUT: ' + esc(rut) + ' · ' + esc(area) + ' (' + esc(contrato) + ')</small></td>'
-            + '<td class="c">' + esc(fIngVis) + '</td>'
-            + '<td class="c" style="' + (sal.fechaTermino ? 'color:#b91c1c;font-weight:700;' : '') + '">' + esc(fTermVis) + '</td>'
-            + '<td class="c" style="font-size:8pt;">' + esc(periodoStr) + '</td>'
-            + '<td class="n" style="font-size:9.5pt;font-weight:800;">' + esc(montoStr) + '</td>'
-            + '<td class="c" style="font-size:7.5pt;">' + esc(txtModo) + '<br><span style="color:#64748b;">' + esc(_elimFecha(r.eliminado_en)) + '</span></td>'
-            + '</tr>';
-    }).join('');
-
-    const htmlInforme = '<html><head><meta charset="UTF-8"><title>' + esc(fileName) + '</title><style>'
-        + '*{margin:0;padding:0;box-sizing:border-box;}'
-        + 'body{font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#000;background:#fff;padding:12mm 15mm;line-height:1.4;}'
-        + 'h1{font-size:15pt;font-weight:900;letter-spacing:1px;text-align:center;text-transform:uppercase;}'
-        + '.sub{text-align:center;font-size:8.5pt;color:#333;font-weight:600;margin:2px 0 10px;}'
-        + '.kpis{display:flex;gap:10px;margin-bottom:12px;}'
-        + '.kpi{flex:1;border:1.5px solid #000;border-radius:6px;padding:8px;text-align:center;background:#f8fafc;}'
-        + '.kpi b{display:block;font-size:14pt;font-weight:900;color:#0f172a;}'
-        + '.kpi span{font-size:7pt;text-transform:uppercase;letter-spacing:0.5px;color:#475569;font-weight:700;}'
-        + 'table{width:100%;border-collapse:collapse;margin-top:5px;}'
-        + 'th,td{padding:5px 6px;font-size:8.5pt;vertical-align:top;border:1px solid #cbd5e1;}'
-        + 'th{background:#1e293b;color:#fff;text-align:left;font-size:7.5pt;text-transform:uppercase;letter-spacing:0.5px;}'
-        + 'td.c,th.c{text-align:center;}'
-        + 'td.n,th.n{text-align:right;white-space:nowrap;}'
-        + 'tbody tr:nth-child(even){background:#f8fafc;}'
-        + 'tfoot tr{background:#e2e8f0;font-weight:900;}'
-        + '.firmas{display:flex;justify-content:space-around;margin-top:16mm;page-break-inside:avoid;}'
-        + '.fb{text-align:center;width:40%;}'
-        + '.fl{border-top:1.5px solid #000;padding-top:4px;font-size:9pt;font-weight:700;text-transform:uppercase;}'
-        + '.fs{font-size:8pt;color:#555;}'
-        + '.pie{font-size:7.5pt;color:#64748b;text-align:center;margin-top:8mm;border-top:1px dashed #ccc;padding-top:2mm;}'
-        + '@media print{@page{size:A4 portrait;margin:8mm;}body{padding:0;}tr{page-break-inside:avoid;}}'
-        + '@media screen{body{background:#ddd;}.page{background:#fff;max-width:860px;margin:0 auto;padding:14px;box-shadow:0 2px 12px rgba(0,0,0,0.2);}}'
-        + '</style></head><body><div class="page">'
-
-        + '<h1>INFORME DE SOCIOS ELIMINADOS</h1>'
-        + '<div class="sub">Fondo Solidario de Propina · Casino de Puerto Varas · Ley 17312 del 29/07/70</div>'
-
-        + '<div class="kpis">'
-        +   '<div class="kpi"><b>' + vis.length + '</b><span>Socios respaldados</span></div>'
-        +   '<div class="kpi"><b>' + _elimPlata(totalCobradoGeneral) + '</b><span>Total cobrado al cierre</span></div>'
-        + '</div>'
-
-        + '<table><thead><tr>'
-        + '<th class="c" style="width:4%;">#</th>'
-        + '<th style="width:28%;">Socio / Datos</th>'
-        + '<th class="c" style="width:12%;">Ingreso</th>'
-        + '<th class="c" style="width:14%;">Término Contrato</th>'
-        + '<th class="c" style="width:18%;">Cierre del Mes</th>'
-        + '<th class="n" style="width:12%;">Monto Cobrado</th>'
-        + '<th class="c" style="width:12%;">Estado / Fecha</th>'
-        + '</tr></thead><tbody>'
-        + filasHtml
-        + '</tbody>'
-        + '<tfoot><tr>'
-        + '<td colspan="5" style="padding:6px 8px;">TOTAL GENERAL COBRADO DE LOS SOCIOS RESPALDADOS</td>'
-        + '<td class="n" style="padding:6px 8px;font-size:10pt;">' + _elimPlata(totalCobradoGeneral) + '</td>'
-        + '<td></td>'
-        + '</tr></tfoot></table>'
-
-        + '<div class="firmas">'
-        +   '<div class="fb"><div style="height:14mm"></div><div class="fl">Comisión de Propina</div><div class="fs">Fondo Solidario</div></div>'
-        +   '<div class="fb"><div style="height:14mm"></div><div class="fl">' + esc(_elimQuien()) + '</div><div class="fs">Responsable / Administración</div></div>'
-        + '</div>'
-
-        + '<div class="pie">Informe de Socios Eliminados · Emitido el ' + esc(fechaHoyVis) + ' · Sistema Fondo Solidario</div>'
-        + '</div></body></html>';
-
-    if (typeof printHTML === 'function') {
-        printHTML(htmlInforme, fileName);
-    } else {
-        const win = window.open('', '_blank', 'width=900,height=1000');
-        if (win) {
-            win.document.write(htmlInforme);
-            win.document.close();
-        }
-    }
-
-    if (typeof sbAuditLog === 'function') {
-        sbAuditLog('Informe Socios Eliminados', {
-            detalle: `Generado informe de ${vis.length} socios eliminados. Total cobrado: ${_elimPlata(totalCobradoGeneral)}`
-        });
     }
 }
