@@ -756,6 +756,68 @@ function _elimSalida(d) {
     };
 }
 
+// Recalcula el alcance con el MISMO motor que el recibo del cierre, en
+// vez de creerle al `alcance` que quedó guardado.
+//
+// `sumaValorPuntoSocio` (js/constants.js) recorre día por día la
+// recaudación del período activo y SALTA los días de ausencia. El término
+// de contrato se registra como una ausencia por día, así que basta con
+// pasarle las ausencias del respaldo para que el congelamiento quede
+// aplicado — igual que cuando se imprime el recibo desde Gestión.
+//
+// Devuelve { ok:false, motivo } cuando no se puede: sin recaudación
+// cargada, sin puntos, o porque el socio pertenece a un período que la
+// recaudación de hoy ya no cubre. En esos casos quien llama se queda con
+// lo guardado y lo dice en la hoja.
+function _elimAlcanceVivo(r, d, sal, puntos, per) {
+    if (typeof sumaValorPuntoSocio !== 'function' || typeof periodoActivoISO !== 'function')
+        return { ok: false, motivo: 'sin-motor' };
+    if (!puntos) return { ok: false, motivo: 'sin-puntos' };
+
+    const mapa = (typeof globalMapaPuntosDia === 'object' && globalMapaPuntosDia) || {};
+    if (!Object.keys(mapa).length) return { ok: false, motivo: 'sin-recaudacion' };
+
+    const act = periodoActivoISO();
+    // El período del socio tiene que ser el que está cargado. Si no,
+    // recalcular daría el alcance de OTRO mes.
+    if (!per || per.inicio !== act.inicio || per.fin !== act.fin)
+        return { ok: false, motivo: 'otro-periodo', activo: act };
+
+    const f = (d && d.ficha) || {};
+    const t = (d && d.tablas) || {};
+    const fIng = String(r.fecha_ingreso || f.fecha_ingreso || '').substring(0, 10);
+    const fIni = String(f.fecha_inicio_puntos || '').substring(0, 10);
+    const contrato = String(r.contrato || f.tipo_contrato || f.contrato || '');
+
+    // Mismo molde que los socios de `cacheSocios`: `sumaValorPuntoSocio`
+    // lee `fechaInicioPuntos` en camelCase.
+    const socio = {
+        id: r.socio_id, puntos: puntos, area: r.area || f.area || '',
+        contrato: contrato, fechaIngreso: fIng, fechaInicioPuntos: fIni || fIng
+    };
+
+    const extras = Array.isArray(t.extras) ? t.extras : [];
+    const aus = new Set(extras
+        .filter(e => String(e.tipo || '').toLowerCase().includes('ausencia'))
+        .map(e => String(e.fecha || '').substring(0, 10))
+        .filter(Boolean));
+
+    let diasPT = null;
+    if (contrato === 'Part-Time') {
+        const fila = (Array.isArray(t.dias_pt) ? t.dias_pt : [])[0];
+        diasPT = (fila && Array.isArray(fila.dias)) ? fila.dias : [];
+    }
+
+    const suma = sumaValorPuntoSocio(socio, aus, diasPT);
+    return {
+        ok: true,
+        valorPunto: Math.round(suma),
+        alcance: Math.round(suma * puntos),
+        diasAusencia: aus.size,
+        periodo: act
+    };
+}
+
 // ══════════════════════════════════════════════════════════════════════
 // COMPROBANTE DE SALIDA
 //
@@ -818,14 +880,38 @@ function elim_imprimir(id) {
     const per = _elimPeriodoDe(perRef);
     const periodoStr = per ? (_elimDdMmAaaa(per.inicio) + ' AL ' + _elimDdMmAaaa(per.fin)) : '—';
 
-    // ── Valor punto ──────────────────────────────────────────────────
-    // No está guardado como columna, pero sale de lo que sí está:
-    // alcance = valor punto × puntos. Con término de contrato el alcance
-    // ya viene recortado, así que el valor punto que se obtiene es el de
-    // los días trabajados — que es justo lo que el recibo rotula
-    // «VALOR PUNTO (HASTA …)».
-    const alcance    = c ? (Number(c.alcance) || 0) : null;
-    const valorPunto = (alcance != null && puntos > 0) ? Math.round(alcance / puntos) : null;
+    // ── EL ALCANCE: se recalcula, no se cree lo guardado ─────────────
+    //
+    // Acá estaba el error. El cierre guardado en `cierres_mes` es una foto
+    // del momento en que se cerró el mes, y el término de contrato casi
+    // siempre se registra DESPUÉS: primero se cierra el período para todos
+    // —el cierre masivo— y recién cuando el socio se va se le marca el
+    // congelamiento. Esa foto quedó tomada cuando el socio todavía
+    // figuraba trabajando, así que su `alcance` es el del mes completo.
+    //
+    // El recibo real nunca tuvo ese problema porque NO lee la foto: vuelve
+    // a calcular en el momento de imprimir, con `sumaValorPuntoSocio`, que
+    // salta los días de ausencia. Por eso el recibo de Ignacio Marín dice
+    // «VALOR PUNTO (HASTA 30/09/2026)» y la hoja de salida decía otra cosa.
+    //
+    // Entonces esta hoja hace exactamente lo mismo que el recibo: recalcula
+    // con la misma función, pasándole las ausencias del respaldo. Dos
+    // papeles, un solo cálculo.
+    //
+    // Solo se puede recalcular si la recaudación cargada cubre el período
+    // del socio. Si se fue hace meses, el mapa de puntos de hoy es de otro
+    // período y recalcular daría un número inventado: ahí sí se usa lo
+    // guardado, y la hoja dice de dónde salió cada cifra.
+    const vivo = _elimAlcanceVivo(r, d, sal, puntos, per);
+    // Sin recálculo se usa lo guardado, pero solo si realmente hay algo:
+    // `alcance` es una columna opcional y un cierre viejo puede traerla en
+    // null. Imprimir «$0» como alcance sería peor que decir que falta.
+    const alcanceGuardado = (c && c.alcance != null && isFinite(Number(c.alcance)))
+        ? Number(c.alcance) : null;
+    const alcance = vivo.ok ? vivo.alcance : alcanceGuardado;
+    const valorPunto = vivo.ok
+        ? vivo.valorPunto
+        : ((alcance != null && puntos > 0) ? Math.round(alcance / puntos) : null);
 
     const fila = (e, v) => '<div class="row"><label>' + esc(e) + '</label><span>' + v + '</span></div>';
 
@@ -890,13 +976,24 @@ function elim_imprimir(id) {
         : '<tr><td colspan="4" class="c" style="padding:5px;color:#888;">Sin movimientos registrados</td></tr>';
 
     // ── DETALLE ──────────────────────────────────────────────────────
+    // La cuenta es la de `cierresMes_calcularSocio`, con el alcance ya
+    // congelado al día del término:
+    //     SALDO REAL = alcance + saldo anterior − anticipos
+    //     TOTAL A COBRAR / REMANENTE = repartirSaldo(saldo real)
     let detalleHtml, avisoCierre = '';
-    if (c) {
-        const saldoAnt  = Number(c.saldo_anterior) || 0;
-        const antTot    = (c.anticipos_total != null) ? Number(c.anticipos_total) : sal.totalAnt;
-        const aPagar    = Number(c.a_pagar) || 0;
-        const rema      = Number(c.remanente) || 0;
+    if (alcance != null) {
+        const saldoAnt = c ? (Number(c.saldo_anterior) || 0) : 0;
+        // Los anticipos se archivan cuando el socio cobra, así que la tabla
+        // del respaldo puede venir vacía aunque sí hubo. El cierre guarda el
+        // total que efectivamente se descontó: ese manda.
+        const antTot = (c && c.anticipos_total != null) ? Number(c.anticipos_total) : sal.totalAnt;
         const saldoReal = alcance + saldoAnt - antTot;
+        const esGC = (typeof _esGastoComision === 'function') && _esGastoComision(r.area || f.area);
+        const rep = (typeof repartirSaldo === 'function')
+            ? repartirSaldo(saldoReal, esGC)
+            : { aPagar: Math.floor(Math.max(0, saldoReal) / 1000) * 1000,
+                remanente: saldoReal - Math.floor(Math.max(0, saldoReal) / 1000) * 1000 };
+
         detalleHtml =
               fila('BRUTO (Alcance)', _elimPlata(alcance))
             + fila('ANTICIPOS', _elimPlata(antTot))
@@ -904,25 +1001,45 @@ function elim_imprimir(id) {
             + '<div class="row bold"><label>SALDO REAL</label><strong>' + _elimPlata(saldoReal) + '</strong></div>'
             + '<div class="divider"></div>'
             + '<div class="total-cobrar"><div class="total-label">TOTAL A COBRAR</div>'
-            +   '<div class="total-monto">' + _elimPlata(aPagar) + '</div></div>'
-            + fila('REMANENTE', _elimPlata(rema));
-        // El cierre guardado tiene que cuadrar con su propia cuenta. Si no
-        // cuadra es que se movió algo después de cerrar —un anticipo, una
-        // ausencia— y el total de arriba quedó viejo. Se dice, no se tapa.
-        if (Math.abs((aPagar + rema) - saldoReal) > 1) {
-            avisoCierre = '<div class="alerta"><b>El cierre guardado no cuadra.</b> '
-                + 'Alcance + saldo anterior − anticipos da ' + _elimPlata(saldoReal)
-                + ', pero el cierre dice ' + _elimPlata(aPagar) + ' + ' + _elimPlata(rema)
-                + '. Se movió algo después de cerrar el período: vuelve a cerrarlo en '
-                + 'Anticipos y Ausencias y reimprime esta hoja.</div>';
+            +   '<div class="total-monto">' + _elimPlata(rep.aPagar) + '</div></div>'
+            + fila('REMANENTE', _elimPlata(rep.remanente));
+
+        // Si el cierre guardado dice otra cosa, se muestra la diferencia.
+        // Casi siempre es esto: se cerró el mes ANTES de marcar el término,
+        // así que la foto quedó con el socio trabajando el mes entero.
+        if (vivo.ok && c && c.alcance != null && Math.abs(Number(c.alcance) - alcance) > 1) {
+            const guardado = Number(c.alcance);
+            avisoCierre = '<div class="alerta"><b>El cierre guardado quedó viejo.</b> '
+                + 'Dice un alcance de ' + _elimPlata(guardado) + ', que es el del mes completo. '
+                + 'Con el congelamiento aplicado'
+                + (sal.fechaTermino ? ' desde el ' + esc(_elimDdMmAaaa(sal.fechaTermino)) : '')
+                + ' corresponden ' + _elimPlata(alcance) + ' ('
+                + _elimPlata(guardado - alcance) + ' de diferencia). '
+                + 'Esta hoja usa el recalculado, igual que el recibo. '
+                + 'Vuelve a cerrar el período en Anticipos y Ausencias para que el cierre también quede al día.'
+                + '</div>';
+        } else if (!vivo.ok && c) {
+            // No se pudo recalcular: hay que decir que el número es el de la
+            // foto y que puede no tener el congelamiento aplicado.
+            avisoCierre = '<div class="alerta"><b>Cifras tomadas del cierre guardado.</b> '
+                + (vivo.motivo === 'otro-periodo'
+                    ? 'El socio pertenece al período ' + esc(periodoStr) + ', y la recaudación cargada '
+                      + 'es la del ' + esc(_elimDdMmAaaa(vivo.activo.inicio)) + ' al '
+                      + esc(_elimDdMmAaaa(vivo.activo.fin)) + ', así que no se puede recalcular acá. '
+                    : 'No hay recaudación cargada para recalcular. ')
+                + (sal.porTerminoContrato
+                    ? 'Si el mes se cerró antes de marcar el término de contrato, ese alcance es el del '
+                      + 'mes completo y hay que revisarlo contra el recibo del socio.'
+                    : 'Compáralas con el recibo del socio antes de pagar.')
+                + '</div>';
         }
     } else {
         detalleHtml =
               fila('ANTICIPOS', _elimPlata(sal.totalAnt))
             + (sal.saldo != null ? fila('SALDO REGISTRADO', _elimPlata(sal.saldo)) : '')
-            + '<div class="falta">El <b>alcance del período</b> no quedó guardado en este respaldo, '
-            + 'así que el total a cobrar no se puede calcular acá. Tómalo del cierre del período en '
-            + 'Anticipos y Ausencias y complétalo a mano antes de firmar.</div>';
+            + '<div class="falta">El <b>alcance del período</b> no se pudo calcular ni quedó guardado en '
+            + 'este respaldo, así que el total a cobrar no se puede obtener acá. Tómalo del cierre del '
+            + 'período en Anticipos y Ausencias y complétalo a mano antes de firmar.</div>';
     }
 
     // ── Motivo de la salida ──────────────────────────────────────────

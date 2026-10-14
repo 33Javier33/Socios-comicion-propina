@@ -232,6 +232,30 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-14 — El comprobante de salida recalcula el congelamiento en vez de creerle al cierre guardado (SW v179)
+
+**El error.** El comprobante de salida leía el `alcance` de la tabla `cierres_mes`. Esa tabla es **una foto del momento en que se cerró el mes**, y el término de contrato casi siempre se registra *después*: primero se cierra el período para todos (el cierre masivo), y recién cuando el socio se va se le marca el congelamiento. La foto quedó tomada **cuando el socio todavía figuraba trabajando**, así que su alcance es el del mes completo.
+
+Con Ignacio Marín: el cierre guardado tenía el mes entero, mientras que su recibo —emitido el 07/10, ya con el término marcado— decía `VALOR PUNTO (HASTA 30/09/2026) $13.377` y un alcance de `$107.015`. La hoja de salida mostraba un monto mayor, como si hubiera seguido trabajando hasta el 14.
+
+**Por qué el recibo sí estaba bien.** `imprimirReciboSocio()` (`js/reports.js`) **no lee la foto**: vuelve a calcular al momento de imprimir con `sumaValorPuntoSocio()` (`js/constants.js`), que recorre la recaudación día por día y **salta los días de ausencia** — y el término de contrato se registra justamente como una ausencia por día.
+
+**Qué se hizo.** `elim_imprimir()` ahora hace exactamente lo mismo. Nuevo `_elimAlcanceVivo()` en `js/eliminados.js`:
+
+- reconstruye el socio desde la ficha del respaldo (`puntos`, `contrato`, `fechaInicioPuntos`, días Part-Time),
+- junta las fechas de ausencia del respaldo (el término incluido),
+- y llama a **`sumaValorPuntoSocio()`, la misma función del recibo**.
+
+Dos papeles, un solo cálculo. El total, el remanente y el valor punto salen de ahí, y `repartirSaldo()` reparte igual que el cierre (incluido el caso Gastos Comisión, que retira todo).
+
+**Cuándo no se puede recalcular.** El mapa de puntos cargado es el del período activo. Si el socio pertenece a otro período, recalcular daría el alcance de un mes que no es el suyo, así que se usa lo guardado y **la hoja dice de dónde salió cada cifra** («Cifras tomadas del cierre guardado», con el período del socio y el de la recaudación cargada). Si no hay ni recálculo ni cierre, no se inventa un total.
+
+**Nuevo aviso: «El cierre guardado quedó viejo».** Cuando el recálculo difiere de la foto, la hoja imprime el recalculado (el correcto, el del recibo) y muestra los dos números con la diferencia exacta, recordando volver a cerrar el período para que el cierre también quede al día. Para Ignacio: *«Dice un alcance de $145.023, que es el del mes completo. Con el congelamiento aplicado desde el 30/09/2026 corresponden $107.015 ($38.008 de diferencia).»*
+
+Esto no era un caso aislado: **cualquier socio al que se le cerrara el mes antes de marcarle el término salía con el mes completo.** Ahora no.
+
+`test_comprobante_salida.js`: 70 comprobaciones, con el cierre guardado adulterado a propósito al valor del mes completo para verificar que la hoja no le cree.
+
 #### 2026-10-14 — El comprobante de salida es ahora el mismo recibo del cierre (SW v178)
 
 **El problema.** El comprobante de Socios Eliminados era un documento inventado: hoja A4, secciones propias («Lo que debe recibir», «Alcance del período»), su propia redacción. Al compararlo con el recibo real de Ignacio Marín no cuadraba nada — no porque los números estuvieran mal, sino porque **eran dos papeles distintos para el mismo hecho**, y el que se firma es el recibo.
