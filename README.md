@@ -232,6 +232,34 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-14 — El comprobante de salida es ahora el mismo recibo del cierre (SW v178)
+
+**El problema.** El comprobante de Socios Eliminados era un documento inventado: hoja A4, secciones propias («Lo que debe recibir», «Alcance del período»), su propia redacción. Al compararlo con el recibo real de Ignacio Marín no cuadraba nada — no porque los números estuvieran mal, sino porque **eran dos papeles distintos para el mismo hecho**, y el que se firma es el recibo.
+
+**Qué se hizo.** `elim_imprimir()` (en `js/eliminados.js`) ahora emite **el mismo recibo** que `imprimirReciboSocio()` (en `js/reports.js`): mismo papel de 72 mm, mismo encabezado *FONDO DE SOLIDARIDAD / CASINO DE PTO. VARAS / LEY 17312 DEL 29/07/70*, mismo folio, mismas secciones y mismos nombres de línea.
+
+Lo que antes faltaba y ahora está:
+
+| Sección | Líneas |
+|---|---|
+| **Folio** | `SAL-AAAAMMDD-HHMMSS-INI` + marca «DESDE RESPALDO» |
+| **DATOS** | NOMBRE · RUT · ID SOCIO · ÁREA · CONTRATO · AÑO INGRESO · INICIO PUNTOS · PUNTOS · SUBE PUNTOS |
+| **CIERRE PUNTO** | VALOR PUNTO (HASTA dd/mm/aaaa) · 🔴 TÉRMINO CONTRATO DESDE |
+| **DETALLE** | BRUTO (Alcance) · ANTICIPOS · SALDO ANTERIOR · **SALDO REAL** · TOTAL A COBRAR · REMANENTE |
+| **MOVIMIENTOS / RESPONSABLES** | anticipos numerados + el término y las ausencias agrupados por tramo |
+| **PERÍODO** | dd/mm/aaaa AL dd/mm/aaaa |
+
+Detalles que valen la pena:
+
+- **El valor punto no está guardado como columna**, pero sale de lo que sí está: `alcance ÷ puntos`. Con término de contrato el alcance ya viene recortado, así que lo que se obtiene es el valor de los días trabajados — justo lo que el recibo rotula «VALOR PUNTO (HASTA …)». Para Ignacio: 107.015 ÷ 8 = **$13.377**, el mismo número de su recibo.
+- **El término de contrato va en MOVIMIENTOS, fuera de la aritmética.** Esa era la confusión de fondo: `sumaValorPuntoSocio` salta los días de ausencia y el término se registra como una ausencia por día, así que el alcance **ya viene sin esos días**. La línea `🔴 T.CONTRATO ▸ 30/09 al 14/10 · (15 días) · −$38.008` es informativa, igual que en el recibo real.
+- **El folio lleva prefijo `SAL-`, no `REC-`.** Esta hoja se emite desde el respaldo, no es el cierre original; un folio `REC-` inventado acá no existiría en auditoría y sería imposible cruzarlo con el recibo de verdad.
+- **El período se deduce de la fecha (15 → 14)**, no del período activo de la app: el respaldo puede ser de hace meses y la hoja tiene que decir el período del socio, no el de hoy.
+- **Nuevo aviso: «El cierre guardado no cuadra».** Si `a_pagar + remanente ≠ alcance + saldo anterior − anticipos`, es que se movió algo después de cerrar el período y el total quedó viejo. Se dice en la hoja en vez de imprimir un número que ya no corresponde.
+- Se mantienen el aviso de **término mal cubierto** y la negativa a inventar un total cuando el respaldo no trae el alcance.
+
+**Verificado** contra el recibo real de Ignacio Marín (folio `REC-20261007-222609-CP`): las 55 comprobaciones de `test_comprobante_salida.js` pasan, incluidos los seis números del DETALLE, el valor punto, la línea del término y el período.
+
 #### 2026-10-14 — El comprobante restaba dos veces, y ahora avisa si el término quedó corto (SW v177)
 
 Dos cosas, y la segunda es la importante.
