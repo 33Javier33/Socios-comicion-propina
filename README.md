@@ -232,6 +232,27 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-14 — La fecha de inicio de puntos no se guardaba (SW v182)
+
+**El síntoma.** En Gestión de Socios se editaba la fecha de inicio de puntos, salía «Socio actualizado», y al rato volvía la anterior.
+
+**La causa.** La lista de socios se **lee** de Supabase, pero cada vez que se pide, en segundo plano se trae la copia de la **planilla** y se vuelca sobre Supabase (`_seedSociosToSupabase`). Ese volcado incluía `fecha_inicio_puntos`, así que **pisaba la edición recién hecha con el valor viejo de la planilla**. `puntos` ya estaba excluido por exactamente esta razón; la fecha no.
+
+No había forma de ganarle esperando: el volcado lee la planilla en segundo plano y la escritura a Sheets es lenta, así que la copia que trae puede ser anterior a la edición.
+
+**El arreglo.** El volcado ya no manda `fecha_inicio_puntos` **para los socios que ya existen en Supabase** — para ésos manda Supabase, que es donde la escribe la app. Sigue sembrándola para el socio que solo está en la planilla, que es para lo que el volcado sirve.
+
+Se mira si el socio **existe**, no si tiene fecha. Si se mirara la fecha, **borrarla tampoco duraría**: quedaría vacía, el socio pasaría por «no la tiene» y el volcado se la devolvería. Vaciarla es una decisión —volver a la regla automática— y ahora se respeta.
+
+**Segundo bug, encontrado al probar.** El `<select>` de área guarda los valores en minúscula (`maquinas`), pero en la base están escritos de varias formas (`Maquinas`, `Máquinas`, `MAQUINAS`, `Mesas - Cambistas`). Al abrir la edición el select no encontraba la opción y quedaba en «Seleccionar…» — y como el campo es `required`, **el formulario no dejaba guardar nada del socio**. Nuevo `_gestAreaOpcion()` traduce el área guardada a su opción (sin tildes, sin mayúsculas, sin espacios, con los casos de Cambistas y Gastos Comisión). Si aun así no calza, lo avisa en vez de dejar al admin peleando con un formulario que no guarda y no explica por qué.
+
+**Y la ayuda del campo decía algo que no era cierto.** Decía «Si se deja vacía, se usa la fecha de ingreso». Lo que pasa en realidad:
+
+- **Vacía:** se aplica la regla — empieza a sumar el primer día 15 después de **cumplir un mes** de contrato.
+- **Con fecha:** manda ésa y **se salta esa espera**. Es para cuando el contrato viene de antes y no corresponde hacerlo esperar el mes. Se guarda siempre el **día 15** del mes elegido (los períodos van del 15 al 14).
+
+`test_fecha_inicio_puntos.js`: 36 comprobaciones, incluida la reproducción del volcado que pisaba el dato.
+
 #### 2026-10-14 — Informe general de socios eliminados, con el término de contrato al frente (SW v181)
 
 Botón **🖨 Informe de todos** en Socios Eliminados: una hoja A4 **horizontal** con todos los que salieron, no de a uno.

@@ -267,32 +267,76 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     // Exponer para el listener online (fuera del IIFE)
     window._scSincronizar = _sincronizarOps;
 
-    // ── Helper: upsert datos de socios a Supabase (sin sobreescribir puntos) ──
-    function _seedSociosToSupabase(socios) {
+    // ── Helper: upsert datos de socios a Supabase ──
+    //
+    // Este volcado trae la copia de la PLANILLA y la escribe sobre Supabase.
+    // Hay dos campos que NO puede tocar, porque se editan en la app y
+    // Supabase es su fuente de verdad:
+    //
+    //   · `puntos` — nunca se manda (ya era así).
+    //   · `fecha_inicio_puntos` — solo se manda para el socio que todavía
+    //     NO EXISTE en Supabase. Para los que ya están, manda lo que diga
+    //     Supabase, incluso si es vacío.
+    //
+    // Lo segundo es un arreglo: editar la fecha de inicio de puntos en
+    // Gestión de Socios la guardaba bien en Supabase, pero al siguiente
+    // `getSocios` este volcado la pisaba con el valor viejo de la planilla
+    // y el cambio se perdía solo. Y no hay forma de ganarle esperando: el
+    // volcado lee la planilla en segundo plano y la escritura a Sheets es
+    // lenta, así que la copia que trae puede ser anterior a la edición.
+    //
+    // Se mira si el socio EXISTE en Supabase, no si tiene fecha. Si se
+    // mirara la fecha, borrarla tampoco duraría: quedaría en vacío, el
+    // socio pasaría por «no la tiene» y el volcado se la devolvería desde
+    // la planilla. Vaciarla es una decisión del admin —volver a la regla
+    // automática— y tiene que quedarse vacía.
+    //
+    // Para el socio que solo está en la planilla sí se siembra, que es
+    // para lo que el volcado sirve.
+    //
+    // `yaEnSupabase` es el conjunto de ids que ya están en la tabla.
+    function _seedSociosToSupabase(socios, yaEnSupabase) {
         if (!Array.isArray(socios) || socios.length === 0) return;
-        const rows = socios.map(s => ({
-            id: String(s.ID),
-            nombre: s.Nombre || '',
-            apellido: s.Apellido || '',
-            area: s.Area || '',
-            contrato: s.TipoContrato || '',
-            fecha_ingreso: s.FechaIngreso || null,
-            fecha_inicio_puntos: s.FechaInicioPuntos || null
-            // SIN puntos — preservar valor existente en Supabase
-        }));
-        _origFetch(`${_SB_URL_SOC}/rest/v1/socios`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': _SB_KEY_SOC,
-                'Authorization': 'Bearer ' + _SB_KEY_SOC,
-                'Prefer': 'resolution=merge-duplicates,return=minimal'
-            },
-            body: JSON.stringify(rows)
-        }).then(r => {
-            if (!r.ok) r.text().then(t => console.error('[SB-SEED]', t));
-            else console.log('[SB-SEED]', rows.length, 'socios sincronizados con Supabase');
-        }).catch(e => console.error('[SB-SEED]', e));
+        const conservar = (yaEnSupabase instanceof Set) ? yaEnSupabase : new Set();
+
+        const conFIP = [], sinFIP = [];
+        socios.forEach(s => {
+            const row = {
+                id: String(s.ID),
+                nombre: s.Nombre || '',
+                apellido: s.Apellido || '',
+                area: s.Area || '',
+                contrato: s.TipoContrato || '',
+                fecha_ingreso: s.FechaIngreso || null
+                // SIN puntos — preservar valor existente en Supabase
+            };
+            if (conservar.has(String(s.ID))) {
+                sinFIP.push(row);                                  // no se le toca la fecha
+            } else {
+                row.fecha_inicio_puntos = s.FechaInicioPuntos || null;
+                conFIP.push(row);
+            }
+        });
+
+        // Van en dos envíos porque PostgREST exige que todas las filas de un
+        // mismo lote tengan exactamente las mismas columnas.
+        [conFIP, sinFIP].forEach(rows => {
+            if (!rows.length) return;
+            _origFetch(`${_SB_URL_SOC}/rest/v1/socios`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': _SB_KEY_SOC,
+                    'Authorization': 'Bearer ' + _SB_KEY_SOC,
+                    'Prefer': 'resolution=merge-duplicates,return=minimal'
+                },
+                body: JSON.stringify(rows)
+            }).then(r => {
+                if (!r.ok) r.text().then(t => console.error('[SB-SEED]', t));
+                else console.log('[SB-SEED]', rows.length, 'socios sincronizados con Supabase'
+                    + (rows === sinFIP ? ' (sin tocar su fecha de inicio de puntos)' : ''));
+            }).catch(e => console.error('[SB-SEED]', e));
+        });
     }
 
     // ── HANDLER: getSocios GET → Supabase primero (rápido), GAS refresca en segundo plano ──
@@ -328,10 +372,16 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         Correo: s.correo || ''
                     }));
 
+                // Los que ya están en Supabase: su fecha de inicio de puntos
+                // la manda Supabase (la pone el admin en Gestión de Socios),
+                // y el volcado de la planilla no debe tocarla — ni siquiera
+                // cuando está vacía, porque vaciarla también es una decisión.
+                const _yaEnSupabase = new Set(sbData.map(s => String(s.id)));
+
                 // Refrescar GAS en segundo plano → mantiene Supabase sincronizado con Sheets
                 _origFetch(url, options)
                     .then(r => r.json())
-                    .then(gasRaw => { if (gasRaw && gasRaw.status === 'success') _seedSociosToSupabase(gasRaw.data); })
+                    .then(gasRaw => { if (gasRaw && gasRaw.status === 'success') _seedSociosToSupabase(gasRaw.data, _yaEnSupabase); })
                     .catch(() => {});
 
                 console.log('[SB-SOCIOS] Sirviendo', data.length, 'socios desde Supabase (instantáneo)');

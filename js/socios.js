@@ -305,6 +305,33 @@ function filtrarSociosRegistro() {
     });
 }
 
+// El <select> de área guarda los valores en minúscula y sin tilde
+// ('maquinas'), pero en la base quedaron escritos de varias formas:
+// 'Maquinas', 'Máquinas', 'MAQUINAS', 'Mesas - Cambistas'. Si al abrir la
+// edición no se traduce, el select se queda en «Seleccionar…» — y como es
+// obligatorio, el formulario NO DEJA GUARDAR nada del socio, ni el área ni
+// la fecha de inicio de puntos ni el resto.
+function _gestAreaOpcion(areaRaw) {
+    const sel = document.getElementById('area');
+    const raw = String(areaRaw || '').trim();
+    if (!sel) return raw;
+    const opts = Array.from(sel.options).map(o => o.value).filter(Boolean);
+    if (opts.includes(raw)) return raw;
+
+    const norm = s => String(s).toLowerCase().normalize('NFD')
+        .replace(/[̀-ͯ]/g, '').replace(/[\s_·-]/g, '');
+    const n = norm(raw);
+    if (!n) return '';
+
+    const exacta = opts.find(o => norm(o) === n);
+    if (exacta) return exacta;
+    // Antes del parcial: «Mesas - Cambistas» contiene «mesas», y se iría al
+    // área equivocada.
+    if (n.includes('cambista')) return opts.includes('cambistas') ? 'cambistas' : '';
+    if (n.includes('gasto'))    return opts.includes('GastosComision') ? 'GastosComision' : '';
+    return opts.find(o => norm(o) && n.includes(norm(o))) || '';
+}
+
 function prepararEdicion(id) {
     const socio = cacheSocios.find(s => s.id === id);
     if(socio) {
@@ -315,9 +342,15 @@ function prepararEdicion(id) {
         document.getElementById('fechaIngreso').value = socio.fechaIngreso;
         const fip = socio.fechaInicioPuntos || '';
         document.getElementById('fechaInicioPuntos').value = (fip !== socio.fechaIngreso) ? fip : '';
-        let areaVal = socio.area;
-        if(areaVal === 'GastosComision' || areaVal.includes('gastos')) areaVal = 'GastosComision';
+        const areaVal = _gestAreaOpcion(socio.area);
         document.getElementById('area').value = areaVal;
+        if (!areaVal && socio.area) {
+            // No se pudo traducir: mejor decirlo que dejar al admin peleando
+            // con un formulario que no guarda y no explica por qué.
+            console.warn('[gest] Área sin opción equivalente:', socio.area);
+            if (typeof showToast === 'function')
+                showToast('El área «' + socio.area + '» no está en la lista: elígela de nuevo antes de guardar', 'warning');
+        }
         document.getElementById('contrato').value = socio.contrato;
         const _rutEl = document.getElementById('rutSocio'); if (_rutEl) _rutEl.value = socio.rut || '';
         const _correoEl = document.getElementById('correoSocio'); if (_correoEl) _correoEl.value = socio.correo || '';
