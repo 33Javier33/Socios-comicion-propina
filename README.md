@@ -232,6 +232,26 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-14 — Comprobante de salida, para imprimir (SW v176)
+
+En **Socios Eliminados**, cada respaldo tiene ahora un botón **🖨 Comprobante**: una hoja A4 lista para firmar con los datos del socio, el motivo de la salida y lo que debe recibir.
+
+**El término de contrato se detecta solo.** No es un campo aparte: el sistema ya lo registra como una ausencia en `extras` con el detalle «Término de Contrato». El comprobante lo busca ahí, y la **fecha** es la primera de esas ausencias — el día desde el que deja de percibir. Sale destacado en un recuadro:
+
+> **TÉRMINO DE CONTRATO**
+> Con fecha **6 de octubre de 2026**. Desde ese día el socio deja de percibir la recaudación (2 días registrados).
+
+**La cuenta de lo que debe recibir** sale del cierre de mes guardado en el respaldo, que es la cuenta que hizo la propia app: alcance del período, saldo anterior, extras, descuentos por ausencia, los días desde el término, los anticipos ya recibidos y el total.
+
+> **Si el respaldo no trae el cierre, no se inventa un total.** Muestra lo que sí se sabe y dice que el alcance del período no quedó guardado, que hay que tomarlo del cierre en Anticipos y Ausencias y completarlo a mano. Un comprobante de pago con un número adivinado es peor que uno incompleto.
+
+Si no hay registro de término de contrato, el comprobante **no lo afirma**: dice cómo salió el socio y avisa de dejarlo anotado en Anticipos y Ausencias antes de emitirlo.
+
+De paso, los montos negativos pasan de `$-80.000` a **−$80.000** — con el signo antes del peso. En una hoja que alguien firma, el formato anterior se puede confundir con un monto positivo.
+
+**Archivos:** `js/eliminados.js`, `index.html`, `sw.js`, `js/version.js`.
+
+
 #### 2026-10-09 — El calendario del filtro de Recaudación era ilegible en tema oscuro (SW v172)
 
 Al abrir **🔍 Filtrar** en Recaudación, el encabezado se ponía oscuro pero **el panel se quedaba blanco**, con los números del calendario en gris clarito encima. Imposible de leer.

@@ -236,6 +236,7 @@ function elim_ver(id) {
 
     html += '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">'
          + '<button onclick="elim_verRegistros(\'' + r.id + '\')" class="btn-action" style="flex:1;background:#1d4ed8;">🧾 Ver el detalle</button>'
+        + '<button onclick="elim_imprimir(\'' + r.id + '\')" class="btn-action" style="flex:1;background:#475569;">🖨 Comprobante</button>'
          + '<button onclick="elim_exportar(\'' + r.id + '\')" class="btn-action" style="flex:1;background:#16a34a;">⬇ Descargar todo</button>'
          + '</div>';
 
@@ -569,6 +570,7 @@ function elim_verRegistros(id) {
     }
 
     html += '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">'
+        + '<button onclick="elim_imprimir(\'' + r.id + '\')" class="btn-action" style="flex:1;background:#475569;">🖨 Comprobante</button>'
         + '<button onclick="elim_exportar(\'' + r.id + '\')" class="btn-action" style="flex:1;background:#16a34a;">⬇ Descargar todo</button>'
         + '</div>'
         + '<div style="text-align:center;margin-top:8px;">'
@@ -591,6 +593,251 @@ function elim_verCrudo(id) {
         + '<pre style="background:#0f172a;color:#e2e8f0;border-radius:8px;padding:11px;font-size:10.5px;'
         + 'line-height:1.45;overflow:auto;max-height:55vh;white-space:pre-wrap;word-break:break-word;">'
         + _elimEsc(JSON.stringify(r.datos, null, 2)) + '</pre>';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// COMPROBANTE DE SALIDA — para imprimir
+//
+// Una hoja con lo del socio y, si se fue por TÉRMINO DE CONTRATO, que lo
+// diga con todas sus letras, con la fecha y lo que le corresponde recibir
+// hasta ese día.
+//
+// De dónde sale cada cosa:
+//   · El término de contrato NO es un campo aparte: el sistema lo registra
+//     como una ausencia en `extras` con el detalle «Término de Contrato».
+//     Así que se detecta ahí, y la fecha es la PRIMERA de esas ausencias:
+//     es el día desde el que deja de percibir.
+//   · Lo que debe recibir sale del cierre de mes guardado, que es la
+//     cuenta que hizo la propia app. Si en el respaldo no hay cierre, NO
+//     se inventa un total: se muestra lo que sí se sabe y se dice que el
+//     alcance del período no quedó guardado. Un comprobante de pago con
+//     un número adivinado es peor que uno incompleto.
+// ══════════════════════════════════════════════════════════════════════
+
+function _elimPlata(n) {
+    const v = Number(n);
+    if (!isFinite(v)) return '—';
+    // El signo va ANTES del peso: formatearMoneda devuelve «$-80.000», que
+    // en una hoja que alguien firma se lee mal y se puede confundir con un
+    // monto positivo. Acá queda «−$80.000».
+    const abs = Math.abs(Math.round(v));
+    const txt = (typeof formatearMoneda === 'function')
+        ? formatearMoneda(abs)
+        : '$' + abs.toLocaleString('es-CL');
+    return (v < 0 ? '\u2212' : '') + txt;
+}
+function _elimFechaLarga(iso) {
+    const M = ['enero','febrero','marzo','abril','mayo','junio','julio',
+               'agosto','septiembre','octubre','noviembre','diciembre'];
+    const p = String(iso || '').substring(0, 10).split('-').map(Number);
+    if (p.length !== 3 || !p[0]) return '—';
+    return p[2] + ' de ' + M[p[1] - 1] + ' de ' + p[0];
+}
+
+// Qué dice el respaldo sobre cómo y cuándo se fue, y cuánto le queda.
+function _elimSalida(d) {
+    const t = (d && d.tablas) || {};
+    const extras = Array.isArray(t.extras) ? t.extras : [];
+    const esAus  = e => String(e.tipo || '').toLowerCase().includes('ausencia');
+    const esTC   = e => String(e.detalle || '').trim().toLowerCase() === 'término de contrato'
+                     || String(e.detalle || '').trim().toLowerCase() === 'termino de contrato';
+
+    const tc = extras.filter(e => esAus(e) && esTC(e))
+                     .sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || '')));
+
+    // El cierre de mes es la cuenta que hizo la app. Se prefiere el del
+    // historial si hay varios: es el del período que corresponde.
+    const cierres = []
+        .concat(Array.isArray(t.cierres_mes) ? t.cierres_mes : [])
+        .concat(Array.isArray(t.cierres_mes_historial) ? t.cierres_mes_historial : []);
+    const cierre = cierres.length
+        ? cierres.slice().sort((a, b) =>
+            String(b.fecha_cierre || b.periodo || '').localeCompare(String(a.fecha_cierre || a.periodo || '')))[0]
+        : null;
+
+    const anticipos = Array.isArray(t.anticipos) ? t.anticipos : [];
+    const totalAnt  = anticipos.reduce((s, a) => s + (Number(a.monto) || 0), 0);
+    const otrosEx   = extras.filter(e => !esAus(e));
+    const totalEx   = otrosEx.reduce((s, e) => s + (Number(e.monto) || 0), 0);
+    const ausencias = extras.filter(e => esAus(e) && !esTC(e));
+    const totalAus  = ausencias.reduce((s, e) => s + (Number(e.monto) || 0), 0);
+    const totalTC   = tc.reduce((s, e) => s + (Number(e.monto) || 0), 0);
+    const saldo     = (Array.isArray(t.saldos_socio) && t.saldos_socio[0])
+                      ? Number(t.saldos_socio[0].monto) || 0 : null;
+
+    return {
+        porTerminoContrato: tc.length > 0,
+        fechaTermino: tc.length ? String(tc[0].fecha || '').substring(0, 10) : null,
+        diasTermino: tc.length,
+        cierre: cierre,
+        anticipos: anticipos, totalAnt: totalAnt,
+        totalEx: totalEx, totalAus: totalAus, totalTC: totalTC,
+        saldo: saldo
+    };
+}
+
+function elim_imprimir(id) {
+    const r = (_elimLista || []).find(x => x.id === id);
+    if (!r) return;
+    const d = r.datos || {};
+    const f = d.ficha || {};
+    const sal = _elimSalida(d);
+    const esc = _elimEsc;
+
+    const nombre = ((r.nombre || f.nombre || '') + ' ' + (r.apellido || f.apellido || '')).trim().toUpperCase();
+    const hoy = new Date();
+    const M = ['enero','febrero','marzo','abril','mayo','junio','julio',
+               'agosto','septiembre','octubre','noviembre','diciembre'];
+    const lugarFecha = 'Puerto Varas, ' + hoy.getDate() + ' de ' + M[hoy.getMonth()] + ' de ' + hoy.getFullYear();
+
+    const dato = (etq, v) => '<tr><td class="e">' + esc(etq) + '</td><td class="v">'
+        + esc(v == null || v === '' ? '—' : v) + '</td></tr>';
+
+    // ── El motivo de salida ──────────────────────────────────────────
+    const motivoHtml = sal.porTerminoContrato
+        ? '<div class="motivo motivo-tc">'
+          + '<div class="motivo-t">Término de contrato</div>'
+          + '<div class="motivo-d">Con fecha <b>' + _elimFechaLarga(sal.fechaTermino) + '</b>. '
+          + 'Desde ese día el socio deja de percibir la recaudación'
+          + (sal.diasTermino > 1 ? ' (' + sal.diasTermino + ' días registrados)' : '') + '.</div>'
+          + '</div>'
+        : '<div class="motivo">'
+          + '<div class="motivo-t">' + (r.modo === 'desactivado' ? 'Dado de baja'
+              : r.modo === 'recuperado' ? 'Registro recuperado' : 'Eliminado del sistema') + '</div>'
+          + '<div class="motivo-d">En el respaldo no hay un registro de término de contrato. '
+          + 'Si la salida fue por ese motivo, déjalo anotado en Anticipos y Ausencias '
+          + 'antes de emitir este comprobante.</div>'
+          + '</div>';
+
+    // ── Lo que debe recibir ──────────────────────────────────────────
+    let cuentaHtml, totalHtml;
+    const c = sal.cierre;
+    if (c) {
+        const alcance = Number(c.alcance) || 0;
+        const saldoAnt = Number(c.saldo_anterior) || 0;
+        const antTot = (c.anticipos_total != null) ? Number(c.anticipos_total) : sal.totalAnt;
+        const aPagar = Number(c.a_pagar) || 0;
+        cuentaHtml =
+              '<tr><td>Alcance del período' + (c.periodo ? ' (' + esc(c.periodo) + ')' : '') + '</td>'
+            +     '<td class="n">' + _elimPlata(alcance) + '</td></tr>'
+            + (saldoAnt ? '<tr><td>Saldo del período anterior</td><td class="n">' + _elimPlata(saldoAnt) + '</td></tr>' : '')
+            + (sal.totalEx ? '<tr><td>Extras</td><td class="n">' + _elimPlata(sal.totalEx) + '</td></tr>' : '')
+            + (sal.totalAus ? '<tr><td>Descuentos por ausencia</td><td class="n">' + _elimPlata(sal.totalAus) + '</td></tr>' : '')
+            + (sal.totalTC ? '<tr><td>Días desde el término de contrato</td><td class="n">' + _elimPlata(sal.totalTC) + '</td></tr>' : '')
+            + '<tr><td>Anticipos ya recibidos</td><td class="n">' + _elimPlata(-Math.abs(antTot)) + '</td></tr>'
+            + (Number(c.remanente) ? '<tr><td>Remanente</td><td class="n">' + _elimPlata(c.remanente) + '</td></tr>' : '');
+        totalHtml = '<div class="total"><span>Debe recibir</span><span>' + _elimPlata(aPagar) + '</span></div>';
+    } else {
+        cuentaHtml =
+              '<tr><td>Anticipos ya recibidos</td><td class="n">' + _elimPlata(-Math.abs(sal.totalAnt)) + '</td></tr>'
+            + (sal.totalEx ? '<tr><td>Extras</td><td class="n">' + _elimPlata(sal.totalEx) + '</td></tr>' : '')
+            + (sal.totalAus ? '<tr><td>Descuentos por ausencia</td><td class="n">' + _elimPlata(sal.totalAus) + '</td></tr>' : '')
+            + (sal.totalTC ? '<tr><td>Días desde el término de contrato</td><td class="n">' + _elimPlata(sal.totalTC) + '</td></tr>' : '')
+            + (sal.saldo != null ? '<tr><td>Saldo registrado</td><td class="n">' + _elimPlata(sal.saldo) + '</td></tr>' : '');
+        totalHtml = '<div class="falta">El <b>alcance del período</b> no quedó guardado en este respaldo, '
+            + 'así que el total a recibir no se puede calcular acá. Tómalo del cierre del período en '
+            + 'Anticipos y Ausencias y complétalo a mano antes de firmar.</div>';
+    }
+
+    const filasAnt = sal.anticipos.slice()
+        .sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || '')))
+        .map(a => '<tr><td>' + esc(_elimFechaCorta(a.fecha)) + '</td>'
+                + '<td class="n">' + _elimPlata(a.monto) + '</td></tr>').join('');
+
+    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
++ '<title>Comprobante de salida — ' + esc(nombre) + '</title><style>'
++ '*{margin:0;padding:0;box-sizing:border-box;}html,body{height:100%;}'
++ 'body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#000;'
++ 'padding:20mm 22mm 15mm 22mm;display:flex;flex-direction:column;min-height:100%;}'
++ 'h1{text-align:center;font-size:19pt;font-weight:900;letter-spacing:2px;}'
++ '.sub{text-align:center;font-size:9.5pt;color:#333;margin-bottom:8mm;font-weight:600;}'
++ '.lugar{text-align:right;font-size:9.5pt;color:#555;margin-bottom:6mm;}'
++ 'h2{font-size:10pt;font-weight:900;text-transform:uppercase;letter-spacing:1px;'
++ 'border-bottom:1.5px solid #000;padding-bottom:2px;margin:6mm 0 3mm;}'
++ 'table{width:100%;border-collapse:collapse;}'
++ 'td{padding:3.5px 6px;font-size:10pt;vertical-align:top;}'
++ 'td.e{color:#444;width:42%;}td.v{font-weight:700;}'
++ 'td.n{text-align:right;font-weight:700;white-space:nowrap;}'
++ 'tbody tr:nth-child(even){background:#f7f7f7;}'
++ '.motivo{border:2px solid #000;border-radius:3px;padding:4mm 5mm;margin:4mm 0;}'
++ '.motivo-tc{border-color:#000;background:#f2f2f2;}'
++ '.motivo-t{font-size:13pt;font-weight:900;text-transform:uppercase;letter-spacing:1px;}'
++ '.motivo-d{font-size:9.5pt;color:#333;margin-top:2mm;line-height:1.55;}'
++ '.total{border-top:2px solid #000;margin-top:3mm;padding-top:3mm;display:flex;'
++ 'justify-content:space-between;font-size:13pt;font-weight:900;text-transform:uppercase;}'
++ '.falta{border:1.5px dashed #777;padding:3mm 4mm;margin-top:3mm;font-size:9pt;'
++ 'color:#333;line-height:1.55;}'
++ '.firmas{margin-top:auto;padding-top:14mm;display:flex;justify-content:space-around;'
++ 'page-break-inside:avoid;}'
++ '.fb{text-align:center;width:44%;}.fe{height:15mm;}'
++ '.fl{border-top:1.5px solid #000;padding-top:4px;font-size:9.5pt;font-weight:700;text-transform:uppercase;}'
++ '.fs{font-size:8.5pt;color:#555;margin-top:2px;}'
++ '.pie{font-size:8pt;color:#666;text-align:center;margin-top:6mm;}'
++ '.tb{position:fixed;top:0;left:0;right:0;height:52px;background:#0f172a;display:flex;'
++ 'align-items:center;justify-content:space-between;padding:0 16px;z-index:9999;}'
++ '.tb span{color:#e2e8f0;font-size:12pt;font-weight:700;}'
++ '.tb button{border:none;border-radius:8px;padding:8px 16px;font-size:11pt;font-weight:800;'
++ 'cursor:pointer;margin-left:8px;}'
++ '.p1{background:#2563eb;color:#fff;}.p2{background:#334155;color:#e2e8f0;}'
++ '@media screen{body{padding-top:72px;}}'
++ '@media print{@page{size:A4;margin:0;}body{padding:18mm 20mm 12mm 20mm;}.no-print{display:none !important;}}'
++ '</style></head><body>'
+
++ '<div class="tb no-print"><span>🖨 Comprobante de salida</span><div>'
++ '<button class="p1" onclick="window.print()">Imprimir</button>'
++ '<button class="p2" onclick="window.close()">Cerrar</button></div></div>'
+
++ '<h1>COMPROBANTE DE SALIDA</h1>'
++ '<div class="sub">Fondo Solidario de Propina · Casino de Puerto Varas</div>'
++ '<div class="lugar">' + esc(lugarFecha) + '</div>'
+
++ '<h2>Datos del socio</h2><table><tbody>'
++ dato('Nombre', nombre)
++ dato('RUT', r.rut || f.rut)
++ dato('ID de socio', r.socio_id)
++ dato('Área', r.area || f.area)
++ dato('Contrato', r.contrato || f.tipo_contrato || f.contrato)
++ dato('Fecha de ingreso', _elimFechaLarga(r.fecha_ingreso || f.fecha_ingreso))
++ dato('Puntos al salir', r.puntos != null ? r.puntos : (d.calculado || {}).puntos)
++ dato('Años cumplidos', (d.calculado || {}).anios)
++ '</tbody></table>'
+
++ '<h2>Motivo de la salida</h2>'
++ motivoHtml
+
++ '<h2>Lo que debe recibir</h2><table><tbody>'
++ cuentaHtml
++ '</tbody></table>'
++ totalHtml
+
++ (filasAnt
+    ? '<h2>Anticipos recibidos</h2><table><tbody>' + filasAnt + '</tbody></table>'
+      + '<div class="total" style="font-size:11pt;"><span>Total anticipado</span><span>'
+      + _elimPlata(sal.totalAnt) + '</span></div>'
+    : '')
+
++ '<div class="firmas">'
++   '<div class="fb"><div class="fe"></div><div class="fl">' + esc(nombre) + '</div>'
++     '<div class="fs">Socio saliente</div></div>'
++   '<div class="fb"><div class="fe"></div><div class="fl">' + esc(_elimQuien()) + '</div>'
++     '<div class="fs">Comisión de Propina</div></div>'
++ '</div>'
++ '<div class="pie">Respaldo tomado el ' + esc(_elimFecha(r.eliminado_en))
++ ' · Documento generado el ' + esc(_elimFecha(new Date().toISOString())) + '</div>'
++ '</body></html>';
+
+    const win = window.open('', '_blank', 'width=880,height=1000');
+    if (!win) {
+        if (typeof showToast === 'function') showToast('El navegador bloqueó la ventana. Permite las ventanas emergentes.', 'warning');
+        return;
+    }
+    win.document.write(html);
+    win.document.close();
+    if (typeof sbAuditLog === 'function') sbAuditLog('Comprobante de Salida', {
+        idAfectado: r.socio_id,
+        detalle: 'Impreso para ' + nombre + (sal.porTerminoContrato
+            ? ' · término de contrato ' + sal.fechaTermino : '')
+    });
 }
 
 function elim_exportar(id) {
