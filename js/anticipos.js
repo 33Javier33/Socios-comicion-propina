@@ -923,6 +923,21 @@ async function cargarHistorialSocio(id) {
                 ? alcanceDeSocio(_socioAlc, fechasAusencia, selectedDaysPT)
                 : alcanceDeSocio(_socioAlc, fechasAusencia, null);
 
+            // ── ¿Ya se le cerró el mes a este socio? ─────────────────────
+            //
+            // Si ya se cerró, su alcance y sus anticipos de este período YA
+            // se liquidaron: están en el cierre, y su remanente ya quedó
+            // guardado como saldo anterior. Volver a sumarlos acá lo dejaba
+            // «con plata otra vez» apenas se cerraba, porque la recaudación
+            // del período sigue cargada (y no se puede archivar sin perder
+            // los datos de recaudación).
+            //
+            // Así queda separado: la recaudación no se toca, y el socio
+            // cerrado parte el mes nuevo en 0, solo con su saldo anterior.
+            const _cierreYa = (typeof cierresMes_delSocio === 'function')
+                ? cierresMes_delSocio(socio.id) : null;
+            if (_cierreYa) { alcance = 0; sumaTotalPedido = 0; }
+
             const saldoReal = (alcance + saldoAnterior) - sumaTotalPedido;
 
             // Gastos Comisión retira todo: a pagar = saldo completo, remanente 0.
@@ -954,6 +969,34 @@ async function cargarHistorialSocio(id) {
             const elRem = document.getElementById('socioRemanente');
             elRem.innerText = formatearMoneda(remanente);
             elRem.style.color = remanente < 0 ? 'var(--danger)' : '#8e44ad';
+
+            // El aviso del mes ya cerrado, con lo que se liquidó. Sin esto,
+            // ver el alcance en $0 parecería un error en vez de lo que es.
+            const _avCierre = document.getElementById('socioCierreAviso');
+            if (_avCierre) {
+                if (_cierreYa) {
+                    const _f = _cierreYa.fechaCierre
+                        ? new Date(_cierreYa.fechaCierre).toLocaleDateString('es-CL',
+                            { day: '2-digit', month: '2-digit', year: 'numeric' })
+                        : '—';
+                    const _est = _cierreYa.estadoCobro === 'cobrado' ? '💵 Cobrado' : '📩 En sobre';
+                    _avCierre.style.display = 'block';
+                    _avCierre.className = 'cierre-aviso';
+                    _avCierre.innerHTML =
+                          '<div class="ca-t">🔒 El mes de este socio ya está cerrado · ' + _est + '</div>'
+                        + '<div class="ca-d">Se cerró el <b>' + _srEsc(_f) + '</b> por '
+                        + '<b>' + formatearMoneda(Number(_cierreYa.aPagar) || 0) + '</b> a pagar'
+                        + (Number(_cierreYa.remanente) ? ' y <b>' + formatearMoneda(Number(_cierreYa.remanente)) + '</b> de remanente' : '')
+                        + (_cierreYa.alcance != null ? ' (alcance liquidado: <b>' + formatearMoneda(Number(_cierreYa.alcance)) + '</b>)' : '')
+                        + '.</div>'
+                        + '<div class="ca-d">Las cifras de abajo son las del <b>mes nuevo</b>: el alcance y los '
+                        + 'anticipos del período cerrado ya no suman, y el socio parte solo con su saldo anterior. '
+                        + 'La recaudación del período no se tocó.</div>';
+                } else {
+                    _avCierre.style.display = 'none';
+                    _avCierre.innerHTML = '';
+                }
+            }
 
             if(listaFinal.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#7f8c8d; padding:20px;">No hay movimientos registrados.</td></tr>'; return; }
             listaFinal.sort((a,b) => b.rawDate - a.rawDate);
@@ -1813,6 +1856,24 @@ function cierresMes_obtener() {
     catch { try { return JSON.parse(localStorage.getItem(CIERRES_MES_KEY) || '[]'); } catch { return []; } }
 }
 
+// El cierre de ESTE socio en el período en curso, o null si todavía no se
+// le cerró el mes.
+//
+// Es la pieza que separa la RECAUDACIÓN de la liquidación del socio. La
+// recaudación del período sigue cargada —no se archiva, no se borra— pero
+// el socio al que ya se le cerró el mes no vuelve a sumarla: su alcance
+// ya se pagó. Parte el mes nuevo solo con su saldo anterior.
+//
+// La lista se vacía justo cuando se archiva el período (`cierresMes_limpiarTodo`),
+// que es el momento en que empieza el mes siguiente. Por eso no hace falta
+// guardar ninguna fecha de corte: la existencia del cierre ES la marca.
+function cierresMes_delSocio(id) {
+    if (id == null) return null;
+    try {
+        return cierresMes_obtener().find(c => String(c.id) === String(id)) || null;
+    } catch (e) { return null; }
+}
+
 // Borra el seguimiento único y cualquier clave de período antigua (local + Supabase).
 function cierresMes_limpiarTodo() {
     const aBorrar = [];
@@ -2483,21 +2544,72 @@ async function cierresMes_finalizarPeriodo(motivoMasivo) {
     const hoy = new Date();
     const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
     const tabNombre = `Anticipos_${MESES[hoy.getMonth()]}_${hoy.getFullYear()}`;
+
+    // ── No se archiva con socios sin cerrar ──────────────────────────
+    //
+    // Archivar borra los anticipos activos. Al socio al que todavía no se
+    // le cerró el mes se le borrarían SUS anticipos sin haberlos
+    // descontado en ningún cierre: cuando después se le cierre, la cuenta
+    // saldrá sin esos anticipos y se le pagará de más.
+    //
+    // Antes el botón solo mostraba «⚠️ (N pendientes)» y dejaba archivar
+    // igual. Ahora hay que decir explícitamente que se asume esa pérdida.
+    const _pend = (typeof cacheSocios !== 'undefined' ? cacheSocios : [])
+        .filter(s => !cierresMes_delSocio(s.id));
+    if (_pend.length) {
+        const nombres = _pend.slice(0, 12).map(s => '· ' + s.nombre + ' ' + s.apellido).join('\n')
+            + (_pend.length > 12 ? '\n· …y ' + (_pend.length - 12) + ' más' : '');
+        const ok = confirm('⛔ HAY ' + _pend.length + ' SOCIO(S) SIN CERRAR EL MES\n\n'
+            + nombres + '\n\n'
+            + 'Si archivas ahora, a estos socios se les BORRAN sus anticipos sin\n'
+            + 'haberlos descontado en ningún cierre. Cuando después les cierres el\n'
+            + 'mes, la cuenta saldrá sin esos anticipos y SE LES PAGARÁ DE MÁS.\n\n'
+            + '✅ Lo correcto: cancela, ciérrales el mes, y recién ahí archiva.\n\n'
+            + '¿Archivar igual, asumiendo esa diferencia?');
+        if (!ok) { showToast('Archivado cancelado — cierra primero a los pendientes', 'info'); return; }
+        try {
+            if (typeof sbAuditLog === 'function') sbAuditLog('Archivado con pendientes', {
+                detalle: 'Se archivó el período con ' + _pend.length + ' socio(s) sin cerrar: '
+                    + _pend.map(s => s.nombre + ' ' + s.apellido).join(', '),
+                datos: { pendientes: _pend.length, ids: _pend.map(s => s.id) }
+            });
+        } catch (e) {}
+    }
+
     if (!motivoMasivo && !confirm(`¿Archivar TODOS los anticipos del período?\n\nSe moverán a la pestaña "${tabNombre}" y se borrarán de la hoja activa y de Supabase.\n\n⚠️ Esta acción no se puede deshacer.\n\n✅ Hazlo cuando ya hayas cobrado a todos o quieras limpiar y empezar el mes nuevo.`)) return;
     toggleLoader(true, 'Archivando anticipos...');
     try {
         // Guardar la FOTO completa del mes por socio (Meses Anteriores) ANTES de limpiar.
         const periodoFoto = tabNombre.replace('Anticipos_', '').replace(/_/g, ' ');
         try { await callApiSocios('archivarCierresMes', { periodo: periodoFoto }); } catch (eF) { console.warn('[cierres] foto mes:', eF); }
+
+        // ── A partir de acá los anticipos YA están archivados ────────
+        //
+        // Lo que sigue es limpieza y repintado. Antes iba todo dentro del
+        // mismo try: si fallaba cualquier cosa cosmética —un render, el
+        // historial del socio abierto— se saltaba `cierresMes_limpiarTodo()`
+        // y salía «Error al archivar anticipos». Pero los anticipos SÍ se
+        // habían archivado: el período quedaba a medio cerrar, con los
+        // cierres todavía marcados, y el aviso invitaba a reintentar.
         await callApiSocios('reiniciarAnticipos', { tabNombre });
+
+        // Esto SÍ es parte del cierre: sin limpiar los cierres, el mes
+        // nuevo no empieza. Va protegido aparte y es lo primero.
+        try {
+            cierresMes_limpiarTodo();
+            _cierresMesSaldoLive = {}; _cierresMesSaldoListo = false;
+        } catch (eL) { console.error('[cierres] limpiar:', eL); }
+
         showToast('✅ Anticipos archivados en ' + tabNombre, 'success');
-        logAccion('Finalizar Período', `Archivado en ${tabNombre}` + (motivoMasivo ? ` | Motivo del cierre masivo: ${motivoMasivo}` : ''));
-        cierresMes_limpiarTodo();
-        _cierresMesSaldoLive = {}; _cierresMesSaldoListo = false;
-        cierresMes_render();
-        const idActivo = document.getElementById('gestionSocioId').value;
-        if (idActivo) cargarHistorialSocio(idActivo);
+        try { logAccion('Finalizar Período', `Archivado en ${tabNombre}` + (motivoMasivo ? ` | Motivo del cierre masivo: ${motivoMasivo}` : '')); } catch (e) {}
+        try { cierresMes_render(); } catch (eR) { console.warn('[cierres] render:', eR); }
+        try {
+            const idActivo = document.getElementById('gestionSocioId').value;
+            if (idActivo) cargarHistorialSocio(idActivo);
+        } catch (eH) { console.warn('[cierres] historial:', eH); }
     } catch(e) {
+        // Solo llega acá si falló el archivado de verdad.
+        console.error('[cierres] finalizarPeriodo:', e);
         showToast('Error al archivar anticipos', 'error');
     } finally {
         toggleLoader(false);

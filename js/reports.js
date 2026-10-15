@@ -388,12 +388,29 @@ async function imprimirReciboSocio() {
     const fipLabel    = (socio.fechaInicioPuntos && socio.fechaInicioPuntos !== socio.fechaIngreso)
                           ? socio.fechaInicioPuntos.split('-').reverse().join('/') : null;
 
-    const saldoAnt    = document.getElementById('socioSaldoAnterior').innerText || '$0';
-    const alcance     = document.getElementById('socioAlcance').innerText || '$0';
-    const totalPedido = document.getElementById('socioTotalPedido').innerText || '$0';
-    const saldoReal   = document.getElementById('socioSaldoReal').innerText || '$0';
-    const aPagar      = document.getElementById('socioAPagar').innerText || '$0';
-    const remanente   = document.getElementById('socioRemanente').innerText || '$0';
+    // ── De dónde salen las cifras ────────────────────────────────────
+    // Normalmente, de lo que está en pantalla. PERO si a este socio ya se
+    // le cerró el mes, la pantalla muestra el mes NUEVO (alcance en 0,
+    // solo su saldo anterior), y un recibo con ceros no sirve de nada.
+    // En ese caso manda la foto del cierre: el recibo dice lo que se
+    // liquidó, que es lo que el socio firma.
+    const _cierre = (typeof cierresMes_delSocio === 'function') ? cierresMes_delSocio(id) : null;
+    const _delCierre = !!(_cierre && _cierre.alcance != null);
+    const _m = v => formatearMoneda(Number(v) || 0);
+
+    const saldoAnt    = _delCierre ? _m(_cierre.saldoAnterior)
+                        : (document.getElementById('socioSaldoAnterior').innerText || '$0');
+    const alcance     = _delCierre ? _m(_cierre.alcance)
+                        : (document.getElementById('socioAlcance').innerText || '$0');
+    const totalPedido = _delCierre ? _m(_cierre.anticiposTotal)
+                        : (document.getElementById('socioTotalPedido').innerText || '$0');
+    const saldoReal   = _delCierre
+                        ? _m((Number(_cierre.alcance) || 0) + (Number(_cierre.saldoAnterior) || 0) - (Number(_cierre.anticiposTotal) || 0))
+                        : (document.getElementById('socioSaldoReal').innerText || '$0');
+    const aPagar      = _delCierre ? _m(_cierre.aPagar)
+                        : (document.getElementById('socioAPagar').innerText || '$0');
+    const remanente   = _delCierre ? _m(_cierre.remanente)
+                        : (document.getElementById('socioRemanente').innerText || '$0');
 
     // Si el socio tiene Término de Contrato, calcular valor punto solo para los días trabajados
     let valorPuntoNoche = globalValorPuntoTotal || 0;

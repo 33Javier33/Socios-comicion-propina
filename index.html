@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="img/icono-cpn-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=123">
+    <link rel="stylesheet" href="styles.css?v=124">
     <script>
         // El tema se aplica ANTES de pintar nada. Si esperara a auth.js, abrir
         // con tema oscuro daría un fogonazo blanco. Como acá todavía no existe
@@ -556,6 +556,11 @@
                             <span class="points-label">Pts</span>
                         </div>
                     </div>
+
+                    <!-- Aviso de que a este socio ya se le cerró el mes: su
+                         alcance y sus anticipos del período ya se liquidaron,
+                         así que las cifras de abajo son las del mes NUEVO. -->
+                    <div id="socioCierreAviso" style="display:none;"></div>
 
                     <!-- ESTADÍSTICAS FINANCIERAS PERSONALES -->
                     <div class="dashboard-socios" style="margin-bottom:20px;">
@@ -2433,7 +2438,7 @@
     <script src="js/socios.js?v=49"></script>
     <script src="js/eliminados.js?v=9"></script>
     <script src="js/puntos.js?v=32"></script>
-    <script src="js/anticipos.js?v=67"></script>
+    <script src="js/anticipos.js?v=68"></script>
     <script src="js/desglose-anticipos.js?v=39"></script>
     <script src="js/meses-anteriores.js?v=33"></script>
     <script src="js/batch-dias-pt.js?v=32"></script>
@@ -2441,7 +2446,7 @@
     <script src="js/arqueo.js?v=40"></script>
     <script src="js/canje.js?v=32"></script>
     <script src="js/notas.js?v=34"></script>
-    <script src="js/reports.js?v=44"></script>
+    <script src="js/reports.js?v=45"></script>
     <script src="js/help.js?v=48"></script>
     <script src="js/auditoria.js?v=34"></script>
     <script src="js/carpetas.js?v=46"></script>

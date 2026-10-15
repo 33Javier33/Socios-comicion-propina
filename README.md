@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-15 — El socio cerrado queda en 0, sin tocar la recaudación (SW v184)
+
+**El problema.** Al cerrar el mes de un socio, la **recaudación del período sigue cargada** —y no se puede archivar sin perder esos datos—, así que al volver a mirarlo su alcance seguía ahí y parecía que tenía plata otra vez. Había que elegir entre archivar recaudaciones (perder datos) o convivir con cifras que no correspondían.
+
+**La separación.** La recaudación no se toca. Lo que cambia es que **el socio al que ya se le cerró el mes no vuelve a sumarla**: su alcance ya se pagó. Nuevo `cierresMes_delSocio(id)`; en `cargarHistorialSocio`, si hay cierre registrado, el alcance y los anticipos del período quedan en **0** y el socio parte el mes nuevo **solo con su saldo anterior** (que es el remanente que dejó el cierre).
+
+No hizo falta ninguna columna nueva ni tocar Supabase: **la existencia del cierre ES la marca**, y la lista se vacía justo cuando se archiva el período, que es cuando empieza el mes siguiente. Al archivar, el socio vuelve a acumular solo.
+
+Para que ver un alcance en $0 no parezca un error, Gestión muestra un aviso: *«🔒 El mes de este socio ya está cerrado · 📩 En sobre — Se cerró el 14/10 por $265.000 a pagar (alcance liquidado: $300.000). Las cifras de abajo son las del mes nuevo… La recaudación del período no se tocó.»*
+
+**El recibo.** Si el socio ya está cerrado, `imprimirReciboSocio()` toma las seis cifras de la **foto del cierre** en vez de la pantalla. Antes habría impreso los ceros del mes nuevo; ahora el recibo dice lo que se liquidó, que es lo que el socio firma.
+
+**Agujero que se cerró: archivar con socios pendientes.** Archivar borra los anticipos activos. Al socio sin cerrar se le borraban **sin haberlos descontado en ningún cierre**: al cerrarle después, la cuenta salía sin esos anticipos y **se le pagaba de más**. El botón solo mostraba «⚠️ (N pendientes)» y dejaba archivar igual. Ahora avisa con los nombres, explica la consecuencia, exige confirmarlo expresamente y lo deja anotado en auditoría.
+
+**Fragilidad que se corrigió.** En `cierresMes_finalizarPeriodo`, todo iba dentro del mismo `try`: si fallaba cualquier cosa **cosmética** posterior al archivado —un render, el historial del socio abierto— se saltaba `cierresMes_limpiarTodo()` y salía «Error al archivar anticipos»… pero los anticipos **sí** se habían archivado. El período quedaba a medio cerrar y el aviso invitaba a reintentar. Ahora la limpieza va protegida aparte y el error solo aparece si falló el archivado de verdad.
+
+`test_cierre_mes.js`: 38 comprobaciones sobre el flujo completo — antes y después del cierre, que la recaudación quede intacta, que el otro socio no se vea afectado, el recibo, el cierre masivo omitiendo al ya cerrado, el aviso de pendientes, el orden foto-antes-de-limpiar, y que tras archivar el socio vuelva a acumular.
+
 #### 2026-10-14 — Fechas en Mensajes: ya se sabe cuándo se envió cada uno (SW v183)
 
 El hilo mostraba **solo la hora**. Un mensaje de hace tres semanas decía «14:32» y no había forma de saber de cuándo era. Y la lista de socios no decía nada, así que para encontrar una conversación había que ir abriéndolas una por una.
