@@ -232,6 +232,23 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-15 — El buscador del Estado del Cobro cerraba el teclado en cada letra (SW v185)
+
+**El síntoma.** Al escribir en el filtro de «Estado del Cobro del Período», el teclado del teléfono se cerraba y volvía a abrirse con cada tecla. No se podía escribir de corrido.
+
+**La causa.** El `oninput` del campo llamaba a `cierresMes_render()`, que reescribe el `innerHTML` del panel **entero — incluido el propio `<input>`**. Al destruir el campo que tiene el foco, el teclado se cierra; el `focus()` que venía después lo volvía a abrir. De ahí el parpadeo.
+
+**El arreglo.** El buscador pasa a ser un **nodo estable**: ya no se repinta. El panel quedó dividido en dos:
+
+- **Lo fijo** — las cuatro tarjetas de totales, el resumen de pago y el buscador. No dependen del filtro (cuentan sobre el total), así que no hay motivo para redibujarlos al escribir.
+- **`#cierreMesResultados`** — los botones de acción masiva y las tres listas. Es lo único que el filtro cambia, y es lo único que se repinta, con el nuevo `cierresMes_filtrar()`.
+
+Para no quedar con dos versiones de la misma plantilla —el problema que ya apareció antes en esta sesión— el contenido de los resultados se construye en un solo lugar, `_cierresMesResultadosHTML()`, que usan tanto el render completo como el filtrado.
+
+La ✕ de limpiar ahora está siempre en el DOM y solo se muestra u oculta, en vez de aparecer y desaparecer del HTML; al tocarla, el foco vuelve al campo.
+
+`test_filtro_cierre.js`: 25 comprobaciones. La que importa marca el nodo del `<input>` antes de teclear y verifica que **sea el mismo después** —si sobrevive, nunca perdió el foco y el teclado no se movió— más un contador de `blur` que tiene que quedar en **0**. También comprueba que el encabezado sea idéntico antes y después de filtrar, que el filtro no distinga mayúsculas y busque por trozo, y que los botones de acción masiva se escondan mientras se filtra.
+
 #### 2026-10-15 — El socio cerrado queda en 0, sin tocar la recaudación (SW v184)
 
 **El problema.** Al cerrar el mes de un socio, la **recaudación del período sigue cargada** —y no se puede archivar sin perder esos datos—, así que al volver a mirarlo su alcance seguía ahí y parecía que tenía plata otra vez. Había que elegir entre archivar recaudaciones (perder datos) o convivir con cifras que no correspondían.

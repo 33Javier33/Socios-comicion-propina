@@ -2218,25 +2218,12 @@ async function cierresMes_cargarSaldosLive(forzar = false) {
     cierresMes_render();
 }
 
-function cierresMes_render(refocusBuscador = false) {
-    const badge = document.getElementById('cierreMesBadge');
-    const body = document.getElementById('cierreMesBody');
-    if (!badge) return;
-
+// Lo único del panel que depende del buscador: los botones de acción y
+// las tres listas. Vive aparte para que escribir en el filtro repinte
+// SOLO esto y no el <input>, que es lo que cerraba el teclado.
+function _cierresMesResultadosHTML() {
     const cerrados = cierresMes_obtener();
     const cerradosIds = new Set(cerrados.map(c => String(c.id)));
-    const total = cacheSocios.length;
-    const nCerrados = cacheSocios.filter(s => cerradosIds.has(String(s.id))).length;
-    const nPendientes = total - nCerrados;
-    const nCobrados = cerrados.filter(c => c.estadoCobro === 'cobrado').length;
-    const nEnSobre = cerrados.filter(c => c.estadoCobro !== 'cobrado').length;
-    const allClosed = nCerrados === total && total > 0;
-
-    badge.textContent = `${nCerrados}/${total} · 💵${nCobrados} 📩${nEnSobre}`;
-    badge.style.background = allClosed ? '#16a34a' : (nCerrados > 0 ? '#f59e0b' : '#dc2626');
-
-    if (!body || body.style.display === 'none') return;
-
     const fmtM = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
     let pendientesHtml = '', sobreHtml = '', cobradosHtml = '';
     const filtro = (_cierreMesFiltro || '').toLowerCase().trim();
@@ -2282,6 +2269,50 @@ function cierresMes_render(refocusBuscador = false) {
     const nPendientesFiltro = sociosFiltrados.filter(s => !cerradosIds.has(String(s.id))).length;
     const nSobreFiltro   = sociosFiltrados.filter(s => { const c = cerrados.find(x=>String(x.id)===String(s.id)); return c && c.estadoCobro !== 'cobrado'; }).length;
     const nCobradosFiltro = sociosFiltrados.filter(s => { const c = cerrados.find(x=>String(x.id)===String(s.id)); return c && c.estadoCobro === 'cobrado'; }).length;
+    const total = cacheSocios.length;
+    const nCerrados = cacheSocios.filter(s => cerradosIds.has(String(s.id))).length;
+    const nPendientes = total - nCerrados;
+    const allClosed = nCerrados === total && total > 0;
+
+    return `
+        ${!filtro && nPendientes > 0 ? `<button onclick="cierresMes_cerrarTodos()" style="width:100%;background:linear-gradient(135deg,#dc2626,#991b1b);color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:8px;">🔒 Cerrar mes a TODOS (${nPendientes} pendiente${nPendientes!==1?'s':''})</button>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:9px 11px;margin-bottom:12px;font-size:0.72em;color:#7f1d1d;line-height:1.55;">
+            <b>¿Qué hace este botón?</b> Cierra el mes de todos los socios pendientes de una sola vez. Por cada uno calcula su monto y <b>guarda su remanente</b> como saldo del próximo mes — exactamente igual que el botón "Cerrar" individual. Todos quedan <b>📩 en sobre</b>; después marcas "Cobrado" a quien retire.<br>
+            <b>Pide un motivo obligatorio</b> (queda en la auditoría) y permite además <b>archivar los anticipos y empezar el nuevo mes</b> en el mismo paso.<br>
+            <b>Úsalo cuando</b> haya que cuadrar el período completo de una vez: fin de mes, o cuando no se alcanzará a cerrar socio por socio.
+        </div>` : ''}
+        ${!filtro ? `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:${allClosed?'linear-gradient(135deg,#8e44ad,#6c3483)':'linear-gradient(135deg,#d97706,#b45309)'};color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">${allClosed?'🏁 Todos cerrados — Archivar y Empezar Nuevo Mes':'📦 Archivar anticipos y empezar nuevo mes'}${nPendientes > 0 ? ' ⚠️ ('+nPendientes+' pendientes)' : ''}</button>` : ''}
+        ${!pendientesHtml && !sobreHtml && !cobradosHtml && filtro ? `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.85em;">Sin resultados para "${_cierreMesFiltro}"</div>` : ''}
+        ${pendientesHtml ? `<div style="font-weight:700;font-size:0.77em;color:#991b1b;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">⏳ Pendientes (${nPendientesFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #fecaca;margin-bottom:12px;">${pendientesHtml}</div>` : ''}
+        ${sobreHtml ? `<div style="font-weight:700;font-size:0.77em;color:#92400e;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">📩 En Sobre (${nSobreFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #fde68a;margin-bottom:12px;">${sobreHtml}</div>` : ''}
+        ${cobradosHtml ? `<div style="font-weight:700;font-size:0.77em;color:#15803d;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">💵 Cobrados (${nCobradosFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #bbf7d0;margin-bottom:12px;">${cobradosHtml}</div>` : ''}
+        <div style="margin-top:10px;text-align:right;">
+            <button onclick="if(confirm('¿Reiniciar el seguimiento local? Los datos en Google Sheets no se borran.')){cierresMes_limpiarTodo();cierresMes_render();}" style="background:none;border:1px solid #cbd5e1;border-radius:6px;padding:3px 10px;font-size:0.73em;color:#64748b;cursor:pointer;">↺ Reiniciar seguimiento</button>
+        </div>
+`;
+}
+
+function cierresMes_render(refocusBuscador = false) {
+    const badge = document.getElementById('cierreMesBadge');
+    const body = document.getElementById('cierreMesBody');
+    if (!badge) return;
+
+    const cerrados = cierresMes_obtener();
+    const cerradosIds = new Set(cerrados.map(c => String(c.id)));
+    const total = cacheSocios.length;
+    const nCerrados = cacheSocios.filter(s => cerradosIds.has(String(s.id))).length;
+    const nPendientes = total - nCerrados;
+    const nCobrados = cerrados.filter(c => c.estadoCobro === 'cobrado').length;
+    const nEnSobre = cerrados.filter(c => c.estadoCobro !== 'cobrado').length;
+    const allClosed = nCerrados === total && total > 0;
+
+    badge.textContent = `${nCerrados}/${total} · 💵${nCobrados} 📩${nEnSobre}`;
+    badge.style.background = allClosed ? '#16a34a' : (nCerrados > 0 ? '#f59e0b' : '#dc2626');
+
+    if (!body || body.style.display === 'none') return;
+
+    const fmtM = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
+
 
     body.innerHTML = `
         <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
@@ -2305,23 +2336,12 @@ function cierresMes_render(refocusBuscador = false) {
         ${_cierresMesResumenPagoHTML(cerrados, fmtM)}
         <div style="position:relative;margin-bottom:12px;">
             <input id="cierreMesBuscador" type="text" placeholder="🔍 Buscar por nombre..." value="${_cierreMesFiltro.replace(/"/g,'&quot;')}"
-                oninput="_cierreMesFiltro=this.value;cierresMes_render(true);"
+                oninput="cierresMes_filtrar(this.value)"
                 style="width:100%;box-sizing:border-box;padding:8px 32px 8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.87em;outline:none;">
-            ${_cierreMesFiltro ? `<button onclick="_cierreMesFiltro='';cierresMes_render(true);" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1em;line-height:1;">✕</button>` : ''}
+            <button id="cierreMesBuscarX" onclick="cierresMes_filtrar('', true)" style="display:${_cierreMesFiltro ? 'block' : 'none'};position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1em;line-height:1;">✕</button>
         </div>
-        ${!filtro && nPendientes > 0 ? `<button onclick="cierresMes_cerrarTodos()" style="width:100%;background:linear-gradient(135deg,#dc2626,#991b1b);color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:8px;">🔒 Cerrar mes a TODOS (${nPendientes} pendiente${nPendientes!==1?'s':''})</button>
-        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:9px 11px;margin-bottom:12px;font-size:0.72em;color:#7f1d1d;line-height:1.55;">
-            <b>¿Qué hace este botón?</b> Cierra el mes de todos los socios pendientes de una sola vez. Por cada uno calcula su monto y <b>guarda su remanente</b> como saldo del próximo mes — exactamente igual que el botón "Cerrar" individual. Todos quedan <b>📩 en sobre</b>; después marcas "Cobrado" a quien retire.<br>
-            <b>Pide un motivo obligatorio</b> (queda en la auditoría) y permite además <b>archivar los anticipos y empezar el nuevo mes</b> en el mismo paso.<br>
-            <b>Úsalo cuando</b> haya que cuadrar el período completo de una vez: fin de mes, o cuando no se alcanzará a cerrar socio por socio.
-        </div>` : ''}
-        ${!filtro ? `<button onclick="cierresMes_finalizarPeriodo()" style="width:100%;background:${allClosed?'linear-gradient(135deg,#8e44ad,#6c3483)':'linear-gradient(135deg,#d97706,#b45309)'};color:white;border:none;border-radius:8px;padding:10px;font-weight:800;font-size:0.87em;cursor:pointer;margin-bottom:12px;">${allClosed?'🏁 Todos cerrados — Archivar y Empezar Nuevo Mes':'📦 Archivar anticipos y empezar nuevo mes'}${nPendientes > 0 ? ' ⚠️ ('+nPendientes+' pendientes)' : ''}</button>` : ''}
-        ${!pendientesHtml && !sobreHtml && !cobradosHtml && filtro ? `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.85em;">Sin resultados para "${_cierreMesFiltro}"</div>` : ''}
-        ${pendientesHtml ? `<div style="font-weight:700;font-size:0.77em;color:#991b1b;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">⏳ Pendientes (${nPendientesFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #fecaca;margin-bottom:12px;">${pendientesHtml}</div>` : ''}
-        ${sobreHtml ? `<div style="font-weight:700;font-size:0.77em;color:#92400e;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">📩 En Sobre (${nSobreFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #fde68a;margin-bottom:12px;">${sobreHtml}</div>` : ''}
-        ${cobradosHtml ? `<div style="font-weight:700;font-size:0.77em;color:#15803d;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">💵 Cobrados (${nCobradosFiltro})</div><div style="border-radius:8px;overflow:hidden;border:1px solid #bbf7d0;margin-bottom:12px;">${cobradosHtml}</div>` : ''}
-        <div style="margin-top:10px;text-align:right;">
-            <button onclick="if(confirm('¿Reiniciar el seguimiento local? Los datos en Google Sheets no se borran.')){cierresMes_limpiarTodo();cierresMes_render();}" style="background:none;border:1px solid #cbd5e1;border-radius:6px;padding:3px 10px;font-size:0.73em;color:#64748b;cursor:pointer;">↺ Reiniciar seguimiento</button>
+        <div id="cierreMesResultados">
+${_cierresMesResultadosHTML()}
         </div>`;
 
     if (refocusBuscador) {
@@ -2329,6 +2349,33 @@ function cierresMes_render(refocusBuscador = false) {
             const inp = document.getElementById('cierreMesBuscador');
             if (inp) { inp.focus(); const len = inp.value.length; inp.setSelectionRange(len, len); }
         });
+    }
+}
+
+// ── Escribir en el buscador no puede re-dibujar el buscador ──────────
+//
+// Antes cada tecla llamaba a `cierresMes_render()`, que reescribe el
+// `innerHTML` del panel entero — incluido el propio <input>. Al destruir
+// el campo que tiene el foco, el teclado del teléfono se cierra; el
+// `focus()` de después lo vuelve a abrir. Resultado: el teclado
+// parpadeaba en cada letra y no se podía escribir de corrido.
+//
+// Ahora el buscador es un nodo estable: solo se repinta la lista de
+// resultados, que es lo único que depende del filtro. Las tarjetas de
+// arriba cuentan sobre el total, así que no cambian al filtrar.
+function cierresMes_filtrar(valor, devolverFoco) {
+    _cierreMesFiltro = valor;
+
+    const x = document.getElementById('cierreMesBuscarX');
+    if (x) x.style.display = valor ? 'block' : 'none';
+
+    const cont = document.getElementById('cierreMesResultados');
+    if (!cont) { cierresMes_render(!!devolverFoco); return; }   // panel aún sin pintar
+    cont.innerHTML = _cierresMesResultadosHTML();
+
+    if (devolverFoco) {
+        const inp = document.getElementById('cierreMesBuscador');
+        if (inp) { inp.value = valor; inp.focus(); }
     }
 }
 
