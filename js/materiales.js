@@ -128,6 +128,7 @@ function mat_render() {
             </div>
             ${fotoThumb}
             <div style="font-weight:800;color:${montoColor};font-size:0.92em;white-space:nowrap;">${montoSigno}${formatearMoneda(mat_monto(r))}</div>
+            <button onclick="mat_editar('${r.uuid}')" style="background:none;border:none;cursor:pointer;font-size:1em;padding:2px 4px;color:#94a3b8;line-height:1;" title="Editar fecha, monto o descripción">✏️</button>
             <button onclick="mat_borrar('${r.uuid}')" style="background:none;border:none;cursor:pointer;font-size:1.1em;padding:2px 4px;color:#94a3b8;line-height:1;" title="Eliminar">🗑️</button>
         </div>`;
     }).join('');
@@ -258,9 +259,13 @@ function mat_cambiarPeriodo(dir) {
 }
 
 // Abre el modal de nuevo registro
+// uuid del movimiento que se está corrigiendo, o null si es uno nuevo.
+let _matEditando = null;
+
 function mat_abrirModal(tipo = 'Ingreso') {
     const modal = document.getElementById('mat-modal');
     if (!modal) return;
+    _matEditando = null;
     const elFecha = document.getElementById('mat-modal-fecha');
     const elMonto = document.getElementById('mat-modal-monto');
     const elNota  = document.getElementById('mat-modal-nota');
@@ -271,6 +276,49 @@ function mat_abrirModal(tipo = 'Ingreso') {
     mat_fotoQuitar();
     mat_toggleTipo(tipo);
     document.getElementById('mat-modal-titulo').textContent = tipo === 'Ingreso' ? 'Nuevo Ingreso' : 'Nuevo Gasto';
+    const _bg = document.getElementById('mat-modal-guardar'); if (_bg) _bg.textContent = 'Guardar Registro';
+    const _av = document.getElementById('mat-modal-editando'); if (_av) _av.style.display = 'none';
+    modal.style.display = 'flex';
+}
+
+// ── Corregir un movimiento ya registrado ─────────────────────────────
+//
+// Una fecha o un monto mal tecleado antes solo se arreglaba borrando y
+// volviendo a crear: se perdía la foto de la compra y quedaban dos
+// movimientos en el historial. Se reutiliza el MISMO modal del alta —
+// una sola pantalla que mantener— con el registro ya cargado.
+function mat_editar(uuid) {
+    const r = (matDatos || []).find(x => String(x.uuid) === String(uuid));
+    if (!r) { showToast('No se encontró el movimiento', 'error'); return; }
+    const modal = document.getElementById('mat-modal');
+    if (!modal) return;
+
+    _matEditando = String(uuid);
+    const tipo = (r.tipo === 'Gasto') ? 'Gasto' : 'Ingreso';
+
+    const elFecha = document.getElementById('mat-modal-fecha');
+    const elMonto = document.getElementById('mat-modal-monto');
+    const elNota  = document.getElementById('mat-modal-nota');
+    const elComp  = document.getElementById('mat-modal-comprador');
+    if (elFecha) elFecha.value = String(r.fecha || '').substring(0, 10);
+    if (elMonto) elMonto.value = String(mat_monto(r));
+    if (elNota)  elNota.value  = r.nota || '';
+    if (elComp)  elComp.value  = r.comprador || '';
+
+    // La foto que ya tiene se conserva salvo que se elija otra.
+    mat_fotoQuitar();
+    mat_toggleTipo(tipo);
+
+    document.getElementById('mat-modal-titulo').textContent =
+        tipo === 'Ingreso' ? 'Editar Ingreso' : 'Editar Gasto';
+    const _bg = document.getElementById('mat-modal-guardar'); if (_bg) _bg.textContent = 'Guardar cambios';
+    const _av = document.getElementById('mat-modal-editando');
+    if (_av) {
+        _av.style.display = 'block';
+        _av.innerHTML = '✏️ Estás corrigiendo un movimiento ya registrado del '
+            + '<b>' + (String(r.fecha || '').split('-').reverse().join('/') || '—') + '</b>'
+            + (r.foto_url ? '. Su foto se conserva salvo que elijas otra.' : '.');
+    }
     modal.style.display = 'flex';
 }
 
@@ -325,7 +373,9 @@ function mat_fotoQuitar() {
     const g = document.getElementById('mat-foto-gal'); if (g) g.value = '';
 }
 
-// Guarda un nuevo registro
+// Guarda un registro nuevo, o guarda la corrección si se abrió desde
+// el lápiz. Es el mismo formulario: lo único que cambia es si al final
+// se crea un movimiento o se corrige el que ya estaba.
 async function mat_guardar() {
     const tipo  = (document.getElementById('mat-modal-tipo')  || {}).value || '';
     const fecha = (document.getElementById('mat-modal-fecha') || {}).value || '';
@@ -354,9 +404,22 @@ async function mat_guardar() {
                 if (!up.error) { foto_url = dbSoc.storage.from('avatares').getPublicUrl(path).data.publicUrl; }
             } catch (eF) { console.warn('[mat] foto:', eF); }
         }
-        await callApiSocios('registrarMaterial', { fecha, tipo, monto, nota, responsable, periodo, comprador, foto_url });
-        document.getElementById('mat-modal').style.display = 'none';
-        showToast('Registro guardado', 'success');
+        if (_matEditando) {
+            // `foto_url` solo viaja si se eligió una nueva: si se mandara
+            // vacío, corregir la fecha borraría la boleta que ya estaba.
+            const payload = { uuid: _matEditando, fecha, tipo, monto, nota, responsable, periodo, comprador };
+            if (foto_url) payload.foto_url = foto_url;
+            const res = await callApiSocios('editarMaterial', payload);
+            if (res && res.status === 'error') { showToast('No se pudo guardar el cambio', 'error'); return; }
+            logAccion('Editar Material', 'uuid ' + _matEditando + ' · ' + tipo + ' ' + fecha + ' · ' + monto);
+            _matEditando = null;
+            document.getElementById('mat-modal').style.display = 'none';
+            showToast('Movimiento corregido', 'success');
+        } else {
+            await callApiSocios('registrarMaterial', { fecha, tipo, monto, nota, responsable, periodo, comprador, foto_url });
+            document.getElementById('mat-modal').style.display = 'none';
+            showToast('Registro guardado', 'success');
+        }
         await mat_cargar();
     } catch(e) {
         showToast('Error al guardar', 'error');

@@ -1924,6 +1924,58 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             }
         }
 
+        // ── editarMaterial → corregir un movimiento ya registrado ──
+        //
+        // Hace falta porque una fecha o un monto mal tecleado solo se podía
+        // arreglar borrando y volviendo a crear, lo que perdía la foto de
+        // la compra y dejaba dos movimientos en el historial.
+        //
+        // Al ser plata, el cambio queda en auditoría con el antes y el
+        // después: `registrarMaterial` y `borrarMaterial` no auditan, pero
+        // corregir un monto a mano sí tiene que poder rastrearse.
+        if (action === 'editarMaterial') {
+            const matUuid = body.uuid || '';
+            if (!matUuid) return _mockOk({ status: 'error', message: 'uuid requerido' });
+            try {
+                // El estado anterior, para poder decir qué cambió.
+                const { data: antes } = await dbSoc.from('materiales')
+                    .select('fecha, tipo, monto, nota, comprador, periodo').eq('uuid', matUuid).limit(1);
+                const prev = (antes || [])[0] || {};
+
+                const upd = {};
+                if (body.fecha     !== undefined) upd.fecha     = body.fecha || null;
+                if (body.tipo      !== undefined) upd.tipo      = body.tipo || '';
+                if (body.monto     !== undefined) upd.monto     = Number(body.monto || 0);
+                if (body.nota      !== undefined) upd.nota      = body.nota || null;
+                if (body.comprador !== undefined) upd.comprador = body.comprador || null;
+                if (body.periodo   !== undefined) upd.periodo   = body.periodo || null;
+                // La foto solo se toca si viene una nueva: editar la fecha
+                // no puede borrar la boleta que ya estaba.
+                if (body.foto_url) upd.foto_url = body.foto_url;
+
+                if (!Object.keys(upd).length) return _mockOk({ status: 'success', sinCambios: true });
+
+                const { error } = await dbSoc.from('materiales').update(upd).eq('uuid', matUuid);
+                if (error) throw error;
+
+                const cambios = Object.keys(upd)
+                    .filter(k => String(prev[k] == null ? '' : prev[k]) !== String(upd[k] == null ? '' : upd[k]))
+                    .map(k => `${k}: ${prev[k] == null ? '—' : prev[k]} → ${upd[k] == null ? '—' : upd[k]}`);
+                _sbAudit('Editar Material', {
+                    idAfectado: matUuid,
+                    detalle: (body.tipo || prev.tipo || 'Movimiento') + ' · '
+                           + (cambios.length ? cambios.join(' | ') : 'sin cambios efectivos'),
+                    datos: { uuid: matUuid, antes: prev, despues: upd, responsable: body.responsable || null }
+                });
+
+                _origFetch(url, options).catch(() => {});
+                return _mockOk({ status: 'success', cambios });
+            } catch(e) {
+                console.warn('[SB-MAT] editarMaterial error:', e.message);
+                return _mockOk({ status: 'error', message: e.message });
+            }
+        }
+
         // ── borrarMaterial → soft delete en Supabase, GAS en background ──
         if (action === 'borrarMaterial') {
             const matUuid = body.uuid || '';

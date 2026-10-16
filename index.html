@@ -2431,7 +2431,7 @@
     <script src="js/cache.js?v=32"></script>
     <script src="js/auth.js?v=36"></script>
     <script src="js/config.js?v=99"></script>
-    <script src="js/supabase-config.js?v=73"></script>
+    <script src="js/supabase-config.js?v=74"></script>
     <script src="js/api.js?v=38"></script>
     <script src="js/vendor/qrcode.js?v=1"></script>
     <script src="js/qr-socios.js?v=2"></script>
@@ -2450,7 +2450,7 @@
     <script src="js/help.js?v=48"></script>
     <script src="js/auditoria.js?v=34"></script>
     <script src="js/carpetas.js?v=46"></script>
-    <script src="js/materiales.js?v=32"></script>
+    <script src="js/materiales.js?v=33"></script>
     <script src="js/dineros.js?v=32"></script>
     <script src="js/certificados.js?v=32"></script>
     <script src="js/diario-pins.js?v=34"></script>
@@ -2688,6 +2688,9 @@
             <span class="close-modal" onclick="document.getElementById('mat-modal').style.display='none'" style="color:white;">&times;</span>
         </div>
         <div class="modal-body">
+            <!-- Se enciende al abrir con el lápiz: deja claro que se está
+                 corrigiendo un movimiento y no creando otro. -->
+            <div id="mat-modal-editando" style="display:none;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:9px;padding:9px 11px;margin-bottom:14px;font-size:0.8em;line-height:1.5;"></div>
             <!-- Tipo toggle -->
             <div style="display:flex;gap:8px;margin-bottom:16px;">
                 <button id="mat-btn-ingreso" onclick="mat_toggleTipo('Ingreso')" style="flex:1;padding:10px;border:2px solid #10b981;border-radius:8px;font-weight:700;font-size:0.88em;cursor:pointer;transition:0.2s;">↑ Ingreso</button>
@@ -2725,7 +2728,7 @@
                 </div>
             </div>
 
-            <button onclick="mat_guardar()" style="width:100%;padding:12px;background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:8px;font-weight:700;font-size:0.95em;cursor:pointer;">Guardar Registro</button>
+            <button id="mat-modal-guardar" onclick="mat_guardar()" style="width:100%;padding:12px;background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:8px;font-weight:700;font-size:0.95em;cursor:pointer;">Guardar Registro</button>
         </div>
     </div>
 </div>

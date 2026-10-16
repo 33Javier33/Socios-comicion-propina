@@ -232,6 +232,23 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-16 — Materiales: corregir los movimientos del período (SW v186)
+
+Un **lápiz ✏️** en cada movimiento del período abre el mismo formulario del alta, con el registro ya cargado, para arreglar una fecha o un monto mal tecleado.
+
+Antes la única salida era **borrar y volver a crear**, que tenía dos costos: se perdía la **foto de la compra** y quedaban **dos movimientos** en el historial —uno borrado y otro nuevo— en vez de la corrección de uno solo.
+
+Detalles que importan:
+
+- **La foto no se toca si no eliges otra.** `foto_url` solo viaja cuando se sube una nueva; si se mandara vacío, corregir la fecha borraría la boleta que ya estaba.
+- **Cambiar la fecha recalcula el período** al que pertenece el movimiento, con la misma regla 15→14 del alta. Si la fecha corregida cae en otro mes, el movimiento se va al período que corresponde.
+- **El modal deja claro que estás corrigiendo**: título «Editar Gasto/Ingreso», botón «Guardar cambios» y un aviso con la fecha del movimiento original. Al cerrarlo vuelve a modo «nuevo» sin arrastrar el registro anterior.
+- **Queda en auditoría, con el antes y el después.** Ni el alta ni el borrado auditan, pero corregir un monto a mano sí tiene que poder rastrearse: el registro guarda qué campos cambiaron y de qué valor a cuál.
+
+Nueva acción `editarMaterial` en `js/supabase-config.js` (`UPDATE` sobre `materiales` por `uuid`, con el GAS en segundo plano como las demás).
+
+`test_materiales_editar.js`: 36 comprobaciones — que el lápiz cargue el movimiento tal cual, que se haga `UPDATE` y no `INSERT`, que la foto sobreviva, que el período se recalcule, que la auditoría registre el cambio, y que un alta posterior siga siendo un alta.
+
 #### 2026-10-15 — El buscador del Estado del Cobro cerraba el teclado en cada letra (SW v185)
 
 **El síntoma.** Al escribir en el filtro de «Estado del Cobro del Período», el teclado del teléfono se cerraba y volvía a abrirse con cada tecla. No se podía escribir de corrido.
