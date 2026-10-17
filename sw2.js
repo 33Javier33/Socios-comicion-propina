@@ -1,6 +1,6 @@
 // Service Worker de la app de Horarios (index2.html).
 // Alcance acotado a /index2.html para NO afectar la app principal (index.html).
-const CACHE = 'horarios-mesas-v36';
+const CACHE = 'horarios-mesas-v37';
 const ASSETS = ['/index2.html', '/manifest2.json', '/img/horarios-192.png', '/img/horarios-512.png', '/img/marca/cpn-marca.png'];
 
 // Sin skipWaiting a propósito: la versión nueva queda EN ESPERA y la página
@@ -82,14 +82,43 @@ self.addEventListener('periodicsync', event => {
   if (event.tag === 'horarios-avisos') event.waitUntil(_dispararAvisos());
 });
 
+// ══════════════════════════════════════════════════════════════════════
+// PUSH DE SERVIDOR — lo único que llega con la app CERRADA
+//
+// Faltaba este listener, y era la causa de fondo: sin él, aunque el
+// servidor mandara el aviso, el teléfono no tenía qué mostrar. Todo lo
+// de arriba (temporizadores y `periodicSync`) necesita que la app esté
+// abierta o que el navegador decida correr una tarea en segundo plano
+// —cosa que en iPhone no existe y en Android casi nunca pasa—, así que
+// los avisos terminaban apareciendo recién al abrir la app.
+//
+// Lo manda la Edge Function `push-notify` del proyecto de socios, la
+// misma que ya le avisa al administrador. Formato: { title, body, url }.
+// ══════════════════════════════════════════════════════════════════════
+self.addEventListener('push', event => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; }
+  catch (e) { d = { title: 'Horarios', body: (event.data && event.data.text()) || '' }; }
+  event.waitUntil(self.registration.showNotification(d.title || 'Horarios', {
+    body: d.body || '',
+    icon: '/img/horarios-192.png',
+    badge: '/img/horarios-192.png',
+    tag: d.tag || 'horario',
+    renotify: true,
+    vibrate: [90, 50, 90],
+    data: { url: d.url || '/index2.html' }
+  }));
+});
+
 // Al tocar el aviso se abre la app, o se trae al frente la que ya estaba.
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/index2.html';
   event.waitUntil((async () => {
     const lista = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const abierta = lista.find(c => c.url.includes('index2'));
     if (abierta) return abierta.focus();
-    if (self.clients.openWindow) return self.clients.openWindow('/index2.html');
+    if (self.clients.openWindow) return self.clients.openWindow(url);
   })());
 });
 

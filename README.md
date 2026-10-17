@@ -232,6 +232,26 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-17 — Horarios: los avisos de turno no llegaban con la app cerrada (SW Horarios v37)
+
+**Por qué pasaba.** Los avisos los disparaba la **propia página**: un `setTimeout` mientras la app estaba abierta, y `periodicSync` para lo demás. El `setTimeout` muere al cerrar la app, y `periodicSync` **en iPhone no existe** y en Android el navegador decide cuándo correrlo —en la práctica, casi nunca—. Así que con la app cerrada no llegaba nada, y al abrirla se disparaba de golpe todo lo vencido. El propio comentario del Service Worker lo decía: *«No es push de servidor y no pretende serlo.»*
+
+Y faltaba la pieza de fondo: **`sw2.js` no tenía listener de `push`**. Aunque el servidor mandara el aviso, el teléfono no tenía qué mostrar.
+
+**Qué se hizo en la app** (esto ya está publicado):
+
+1. **`sw2.js` ahora recibe push**, con el icono de Horarios y abriendo la app al tocarlo. Es lo único que llega con la app cerrada.
+2. **La campana suscribe el teléfono** del socio a Web Push, con su `socio_id` — la misma tabla `push_subscriptions` y la misma clave pública del proyecto que ya usa el administrador. Al apagarla, **suelta la suscripción**: si no, el servidor le seguiría mandando avisos a quien los apagó.
+3. **Ya no se dispara lo vencido al abrir.** Era la queja concreta: el socio entra y le aparece el recordatorio de algo que tiene en pantalla. Se marca como hecho y no se muestra.
+4. **El plan se publica en la base**, en `horarios_avisos`, con **7 días por delante** — así los avisos están puestos aunque el socio no abra la app en toda la semana. Lo que ya pasó no se publica.
+5. Si la suscripción falla, la campana lo dice: *«Avisos activados solo con la app abierta»*, en vez de dejar creer que va a sonar el teléfono.
+
+**Falta un paso que es tuyo:** aplicar **`migracion-horarios-avisos.sql`** en el proyecto de socios (**respaldo antes**, como siempre). Crea la tabla `horarios_avisos` y una tarea `pg_cron` que cada 5 minutos manda los avisos vencidos a través de la Edge Function **`push-notify`** que ya existe. **Hasta que lo apliques, los avisos siguen llegando solo con la app abierta** — con la diferencia de que ya no se amontonan al entrar.
+
+El turno de un socio sale de la rotación de su grupo más sus excepciones, y esa lógica vive en `index2.html`. Por eso la app publica el plan y el SQL solo lo envía: rehacer la rotación en SQL sería una segunda copia de una regla delicada, y en esta app ya pasó tres veces que dos copias de la misma regla terminaran diciendo cosas distintas.
+
+`test_horarios_avisos.js`: 27 comprobaciones.
+
 #### 2026-10-16 — Materiales: corregir los movimientos del período (SW v186)
 
 Un **lápiz ✏️** en cada movimiento del período abre el mismo formulario del alta, con el registro ya cargado, para arreglar una fecha o un monto mal tecleado.

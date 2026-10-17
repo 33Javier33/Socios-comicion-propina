@@ -1773,6 +1773,45 @@ const NOTIF_HORAS_ANTES = 3;
 let _notifTimers = [];
 
 function notifSoportado(){ return 'Notification' in window && 'serviceWorker' in navigator; }
+
+// ══════════ Push de servidor ══════════
+// La clave pública del proyecto de socios: la misma con la que ya se
+// suscribe el administrador, porque la Edge Function `push-notify`
+// firma con su par privado. (Es pública por diseño; la privada vive
+// solo en Supabase.)
+const HOR_VAPID = 'BFzJrgZgoGMHxdHbqCyiftayb-JINxQNy3ek3h1YRH9yoZQIBp7zfFgr8IG72rLkzRpBsLPY2XVvy5k4G_gA6RI';
+function _horB64(base64){
+  const pad='='.repeat((4-base64.length%4)%4);
+  const b=(base64+pad).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(b); const arr=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i);
+  return arr;
+}
+
+// Deja el teléfono de este socio suscrito, para que el servidor pueda
+// despertarlo con la app cerrada. Sin esto no hay aviso que valga: los
+// temporizadores de la página mueren al cerrar la app.
+async function notifSuscribirPush(){
+  try{
+    if(!('PushManager' in window) || !sesion || sesion.rol!=='socio') return false;
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:_horB64(HOR_VAPID) });
+    if(!sub) return false;
+    const j = sub.toJSON ? sub.toJSON() : sub;
+    if(!j.endpoint) return false;
+    const { error } = await db.from('push_subscriptions').upsert({
+      id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
+      socio_id: String(sesion.id),
+      endpoint: j.endpoint,
+      p256dh: (j.keys||{}).p256dh || '',
+      auth: (j.keys||{}).auth || '',
+      user_agent: navigator.userAgent
+    }, { onConflict:'endpoint' });
+    if(error){ console.warn('[push] no se pudo guardar la suscripción:', error.message); return false; }
+    return true;
+  }catch(e){ console.warn('[push]', e); return false; }
+}
 function notifActiva(){
   try{ return localStorage.getItem(NOTIF_ON_KEY)==='1' && Notification.permission==='granted'; }catch(e){ return false; }
 }
@@ -1804,6 +1843,17 @@ async function notifToggle(){
   if(notifActiva()){
     try{ localStorage.setItem(NOTIF_ON_KEY,'0'); }catch(e){}
     _notifLimpiarTimers();
+    // Soltar la suscripción: si no, el servidor le sigue mandando avisos
+    // a un socio que los apagó.
+    try{
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if(sub){
+        const ep = sub.endpoint;
+        await sub.unsubscribe().catch(()=>{});
+        await db.from('push_subscriptions').delete().eq('endpoint', ep);
+      }
+    }catch(e){ console.warn('[push] baja:', e); }
     notifPintarBtn(); toast('Avisos desactivados');
     return;
   }
@@ -1817,7 +1867,12 @@ async function notifToggle(){
   }
   try{ localStorage.setItem(NOTIF_ON_KEY,'1'); }catch(e){}
   notifPintarBtn();
-  toast('🔔 Avisos activados');
+  // Suscribir el teléfono al push: es lo ÚNICO que llega con la app
+  // cerrada. Si falla, se dice, en vez de dejar al socio creyendo que
+  // le va a sonar el teléfono antes del turno.
+  const ok = await notifSuscribirPush();
+  toast(ok ? '🔔 Avisos activados' : '🔔 Avisos activados solo con la app abierta',
+        ok ? '' : '#b45309');
   await notifRevisar(true);
 }
 
@@ -1833,9 +1888,9 @@ async function _notifMostrar(titulo, cuerpo, tag){
 }
 
 // El plan del día: qué avisar y a qué hora. Devuelve [{ llave, cuando, titulo, cuerpo }].
-async function notifPlanDelDia(){
+async function notifPlanDelDia(dia){
   if(!sesion || sesion.rol!=='socio') return [];
-  const hoy = new Date();
+  const hoy = dia ? new Date(dia.getFullYear(), dia.getMonth(), dia.getDate()) : new Date();
   const iso = fechaISO(hoy);
   const exc = await excepcionesDe(sesion.id, hoy);
   const t = turnoDeSocioEnFecha(sesion.id, hoy, exc);
@@ -1878,6 +1933,48 @@ async function notifPlanDelDia(){
   return plan;
 }
 
+// ══════════ El plan, donde el servidor lo pueda mandar ══════════
+//
+// Acá está el cambio de fondo. Antes el plan se guardaba en una caché
+// del navegador y dependía de que el propio teléfono se despertara
+// —`periodicSync`, que en iPhone no existe y en Android casi nunca
+// corre—. Ahora se escribe en la tabla `horarios_avisos` de Supabase, y
+// una tarea programada le pide a `push-notify` que lo mande a la hora.
+// Eso sí llega con la app cerrada.
+//
+// Se adelantan varios días a propósito: si el socio no abre la app en
+// toda la semana, sus avisos ya están puestos.
+const NOTIF_DIAS_ADELANTE = 7;
+
+async function notifPublicarPlan(){
+  if(!notifActiva() || !sesion || sesion.rol!=='socio') return;
+  try{
+    const filas = [];
+    const base = new Date();
+    for(let i=0; i<NOTIF_DIAS_ADELANTE; i++){
+      const d = new Date(base.getFullYear(), base.getMonth(), base.getDate()+i);
+      let plan = [];
+      try{ plan = await notifPlanDelDia(d); }catch(e){ continue; }
+      plan.forEach(a=>{
+        // Lo que ya pasó no se manda: el servidor avisaría tarde y el
+        // socio recibiría el recordatorio de un turno que ya empezó.
+        if(a.cuando.getTime() <= Date.now()) return;
+        filas.push({
+          socio_id: String(sesion.id),
+          llave: a.llave,
+          cuando: a.cuando.toISOString(),
+          titulo: a.titulo,
+          cuerpo: a.cuerpo
+        });
+      });
+    }
+    if(!filas.length) return;
+    const { error } = await db.from('horarios_avisos')
+      .upsert(filas, { onConflict:'socio_id,llave' });
+    if(error) console.warn('[avisos] no se pudo publicar el plan:', error.message);
+  }catch(e){ console.warn('[avisos]', e); }
+}
+
 // Dispara lo vencido, programa lo que falta y le deja el plan al Service
 // Worker por si puede revisarlo con la app cerrada.
 async function notifRevisar(forzar){
@@ -1891,10 +1988,11 @@ async function notifRevisar(forzar){
   plan.forEach(a=>{
     if(hechas[a.llave]) return;
     const falta = a.cuando.getTime() - ahora;
-    // Ya pasó la hora: se avisa igual al abrir, salvo que sea de ayer.
-    if(falta <= 0){
-      _notifMostrar(a.titulo, a.cuerpo, a.llave); _notifMarcar(a.llave); return;
-    }
+    // Ya pasó la hora: NO se avisa. El socio está dentro de la app, con
+    // su turno en pantalla; una notificación de algo que está viendo es
+    // ruido — y era justo lo que hacía que «los avisos llegaran al
+    // entrar». Se marca como hecho para que no salte después.
+    if(falta <= 0){ _notifMarcar(a.llave); return; }
     // Más de 6 horas por delante: no se deja un temporizador tan largo, se
     // vuelve a revisar la próxima vez que se abra la app.
     if(falta > 6*3600000) return;
@@ -1916,6 +2014,10 @@ async function notifRevisar(forzar){
       try{ await reg.periodicSync.register('horarios-avisos', { minInterval: 2*3600000 }); }catch(e){}
     }
   }catch(e){}
+
+  // Y lo importante: dejarlo en el servidor, que es quien puede avisar
+  // con la app cerrada. Sin await: no tiene que demorar el pintado.
+  notifPublicarPlan();
 }
 
 // ══════════ App Socio ══════════
@@ -4672,6 +4774,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=18"></script>
+<script src="js/version-horarios.js?v=19"></script>
 </body>
 </html>
