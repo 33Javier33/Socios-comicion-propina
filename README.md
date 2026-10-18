@@ -232,6 +232,29 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-18 — El recibo decía mal el mes de «SUBE PUNTOS» (SW v187)
+
+**Lo que pasaba.** El recibo que imprime socios-comicion mostraba en *SUBE PUNTOS* el mes de la **primera entrega** de puntos, no el del **aniversario**. Son dos fechas distintas:
+
+| Socio ingresa | Primera entrega | Aniversario (lo correcto) | El recibo decía |
+|---|---|---|---|
+| 10 de junio | 15 de julio | **15 de junio** | 15 DE JUL |
+| 2 de marzo | 15 de abril | **15 de marzo** | 15 DE ABR |
+| 20 de diciembre | 15 de febrero | **15 de diciembre** | 15 DE FEB ← dos meses corrido |
+
+La regla la declara el propio código en `reglaPuntosFechas`: *«El aniversario vive en el mes de INGRESO»*, y cae el día 15. El recibo lo deducía de `socio.fechaInicioPuntos`, que **no** es la fecha que pone el administrador a mano sino la primera entrega ya calculada. Solo acertaba cuando el socio tenía override manual, por coincidencia.
+
+**El arreglo.** `procesarSocioDesdeGoogle` ya deja el mes correcto en `mesAniversario`; el recibo lo usa en vez de volver a deducirlo. Nuevos `mesAniversarioDe()` y `subePuntosLabel()` en `js/constants.js`, un solo lugar para una regla que estaba en tres.
+
+**Dos de paso, por la misma causa:**
+
+- El **comprobante de salida** (Socios Eliminados) armaba la etiqueta con el **día del ingreso** —«10 DE JUN» para quien entró un día 10— cuando el aumento siempre cae el 15.
+- En **propi.solicitada** el mes estaba bien pero el día también salía del ingreso, y **no respetaba el override**: a un socio con fecha de inicio puesta a mano le mostraba el mes de ingreso. Ahora las tres apps dicen lo mismo.
+
+**Lo que sí estaba bien** y se verificó: nombre, área, contrato, año de ingreso y puntos coinciden entre las dos apps.
+
+`test_recibo_datos.js`: 16 comprobaciones. **Imprime el recibo de verdad** y lee lo que sale, en vez de copiar su fórmula —copiarla sería probar la copia, no el papel que firma el socio— y contrasta contra la regla socio por socio, incluido el caso con override.
+
 #### 2026-10-17 — Horarios: los avisos de turno no llegaban con la app cerrada (SW Horarios v37)
 
 **Por qué pasaba.** Los avisos los disparaba la **propia página**: un `setTimeout` mientras la app estaba abierta, y `periodicSync` para lo demás. El `setTimeout` muere al cerrar la app, y `periodicSync` **en iPhone no existe** y en Android el navegador decide cuándo correrlo —en la práctica, casi nunca—. Así que con la app cerrada no llegaba nada, y al abrirla se disparaba de golpe todo lo vencido. El propio comentario del Service Worker lo decía: *«No es push de servidor y no pretende serlo.»*

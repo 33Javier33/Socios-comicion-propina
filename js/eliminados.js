@@ -864,13 +864,14 @@ function _elimCalculo(r) {
     const puntos   = Number(r.puntos != null ? r.puntos
                           : (f.puntos != null ? f.puntos : calc.puntos)) || 0;
 
-    const MESES_C = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
-    let subePuntos = '\u2014';
-    const base = (fIni && fIni !== fIng) ? fIni : fIng;
-    const bp = base ? base.split('-') : null;
-    if (bp && bp.length === 3 && MESES_C[parseInt(bp[1], 10) - 1]) {
-        subePuntos = bp[2] + ' DE ' + MESES_C[parseInt(bp[1], 10) - 1];
-    }
+    // El aumento anual cae el día 15 del mes de ingreso (o el de la fecha
+    // de inicio de puntos, si la pusieron a mano). Acá se armaba con el
+    // DÍA del ingreso —«10 DE JUN» para quien entró un día 10—, cuando
+    // siempre es el 15. Ahora sale de `subePuntosLabel`, el mismo que usa
+    // el recibo del cierre.
+    const subePuntos = (typeof subePuntosLabel === 'function')
+        ? subePuntosLabel(fIng, fIni)
+        : '\u2014';
 
     // El período, deducido de la fecha (15 -> 14). No se usa el período
     // activo de la app: el respaldo puede ser de hace meses y la hoja

@@ -210,6 +210,40 @@ function reglaPuntosFechas(fechaIngresoISO) {
     return { primeraEntrega, mesAniversario: mes0, anioIngreso: anio, primerAniversario };
 }
 
+// ══════════════════════════════════════════════════════════════════
+// «SUBE PUNTOS»: cuándo le toca el aumento anual
+//
+// La regla es la de `reglaPuntosFechas`: el aniversario vive en el mes
+// de INGRESO y cae el día 15. Con fecha de inicio de puntos puesta a
+// mano, manda el mes de ésa.
+//
+// Vive acá porque el recibo del cierre y el comprobante de salida lo
+// imprimen, y cada uno lo deducía por su cuenta. El recibo lo sacaba de
+// la PRIMERA ENTREGA en vez del aniversario: a quien entró el 20 de
+// diciembre le decía «15 DE FEB», dos meses corrido.
+// ══════════════════════════════════════════════════════════════════
+const MESES_SUBE = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+
+function mesAniversarioDe(fechaIngresoISO, fechaInicioPuntosISO) {
+    const ing = String(fechaIngresoISO || '').substring(0, 10);
+    const ov  = String(fechaInicioPuntosISO || '').substring(0, 10);
+    // El override solo manda cuando DIFIERE del ingreso: si viene igual
+    // no es una excepción, es un eco del mismo dato.
+    const base = (ov && ov !== ing) ? ov : ing;
+    const p = base.split('-').map(Number);
+    if (p.length !== 3 || !(p[1] >= 1 && p[1] <= 12)) return null;
+    return p[1] - 1;
+}
+
+function subePuntosLabel(fechaIngresoISO, fechaInicioPuntosISO) {
+    const m = mesAniversarioDe(fechaIngresoISO, fechaInicioPuntosISO);
+    return (m === null) ? '—' : ('15 DE ' + MESES_SUBE[m]);
+}
+
+function subePuntosDeMes(mes0) {
+    return (mes0 === null || mes0 === undefined || !MESES_SUBE[mes0]) ? '—' : ('15 DE ' + MESES_SUBE[mes0]);
+}
+
 // Cuántos aumentos anuales lleva a la fecha `hoy`.
 function aniosPuntosA(fechaIngresoISO, hoy) {
     const r = reglaPuntosFechas(fechaIngresoISO);

@@ -142,7 +142,7 @@ function procesarSocioDesdeGoogle(s) {
     if (_dbgSocio) { _dbgSocio = false; console.log('[DBG-SOCIO] FechaIngreso:', fechaStr, '| FechaInicioPuntos:', s.FechaInicioPuntos, '| año15:', año15, '| mes15:', mes15, '| fechaParaPuntos:', fechaParaPuntos, '| visible:', visible, '| Puntos SB:', s.Puntos); }
 
     if (areaNorm === 'gastoscomision' || areaNorm.includes('gastos')) {
-        return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: 'GastosComision', contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios: 0, puntos: puntosActivos ? 1 : 0, puntosActivos, visible, rut: s.Rut || "", fotoUrl: s.FotoUrl || "", correo: s.Correo || "" };
+        return { id: s.ID, nombre: s.Nombre, apellido: s.Apellido, area: 'GastosComision', contrato: s.TipoContrato, fechaIngreso: fechaStr, fechaInicioPuntos: fechaPuntosStr, anios: 0, puntos: puntosActivos ? 1 : 0, puntosActivos, visible, mesAniversario: mes15, rut: s.Rut || "", fotoUrl: s.FotoUrl || "", correo: s.Correo || "" };
     }
     // Base y tope salen de reglaPuntosArea (js/constants.js): un solo lugar
     // para los dos, y la comparación va sin tildes — antes 'bóveda' no calzaba

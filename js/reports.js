@@ -465,13 +465,21 @@ async function imprimirReciboSocio() {
     }
 
     const maxPuntos = calcularPuntosMaximos(socio.area);
-    let subePuntosLabel = "-";
-    const fechaBase = (socio.fechaInicioPuntos && socio.fechaInicioPuntos !== socio.fechaIngreso) ? socio.fechaInicioPuntos : socio.fechaIngreso;
-    const bp = fechaBase ? fechaBase.split('-') : null;
-    if (bp && bp.length === 3) {
-        const MESES_CORTO = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
-        subePuntosLabel = bp[2] + ' DE ' + MESES_CORTO[parseInt(bp[1]) - 1];
-    }
+
+    // «SUBE PUNTOS»: el mes del ANIVERSARIO, que es el de ingreso (o el
+    // de la fecha de inicio de puntos si la pusieron a mano).
+    //
+    // Acá estaba el error que se veía en el recibo. Se deducía de
+    // `socio.fechaInicioPuntos`, que NO es el override del admin sino la
+    // PRIMERA ENTREGA ya calculada —el primer día 15 tras cumplir el
+    // mes—. A quien entraba el 10 de junio le decía «15 DE JUL», y a
+    // quien entraba el 20 de diciembre, «15 DE FEB»: dos meses corrido.
+    //
+    // `procesarSocioDesdeGoogle` ya deja el mes correcto en
+    // `mesAniversario`; se usa ése en vez de volver a deducirlo.
+    const subePuntosLabel = (socio.mesAniversario !== undefined && socio.mesAniversario !== null)
+        ? subePuntosDeMes(socio.mesAniversario)
+        : subePuntosDeMes(mesAniversarioDe(socio.fechaIngreso, socio.fechaInicioPuntos));
 
     function bloqueRecibo(etiqueta) {
         return `
