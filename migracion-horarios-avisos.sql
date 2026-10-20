@@ -56,9 +56,12 @@ create policy horarios_avisos_todos on public.horarios_avisos
     for all using (true) with check (true);
 
 -- ── 2. El envío ────────────────────────────────────────────────────
--- Llama a `push-notify` (la misma que usa el admin) por cada aviso
--- vencido y lo marca. `pg_net` ya está en uso en este proyecto para los
--- triggers de push del administrador.
+-- Llama a `push-notify` igual que los triggers de push que ya funcionan
+-- (`notify_push_mensajes_admin` y compañía): URL escrita directa y el
+-- header `x-push-secret`. La Edge Function acepta la invocación directa
+-- `{socio_id, title, body, url}`, que es justo lo que se manda acá.
+--
+-- `pg_net` ya está en uso en este proyecto para esos mismos triggers.
 create extension if not exists pg_net;
 create extension if not exists pg_cron;
 
@@ -69,18 +72,17 @@ security definer
 set search_path = public
 as $$
 declare
-    a         record;
-    enviados  integer := 0;
-    v_url     text;
-    v_key     text;
+    a        record;
+    enviados integer := 0;
+    v_url    constant text := 'https://teemahksasdougehrcly.supabase.co/functions/v1/push-notify';
+    -- ⚠️ REEMPLAZA esto por el mismo valor de `x-push-secret` que ya usan
+    -- tus triggers. Para verlo:
+    --   select prosrc from pg_proc where proname = 'notify_push_mensajes_admin';
+    -- No se deja escrito en el repositorio a propósito.
+    v_secret constant text := 'PEGA_ACA_EL_X_PUSH_SECRET';
 begin
-    -- Mismos valores que usan los triggers de push ya existentes.
-    -- Si en tu proyecto están guardados con otro nombre, ajústalos acá.
-    v_url := current_setting('app.settings.supabase_url', true);
-    v_key := current_setting('app.settings.service_role_key', true);
-    if v_url is null or v_key is null then
-        raise notice 'Faltan app.settings.supabase_url / service_role_key';
-        return 0;
+    if v_secret = 'PEGA_ACA_EL_X_PUSH_SECRET' then
+        raise exception 'Falta reemplazar v_secret por el x-push-secret real';
     end if;
 
     for a in
@@ -95,10 +97,10 @@ begin
         limit 200
     loop
         perform net.http_post(
-            url     := v_url || '/functions/v1/push-notify',
+            url     := v_url,
             headers := jsonb_build_object(
                 'Content-Type',  'application/json',
-                'Authorization', 'Bearer ' || v_key
+                'x-push-secret', v_secret
             ),
             body    := jsonb_build_object(
                 'socio_id', a.socio_id,
