@@ -79,7 +79,7 @@ declare
     -- tus triggers. Para verlo:
     --   select prosrc from pg_proc where proname = 'notify_push_mensajes_admin';
     -- No se deja escrito en el repositorio a propósito.
-    v_secret constant text := 'PEGA_ACA_EL_X_PUSH_SECRET';
+       v_secret constant text := 'psoli_push_2f9c7a1e8b4d6035';
 begin
     if v_secret = 'PEGA_ACA_EL_X_PUSH_SECRET' then
         raise exception 'Falta reemplazar v_secret por el x-push-secret real';
