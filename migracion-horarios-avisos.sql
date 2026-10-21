@@ -75,11 +75,16 @@ declare
     a        record;
     enviados integer := 0;
     v_url    constant text := 'https://teemahksasdougehrcly.supabase.co/functions/v1/push-notify';
-    -- ⚠️ REEMPLAZA esto por el mismo valor de `x-push-secret` que ya usan
-    -- tus triggers. Para verlo:
+    -- ⚠️ El secreto va SOLO en Supabase, nunca en este archivo.
+    --
+    -- Este repositorio es PÚBLICO. Reemplaza el marcador al pegar el SQL
+    -- en el editor de Supabase, no acá. El commit 8f5105f lo guardó por
+    -- error y quedó en el historial de git: por eso el secreto de ese
+    -- momento hay que darlo por quemado y rotarlo.
+    --
+    -- El valor en uso se mira en la propia base:
     --   select prosrc from pg_proc where proname = 'notify_push_mensajes_admin';
-    -- No se deja escrito en el repositorio a propósito.
-       v_secret constant text := 'psoli_push_2f9c7a1e8b4d6035';
+       v_secret constant text := 'PEGA_ACA_EL_X_PUSH_SECRET';
 begin
     if v_secret = 'PEGA_ACA_EL_X_PUSH_SECRET' then
         raise exception 'Falta reemplazar v_secret por el x-push-secret real';
