@@ -79,8 +79,15 @@ declare
     --
     -- Este repositorio es PÚBLICO. Reemplaza el marcador al pegar el SQL
     -- en el editor de Supabase, no acá. El commit 8f5105f lo guardó por
-    -- error y quedó en el historial de git: por eso el secreto de ese
-    -- momento hay que darlo por quemado y rotarlo.
+    -- error y quedó en el historial de git, donde sigue siendo legible.
+    --
+    -- Ese secreto ya fue rotado el 2026-10-21: se cambió en la Edge
+    -- Function `push-notify` y en las tres funciones de la base que la
+    -- llaman (`horarios_enviar_avisos`, `notify_push_admin`,
+    -- `notify_push_mensajes_admin`), y se comprobó que ninguna conserva
+    -- el valor antiguo. El que quedó en el historial de git ya no abre
+    -- nada. Si vuelve a filtrarse uno, se rota igual: cambiar primero la
+    -- Edge Function, después la base.
     --
     -- El valor en uso se mira en la propia base:
     --   select prosrc from pg_proc where proname = 'notify_push_mensajes_admin';
