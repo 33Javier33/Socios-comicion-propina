@@ -232,6 +232,21 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-21 — Horarios: «¡Verifica los turnos con Talana!» (SW Horarios v38)
+
+Aviso fijo sobre el calendario del socio, justo debajo de la tarjeta de HOY:
+
+> ⚠️ **¡Verifica los turnos con Talana!**
+> Pueden existir cambios de turno que no estén cargados acá. Antes de confiar en este calendario, confírmalo en Talana.
+
+Lo que muestra la app es la planilla que cargó el supervisor. Un cambio de turno acordado después puede no estar reflejado, y la fuente que manda es Talana — eso ahora queda dicho donde el socio mira la hora de entrada, no escondido en la ayuda.
+
+Va **arriba del calendario y debajo de HOY**: se ve al abrir, sin tener que bajar, y acompaña tanto al turno de hoy como al mes completo.
+
+Nuevas variables `--h-avi-bg/bd/tx`, una por cada tema (Claro, Oscuro, Negro). Fijar el color a mano habría quedado ilegible en claro o chillón en negro; medido queda en **11.4:1**, **6.8:1** y **12.7:1** de contraste, los tres sobre el mínimo de 4.5:1.
+
+Compacto a propósito: unas líneas más arriba hay un comentario advirtiendo de no empujar el calendario fuera de la vista, y este letrero va justo encima.
+
 #### 2026-10-18 — El recibo decía mal el mes de «SUBE PUNTOS» (SW v187)
 
 **Lo que pasaba.** El recibo que imprime socios-comicion mostraba en *SUBE PUNTOS* el mes de la **primera entrega** de puntos, no el del **aniversario**. Son dos fechas distintas:

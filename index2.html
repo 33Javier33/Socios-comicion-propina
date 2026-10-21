@@ -42,6 +42,8 @@
     --h-bg:#0f172a; --h-card:#1e293b; --h-border:#334155; --h-text:#e2e8f0;
     --h-field:#0f172a; --h-line:#1e293b; --h-tabla:#293449; --h-ghost:#334155;
     --h-muted:#cbd5e1; --h-hoy:#7dd3fc;
+    /* Aviso de «verifica con Talana» */
+    --h-avi-bg:#3a2708; --h-avi-bd:#a16207; --h-avi-tx:#fde68a;
     /* Filas de la vista lista (la que imita la planilla de papel) */
     --h-pl-libre:#0b1220; --h-pl-impar:#151e2e; --h-pl-par:#111a28; --h-pl-hoy:#0c4a6e33;
   }
@@ -49,11 +51,13 @@
     --h-bg:#f1f5f9; --h-card:#ffffff; --h-border:#e2e8f0; --h-text:#0f172a;
     --h-field:#ffffff; --h-line:#e2e8f0; --h-tabla:#cbd5e1; --h-ghost:#e2e8f0;
     --h-muted:#475569; --h-hoy:#0369a1;
+    --h-avi-bg:#fffbeb; --h-avi-bd:#f59e0b; --h-avi-tx:#92400e;
     --h-pl-libre:#e2e8f0; --h-pl-impar:#ffffff; --h-pl-par:#f8fafc; --h-pl-hoy:#e0f2fe;
   }
   body.tema-negro, :root.pre-negro body{
     --h-bg:#000000; --h-card:#141414; --h-border:#1e1e1e;
     --h-field:#000000; --h-line:#1a1a1a; --h-tabla:#1e1e1e; --h-ghost:#1e1e1e;
+    --h-avi-bg:#1c1403; --h-avi-bd:#854d0e; --h-avi-tx:#fcd34d;
     --h-pl-libre:#000000; --h-pl-impar:#141414; --h-pl-par:#0d0d0d; --h-pl-hoy:#0c4a6e40;
   }
 
@@ -212,6 +216,19 @@
   ::-webkit-scrollbar{ width:0; }
   .card{ background:var(--h-card); border:1px solid var(--h-border); border-radius:16px; }
   .btn-primary{ background:linear-gradient(135deg,#0ea5e9,#0284c7); color:#fff; font-weight:700; border:none; border-radius:12px; padding:12px; cursor:pointer; }
+  /* Aviso fijo sobre el calendario del socio. Compacto a propósito: más
+     arriba hay un comentario sobre no empujar el calendario fuera de la
+     vista, y este letrero va justo encima. */
+  .aviso-talana{
+    display:flex; align-items:flex-start; gap:9px;
+    background:var(--h-avi-bg); border:1px solid var(--h-avi-bd);
+    border-left:4px solid var(--h-avi-bd);
+    color:var(--h-avi-tx);
+    border-radius:12px; padding:9px 12px; margin-bottom:14px;
+  }
+  .aviso-talana .av-ico{ font-size:1.05rem; line-height:1.3; flex-shrink:0; }
+  .aviso-talana .av-t{ font-weight:800; font-size:0.84rem; letter-spacing:0.2px; }
+  .aviso-talana .av-d{ font-size:0.76rem; line-height:1.45; opacity:0.92; margin-top:1px; }
   .btn-ghost{ background:var(--h-border); color:var(--h-text); font-weight:600; border:none; border-radius:10px; padding:9px 12px; cursor:pointer; }
   .fld{ width:100%; background:var(--h-field); border:1px solid var(--h-border); border-radius:10px; padding:10px 12px; color:var(--h-text); font-size:14px; }
 
@@ -458,6 +475,16 @@
     <!-- Lo primero que se ve al abrir: qué toca HOY. Antes había que buscar
          el día dentro de la grilla del mes. -->
     <div id="socioHoy" class="mb-4"></div>
+    <!-- Lo que se ve acá es la planilla de turnos cargada por el
+         supervisor. Un cambio de turno acordado después puede no estar
+         reflejado, así que la fuente que manda es Talana. -->
+    <div class="aviso-talana">
+      <span class="av-ico">⚠️</span>
+      <div>
+        <div class="av-t">¡Verifica los turnos con Talana!</div>
+        <div class="av-d">Pueden existir cambios de turno que no estén cargados acá. Antes de confiar en este calendario, confírmalo en Talana.</div>
+      </div>
+    </div>
     <div class="flex items-center justify-between mb-3">
       <button onclick="socioMes(-1)" class="btn-ghost">‹</button>
       <div id="socioMesLabel" class="font-extrabold text-base"></div>
@@ -4774,6 +4801,6 @@ async function instalarApp(){
     : '💻 En Chrome/Edge:\n\nMenú ⋮ → "Instalar app" (o el ícono de instalar en la barra de direcciones).');
 }
 </script>
-<script src="js/version-horarios.js?v=19"></script>
+<script src="js/version-horarios.js?v=20"></script>
 </body>
 </html>
