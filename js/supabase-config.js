@@ -2934,8 +2934,16 @@ window.sbCargarResponsables = async function() {
         if (error || !data || !data.valor) return;
         const lista = JSON.parse(data.valor);
         if (!Array.isArray(lista) || lista.length === 0) return;
-        localStorage.setItem('fondo_responsables', JSON.stringify(lista));
-        if (typeof responsables_poblarLoginSelector === 'function') responsables_poblarLoginSelector();
+        // La lista de `config_sistema` viene sin PINs a propósito. Escribirla
+        // tal cual borraba el PIN local que cargarCredenciales() acababa de
+        // poner: estas dos cargas corren en paralelo al arrancar y ganaba la
+        // última en responder. responsables_aplicarDesdeNube() fusiona.
+        if (typeof responsables_aplicarDesdeNube === 'function') {
+            responsables_aplicarDesdeNube(lista);
+        } else {
+            localStorage.setItem('fondo_responsables', JSON.stringify(lista));
+            if (typeof responsables_poblarLoginSelector === 'function') responsables_poblarLoginSelector();
+        }
         console.log('[SB-RESP] Responsables cargados desde Supabase:', lista.length);
     } catch(e) {}
 };

@@ -21,30 +21,10 @@ async function cfg_cargarDesdeSupabase() {
             localStorage.setItem(CLAVE_RECUP_KEY, cfg.clave_recup);
         }
         // Responsables (solo sobreescribe si Supabase tiene datos).
-        //
-        // OJO: la lista que vive en `config_sistema` se guarda A PROPÓSITO sin
-        // PINs (los PINs están en `responsable_creds`). Antes esta lista se
-        // escribía tal cual sobre localStorage y BORRABA el `pin` local que
-        // cargarCredenciales() acababa de poner — las dos cargas corren en
-        // paralelo al iniciar, así que ganaba la que respondía última. Cuando
-        // ganaba esta, el responsable aparecía como "sin PIN propio", no se
-        // dibujaba el campo "PIN actual" y el cambio de PIN quedaba trabado.
-        // Por eso ahora se FUSIONA conservando el PIN de la nube o el local.
         if (cfg.responsables) {
             try {
                 const lista = JSON.parse(cfg.responsables);
-                if (Array.isArray(lista) && lista.length > 0) {
-                    const previos = responsables_cargar();
-                    const fusionada = lista.map(r => {
-                        const prev = previos.find(p => p.ini === r.ini && p.area === r.area);
-                        const pin = (typeof credencialesCache === 'object' && credencialesCache[r.ini + '|' + r.area])
-                            || (prev && prev.pin) || '';
-                        return pin ? { ini: r.ini, area: r.area, pin } : { ini: r.ini, area: r.area };
-                    });
-                    localStorage.setItem(RESP_KEY, JSON.stringify(fusionada));
-                    responsables_poblarLoginSelector();
-                    if (document.getElementById('cfg-responsables-lista')) cfg_renderResponsables();
-                }
+                if (Array.isArray(lista) && lista.length > 0) responsables_aplicarDesdeNube(lista);
             } catch(e) {}
         }
         console.log('[CFG-SB] Configuración cargada desde Supabase');
@@ -142,12 +122,130 @@ function responsables_cargar() {
     try { return JSON.parse(localStorage.getItem(RESP_KEY)) || RESP_DEFAULT; }
     catch(e) { return RESP_DEFAULT; }
 }
-function responsables_guardar(lista) {
+
+// Guarda SOLO en este dispositivo. Es lo que corresponde cuando cambia un PIN
+// personal: el PIN de verdad vive en `responsable_creds`, y la lista de
+// `config_sistema` ni se entera.
+//
+// Antes existía un único responsables_guardar() que, además de localStorage,
+// subía la lista local entera a `config_sistema`. Eso BORRABA de la nube a los
+// responsables que hubiera agregado otro dispositivo: al arrancar,
+// cargarCredenciales() → _sincronizarPinsLocales() sube la lista local, que en
+// un equipo recién abierto todavía está desactualizada. El responsable nuevo
+// desaparecía para todos, incluido quien lo creó. Por eso ahora el guardado
+// local y el cambio de la lista compartida son dos cosas distintas.
+function responsables_guardarLocal(lista) {
     try { localStorage.setItem(RESP_KEY, JSON.stringify(lista)); } catch(e) {}
-    // Sincronizar con Supabase en segundo plano (sin PINs para no duplicar con responsable_creds)
-    const listaSinPins = lista.map(({ ini, area }) => ({ ini, area }));
-    callApiSocios('setConfig', { clave: 'responsables', valor: JSON.stringify(listaSinPins) })
-        .catch(e => console.warn('[CFG-SB] Error guardando responsables:', e));
+}
+
+// La lista de `config_sistema` se guarda A PROPÓSITO sin PINs (los PINs están
+// en `responsable_creds`). Volcarla tal cual sobre localStorage borraría el
+// `pin` local que cargarCredenciales() acaba de poner —las dos cargas corren
+// en paralelo al iniciar, así que gana la que responde última—, y el
+// responsable aparecería como "sin PIN propio", sin campo "PIN actual" y con
+// el cambio de PIN trabado. Así que se fusiona, conservando el PIN.
+function responsables_fusionar(listaNube, previos) {
+    const prev = Array.isArray(previos) ? previos : responsables_cargar();
+    return listaNube.map(r => {
+        const p   = prev.find(x => x.ini === r.ini && x.area === r.area);
+        const pin = (typeof credencialesCache === 'object' && credencialesCache[r.ini + '|' + r.area])
+                 || (p && p.pin) || '';
+        return pin ? { ini: r.ini, area: r.area, pin } : { ini: r.ini, area: r.area };
+    });
+}
+
+// Deja en este dispositivo la lista que viene de la nube y repinta lo que la
+// muestra. Solo redibuja si la lista cambió de verdad: redibujar porque sí
+// borraría el formulario de PIN que alguien pudiera estar llenando.
+function responsables_aplicarDesdeNube(listaNube) {
+    if (!Array.isArray(listaNube) || listaNube.length === 0) return false;
+    const antes = localStorage.getItem(RESP_KEY) || '';
+    const fusionada = responsables_fusionar(listaNube);
+    const ahora = JSON.stringify(fusionada);
+    responsables_guardarLocal(fusionada);
+    if (ahora === antes) return false;
+    responsables_poblarLoginSelector();
+    if (typeof responsables_poblarSelector === 'function') responsables_poblarSelector();
+    if (document.getElementById('cfg-responsables-lista')) cfg_renderResponsables();
+    if (document.getElementById('responsables-lista')) responsables_renderLista();
+    return true;
+}
+
+// Alta o baja en la lista COMPARTIDA. Se lee la lista de la nube, se le aplica
+// el cambio y se vuelve a escribir, en vez de subir la copia local: así dos
+// dispositivos pueden agregar gente sin pisarse.
+//
+// Si la nube no se puede leer o no se puede escribir, NO se toca nada y se
+// avisa. Antes se guardaba igual en local y el aviso era "✅ Responsable
+// agregado" aunque no hubiera salido de este teléfono.
+//
+// cambio: { agregar: {ini, area} } ó { quitar: {ini, area} }
+async function responsables_cambiarEnNube(cambio) {
+    let remota = null;
+    try {
+        const res = await callApiSocios('getConfig');
+        if (res && res.status === 'success' && res.data) {
+            // Si la fila todavía no existe (primer uso), la base es la lista
+            // local; si existiera y se ignorara, se perderían los que ya hay.
+            remota = res.data.responsables ? JSON.parse(res.data.responsables) : responsables_cargar();
+        }
+    } catch(e) { remota = null; }
+
+    if (!Array.isArray(remota)) {
+        showToast('Sin conexión con la nube — el cambio no se guardó. Intenta de nuevo.', 'error');
+        return null;
+    }
+
+    const id = r => r.ini + '|' + r.area;
+    let lista = remota.map(r => ({ ini: r.ini, area: r.area }));
+
+    if (cambio.agregar) {
+        if (lista.some(r => id(r) === id(cambio.agregar))) {
+            // Puede existir en la nube aunque este equipo aún no lo viera.
+            responsables_aplicarDesdeNube(lista);
+            showToast('Ese responsable ya existe', 'error');
+            return null;
+        }
+        lista.push({ ini: cambio.agregar.ini, area: cambio.agregar.area });
+    }
+    if (cambio.quitar) {
+        lista = lista.filter(r => id(r) !== id(cambio.quitar));
+    }
+
+    const res2 = await callApiSocios('setConfig', { clave: 'responsables', valor: JSON.stringify(lista) });
+    if (!res2 || res2.status !== 'success') {
+        showToast('No se pudo guardar en la nube. Intenta de nuevo.', 'error');
+        return null;
+    }
+
+    responsables_guardarLocal(responsables_fusionar(lista));
+    responsables_avisarCambio();
+    return lista;
+}
+
+// ── Tiempo real: que el alta se vea en los otros equipos sin recargar ──
+// `postgres_changes` solo llega si `config_sistema` está en la publicación de
+// realtime; el broadcast funciona siempre que los dos equipos tengan la app
+// abierta. Se usan los dos, y el que no esté disponible simplemente no suena.
+let _cfgRtListo = false, _cfgCanal = null;
+function config_initRealtime() {
+    if (_cfgRtListo || typeof dbSoc === 'undefined') return;
+    _cfgRtListo = true;
+    const refrescar = () => { cfg_cargarDesdeSupabase().catch(() => {}); };
+    try {
+        _cfgCanal = dbSoc.channel('config-sistema-rt')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'config_sistema' }, refrescar)
+            .on('broadcast', { event: 'responsables' }, refrescar)
+            .subscribe();
+    } catch (e) {
+        console.warn('[config] realtime no disponible:', e);
+        _cfgCanal = null;
+    }
+}
+function responsables_avisarCambio() {
+    if (!_cfgCanal) return;
+    try { _cfgCanal.send({ type: 'broadcast', event: 'responsables', payload: { ts: Date.now() } }); }
+    catch (e) { /* sin conexión: el otro equipo se entera al recargar */ }
 }
 
 function responsables_poblarSelector() {
@@ -181,22 +279,24 @@ function responsables_renderLista() {
         + '</div>'
     ).join('');
 }
-function responsables_agregar() {
+async function responsables_agregar() {
     const ini  = document.getElementById('resp-new-ini').value.trim().toUpperCase();
     const area = document.getElementById('resp-new-area').value.trim().toUpperCase();
     if (!ini || !area) return showToast('Completa iniciales y área', 'error');
-    const lista = responsables_cargar();
-    lista.push({ ini, area });
-    responsables_guardar(lista);
+    const lista = await responsables_cambiarEnNube({ agregar: { ini, area } });
+    if (!lista) return;
     document.getElementById('resp-new-ini').value = '';
     document.getElementById('resp-new-area').value = '';
     responsables_renderLista();
     showToast('Responsable agregado', 'success');
 }
-function responsables_eliminar(idx) {
-    const lista = responsables_cargar();
-    lista.splice(idx, 1);
-    responsables_guardar(lista);
+async function responsables_eliminar(idx) {
+    // Por identidad y no por posición: la lista puede haberse refrescado desde
+    // otro dispositivo entre que se dibujó el botón y se tocó.
+    const r = responsables_cargar()[idx];
+    if (!r) return;
+    const lista = await responsables_cambiarEnNube({ quitar: { ini: r.ini, area: r.area } });
+    if (!lista) return;
     responsables_renderLista();
 }
 
@@ -355,7 +455,9 @@ async function cfg_guardarRespPin(idx) {
         // Actualizar cache local y responsables
         credencialesCache[key] = pin1;
         lista[idx].pin = pin1;
-        responsables_guardar(lista);
+        // Solo local: el PIN vive en `responsable_creds` y la lista compartida
+        // de `config_sistema` no cambia.
+        responsables_guardarLocal(lista);
         delete _pinRecoveryModes[idx];
         cfg_renderResponsables();
         responsables_poblarLoginSelector();
@@ -386,7 +488,7 @@ async function cfg_quitarRespPin(idx) {
         delete credencialesCache[key];
         delete lista[idx].pin;
         delete _pinRecoveryModes[idx];
-        responsables_guardar(lista);
+        responsables_guardarLocal(lista);
         cfg_renderResponsables();
         responsables_poblarLoginSelector();
         showToast('PIN personal eliminado. Se usará el PIN del sistema.', 'info');
@@ -409,26 +511,27 @@ function cfg_recuperarPinConClave(idx) {
     document.getElementById('cfg-rpin-clave-' + idx).value = '';
 }
 
-function cfg_agregarResponsable() {
+async function cfg_agregarResponsable() {
     const ini  = (document.getElementById('cfg-resp-ini').value || '').trim().toUpperCase();
     const area = (document.getElementById('cfg-resp-area').value || '').trim().toUpperCase();
     if (!ini || !area) return showToast('Ingresa las iniciales y el área', 'error');
-    const lista = responsables_cargar();
-    if (lista.find(r => r.ini === ini && r.area === area)) return showToast('Ese responsable ya existe', 'error');
-    lista.push({ ini, area });
-    responsables_guardar(lista);
+    const lista = await responsables_cambiarEnNube({ agregar: { ini, area } });
+    if (!lista) return;   // no se pudo guardar: el aviso ya salió
     document.getElementById('cfg-resp-ini').value = '';
     document.getElementById('cfg-resp-area').value = '';
     cfg_renderResponsables();
     responsables_poblarSelector();
     responsables_poblarLoginSelector();
-    showToast('✅ Responsable agregado', 'success');
+    showToast('✅ Responsable agregado — ya está en todos los dispositivos', 'success');
 }
-function cfg_eliminarResponsable(idx) {
-    const lista = responsables_cargar();
-    if (!confirm('¿Quitar a ' + lista[idx].ini + ' (' + lista[idx].area + ')?')) return;
-    lista.splice(idx, 1);
-    responsables_guardar(lista);
+async function cfg_eliminarResponsable(idx) {
+    // Por identidad y no por posición, que la lista puede haberse refrescado
+    // desde otro dispositivo justo antes del toque.
+    const r = responsables_cargar()[idx];
+    if (!r) return;
+    if (!confirm('¿Quitar a ' + r.ini + ' (' + r.area + ')?')) return;
+    const lista = await responsables_cambiarEnNube({ quitar: { ini: r.ini, area: r.area } });
+    if (!lista) return;
     cfg_renderResponsables();
     responsables_poblarSelector();
     responsables_poblarLoginSelector();

@@ -232,6 +232,30 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-22 — El responsable nuevo no llegaba a los otros dispositivos (SW v188)
+
+**Lo que pasaba.** Se agregaba un responsable en Configuración, salía el ✅, y en los demás equipos no aparecía. Peor: al rato tampoco estaba en el equipo donde se creó.
+
+**La causa.** Existía una sola función `responsables_guardar()` que, además de escribir en el teléfono, **subía la lista local completa** a `config_sistema.responsables`, pisando lo que hubiera en la nube. Y esa función se llamaba también desde `_sincronizarPinsLocales()` (`js/api.js`), que corre **en cada arranque** junto a `cargarCredenciales()`. En un equipo recién abierto, la lista local todavía es la vieja: subirla borraba de la nube al responsable que había agregado otro dispositivo.
+
+La secuencia, reproducida con el código real:
+
+1. El equipo A agrega `J.R|MESAS` → la nube queda con 4.
+2. El equipo B arranca. `cargarCredenciales()` responde antes que `cfg_cargarDesdeSupabase()`, ve que un PIN de la nube no está en su copia local, y guarda — subiendo sus 3 de siempre. **La nube vuelve a 3.**
+3. El equipo A recarga, lee la nube y pierde al responsable que él mismo había creado.
+
+**El arreglo.** Separar dos cosas que no son lo mismo:
+
+- `responsables_guardarLocal()` — solo este dispositivo. Es lo que usan los cambios de PIN, porque el PIN vive en `responsable_creds` y la lista compartida no cambia.
+- `responsables_cambiarEnNube({agregar|quitar})` — lee la lista **de la nube**, le aplica el alta o la baja y la vuelve a escribir. Dos equipos pueden agregar gente a la vez sin pisarse, y las bajas siguen propagándose (no es una unión de listas).
+
+Además:
+
+- **Si la nube no responde, no se guarda nada y se avisa.** Antes el ✅ salía igual aunque el cambio no hubiera salido del teléfono: `setConfig` devuelve `{status:'error'}` dentro de una promesa *resuelta*, así que el `.catch()` nunca se ejecutaba.
+- **Las bajas van por identidad (`ini|area`), no por posición.** Con la lista refrescándose desde otro equipo, el índice del botón podía apuntar a otra persona.
+- **`sbCargarResponsables()` ya no pisa los PINs locales.** La lista de `config_sistema` viene sin PINs a propósito; esta función la escribía tal cual y borraba el PIN que `cargarCredenciales()` acababa de poner. Ahora fusiona, igual que `cfg_cargarDesdeSupabase()` — que era el único de los dos caminos que ya lo hacía bien.
+- **Tiempo real.** Nuevo `config_initRealtime()`: un alta o baja aparece en los otros equipos **sin recargar**, por `postgres_changes` sobre `config_sistema` y por broadcast en el mismo canal (el broadcast funciona aunque la tabla no esté en la publicación de realtime).
+
 #### 2026-10-21 — Horarios: «¡Verifica los turnos con Talana!» (SW Horarios v38)
 
 Aviso fijo sobre el calendario del socio, justo debajo de la tarjeta de HOY:

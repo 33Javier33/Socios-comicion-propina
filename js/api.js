@@ -48,7 +48,10 @@ function _sincronizarPinsLocales() {
         // NUNCA borra pines locales desde aquí — eso solo lo hace cfg_quitarRespPin
         if (pinNube && r.pin !== pinNube) { r.pin = pinNube; cambios = true; }
     });
-    if (cambios) responsables_guardar(lista);
+    // SOLO local. Esto corre al arrancar, cuando `lista` todavía puede ser la
+    // copia vieja de este equipo; subirla a `config_sistema` borraba de la nube
+    // a los responsables agregados desde otro dispositivo.
+    if (cambios) responsables_guardarLocal(lista);
 }
 
 async function fetchSociosDeGoogle() {

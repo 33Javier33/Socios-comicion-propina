@@ -79,6 +79,8 @@ function iniciarApp() {
     if (typeof ptdias_cargarPendientes === 'function') setTimeout(ptdias_cargarPendientes, 1700);
     // Anticipos en vivo: si otro encargado registra uno, esta pantalla se actualiza sola
     if (typeof anticipos_initRealtime === 'function') anticipos_initRealtime();
+    // Responsables: si otro equipo agrega o quita uno, acá se ve sin recargar
+    if (typeof config_initRealtime === 'function') config_initRealtime();
     // Estado de Cobros sincronizado entre dispositivos (realtime + carga inicial)
     if (typeof cierresMes_initRealtime === 'function') cierresMes_initRealtime();
     if (typeof cierresMes_sincronizar === 'function') setTimeout(() => cierresMes_sincronizar(true), 1200);
