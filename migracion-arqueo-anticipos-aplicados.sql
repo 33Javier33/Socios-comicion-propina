@@ -39,6 +39,49 @@
 alter table public.arqueo_estado
     add column if not exists anticipos_aplicados jsonb not null default '[]'::jsonb;
 
+-- ── 2. Sembrar la lista con lo que YA está descontado ──────────────
+-- La columna nace vacía, y una lista vacía significa "no se ha restado
+-- ninguno". Dejarla así haría que la app restara del conteo TODOS los
+-- anticipos del período, cuando la mayoría ya estaban restados: el
+-- conteo se iría muy abajo de golpe.
+--
+-- No hay forma de saber desde la base cuáles de las restas sobrevivieron
+-- y cuáles se perdieron, así que se parte del supuesto seguro: todos
+-- están aplicados. Equivocarse hacia "ya estaba restado" deja el conteo
+-- como está hoy; equivocarse hacia "falta restarlo" lo descuadra.
+--
+-- Lo que de verdad falte se quita a mano con el paso 3.
+with p as (
+    select case when extract(day from current_date) >= 15
+                then date_trunc('month', current_date)::date + 14
+                else (date_trunc('month', current_date) - interval '1 month')::date + 14
+           end as inicio
+), q as (
+    select inicio, (inicio + interval '1 month' - interval '1 day')::date as fin from p
+)
+update public.arqueo_estado ae
+   set anticipos_aplicados = coalesce((
+           select jsonb_agg(r.firma)
+             from public.retiros_anticipos r, q
+            where r.firma is not null
+              and r.fecha >= q.inicio
+              and r.fecha <= q.fin
+       ), '[]'::jsonb)
+ where coalesce(jsonb_array_length(ae.anticipos_aplicados), 0) = 0;
+
+-- ── 3. (Opcional) Marcar como NO descontados los de un día ─────────
+-- Para recuperar una resta que sí se perdió. Al quitar esas firmas de la
+-- lista, la app las ve como pendientes y resta esos billetes del conteo
+-- la próxima vez que se abra el arqueo. Cambia la fecha antes de correr.
+--
+-- update public.arqueo_estado
+--    set anticipos_aplicados = (
+--        select coalesce(jsonb_agg(f), '[]'::jsonb)
+--          from jsonb_array_elements_text(anticipos_aplicados) as f
+--         where f not in (select firma from public.retiros_anticipos
+--                          where fecha = '2026-10-22' and firma is not null)
+--    );
+
 -- ── Para comprobar que quedó ───────────────────────────────────────
 -- select periodo, jsonb_array_length(anticipos_aplicados) as aplicados
 --   from public.arqueo_estado;

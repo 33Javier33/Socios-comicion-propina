@@ -262,6 +262,7 @@ Lo demás que trae:
 - **Archivar no deja el conteo nuevo en negativo.** Los anticipos del período siguen sumando hasta el día 14; si la lista se vaciara al resetear, se restarían otra vez sobre un conteo en cero. Al archivar se marcan todos como aplicados.
 - **Las donaciones también pasan su folio.** Ese camino (`js/donaciones.js`) escribe su propio desglose en `retiros_anticipos`; sin el folio, la reconciliación lo habría visto como «nunca descontado» y lo habría restado una segunda vez.
 - **Desplegar antes de correr la migración es seguro.** Sin la columna se guarda sin ella, y la lista que no llega **no** se toma por vacía — tomarla por vacía habría sido peor que no tenerla.
+- **La migración siembra la lista.** La columna nace vacía, y vacía significa «no se ha restado ninguno»: la app habría restado del conteo los $1.026.000 enteros cuando la mayoría ya estaban restados. Desde la base no hay forma de saber qué restas sobrevivieron, así que se parte del supuesto seguro —todos aplicados— y lo que de verdad falte se quita de la lista a mano (paso 3 del archivo), que es lo que hace que la app lo reponga.
 
 Catorce comprobaciones automáticas, incluida la reproducción del caso del 22/10 contra el código real.
 
