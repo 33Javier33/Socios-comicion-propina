@@ -141,6 +141,7 @@ function aq_initSiNoIniciado() {
     const sm = localStorage.getItem(AQ_SK_MOVI);
     const sr = localStorage.getItem(AQ_SK_RETIROS);
     _aqCargarAutoMov();
+    _aqCargarAplicados();
     if(sc) aq_conteo = JSON.parse(sc);
     if(sm) { aq_movi = JSON.parse(sm); aq_normTraceTodos(); }  // limpia rastros antiguos con "Manual"/paréntesis
     if(sr) aq_totalRetirado = parseInt(sr);
@@ -429,11 +430,17 @@ function aq_pintarDesgloseRetiros(retirado) {
     if (!retirado && !anticipos) { caja.style.display = 'none'; return; }
     caja.style.display = 'block';
 
-    // Lo atribuible a anticipos no puede pasar de lo que efectivamente salió:
-    // si hay más anticipos que retiros, el resto todavía no se descontó del
-    // conteo y eso se avisa aparte, en vez de mostrar un "otros" negativo.
-    const porAnticipos = Math.min(anticipos, retirado);
-    const otros        = retirado - porAnticipos;
+    // Lo pagado en anticipos sale de los desgloses que están marcados como
+    // restados de este conteo: es el dato exacto. El mínimo de abajo es solo
+    // el respaldo para cuando la lista de desgloses todavía no llegó de la
+    // nube — deduce la cifra de los retiros, que mezclan anticipos con
+    // correcciones a mano, y no puede pasar de lo que efectivamente salió.
+    const exacto = aq_montoAnticiposAplicados();
+    const porAnticipos = exacto === null ? Math.min(anticipos, retirado)
+                                         : Math.min(exacto, anticipos);
+    // "Otros" nunca negativo: si se devolvieron billetes a mano, el retirado
+    // puede quedar por debajo de lo aplicado sin que eso sea un error.
+    const otros        = Math.max(0, retirado - porAnticipos);
     const sinDescontar = anticipos - porAnticipos;
 
     document.getElementById('aq-retiros-anticipos').textContent = aq_fmt(porAnticipos);
@@ -445,7 +452,8 @@ function aq_pintarDesgloseRetiros(retirado) {
         // (por ejemplo, anticipos con fecha de un período anterior).
         document.getElementById('aq-retiros-otros-lbl').textContent = '· otros movimientos del conteo';
         nota.innerHTML = '<span style="color:#b45309;">⚠️ Hay ' + aq_fmt(sinDescontar)
-            + ' en anticipos que no se descontaron de este conteo.</span>';
+            + ' en anticipos que no se descontaron de este conteo.</span>'
+            + ' <button onclick="aq_reconciliarAnticipos()" style="margin-left:6px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;border-radius:6px;padding:3px 9px;cursor:pointer;font-size:0.8em;font-weight:700;">Descontarlos ahora</button>';
     } else if (otros > 0) {
         document.getElementById('aq-retiros-otros-lbl').textContent = '· otros movimientos del conteo';
         nota.innerHTML = 'Los “otros” son correcciones y retiros hechos a mano en el conteo, no plata del fondo.';
@@ -674,8 +682,59 @@ async function aq_fetchAnticipos(silent = false) {
     finally { if(!silent) aq_realizarArqueo(); }
 }
 
-function aq_aplicarBilletesAnticipo(billetes) {
+// ══════════════════════════════════════════════════════════════════════
+// QUÉ DESGLOSES YA ESTÁN RESTADOS DE ESTE CONTEO
+//
+// La lista de firmas (folios ATC-…) viaja PEGADA al conteo: se guarda en
+// la misma fila de `arqueo_estado` y se carga con él. Es a propósito.
+//
+// El conteo es una sola fila que se escribe entera, así que el último
+// dispositivo que guarda manda. Cuando un equipo con el conteo viejo
+// guardaba después del que había registrado un anticipo, la resta
+// desaparecía: los billetes seguían contados y encima se sumaban como
+// anticipo, con lo que el arqueo marcaba un sobrante por ese monto. El
+// 22/10 se perdieron así $266.000 de $1.026.000 — los tres registros del
+// anticipo estaban completos y lo único que faltaba era la resta.
+//
+// Al ir las dos cosas juntas no pueden quedar en desacuerdo: quien pisa
+// el conteo pisa también la lista, y en la siguiente carga se ve qué
+// firmas faltan y se vuelven a restar. Se arregla sola.
+// ══════════════════════════════════════════════════════════════════════
+let aq_anticiposAplicados = [];
+
+// Desgloses del período en curso, tal como están en la nube. Es la fuente
+// de verdad de "qué billetes salieron por anticipos": a diferencia del
+// conteo, nadie la pisa.
+let aqRetirosPeriodo = null;
+
+function _aqCargarAplicados() {
+    try {
+        const v = JSON.parse(localStorage.getItem(AQ_SK_RETIROS_ANTICIPOS) || '[]');
+        aq_anticiposAplicados = Array.isArray(v) ? v : [];
+    } catch (e) { aq_anticiposAplicados = []; }
+}
+
+function _aqGuardarAplicados() {
+    try { localStorage.setItem(AQ_SK_RETIROS_ANTICIPOS, JSON.stringify(aq_anticiposAplicados)); } catch (e) {}
+}
+
+function _aqMarcarAplicado(firma) {
+    if (!firma || aq_anticiposAplicados.includes(firma)) return;
+    aq_anticiposAplicados.push(firma);
+    _aqGuardarAplicados();
+}
+
+function _aqDesmarcarAplicado(firma) {
+    if (!firma) return;
+    const i = aq_anticiposAplicados.indexOf(firma);
+    if (i >= 0) { aq_anticiposAplicados.splice(i, 1); _aqGuardarAplicados(); }
+}
+
+function aq_aplicarBilletesAnticipo(billetes, firma) {
     if (!billetes || Object.keys(billetes).length === 0) return;
+    // Un desglose ya restado no se vuelve a restar, pase lo que pase con
+    // el orden de las cargas. Es lo que hace segura la reconciliación.
+    if (firma && aq_anticiposAplicados.includes(firma)) return;
     if (Object.keys(aq_conteo).length === 0) {
         try { const c = localStorage.getItem(AQ_SK_CONTEO); if (c) aq_conteo = JSON.parse(c); } catch(e) {}
     }
@@ -690,8 +749,88 @@ function aq_aplicarBilletesAnticipo(billetes) {
         aq_movi[den] = (aq_movi[den] || '') + `-${n}`;
         _aqAnotarAuto(den, -n, 'anticipo');
     });
+    _aqMarcarAplicado(firma);
     aq_saveState();
     if (aq_iniciado) aq_generarCampos();
+}
+
+// Monto total de los desgloses del período que SÍ están restados del
+// conteo. Es lo que se muestra como "pagado en anticipos", en vez de
+// deducirlo de los retiros —que mezclan anticipos con correcciones a
+// mano y no distinguen uno de otro.
+function aq_montoAnticiposAplicados() {
+    if (!Array.isArray(aqRetirosPeriodo)) return null;
+    return Math.round(aqRetirosPeriodo
+        .filter(r => aq_anticiposAplicados.includes(r.firma))
+        .reduce((s, r) => s + (Number(r.monto) || 0), 0));
+}
+
+async function aq_cargarRetirosPeriodo() {
+    const { inicio, fin } = aq_calcularPeriodoActual();
+    try {
+        const res = await fetch(AQ_URL_POST, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'getRetirosAnticipos', desde: inicio, hasta: fin, limit: 2000 })
+        });
+        const json = await res.json();
+        if (json.status !== 'success' || !Array.isArray(json.data)) return null;
+        aqRetirosPeriodo = json.data.filter(r => r.firma && r.billetes && Object.keys(r.billetes).length);
+        return aqRetirosPeriodo;
+    } catch (e) {
+        console.warn('[AQ] no se pudieron leer los desgloses del período:', e.message);
+        return null;
+    }
+}
+
+// Repone en el conteo los anticipos cuyos billetes nunca se descontaron
+// —o cuya resta se perdió porque otro equipo guardó encima—. Se apoya en
+// la lista de firmas, así que restar dos veces el mismo anticipo no
+// puede ocurrir.
+async function aq_reconciliarAnticipos() {
+    const lista = await aq_cargarRetirosPeriodo();
+    if (!lista) return 0;
+
+    // Se podan las firmas que ya no son del período en curso: la
+    // reconciliación solo mira este período, así que soltarlas no puede
+    // hacer que algo se reste dos veces, y la lista no crece sin fin.
+    const delPeriodo = new Set(lista.map(r => r.firma));
+    const podada = aq_anticiposAplicados.filter(f => delPeriodo.has(f));
+    if (podada.length !== aq_anticiposAplicados.length) {
+        aq_anticiposAplicados = podada;
+        _aqGuardarAplicados();
+    }
+
+    const faltan = lista.filter(r => !aq_anticiposAplicados.includes(r.firma));
+    if (faltan.length === 0) { aq_realizarArqueo(); return 0; }
+
+    let monto = 0;
+    faltan.forEach(r => {
+        aq_aplicarBilletesAnticipo(r.billetes, r.firma);
+        monto += Number(r.monto) || 0;
+    });
+
+    const txt = faltan.length === 1
+        ? 'Se descontó del conteo 1 anticipo que faltaba (' + aq_fmt(monto) + ')'
+        : 'Se descontaron del conteo ' + faltan.length + ' anticipos que faltaban (' + aq_fmt(monto) + ')';
+    if (typeof showToast === 'function') showToast('💵 ' + txt, 'warning');
+    console.log('[AQ] reconciliación de anticipos:', faltan.map(r => r.firma).join(', '));
+    if (typeof window.sbAuditLog === 'function') {
+        window.sbAuditLog('Reconciliar Anticipos Arqueo', {
+            detalle: txt,
+            datos: { firmas: faltan.map(r => r.firma), monto: Math.round(monto) }
+        });
+    }
+    aq_realizarArqueo();
+    return faltan.length;
+}
+
+// Tras archivar/resetear: marcar como aplicados todos los desgloses del
+// período, para que el conteo nuevo arranque en cero y la reconciliación
+// no intente restarlos otra vez. Ver el comentario en aq_resetear().
+async function _aqAbsorberPeriodoTrasReset() {
+    const lista = aqRetirosPeriodo || await aq_cargarRetirosPeriodo();
+    if (!lista) return;
+    lista.forEach(r => _aqMarcarAplicado(r.firma));
 }
 
 // Saca del rastro el "-n" que dejó un retiro que se está deshaciendo.
@@ -716,8 +855,11 @@ function _aqQuitarRetiroDelRastro(rastro, n) {
 // plata volvía físicamente al cajón, pero el conteo seguía creyendo que había
 // salido y el total de anticipos ya no la compensaba. Un anticipo de $35.000
 // borrado hacía marcar "FALTA 🚨 -$35.000" sin que faltara nada.
-function aq_devolverBilletesAnticipo(billetes) {
+function aq_devolverBilletesAnticipo(billetes, firmas) {
     if (!billetes || Object.keys(billetes).length === 0) return;
+    // La plata vuelve al cajón, así que estos desgloses dejan de estar
+    // restados de este conteo.
+    (firmas || []).forEach(_aqDesmarcarAplicado);
     if (Object.keys(aq_conteo).length === 0) {
         try { const c = localStorage.getItem(AQ_SK_CONTEO); if (c) aq_conteo = JSON.parse(c); } catch(e) {}
     }
@@ -884,7 +1026,15 @@ function aq_resetear() {
     aq_conteo = {}; aq_movi = {}; aq_totalRetirado = 0;
     aq_histStates = []; aq_histIdx = -1;
     localStorage.removeItem(AQ_SK_CONTEO); localStorage.removeItem(AQ_SK_MOVI); localStorage.removeItem(AQ_SK_RETIROS);
-    localStorage.removeItem(AQ_SK_RETIROS_ANTICIPOS);
+    // La lista de desgloses aplicados NO se borra: se completa.
+    //
+    // Resetear cierra este conteo y empieza otro en cero, pero los anticipos
+    // del período siguen contando en «ANTICIPOS (Nube)» hasta el día 14.
+    // Si la lista se vaciara, la reconciliación los vería como "nunca
+    // descontados" y los restaría del conteo nuevo, dejándolo en negativo.
+    // Ya fueron descontados de un conteo; eso no deja de ser cierto porque
+    // se archive. Se marcan todos y así no se vuelven a tocar.
+    _aqAbsorberPeriodoTrasReset();
     localStorage.removeItem(AQ_SK_DIRTY); _aqDirtyFlag = false;
     localStorage.removeItem(AQ_SK_AUTOMOV); aq_autoMov = {}; _aqAutoMovCargado = true;
     aqAnticiposListaPeriodo = [];
@@ -1181,12 +1331,27 @@ async function aq_recuperarDeNube(silencioso = false) {
             aq_movi = datos.movimientoDisplay || {};
             aq_normTraceTodos();   // los rastros que vienen de la nube también quedan limpios
             aq_totalRetirado = datos.totalRetirado || 0;
+            // La lista de desgloses ya restados viene con el conteo, en la
+            // misma fila: si se reemplaza uno hay que reemplazar la otra, o
+            // dejarían de corresponderse y es justo eso lo que se arregló.
+            //
+            // Si NO viene (la columna todavía no existe en la base), se
+            // conserva la local. Tomarla por vacía sería peor que no tenerla:
+            // la reconciliación restaría de nuevo anticipos ya descontados.
+            if (Array.isArray(datos.anticiposAplicados)) {
+                aq_anticiposAplicados = datos.anticiposAplicados;
+                _aqGuardarAplicados();
+            }
             if(silencioso) {
                 aq_histStates = [{ c: JSON.parse(JSON.stringify(aq_conteo)), r: aq_totalRetirado, m: JSON.parse(JSON.stringify(aq_movi)) }];
                 aq_histIdx = 0;
             }
             aq_generarCampos();
             if(!silencioso) showToast(datos.esArchivado ? '⚠️ Cargado desde el último cierre archivado' : '✅ Datos cargados desde nube', datos.esArchivado ? 'warning' : 'success');
+            // Con el conteo recién puesto se comprueba contra los desgloses de
+            // la nube si falta restar alguno. Acá es donde se recupera lo que
+            // antes se perdía sin que nadie se enterara.
+            aq_reconciliarAnticipos();
         } else {
             if(!silencioso) showToast('Sin datos guardados en la nube', 'warning');
         }
@@ -1202,7 +1367,7 @@ async function aq_guardarEnNube(silencioso = false) {
     // van en null y la pantalla las recalcula cuando el esperado aparece.
     const espVal = aq_esperadoVal;
     const totalCaja = Math.round(aq_calcTotal());
-    const payload = { conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: espVal === null ? null : Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
+    const payload = { conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, anticiposAplicados: aq_anticiposAplicados, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: espVal === null ? null : Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
     try {
         if(typeof window.sbGuardarArqueo === 'function') {
             await window.sbGuardarArqueo(payload);
@@ -1227,7 +1392,7 @@ async function aq_archivarEnNube() {
     toggleLoader(true, 'Archivando...');
     const espVal = aq_esperadoVal;
     const totalCaja = Math.round(aq_calcTotal());
-    const payload = { conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
+    const payload = { conteoActual: aq_conteo, totalRetirado: aq_calcRetiradoTotal(), movimientoDisplay: aq_movi, anticiposAplicados: aq_anticiposAplicados, totalContado: totalCaja, totalEsperado: espVal, totalAnticiposNomina: Math.round(aq_totalAnticipos), diferencia: Math.round((totalCaja+aq_totalAnticipos)-espVal), divisorPlanta: document.getElementById('aq-divisor-planta').value, divisorPartTime: document.getElementById('aq-divisor-part-time').value };
     try {
         if(typeof window.sbArchivarArqueo === 'function') {
             await window.sbArchivarArqueo(payload);

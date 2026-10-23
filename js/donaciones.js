@@ -1391,7 +1391,11 @@ async function don_registrarEgreso() {
     toggleLoader(true, 'Registrando egreso...');
     try {
         // 1) Sale de la caja: baja el conteo del arqueo por esos billetes.
-        if (typeof aq_aplicarBilletesAnticipo === 'function') aq_aplicarBilletesAnticipo(billetes);
+        //    El folio va junto porque más abajo (paso 3) se guarda el desglose
+        //    en `retiros_anticipos` con esa misma firma. Sin pasarlo, la
+        //    reconciliación del arqueo vería ese desglose como "nunca
+        //    descontado" y lo restaría una segunda vez.
+        if (typeof aq_aplicarBilletesAnticipo === 'function') aq_aplicarBilletesAnticipo(billetes, folio);
 
         // 2) Entra a ANTICIPOS (Nube), con el id propio de donaciones.
         const resAnt = await callApiSocios('registrarBatchAnticipos', {

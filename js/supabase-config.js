@@ -2354,11 +2354,18 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                 console.log('[AQ-SB] getLast →', row ? 'encontrado' : 'vacío', error ? '| error: ' + error.message : '');
                 if (error) return _mockOk({ status: 'error', message: error.message });
                 if (row) {
-                    return _mockOk({ status: 'success', data: {
+                    const _d = {
                         conteoActual: row.conteo || {},
                         movimientoDisplay: row.movimiento_display || {},
                         totalRetirado: Number(row.total_retirado || 0)
-                    }});
+                    };
+                    // Firmas de los desgloses ya restados de ESTE conteo. Viajan
+                    // con el conteo, en la misma fila, para que no puedan quedar
+                    // en desacuerdo (ver migracion-arqueo-anticipos-aplicados.sql).
+                    // Si la columna aún no existe no se manda nada: un [] haría
+                    // que la app borrara su lista y restara dos veces.
+                    if (Array.isArray(row.anticipos_aplicados)) _d.anticiposAplicados = row.anticipos_aplicados;
+                    return _mockOk({ status: 'success', data: _d });
                 }
                 // Fallback: cargar el último cierre archivado si no hay estado activo
                 const { data: cierre } = await dbSoc.from('arqueo_cierres')
@@ -2547,12 +2554,26 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
             }
 
             // POST default → guardar/actualizar estado con upsert por periodo='actual'
-            const { error: upErr } = await dbSoc.from('arqueo_estado').upsert({
+            const _aqFila = {
                 periodo: 'actual',
                 conteo: aqBody.conteoActual || {},
                 movimiento_display: aqBody.movimientoDisplay || {},
-                total_retirado: Number(aqBody.totalRetirado || 0)
-            }, { onConflict: 'periodo' });
+                total_retirado: Number(aqBody.totalRetirado || 0),
+                // Se guarda junto al conteo a propósito: si este equipo pisa el
+                // conteo con uno viejo, pisa también la lista, y la app detecta
+                // las firmas que faltan y vuelve a restarlas.
+                anticipos_aplicados: Array.isArray(aqBody.anticiposAplicados) ? aqBody.anticiposAplicados : []
+            };
+            let { error: upErr } = await dbSoc.from('arqueo_estado').upsert(_aqFila, { onConflict: 'periodo' });
+            // Si la columna todavía no existe (la app se desplegó antes de
+            // correr migracion-arqueo-anticipos-aplicados.sql), se guarda sin
+            // ella. El conteo es el dato que no se puede perder: vale más
+            // quedarse sin la lista un rato que no guardar nada.
+            if (upErr && /anticipos_aplicados/.test(upErr.message || '')) {
+                console.warn('[AQ-SB] falta la columna anticipos_aplicados — guardando sin ella. Corre migracion-arqueo-anticipos-aplicados.sql.');
+                delete _aqFila.anticipos_aplicados;
+                ({ error: upErr } = await dbSoc.from('arqueo_estado').upsert(_aqFila, { onConflict: 'periodo' }));
+            }
             console.log('[AQ-SB] guardar →', upErr ? 'ERROR: ' + upErr.message : 'OK');
             if (upErr) return _mockOk({ status: 'error', message: upErr.message });
             return _mockOk({ status: 'success' });
@@ -2994,26 +3015,42 @@ window.sbGuardarArqueo = async function(payload) {
         diferencia: payload.diferencia == null ? null : payload.diferencia,
         divisor_planta: String(payload.divisorPlanta || '1'),
         divisor_part_time: String(payload.divisorPartTime || '1'),
+        // Firmas de los desgloses ya restados de este conteo. Van en la MISMA
+        // fila que el conteo para que no puedan quedar en desacuerdo: quien
+        // pisa uno pisa la otra, y la app repone lo que falte.
+        anticipos_aplicados: Array.isArray(payload.anticiposAplicados) ? payload.anticiposAplicados : [],
         updated_at: new Date().toISOString()
     };
-    const { error } = await dbSoc.from('arqueo_estado').upsert(row, { onConflict: 'periodo' });
+    let { error } = await dbSoc.from('arqueo_estado').upsert(row, { onConflict: 'periodo' });
+    // Sin la columna todavía (la app se desplegó antes de correr
+    // migracion-arqueo-anticipos-aplicados.sql) se guarda sin ella: el conteo
+    // es el dato que no se puede perder.
+    if (error && /anticipos_aplicados/.test(error.message || '')) {
+        console.warn('[AQ-SB] falta la columna anticipos_aplicados — guardando sin ella. Corre migracion-arqueo-anticipos-aplicados.sql.');
+        delete row.anticipos_aplicados;
+        ({ error } = await dbSoc.from('arqueo_estado').upsert(row, { onConflict: 'periodo' }));
+    }
     if (error) throw new Error(error.message);
 };
 
 window.sbCargarArqueo = async function() {
+    // `anticiposAplicados` solo se incluye si la columna existe. Mandarlo como
+    // [] cuando falta sería peor que no mandarlo: la app borraría su lista
+    // local y volvería a restar anticipos ya descontados.
+    const _fila = f => {
+        const d = { conteoActual: f.conteo || {}, movimientoDisplay: f.movimiento_display || {}, totalRetirado: f.total_retirado || 0, esArchivado: false };
+        if (Array.isArray(f.anticipos_aplicados)) d.anticiposAplicados = f.anticipos_aplicados;
+        return d;
+    };
     const periodo = _aqPeriodoActual();
     // Intenta el período actual primero
     let { data, error } = await dbSoc.from('arqueo_estado')
         .select('*').eq('periodo', periodo).maybeSingle();
-    if (!error && data) {
-        return { conteoActual: data.conteo || {}, movimientoDisplay: data.movimiento_display || {}, totalRetirado: data.total_retirado || 0, esArchivado: false };
-    }
+    if (!error && data) return _fila(data);
     // Fallback: el más reciente de cualquier período
     const { data: fb } = await dbSoc.from('arqueo_estado')
         .select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle();
-    if (fb) {
-        return { conteoActual: fb.conteo || {}, movimientoDisplay: fb.movimiento_display || {}, totalRetirado: fb.total_retirado || 0, esArchivado: false };
-    }
+    if (fb) return _fila(fb);
     return null;
 };
 

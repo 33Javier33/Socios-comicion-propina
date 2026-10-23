@@ -1567,7 +1567,7 @@ async function _anticipoDevolverBilletes(desgloses) {
     );
     if (!devolver) return;
 
-    aq_devolverBilletesAnticipo(juntos);
+    aq_devolverBilletesAnticipo(juntos, desgloses.map(r => r.firma).filter(Boolean));
 
     // El desglose queda huérfano: su anticipo ya no existe. Se borra para que
     // no siga apareciendo en "Desglose de Anticipos" ni en el informe.
@@ -3207,8 +3207,11 @@ async function confirmarDesgloseAnticipo() {
         + '-' + _padF(_ahoraFolio.getHours()) + _padF(_ahoraFolio.getMinutes()) + _padF(_ahoraFolio.getSeconds())
         + '-' + (respIni||'SYS').replace(/[^A-Za-z0-9]/g,'');
 
-    // Registrar billetes como retiro en el conteo de caja (arqueo)
-    if (typeof aq_aplicarBilletesAnticipo === 'function') aq_aplicarBilletesAnticipo(billetes);
+    // Registrar billetes como retiro en el conteo de caja (arqueo). El folio
+    // va junto: es lo que queda anotado como "ya descontado de este conteo",
+    // para que si la resta se pierde (otro equipo guarda el conteo viejo
+    // encima) se detecte y se reponga, y para que no se reste dos veces.
+    if (typeof aq_aplicarBilletesAnticipo === 'function') aq_aplicarBilletesAnticipo(billetes, folio);
 
     if (campoMonto) campoMonto.classList.add('input-ok');
     toggleLoader(true);

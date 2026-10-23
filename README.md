@@ -232,6 +232,41 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-23 — El arqueo perdía la resta de los anticipos (SW v189)
+
+> Requiere correr **`migracion-arqueo-anticipos-aplicados.sql`** en el proyecto SOC. La app funciona sin ella —se guarda igual, avisando por consola— pero la protección no actúa hasta que la columna exista.
+
+**Lo que pasaba.** El 22/10 el arqueo avisaba «⚠️ Hay $266.000 en anticipos que no se descontaron de este conteo», con $1.026.000 en ANTICIPOS (Nube) y solo $760.000 de retiros.
+
+**Comprobado en la base, no deducido.** Los dos totales del período coincidían (`anticipos` = `retiros_anticipos` = $1.026.000) y ningún anticipo estaba sin desglose. Es decir: los tres registros del anticipo estaban completos y **lo único que faltaba era la resta en el conteo de billetes**.
+
+**La causa.** Al registrar un anticipo pasan tres cosas:
+
+| | dónde queda | ¿se puede pisar? |
+|---|---|---|
+| 1. restar los billetes del conteo | `arqueo_estado`, una sola fila | **sí** |
+| 2. el anticipo | tabla `anticipos` | no |
+| 3. el desglose de billetes | tabla `retiros_anticipos` | no |
+
+Las dos últimas son hechos propios en la nube. La primera no: el conteo es **una sola fila que se guarda entera**, así que el último dispositivo que escribe manda. Si un equipo con el conteo de antes guardaba después del que registró el anticipo, la resta desaparecía. Y no es solo cosmético: los billetes seguían contados **y además** se sumaban como anticipo, así que el arqueo marcaba un sobrante por ese mismo monto.
+
+**El arreglo.** Una columna nueva, `anticipos_aplicados`, con las firmas (folios `ATC-…` / `DON-…`) de los desgloses ya restados de ese conteo. Va **en la misma fila que el conteo**, y eso es lo que hace que funcione: las dos cosas se escriben juntas, así que no pueden quedar en desacuerdo. Si alguien pisa el conteo con uno viejo, pisa también la lista, la app ve que faltan firmas y vuelve a restar lo que corresponde. **Se arregla sola.**
+
+Guardar la lista aparte —en el teléfono, o en otra fila— habría dejado otra vez dos cosas que pueden desincronizarse, que es justo el problema.
+
+Lo demás que trae:
+
+- **No puede restar dos veces.** Un folio ya anotado no se vuelve a aplicar, venga de donde venga.
+- **«pagado en anticipos» ahora es exacto.** Antes se deducía como `mín(anticipos, retirado)`, y «retirado» mezcla anticipos con las correcciones a mano del conteo. Ahora es la suma de los desgloses efectivamente aplicados.
+- **Botón «Descontarlos ahora»** junto al aviso, por si se prefiere revisar antes de que la reconciliación lo haga al cargar.
+- **Archivar no deja el conteo nuevo en negativo.** Los anticipos del período siguen sumando hasta el día 14; si la lista se vaciara al resetear, se restarían otra vez sobre un conteo en cero. Al archivar se marcan todos como aplicados.
+- **Las donaciones también pasan su folio.** Ese camino (`js/donaciones.js`) escribe su propio desglose en `retiros_anticipos`; sin el folio, la reconciliación lo habría visto como «nunca descontado» y lo habría restado una segunda vez.
+- **Desplegar antes de correr la migración es seguro.** Sin la columna se guarda sin ella, y la lista que no llega **no** se toma por vacía — tomarla por vacía habría sido peor que no tenerla.
+
+Catorce comprobaciones automáticas, incluida la reproducción del caso del 22/10 contra el código real.
+
+Queda sabido, sin cambiar: **editar** un desglose ya aplicado (en «Desglose de anticipos») no ajusta el conteo; la diferencia aparece en la línea «otros movimientos del conteo».
+
 #### 2026-10-22 — El responsable nuevo no llegaba a los otros dispositivos (SW v188)
 
 **Lo que pasaba.** Se agregaba un responsable en Configuración, salía el ✅, y en los demás equipos no aparecía. Peor: al rato tampoco estaba en el equipo donde se creó.

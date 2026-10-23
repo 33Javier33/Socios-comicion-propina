@@ -1,0 +1,44 @@
+-- ════════════════════════════════════════════════════════════════════
+-- QUE EL ARQUEO NO VUELVA A PERDER LA RESTA DE UN ANTICIPO
+--
+-- ANTES DE PEGAR ESTO: haz el respaldo del proyecto de socios (SOC).
+--
+-- Qué resuelve
+-- ------------
+-- Al registrar un anticipo pasan tres cosas:
+--
+--   1. se restan los billetes del conteo de arqueo,
+--   2. el anticipo entra en la tabla `anticipos`  → «ANTICIPOS (Nube)»,
+--   3. el desglose de billetes entra en `retiros_anticipos`.
+--
+-- Las dos últimas son hechos propios en la nube y no se pisan. La
+-- primera no: el conteo es UNA sola fila (`arqueo_estado`, periodo
+-- 'actual') que se guarda entera, así que el último dispositivo que
+-- escribe manda. Si un equipo con el conteo viejo guarda después del
+-- que registró el anticipo, la resta desaparece — y el arqueo queda
+-- con un sobrante igual al anticipo, porque los billetes siguen
+-- contados y además se suman como anticipo.
+--
+-- El 22/10 se perdieron así $266.000 de $1.026.000: los tres registros
+-- estaban completos y solo faltaba la resta en el conteo.
+--
+-- La columna
+-- ----------
+-- `anticipos_aplicados` guarda las firmas (folios ATC-…) de los
+-- desgloses que YA están restados de este conteo. Va en la MISMA fila
+-- que el conteo, y a propósito: las dos cosas se escriben juntas, así
+-- que no pueden quedar en desacuerdo. Si alguien pisa el conteo con
+-- uno viejo, también pisa la lista con la vieja, y la app ve que
+-- faltan firmas y vuelve a restar lo que corresponde. Se arregla sola.
+--
+-- Guardar la lista aparte (en el teléfono, o en otra fila) no serviría:
+-- volvería a haber dos cosas que pueden desincronizarse, que es el
+-- problema que se está arreglando.
+-- ════════════════════════════════════════════════════════════════════
+
+alter table public.arqueo_estado
+    add column if not exists anticipos_aplicados jsonb not null default '[]'::jsonb;
+
+-- ── Para comprobar que quedó ───────────────────────────────────────
+-- select periodo, jsonb_array_length(anticipos_aplicados) as aplicados
+--   from public.arqueo_estado;
