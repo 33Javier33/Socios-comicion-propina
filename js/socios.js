@@ -507,7 +507,11 @@ function verificarEscalamientos() {
         if (socio.puntos >= max) return;
 
         if (mesIngreso === mesPasado) {
-            const aniosCumplidos = aniosPuntosA(socio.fechaIngreso, new Date(anioPasado, mesPasado, 15));
+            // Del mismo sitio que el informe. `aniosPuntosA(fechaIngreso, …)`
+            // deduce el aniversario del INGRESO, así que a los socios con
+            // fecha de inicio de puntos puesta a mano les daba un año de más
+            // o de menos y las dos pantallas decían cosas distintas.
+            const aniosCumplidos = aniosPuntosTrasAniversario(socio, anioPasado);
             if (aniosCumplidos >= 1) {
                 const puntosAntes   = calcularPuntosPorAnios(aniosCumplidos - 1, socio.area);
                 const puntosDespues = calcularPuntosPorAnios(aniosCumplidos, socio.area);
@@ -522,7 +526,7 @@ function verificarEscalamientos() {
         }
 
         if (mesIngreso === mesActual) {
-            const aniosCumpleEsteMes = aniosPuntosA(socio.fechaIngreso, new Date(anioActual, mesActual, 15));
+            const aniosCumpleEsteMes = aniosPuntosTrasAniversario(socio, anioActual);
             if (aniosCumpleEsteMes >= 1) {
                 const puntosAntes   = calcularPuntosPorAnios(aniosCumpleEsteMes - 1, socio.area);
                 const puntosDespues = calcularPuntosPorAnios(aniosCumpleEsteMes, socio.area);

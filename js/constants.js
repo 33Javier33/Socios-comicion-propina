@@ -244,6 +244,32 @@ function subePuntosDeMes(mes0) {
     return (mes0 === null || mes0 === undefined || !MESES_SUBE[mes0]) ? '—' : ('15 DE ' + MESES_SUBE[mes0]);
 }
 
+// ══════════════════════════════════════════════════════════════════
+// CUÁNTOS AUMENTOS TIENE EL SOCIO JUSTO DESPUÉS DEL ANIVERSARIO DE UN AÑO
+//
+// Para las listas de "subieron / suben / van a subir" hace falta el
+// número de aumentos en una fecha que no es hoy: el 15 del mes
+// aniversario del mes pasado, de este mes o del próximo.
+//
+// Se saca de `socio.anios` —el que calcula api.js con la regla buena,
+// incluido el caso de fecha de inicio de puntos puesta a mano— en vez de
+// volver a deducirlo de la fecha de ingreso. Deducirlo otra vez es lo que
+// tenía al informe listando a cada socio uno o dos meses tarde.
+//
+// Como hay exactamente un aniversario por año, basta con saber si el de
+// ESTE año ya pasó y contar años desde ahí.
+// ══════════════════════════════════════════════════════════════════
+function aniosPuntosTrasAniversario(socio, anioObjetivo, hoy) {
+    const m = socio && Number.isInteger(socio.mesAniversario)
+        ? socio.mesAniversario
+        : mesAniversarioDe(socio && socio.fechaIngreso, null);
+    if (m === null || m === undefined) return null;
+    const h = hoy || new Date();
+    const yaPaso = (h.getMonth() > m) || (h.getMonth() === m && h.getDate() >= 15);
+    const anioUltimo = yaPaso ? h.getFullYear() : h.getFullYear() - 1;
+    return (Number(socio.anios) || 0) + (anioObjetivo - anioUltimo);
+}
+
 // Cuántos aumentos anuales lleva a la fecha `hoy`.
 function aniosPuntosA(fechaIngresoISO, hoy) {
     const r = reglaPuntosFechas(fechaIngresoISO);

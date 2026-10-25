@@ -757,34 +757,44 @@ async function informeSociosPuntos() {
         const _anioProx = _mesAct === 11 ? _anioAct + 1 : _anioAct;
         const subenEsteMes = [], subieronMesPasado = [], subenProxMes = [];
 
+        // El aniversario vive en el mes de INGRESO y cae SIEMPRE el día 15.
+        //
+        // Antes esto agrupaba por el mes de `so.fechaInicioPuntos`, que api.js
+        // llena con la fecha de PRIMERA ENTREGA —el primer 15 después de
+        // cumplir un mes—, que es otra cosa. A quien entró el 20 de septiembre
+        // la primera entrega le cae el 15 de noviembre, y el informe lo listaba
+        // subiendo en NOVIEMBRE cuando su aniversario es septiembre. Medido
+        // sobre ocho casos, los ocho quedaban uno o dos meses tarde. Es el
+        // mismo error que tenía el recibo y que se corrigió el 18/10.
         cacheSocios.forEach(so => {
-            const base = (so.fechaInicioPuntos && so.fechaInicioPuntos !== so.fechaIngreso)
-                ? so.fechaInicioPuntos : so.fechaIngreso;
-            if (!base) return;
             if (String(so.area || '').toLowerCase().includes('gasto')) return;
-            const pz = String(base).substring(0, 10).split('-');
-            const anioIng = parseInt(pz[0]), mesIng = parseInt(pz[1]) - 1, diaIng = parseInt(pz[2]) || 15;
-            if (isNaN(anioIng) || isNaN(mesIng)) return;
+            const mesAniv = Number.isInteger(so.mesAniversario)
+                ? so.mesAniversario
+                : mesAniversarioDe(so.fechaIngreso, null);
+            if (mesAniv === null || mesAniv === undefined) return;
 
             const ptsPor = a => {
                 try { return calcularPuntosPorAnios(a, so.area); } catch (e) { return null; }
             };
             const evaluar = (mesRef, anioRef, destino, tipo) => {
-                if (mesIng !== mesRef) return;
-                const anios = anioRef - anioIng;
-                if (anios < 1) return;
+                if (mesAniv !== mesRef) return;
+                // Aumentos que tiene (o tendrá) justo después del 15 de ese mes.
+                const anios = aniosPuntosTrasAniversario(so, anioRef, hoyDate);
+                if (anios === null || anios < 1) return;   // aún no cumple el primero
                 const antes = ptsPor(anios - 1), desp = ptsPor(anios);
                 if (antes === null || desp === null || desp <= antes) return;   // ya está en el tope
                 const actuales = Number(so.puntos) || 0;
                 const aplicado = actuales >= desp;
                 let estado;
-                if (tipo === 'proximo') estado = 'Sube el día ' + diaIng;          // aún no llega el mes
+                if (tipo === 'proximo') estado = 'Sube el día 15';                 // aún no llega el mes
                 else if (tipo === 'pasado') estado = aplicado ? 'Aplicado' : 'Pendiente de aplicar';
-                else estado = aplicado ? 'Aplicado' : (_diaAct >= diaIng ? 'Pendiente de aplicar' : 'Sube el día ' + diaIng);
+                else estado = aplicado ? 'Aplicado' : (_diaAct >= 15 ? 'Pendiente de aplicar' : 'Sube el día 15');
                 destino.push({
-                    socio: so, antes, desp, dia: diaIng, anios,
-                    fIngreso: so.fechaIngreso, fBase: base,
-                    baseDistinta: String(base).substring(0,10) !== String(so.fechaIngreso || '').substring(0,10),
+                    socio: so, antes, desp, dia: 15, anios,
+                    fIngreso: so.fechaIngreso,
+                    // Lo que manda es el aniversario, no la primera entrega.
+                    fBase: subePuntosDeMes(mesAniv),
+                    baseDistinta: !!so.puntosOverride,
                     estado: estado
                 });
             };
@@ -811,7 +821,7 @@ async function informeSociosPuntos() {
                     + '<td class="c">' + esc(NOMBRE_AREA[claveArea(so)] || (so.area || '')) + '</td>'
                     + '<td class="c">' + fmtFecha(e.fIngreso) + '</td>'
                     + '<td class="c" style="font-weight:700;' + (e.baseDistinta ? 'color:#7c3aed;' : '') + '">'
-                    +   fmtFecha(e.fBase) + (e.baseDistinta ? ' *' : '') + '</td>'
+                    +   esc(e.fBase) + (e.baseDistinta ? ' *' : '') + '</td>'
                     + '<td class="c">día ' + e.dia + '</td>'
                     + '<td class="c">' + e.anios + '</td>'
                     + '<td class="c">' + e.antes + ' → <b style="color:' + color + ';">' + e.desp + '</b></td>'
@@ -823,11 +833,11 @@ async function informeSociosPuntos() {
                 + '<table class="tbl"><thead><tr>'
                 + '<th style="width:3%">#</th><th style="width:20%">NOMBRE</th><th style="width:9%">SUB-ÁREA</th>'
                 + '<th style="width:11%">ÁREA</th><th style="width:9%">INGRESO</th>'
-                + '<th style="width:10%">BASE PUNTOS</th><th style="width:7%">SUBE EL</th><th style="width:5%">AÑOS</th>'
+                + '<th style="width:10%">SUBE PUNTOS</th><th style="width:7%">SUBE EL</th><th style="width:5%">AÑOS</th>'
                 + '<th style="width:12%">PUNTOS</th><th style="width:6%">AUM.</th><th style="width:8%">ESTADO</th>'
                 + '</tr></thead><tbody>' + filas + '</tbody>'
                 + '<tfoot><tr class="sub"><td colspan="9">TOTAL — ' + lista.length + ' socio' + (lista.length !== 1 ? 's' : '')
-                +   ' &nbsp;·&nbsp; <span style="font-weight:600;color:#7c3aed;">* la fecha BASE PUNTOS es la que define el aumento (cuando difiere del ingreso)</span></td>'
+                +   ' &nbsp;·&nbsp; <span style="font-weight:600;color:#7c3aed;">el aumento cae el 15 del mes de ingreso · * fecha de inicio de puntos puesta a mano</span></td>'
                 + '<td class="c pts">+' + totalPts + '</td><td></td></tr></tfoot>'
                 + '</table></div>';
         }
@@ -835,7 +845,10 @@ async function informeSociosPuntos() {
         const bloqueEscalamientos =
             tablaEscalamiento('✅ SUBIERON EL MES PASADO (' + MESES_N[_mesPas].toUpperCase() + ' ' + _anioPas + ')', subieronMesPasado, '#166534',
                 'Ningún socio cumplió aniversario de puntos el mes pasado.')
-            + tablaEscalamiento('⬆ SUBEN ESTE MES (' + MESES_N[_mesAct].toUpperCase() + ' ' + _anioAct + ')', subenEsteMes, '#b45309',
+            // El aumento cae el día 15, así que a partir del 15 ya ocurrió: el
+            // título lo dice en pasado en vez de anunciar algo que ya pasó.
+            + tablaEscalamiento((_diaAct >= 15 ? '✅ SUBIERON ESTE MES (' : '⬆ SUBEN ESTE MES (')
+                + MESES_N[_mesAct].toUpperCase() + ' ' + _anioAct + ')', subenEsteMes, '#b45309',
                 'Ningún socio cumple aniversario de puntos este mes.')
             + tablaEscalamiento('🔮 SUBEN EL PRÓXIMO MES (' + MESES_N[_mesProx].toUpperCase() + ' ' + _anioProx + ')', subenProxMes, '#4338ca',
                 'Ningún socio cumple aniversario de puntos el próximo mes.');

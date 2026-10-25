@@ -232,6 +232,38 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-25 — El informe listaba los escalamientos en el mes equivocado (SW v191)
+
+**Lo que pasaba.** En Gestión de Socios → Informe, los tres bloques de «subieron / suben / van a subir» tenían a la gente cambiada de mes.
+
+**Medido, no supuesto.** Ocho casos contra la regla de `reglaPuntosFechas`:
+
+| ingreso | 1ª entrega | aniversario | el informe decía |
+|---|---|---|---|
+| 01/01/2025 | 15/02/2025 | **15 ENE** | 15 FEB |
+| 15/09/2025 | 15/10/2025 | **15 SEP** | 15 OCT |
+| 20/09/2025 | 15/11/2025 | **15 SEP** | 15 NOV |
+| 20/12/2025 | 15/02/2026 | **15 DIC** | 15 FEB |
+
+Los ocho de ocho, corridos uno o dos meses.
+
+**La causa.** El informe agrupaba por el mes de `socio.fechaInicioPuntos`. Ese campo lo llena `api.js` con la fecha de **primera entrega** —el primer 15 después de cumplir un mes—, que no es el aniversario. Son dos fechas distintas y confundirlas es exactamente el error que se corrigió en el recibo el 18/10: ahí quedó arreglado el recibo, pero esta otra copia de la misma deducción siguió como estaba.
+
+De paso arrastraba tres cosas más:
+
+- Los **años** salían de `anioRef − año de la primera entrega`, así que a quien cruza de año entre el ingreso y la primera entrega le contaba un aumento de más o de menos.
+- El **día** salía de la fecha base en vez de ser siempre 15.
+- El **asterisco morado** («la fecha BASE PUNTOS difiere del ingreso») se encendía para casi todos, porque la primera entrega casi nunca coincide con el ingreso. No marcaba excepciones: marcaba ruido.
+
+**El arreglo.** El informe usa ahora `socio.mesAniversario` —el que calcula `api.js` con la regla buena, override incluido— y el día 15 fijo. Los años salen de un helper nuevo en `constants.js`, `aniosPuntosTrasAniversario()`, que parte de `socio.anios` en vez de volver a deducirlo.
+
+- La columna **BASE PUNTOS** pasa a **SUBE PUNTOS** y muestra el aniversario («15 DE SEP»), no la primera entrega.
+- El asterisco morado ahora sí marca una excepción de verdad: `api.js` expone `puntosOverride`, que es cierto solo cuando hay fecha de inicio de puntos puesta a mano.
+- **El título del bloque del mes en curso cambia de tiempo verbal a partir del día 15**: «SUBIERON ESTE MES» en vez de anunciar algo que ya ocurrió.
+- El panel de alerta «próximos a subir» (`js/socios.js`) usa el mismo helper. Deducía los años de la fecha de **ingreso**, así que a los socios con fecha de puntos manual les daba un año distinto que el informe. Dos pantallas, un solo cálculo.
+
+Quince comprobaciones automáticas que ejecutan el informe de verdad y miran en qué bloque cae cada socio. Contra el código anterior fallan cinco.
+
 #### 2026-10-25 — El arqueo ya no resta solo: avisa y pregunta (SW v190)
 
 **Lo que pasaba.** La versión del 23/10 restaba del conteo, al cargar el arqueo, los anticipos que no le constaban descontados. Estaba provocando errores en los conteos de caja.
