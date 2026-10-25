@@ -50,9 +50,11 @@ function iniciarApp() {
         ? { weekday: 'short', day: 'numeric', month: 'short' }
         : { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     document.getElementById('fechaHoyBadge').textContent = hoy.toLocaleDateString('es-ES', opciones);
-    const todayISO = hoy.toISOString().split('T')[0];
-    document.getElementById('fechaAnticipo').value = todayISO;
-    document.getElementById('fechaAusencia').value = todayISO;
+    // Fechas que se quedan donde las dejen mientras la app esté abierta, y
+    // que arrancan en el día LOCAL — `toISOString()` daba el de UTC, o sea el
+    // día siguiente a partir de las 20:00 o 21:00 en Chile.
+    fechaPegajosaEnganchar('fechaAnticipo');
+    fechaPegajosaEnganchar('fechaAusencia');
     iniciarWatchdogInactividad();
     responsables_poblarSelector();
     // Mostrar badge responsable en header

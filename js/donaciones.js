@@ -1234,8 +1234,7 @@ function don_abrirEgreso(motivoPre) {
         }
     }
     inp.value = motivoPre || '';
-    const f = document.getElementById('donEgrFecha');
-    if (f) f.value = new Date().toISOString().split('T')[0];
+    fechaPegajosaEnganchar('donEgrFecha');
     const m = document.getElementById('donEgrMonto');
     if (m) m.value = '';                       // el monto lo escribe quien registra
     don_egrRenderBilletes();

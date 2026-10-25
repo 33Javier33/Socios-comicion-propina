@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-25 — La fecha se queda donde la dejaron (SW v192)
+
+Al guardar un registro, el formulario se limpiaba y la fecha volvía a **hoy**. Quien estaba cargando varios movimientos de otro día tenía que ir al calendario en cada uno.
+
+Ahora el campo recuerda la última fecha elegida y vuelve a ella. Dura lo que dura la app abierta (`sessionStorage`): mañana el campo dice hoy otra vez, no el día que se estuvo corrigiendo. Cada campo recuerda la suya — poner una fecha en Anticipos no mueve la de Ausencias.
+
+Alcanza a **Anticipos**, **Ausencias**, **Dineros**, **Materiales** y el egreso de **Donaciones**.
+
+**Y de paso, un error que empeoraba justo lo mismo.** El "hoy" se calculaba con `toISOString()`, que da la fecha en **UTC** — tres o cuatro horas adelante de Chile. A partir de las 20:00 o 21:00 el campo aparecía con **el día siguiente**, y en un casino que trabaja de noche eso es casi todos los turnos: había que corregir la fecha incluso para registrar el día en curso.
+
+Medido con el reloj puesto a las 22:30 del 3 de septiembre en horario de Chile: la forma vieja decía `2026-09-04`; la nueva dice `2026-09-03`.
+
+El ayudante (`fechaPegajosaPoner` / `fechaPegajosaEnganchar`) vive en `js/constants.js`, uno solo para todas las pantallas. Nueve comprobaciones automáticas, incluidas la de la zona horaria y la de que no se caiga si el navegador bloquea el almacenamiento (modo privado).
+
 #### 2026-10-25 — El informe listaba los escalamientos en el mes equivocado (SW v191)
 
 **Lo que pasaba.** En Gestión de Socios → Informe, los tres bloques de «subieron / suben / van a subir» tenían a la gente cambiada de mes.

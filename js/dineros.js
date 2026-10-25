@@ -241,10 +241,9 @@ function ds_cambiarPeriodo(dir) {
 function ds_abrirModal(tipo = 'Ingreso') {
     const modal = document.getElementById('ds-modal');
     if (!modal) return;
-    const elFecha = document.getElementById('ds-modal-fecha');
     const elMonto = document.getElementById('ds-modal-monto');
     const elNota  = document.getElementById('ds-modal-nota');
-    if (elFecha) elFecha.value = new Date().toISOString().split('T')[0];
+    fechaPegajosaEnganchar('ds-modal-fecha');
     if (elMonto) elMonto.value = '';
     if (elNota)  elNota.value  = '';
     ds_toggleTipo(tipo);

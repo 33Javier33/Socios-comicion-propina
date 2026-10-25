@@ -266,10 +266,9 @@ function mat_abrirModal(tipo = 'Ingreso') {
     const modal = document.getElementById('mat-modal');
     if (!modal) return;
     _matEditando = null;
-    const elFecha = document.getElementById('mat-modal-fecha');
     const elMonto = document.getElementById('mat-modal-monto');
     const elNota  = document.getElementById('mat-modal-nota');
-    if (elFecha) elFecha.value = new Date().toISOString().split('T')[0];
+    fechaPegajosaEnganchar('mat-modal-fecha');
     if (elMonto) elMonto.value = '';
     if (elNota)  elNota.value  = '';
     const elComp = document.getElementById('mat-modal-comprador'); if (elComp) elComp.value = '';

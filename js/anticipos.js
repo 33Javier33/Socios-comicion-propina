@@ -1442,7 +1442,7 @@ async function enviarAusencia() {
             idAfectado: id, datos: { socio_id: id, nombre, desde: fecha, hasta: fechaHasta, dias: n, motivo: detalleTxt }
         });
         campoMotivo.value = '';
-        document.getElementById('fechaAusencia').value = new Date().toISOString().split('T')[0];
+        fechaPegajosaPoner('fechaAusencia');
         document.querySelectorAll('.btn-motivo').forEach(b => b.classList.remove('activo'));
         if (fechaHastaInput) fechaHastaInput.value = '';
         const chk = document.getElementById('ausVariosDias');
@@ -3241,8 +3241,7 @@ async function confirmarDesgloseAnticipo() {
             campoMonto.value = '';
             campoMonto.classList.remove('input-ok');
         }
-        const fechaInput = document.getElementById('fechaAnticipo');
-        if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
+        fechaPegajosaPoner('fechaAnticipo');
         if (campoMonto) campoMonto.focus();
         anticipos_cambioLocal(id);
         generarBoucherAnticipo({ id, nombre, fecha, monto, respIni, respArea, billetes, folio });

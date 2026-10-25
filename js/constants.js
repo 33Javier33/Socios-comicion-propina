@@ -358,3 +358,53 @@ function alcanceDeSocio(socio, fechasAusencia, diasPT) {
     const pts = parseFloat(socio && socio.puntos) || 0;
     return sumaValorPuntoSocio(socio, fechasAusencia, diasPT) * pts;
 }
+
+// ══════════════════════════════════════════════════════════════════
+// LA FECHA SE QUEDA DONDE LA DEJARON
+//
+// Al guardar un registro el formulario se limpia y la fecha volvía a
+// HOY. Quien está cargando varios movimientos de otro día tenía que
+// moverla de nuevo en cada uno. Ahora se recuerda la última elegida en
+// cada campo y el campo vuelve a ella.
+//
+// Va en sessionStorage a propósito: dura lo que dura la app abierta. Al
+// volver a entrar mañana lo correcto es que diga hoy otra vez, no el día
+// que se estuvo corrigiendo ayer.
+//
+// Y el "hoy" se arma con la fecha LOCAL. `toISOString()` da la fecha en
+// UTC, que en Chile va 3 o 4 horas adelante: a partir de las 20:00 o
+// 21:00 el campo aparecía con el día siguiente. En un casino, que
+// trabaja de noche, eso es casi todos los turnos.
+// ══════════════════════════════════════════════════════════════════
+const FECHA_SS = 'fsFechaPegajosa:';
+
+function hoyISOLocal() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+         + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function fechaRecordada(id) {
+    try { return sessionStorage.getItem(FECHA_SS + id) || ''; } catch (e) { return ''; }
+}
+
+// Deja el campo en la última fecha elegida en esta sesión, o en hoy.
+function fechaPegajosaPoner(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = fechaRecordada(id) || hoyISOLocal();
+}
+
+// Engancha el campo una sola vez y lo deja puesto. Es lo que se llama al
+// abrir un modal: sirve de "poner" y de "enganchar" a la vez.
+function fechaPegajosaEnganchar(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.dataset.pegajosa !== '1') {
+        el.dataset.pegajosa = '1';
+        el.addEventListener('change', () => {
+            try { sessionStorage.setItem(FECHA_SS + id, el.value || ''); } catch (e) {}
+        });
+    }
+    fechaPegajosaPoner(id);
+}
