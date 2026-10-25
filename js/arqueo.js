@@ -453,7 +453,7 @@ function aq_pintarDesgloseRetiros(retirado) {
         document.getElementById('aq-retiros-otros-lbl').textContent = '· otros movimientos del conteo';
         nota.innerHTML = '<span style="color:#b45309;">⚠️ Hay ' + aq_fmt(sinDescontar)
             + ' en anticipos que no se descontaron de este conteo.</span>'
-            + ' <button onclick="aq_reconciliarAnticipos()" style="margin-left:6px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;border-radius:6px;padding:3px 9px;cursor:pointer;font-size:0.8em;font-weight:700;">Descontarlos ahora</button>';
+            + ' <button onclick="aq_descontarAnticiposPendientes()" style="margin-left:6px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;border-radius:6px;padding:3px 9px;cursor:pointer;font-size:0.8em;font-weight:700;">Descontarlos ahora</button>';
     } else if (otros > 0) {
         document.getElementById('aq-retiros-otros-lbl').textContent = '· otros movimientos del conteo';
         nota.innerHTML = 'Los “otros” son correcciones y retiros hechos a mano en el conteo, no plata del fondo.';
@@ -782,17 +782,36 @@ async function aq_cargarRetirosPeriodo() {
     }
 }
 
-// Repone en el conteo los anticipos cuyos billetes nunca se descontaron
-// —o cuya resta se perdió porque otro equipo guardó encima—. Se apoya en
-// la lista de firmas, así que restar dos veces el mismo anticipo no
-// puede ocurrir.
-async function aq_reconciliarAnticipos() {
+// ══════════════════════════════════════════════════════════════════════
+// DETECTAR SÍ, RESTAR SOLO SI SE PIDE
+//
+// La primera versión de esto restaba sola al cargar el arqueo. Era
+// demasiado: basta que la lista de firmas llegue vacía por cualquier
+// motivo —la columna `anticipos_aplicados` todavía no existe, un equipo
+// que nunca la tuvo, un fallo de red al leerla— para que el conteo se
+// vacíe de golpe sin que nadie lo haya pedido. Mover plata en el conteo
+// es del encargado, no de una carga en segundo plano.
+//
+// Así que el arqueo solo MIRA: carga los desgloses del período y deja
+// ver cuánto no está descontado. La resta la dispara el botón
+// "Descontarlos ahora", que muestra el detalle y pide confirmación.
+// ══════════════════════════════════════════════════════════════════════
+
+// Qué desgloses del período no están descontados de este conteo. No toca
+// nada: es lo que alimenta el aviso de la pantalla.
+function aq_anticiposPendientes() {
+    if (!Array.isArray(aqRetirosPeriodo)) return [];
+    return aqRetirosPeriodo.filter(r => !aq_anticiposAplicados.includes(r.firma));
+}
+
+// Se llama al cargar el arqueo. Solo lee y repinta.
+async function aq_revisarAnticipos() {
     const lista = await aq_cargarRetirosPeriodo();
     if (!lista) return 0;
 
-    // Se podan las firmas que ya no son del período en curso: la
-    // reconciliación solo mira este período, así que soltarlas no puede
-    // hacer que algo se reste dos veces, y la lista no crece sin fin.
+    // Se podan las firmas que ya no son del período en curso: el aviso solo
+    // mira este período, así que soltarlas no puede hacer que algo se reste
+    // dos veces, y la lista no crece sin fin.
     const delPeriodo = new Set(lista.map(r => r.firma));
     const podada = aq_anticiposAplicados.filter(f => delPeriodo.has(f));
     if (podada.length !== aq_anticiposAplicados.length) {
@@ -800,22 +819,42 @@ async function aq_reconciliarAnticipos() {
         _aqGuardarAplicados();
     }
 
-    const faltan = lista.filter(r => !aq_anticiposAplicados.includes(r.firma));
-    if (faltan.length === 0) { aq_realizarArqueo(); return 0; }
+    aq_realizarArqueo();
+    return aq_anticiposPendientes().length;
+}
 
-    let monto = 0;
-    faltan.forEach(r => {
-        aq_aplicarBilletesAnticipo(r.billetes, r.firma);
-        monto += Number(r.monto) || 0;
-    });
+// Esto sí resta — y solo desde el botón, con el detalle a la vista.
+async function aq_descontarAnticiposPendientes() {
+    if (!Array.isArray(aqRetirosPeriodo)) await aq_cargarRetirosPeriodo();
+    const faltan = aq_anticiposPendientes();
+    if (faltan.length === 0) {
+        if (typeof showToast === 'function') showToast('No hay anticipos pendientes de descontar', 'info');
+        return 0;
+    }
 
-    const txt = faltan.length === 1
-        ? 'Se descontó del conteo 1 anticipo que faltaba (' + aq_fmt(monto) + ')'
-        : 'Se descontaron del conteo ' + faltan.length + ' anticipos que faltaban (' + aq_fmt(monto) + ')';
-    if (typeof showToast === 'function') showToast('💵 ' + txt, 'warning');
-    console.log('[AQ] reconciliación de anticipos:', faltan.map(r => r.firma).join(', '));
+    const monto = faltan.reduce((s, r) => s + (Number(r.monto) || 0), 0);
+    const detalle = faltan.slice(0, 12).map(r =>
+        '   ' + (r.fecha || '') + '  ' + (r.socio_nombre || r.socio_id || '') + '  ' + aq_fmt(Number(r.monto) || 0)
+    ).join('\n') + (faltan.length > 12 ? '\n   … y ' + (faltan.length - 12) + ' más' : '');
+
+    const ok = window.confirm(
+        '💵 DESCONTAR DEL CONTEO\n\n' +
+        'Estos anticipos están registrados pero sus billetes NO están\n' +
+        'restados de este conteo:\n\n' + detalle + '\n\n' +
+        '   Total: ' + aq_fmt(monto) + '\n\n' +
+        'ACEPTAR  →  Se restan del conteo (si la plata sí salió del cajón)\n' +
+        'CANCELAR →  No se toca nada'
+    );
+    if (!ok) return 0;
+
+    faltan.forEach(r => aq_aplicarBilletesAnticipo(r.billetes, r.firma));
+
+    const txt = 'Descontados del conteo ' + faltan.length + ' anticipo'
+        + (faltan.length === 1 ? '' : 's') + ' (' + aq_fmt(monto) + ')';
+    if (typeof showToast === 'function') showToast('💵 ' + txt + ' — se puede deshacer', 'warning');
+    console.log('[AQ] descontados a petición:', faltan.map(r => r.firma).join(', '));
     if (typeof window.sbAuditLog === 'function') {
-        window.sbAuditLog('Reconciliar Anticipos Arqueo', {
+        window.sbAuditLog('Descontar Anticipos Pendientes', {
             detalle: txt,
             datos: { firmas: faltan.map(r => r.firma), monto: Math.round(monto) }
         });
@@ -1348,10 +1387,10 @@ async function aq_recuperarDeNube(silencioso = false) {
             }
             aq_generarCampos();
             if(!silencioso) showToast(datos.esArchivado ? '⚠️ Cargado desde el último cierre archivado' : '✅ Datos cargados desde nube', datos.esArchivado ? 'warning' : 'success');
-            // Con el conteo recién puesto se comprueba contra los desgloses de
-            // la nube si falta restar alguno. Acá es donde se recupera lo que
-            // antes se perdía sin que nadie se enterara.
-            aq_reconciliarAnticipos();
+            // Con el conteo recién puesto se MIRA contra los desgloses de la
+            // nube si falta restar alguno, y se avisa. No se resta nada acá:
+            // eso lo decide el encargado con el botón del aviso.
+            aq_revisarAnticipos();
         } else {
             if(!silencioso) showToast('Sin datos guardados en la nube', 'warning');
         }

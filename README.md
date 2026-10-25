@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-25 — El arqueo ya no resta solo: avisa y pregunta (SW v190)
+
+**Lo que pasaba.** La versión del 23/10 restaba del conteo, al cargar el arqueo, los anticipos que no le constaban descontados. Estaba provocando errores en los conteos de caja.
+
+**Por qué estaba mal.** La resta dependía de que la lista de folios aplicados llegara completa. Basta que llegue vacía por cualquier motivo —la columna `anticipos_aplicados` todavía sin crear, un equipo que nunca tuvo la lista en su teléfono, un fallo de red al leerla— para que al arqueo no le conste **ninguno** y vacíe el conteo de golpe. En un equipo recién abierto eso es lo normal, no la excepción.
+
+El fallo de fondo era de criterio: mover plata en el conteo es del encargado, no de una carga en segundo plano. Una resta automática que se equivoca hacia abajo es peor que el problema que venía a resolver.
+
+**Cómo queda.** El arqueo solo **mira**: al cargar lee los desgloses del período y deja ver cuánto no está descontado, sin tocar nada. La resta la dispara el botón **«Descontarlos ahora»** del aviso, que antes de hacer nada muestra fecha, socio y monto de cada uno y pide confirmación — igual que al devolver billetes de un anticipo borrado. Cancelar no toca nada.
+
+Lo demás sigue igual: un folio ya aplicado no se vuelve a restar, «pagado en anticipos» sigue siendo exacto, y la lista sigue viajando en la misma fila que el conteo.
+
+Diecisiete comprobaciones automáticas. Las nuevas son las que faltaban el 23/10: que **cargar no cambie el conteo**, que cancelar no cambie nada, y que un equipo sin lista local y sin la columna en la base no vacíe la caja.
+
 #### 2026-10-23 — El arqueo perdía la resta de los anticipos (SW v189)
 
 > Requiere correr **`migracion-arqueo-anticipos-aplicados.sql`** en el proyecto SOC. La app funciona sin ella —se guarda igual, avisando por consola— pero la protección no actúa hasta que la columna exista.
