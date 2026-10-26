@@ -1,5 +1,5 @@
 // Service Worker — Sistema Integral (Fondo Solidario, app admin)
-const CACHE = 'fondo-admin-v193';
+const CACHE = 'fondo-admin-v194';
 
 // ── Push (notificaciones aunque la app esté cerrada) ──
 self.addEventListener('push', event => {

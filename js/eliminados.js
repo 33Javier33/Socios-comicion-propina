@@ -64,10 +64,37 @@ async function elim_snapshot(socioId) {
     // recalcular el alcance de un período que ya no existe.
     try {
         const s = (cacheSocios || []).find(x => String(x.id) === sid);
-        if (s) datos.calculado = {
-            puntos: s.puntos, anios: s.anios, area: s.area, contrato: s.contrato,
-            fechaIngreso: s.fechaIngreso, fechaInicioPuntos: s.fechaInicioPuntos
-        };
+        if (s) {
+            datos.calculado = {
+                puntos: s.puntos, anios: s.anios, area: s.area, contrato: s.contrato,
+                fechaIngreso: s.fechaIngreso, fechaInicioPuntos: s.fechaInicioPuntos
+            };
+            // EL ALCANCE, calculado acá y ahora.
+            //
+            // Es lo que prometía el comentario de arriba y no se estaba
+            // guardando: se anotaban los puntos y las fechas, pero no el
+            // número que de verdad no se puede reconstruir después. El
+            // comprobante terminaba cayendo al `alcance` del cierre, que es
+            // la foto del mes COMPLETO tomada antes de marcar el término.
+            //
+            // Con las ausencias del propio respaldo, así que el término de
+            // contrato ya viene descontado: es el mismo motor del recibo.
+            try {
+                const ext = Array.isArray(datos.tablas.extras) ? datos.tablas.extras : [];
+                const aus = new Set(ext
+                    .filter(e => String(e.tipo || '').toLowerCase().includes('ausencia'))
+                    .map(e => String(e.fecha || '').substring(0, 10))
+                    .filter(Boolean));
+                const filaPT = (Array.isArray(datos.tablas.dias_pt) ? datos.tablas.dias_pt : [])[0];
+                const diasPT = String(s.contrato || '') === 'Part-Time'
+                    ? ((filaPT && Array.isArray(filaPT.dias)) ? filaPT.dias : []) : null;
+                const vp = sumaValorPuntoSocio(s, aus, diasPT);
+                datos.calculado.periodo      = periodoActivoISO();
+                datos.calculado.valorPunto   = Math.round(vp);
+                datos.calculado.alcance      = Math.round(vp * (Number(s.puntos) || 0));
+                datos.calculado.diasAusencia = aus.size;
+            } catch (e) { datos.errores.alcance = e.message || String(e); }
+        }
     } catch (e) {}
     return datos;
 }
@@ -831,10 +858,25 @@ function _elimAlcanceVivo(r, d, sal, puntos, per) {
     if (!Object.keys(mapa).length) return { ok: false, motivo: 'sin-recaudacion' };
 
     const act = periodoActivoISO();
-    // El período del socio tiene que ser el que está cargado. Si no,
-    // recalcular daría el alcance de OTRO mes.
-    if (!per || per.inicio !== act.inicio || per.fin !== act.fin)
-        return { ok: false, motivo: 'otro-periodo', activo: act };
+
+    // Se calcula sobre el período DEL SOCIO, no sobre el de hoy.
+    //
+    // Antes, si el socio pertenecía a un período que ya pasó, esto se
+    // rendía y la hoja caía al `alcance` guardado en el cierre — que es la
+    // foto del MES COMPLETO, tomada antes de marcar el término. A Ignacio
+    // Marín, con término desde el 30/09, le daba $327.928 en vez de los
+    // $107.015 de su recibo: el congelamiento no se aplicaba por ninguna
+    // parte. Y es el caso normal, porque el comprobante de salida se saca
+    // justamente después, cuando el socio ya está eliminado.
+    //
+    // La recaudación histórica no se borra: `action=get` trae todas las
+    // fechas, así que el mapa también tiene los meses pasados. Solo hacía
+    // falta mirar el tramo correcto.
+    const ventana = per || act;
+    const hayDatos = Object.keys(mapa).some(k =>
+        k >= ventana.inicio && k <= ventana.fin && mapa[k] !== null && mapa[k] !== undefined);
+    // Sin recaudación en ESE tramo sí hay que rendirse: el dato no existe.
+    if (!hayDatos) return { ok: false, motivo: 'otro-periodo', activo: act, ventana: ventana };
 
     const f = (d && d.ficha) || {};
     const t = (d && d.tablas) || {};
@@ -861,19 +903,19 @@ function _elimAlcanceVivo(r, d, sal, puntos, per) {
         diasPT = (fila && Array.isArray(fila.dias)) ? fila.dias : [];
     }
 
-    const suma = sumaValorPuntoSocio(socio, aus, diasPT);
+    const suma = sumaValorPuntoSocio(socio, aus, diasPT, ventana);
 
     // El día a día, para que el informe pueda mostrar por qué da lo que da.
     // Se arma con el mismo criterio que `sumaValorPuntoSocio`: fuera del
     // tramo que percibe no cuenta, los días de ausencia no cuentan, y para
     // Part-Time solo cuentan sus días asignados.
-    const desde  = desdeCuandoPercibe(socio, act.inicio);
+    const desde  = desdeCuandoPercibe(socio, ventana.inicio);
     const motivo = {};
     extras.filter(e => String(e.tipo || '').toLowerCase().includes('ausencia'))
           .forEach(e => { motivo[String(e.fecha || '').substring(0, 10)] = String(e.detalle || 'Ausencia'); });
     const setPT = diasPT ? new Set(diasPT) : null;
 
-    const dias = Object.keys(mapa).filter(k => k >= act.inicio && k <= act.fin).sort().map(k => {
+    const dias = Object.keys(mapa).filter(k => k >= ventana.inicio && k <= ventana.fin).sort().map(k => {
         const valor = mapa[k];
         let estado = 'trabajado', cuenta = true;
         if (valor === null || valor === undefined) { estado = 'sin-recaudacion'; cuenta = false; }
@@ -889,7 +931,7 @@ function _elimAlcanceVivo(r, d, sal, puntos, per) {
         valorPunto: Math.round(suma),
         alcance: Math.round(suma * puntos),
         diasAusencia: aus.size,
-        periodo: act, desde: desde, dias: dias
+        periodo: ventana, desde: desde, dias: dias
     };
 }
 
@@ -930,7 +972,12 @@ function _elimCalculo(r) {
     // activo de la app: el respaldo puede ser de hace meses y la hoja
     // tiene que decir el período del socio, no el de hoy.
     const c = sal.cierre;
+    // `periodo` antes que `fecha_cierre`: el cierre guarda a qué período
+    // pertenece, y la fecha en que se hizo puede caer ya en el siguiente.
+    // Un cierre hecho el 15/10 del período 15/09→14/10 se deducía como del
+    // período 15/10→14/11, y el alcance salía del mes equivocado.
     const perRef = sal.fechaTermino
+                || (c && String(c.periodo || '').substring(0, 10))
                 || (c && String(c.fecha_cierre || '').substring(0, 10))
                 || String(r.eliminado_en || '').substring(0, 10);
     const per = _elimPeriodoDe(perRef);
@@ -961,10 +1008,21 @@ function _elimCalculo(r) {
     // null. Imprimir «$0» como alcance sería peor que decir que falta.
     const alcanceGuardado = (c && c.alcance != null && isFinite(Number(c.alcance)))
         ? Number(c.alcance) : null;
-    const alcance = vivo.ok ? vivo.alcance : alcanceGuardado;
+    // El respaldo guarda el alcance calculado el día de la baja, con el
+    // término ya descontado. Vale mucho más que el del cierre, que es la
+    // foto del mes completo: se usa antes que ése.
+    const alcanceRespaldo = (calc && calc.alcance != null && isFinite(Number(calc.alcance)))
+        ? Number(calc.alcance) : null;
+    const fuenteAlcance = vivo.ok ? 'recalculado'
+                        : (alcanceRespaldo != null ? 'respaldo'
+                        : (alcanceGuardado != null ? 'cierre' : null));
+    const alcance = vivo.ok ? vivo.alcance
+                  : (alcanceRespaldo != null ? alcanceRespaldo : alcanceGuardado);
     const valorPunto = vivo.ok
         ? vivo.valorPunto
-        : ((alcance != null && puntos > 0) ? Math.round(alcance / puntos) : null);
+        : ((calc && calc.valorPunto != null && isFinite(Number(calc.valorPunto)) && fuenteAlcance === 'respaldo')
+            ? Number(calc.valorPunto)
+            : ((alcance != null && puntos > 0) ? Math.round(alcance / puntos) : null));
 
     // La cuenta, la de `cierresMes_calcularSocio`:
     //     SALDO REAL = alcance + saldo anterior - anticipos
@@ -1004,7 +1062,8 @@ function _elimCalculo(r) {
              fIng: fIng, fIni: fIni, anioIng: anioIng, fipLabel: fipLabel,
              puntos: puntos, subePuntos: subePuntos,
              per: per, periodoStr: periodoStr,
-             vivo: vivo, alcance: alcance, valorPunto: valorPunto, cuenta: cuenta };
+             vivo: vivo, alcance: alcance, valorPunto: valorPunto,
+             fuenteAlcance: fuenteAlcance, cuenta: cuenta };
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1150,18 +1209,28 @@ function elim_imprimir(id) {
                 + 'Esta hoja usa el recalculado, igual que el recibo. '
                 + 'Vuelve a cerrar el período en Anticipos y Ausencias para que el cierre también quede al día.'
                 + '</div>';
+        } else if (!vivo.ok && K.fuenteAlcance === 'respaldo') {
+            // No se pudo recalcular, pero el respaldo trae el alcance que se
+            // calculó el día de la baja, con el término ya descontado. No es
+            // un problema: se dice de dónde sale y se sigue.
+            avisoCierre += '<div class="alerta"><b>Alcance tomado del respaldo.</b> '
+                + 'No hay recaudación del período ' + esc(periodoStr) + ' para recalcular acá, '
+                + 'así que se usa el alcance que quedó guardado al dar de baja al socio'
+                + (sal.porTerminoContrato ? ', con el término de contrato ya aplicado' : '')
+                + '.</div>';
         } else if (!vivo.ok && c) {
-            // No se pudo recalcular: hay que decir que el número es el de la
-            // foto y que puede no tener el congelamiento aplicado.
-            avisoCierre += '<div class="alerta"><b>Cifras tomadas del cierre guardado.</b> '
+            // Lo último que queda es la foto del cierre, y esa sí es
+            // peligrosa: se toma antes de marcar el término, así que casi
+            // siempre trae el mes completo. Hay que decirlo fuerte.
+            avisoCierre += '<div class="alerta"><b>⚠️ Cifras tomadas del cierre guardado — revísalas.</b> '
                 + (vivo.motivo === 'otro-periodo'
-                    ? 'El socio pertenece al período ' + esc(periodoStr) + ', y la recaudación cargada '
-                      + 'es la del ' + esc(_elimDdMmAaaa(vivo.activo.inicio)) + ' al '
-                      + esc(_elimDdMmAaaa(vivo.activo.fin)) + ', así que no se puede recalcular acá. '
+                    ? 'El socio pertenece al período ' + esc(periodoStr) + ' y no hay recaudación '
+                      + 'cargada de esas fechas, así que no se puede recalcular acá. '
                     : 'No hay recaudación cargada para recalcular. ')
+                + 'Este respaldo tampoco guardó el alcance (es anterior a que se empezara a guardar). '
                 + (sal.porTerminoContrato
                     ? 'Si el mes se cerró antes de marcar el término de contrato, ese alcance es el del '
-                      + 'mes completo y hay que revisarlo contra el recibo del socio.'
+                      + 'MES COMPLETO, sin el congelamiento: hay que revisarlo contra el recibo del socio.'
                     : 'Compáralas con el recibo del socio antes de pagar.')
                 + '</div>';
         }

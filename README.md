@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-26 — El comprobante de salida cobraba el mes completo (SW v194)
+
+**Lo que pasaba.** Ignacio Marín tiene término de contrato desde el **30/09/2026**. Su recibo del 07/10 dice alcance **$107.015** (valor punto $13.377). El comprobante sacado desde Socios Eliminados el 26/10 decía **$327.928** (valor punto $40.991): el **mes completo**, sin el congelamiento.
+
+**La causa.** El recálculo solo funcionaba si el socio pertenecía al período que la app tiene cargado hoy. Si no, se rendía y caía al `alcance` del cierre guardado — que es la foto del mes entero, tomada antes de marcar el término.
+
+Y ése es el caso **normal**, no la excepción: el comprobante de salida se saca justamente después, cuando el socio ya está eliminado y el período ya rotó.
+
+**El arreglo.** Tres cosas, en orden de importancia:
+
+- **Se calcula sobre el período del socio, no sobre el de hoy.** La recaudación histórica no se borra: `action=get` trae todas las fechas, así que el mapa también tiene los meses pasados. Solo hacía falta mirar el tramo correcto. `sumaValorPuntoSocio()` acepta ahora un período opcional; por defecto sigue siendo el activo, así que ninguna otra pantalla cambia.
+- **El respaldo guarda el alcance.** El comentario de `elim_snapshot()` ya prometía que «dentro de un año nadie va a poder recalcular el alcance de un período que ya no existe», pero guardaba los puntos y las fechas y **no** el número que de verdad no se puede reconstruir. Ahora guarda `alcance`, `valorPunto`, `periodo` y `diasAusencia`, calculados con el mismo motor del recibo y con el término ya descontado. De aquí en adelante no hace falta recalcular nada.
+- **El período del cierre sale de su columna `periodo`, no de `fecha_cierre`.** Un cierre hecho el 15/10 para el período 15/09→14/10 se deducía como del período siguiente, y el alcance salía del mes equivocado.
+
+El orden de preferencia queda: **recalculado** → **alcance del respaldo** → **alcance del cierre**. Y cada uno lo dice en la hoja: el del cierre ahora sale con un aviso en negrita de que es el mes completo y hay que revisarlo, en vez de pasar por bueno.
+
+Cinco escenarios automáticos contra el cálculo real, incluido el de Ignacio Marín. Contra el código anterior fallan los siete.
+
 #### 2026-10-26 — El informe de salida no descontaba los anticipos (SW v193)
 
 **Lo que pasaba.** El comprobante y el informe de socios eliminados calculaban el TOTAL A COBRAR **sin restar los adelantos**, así que el socio figuraba recibiendo de más justo lo que ya se había llevado.

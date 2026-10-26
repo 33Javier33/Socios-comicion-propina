@@ -329,8 +329,14 @@ function desdeCuandoPercibe(socio, inicioPeriodo) {
 
 // La suma de valores punto que le corresponden. `diasPT` solo para Part-Time
 // (sus días asignados); para Planta se pasa null y se toman todos los días.
-function sumaValorPuntoSocio(socio, fechasAusencia, diasPT) {
-    const { inicio, fin } = periodoActivoISO();
+// `periodo` es opcional y por defecto es el activo, que es lo que quieren
+// todas las pantallas. Lo necesita el comprobante de salida de un socio
+// eliminado: se imprime meses después y tiene que calcular el alcance del
+// período DEL SOCIO, no el de hoy. La recaudación histórica no se borra —
+// sigue entera en el mapa—, así que lo único que hacía falta era poder
+// elegir el tramo de fechas.
+function sumaValorPuntoSocio(socio, fechasAusencia, diasPT, periodo) {
+    const { inicio, fin } = periodo || periodoActivoISO();
     const desde = desdeCuandoPercibe(socio, inicio);
     const aus = fechasAusencia || new Set();
     const mapa = globalMapaPuntosDia || {};
