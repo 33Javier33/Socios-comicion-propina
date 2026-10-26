@@ -232,6 +232,31 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-26 — El comprobante de salida usa el recibo que el socio firmó (SW v195)
+
+**El problema de fondo.** Hasta acá el comprobante de salida *deducía* lo que el socio debía percibir: recalculaba, o leía la foto del cierre. Las dos cosas fallan cuando el socio se va **a mitad de período** — que es justo cuando más importa. Con Ignacio Marín: recibo $107.015, comprobante $327.928, el mes entero.
+
+Dicho por quien lo reportó: *«será un error si al socio se le elimina un día y no es fin de mes, en el informe saldrá que él recibe todo, será un error grave»*. Exacto.
+
+**La fuente que faltaba.** Cada vez que se imprime un recibo, la hoja entera queda en la auditoría con su folio — el de Ignacio es `REC-20261007-222609-CP`. Eso no es un recálculo ni una foto: **es la hoja que el socio firmó**. Estaba ahí y no se usaba.
+
+**Cómo queda.** El orden de preferencia es ahora:
+
+1. **El recibo de la auditoría** ← nuevo, y manda sobre todo lo demás
+2. Recálculo sobre el período del socio
+3. Alcance guardado en el respaldo
+4. Alcance del cierre (con aviso de que es el mes completo)
+
+Con el recibo delante, la cuenta **no se rehace**: se copia. Volver a calcularla sobre los mismos números solo abre la puerta a que la hoja diga un peso distinto del que el socio firmó.
+
+Lo que trae:
+
+- `imprimirReciboSocio()` guarda el snapshot en `auditoria.snapshot_despues`, y además **en números** (`montos`), no solo formateado. Los recibos ya existentes se leen igual, parseando el texto.
+- Al dar de baja a un socio, el recibo se copia dentro de su respaldo. Para los que ya estaban eliminados se busca en la auditoría la primera vez que se imprime el comprobante y queda guardado.
+- La hoja dice de dónde salen las cifras: **«Cifras del recibo entregado al socio»** con folio y fecha. Si el cierre dice otra cosa, lo deja anotado en vez de callarlo.
+
+Cuatro escenarios automáticos con el recibo real de Ignacio, incluido el caso de un socio sin recibo en la auditoría (ahí cae al recálculo, que desde v194 también aplica el congelamiento).
+
 #### 2026-10-26 — El comprobante de salida cobraba el mes completo (SW v194)
 
 **Lo que pasaba.** Ignacio Marín tiene término de contrato desde el **30/09/2026**. Su recibo del 07/10 dice alcance **$107.015** (valor punto $13.377). El comprobante sacado desde Socios Eliminados el 26/10 decía **$327.928** (valor punto $40.991): el **mes completo**, sin el congelamiento.

@@ -96,6 +96,14 @@ async function elim_snapshot(socioId) {
             } catch (e) { datos.errores.alcance = e.message || String(e); }
         }
     } catch (e) {}
+    // El recibo que se le entregó, desde la auditoría. Es la fuente que
+    // manda en el comprobante de salida: guardarla acá significa que la
+    // hoja no depende de que la auditoría siga disponible ni de volver a
+    // buscarla cada vez.
+    try {
+        const rec = await _elimReciboAuditado(sid);
+        if (rec) datos.recibo = rec;
+    } catch (e) { datos.errores.recibo = e.message || String(e); }
     return datos;
 }
 
@@ -784,6 +792,118 @@ function _elimSalida(d) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+// EL RECIBO QUE SE LE ENTREGÓ AL SOCIO
+//
+// Es la mejor fuente que existe, y por lejos: no es un recálculo ni la
+// foto de un cierre, es la hoja que se imprimió, se firmó y quedó en la
+// auditoría con su folio. Dice exactamente lo que el socio percibe.
+//
+// Importa sobre todo cuando el socio se va A MITAD DE PERÍODO. Ahí el
+// cierre guardado —si existe— trae el mes entero, y sin el recibo el
+// comprobante de salida le daría todo el mes a alguien que dejó de
+// percibir el día 30. Con Ignacio Marín pasó: su recibo dice $107.015 y
+// el comprobante decía $327.928.
+//
+// Cada impresión guarda la hoja completa en `auditoria.snapshot_despues`.
+// ══════════════════════════════════════════════════════════════════════
+function _elimNumero(v) {
+    if (typeof v === 'number') return isFinite(v) ? v : null;
+    const n = parseInt(String(v == null ? '' : v).replace(/[^0-9-]/g, ''), 10);
+    return isNaN(n) ? null : n;
+}
+
+// Normaliza el snapshot del recibo a puros números, venga con `montos`
+// (recibos nuevos) o solo con los textos formateados (los de antes).
+function _elimReciboMontos(s) {
+    if (!s || typeof s !== 'object') return null;
+    const m = s.montos || {};
+    // Tres sitios donde puede estar cada cifra, y se prueban en orden:
+    //   1. `montos`      — recibos nuevos, ya en números;
+    //   2. la propia key  — un recibo que YA pasó por acá (esto se llama
+    //                       dos veces: al buscarlo y al leerlo del respaldo,
+    //                       y sin este paso la segunda vuelta perdía los
+    //                       campos que solo existen con nombre formateado);
+    //   3. el texto       — recibos viejos, con «$107.015».
+    const val = (k, txt) => {
+        const a = _elimNumero(m[k]);      if (a != null) return a;
+        const b = _elimNumero(s[k]);      if (b != null) return b;
+        return _elimNumero(txt);
+    };
+    const alcance = val('alcance', s.alcance);
+    if (alcance == null) return null;            // sin alcance no sirve de nada
+    return {
+        folio: s.folio || null,
+        fechaEmision: s.fechaEmision || null,
+        periodo: s.periodo || null,
+        periodoISO: s.periodoISO || null,
+        congeladoDesde: s.congeladoDesde || null,
+        puntos: _elimNumero(s.puntos),
+        alcance: alcance,
+        valorPunto: val('valorPunto', s.valorPuntoFmt),
+        saldoAnt: val('saldoAnt', s.saldoAnt) || 0,
+        anticipos: val('anticipos', s.totalPedido) || 0,
+        saldoReal: val('saldoReal', s.saldoReal),
+        aPagar: val('aPagar', s.aPagar),
+        remanente: val('remanente', s.remanente)
+    };
+}
+
+// Busca en la auditoría el ÚLTIMO recibo impreso del socio.
+async function _elimReciboAuditado(socioId) {
+    const sid = String(socioId || '');
+    if (!sid || typeof dbSoc === 'undefined') return null;
+    const sacar = rows => {
+        for (const x of (rows || [])) {
+            const m = _elimReciboMontos(x.snapshot_despues);
+            if (m) return m;
+        }
+        return null;
+    };
+    try {
+        // Por el socio dentro del jsonb. Si la base no admite el filtro, se
+        // cae a traer los últimos recibos y filtrar acá.
+        const { data, error } = await dbSoc.from('auditoria')
+            .select('folio, created_at, snapshot_despues, datos_extra')
+            .eq('accion', 'Imprimir Recibo')
+            .eq('datos_extra->>socioId', sid)
+            .order('created_at', { ascending: false })
+            .limit(10);
+        if (!error) {
+            const m = sacar(data);
+            if (m) return m;
+        }
+    } catch (e) { /* se intenta el camino de abajo */ }
+    try {
+        const { data } = await dbSoc.from('auditoria')
+            .select('folio, created_at, snapshot_despues, datos_extra')
+            .eq('accion', 'Imprimir Recibo')
+            .order('created_at', { ascending: false })
+            .limit(400);
+        const mios = (data || []).filter(x => {
+            const s = x.snapshot_despues || {};
+            const dx = x.datos_extra || {};
+            return String(s.socioId || dx.socioId || '') === sid;
+        });
+        return sacar(mios);
+    } catch (e) { return null; }
+}
+
+// Deja el recibo dentro del respaldo del socio. Si el respaldo no lo
+// traía —porque la baja es anterior a que esto existiera—, se busca en la
+// auditoría y se guarda ahí para que la próxima vez esté sin buscar.
+async function _elimAsegurarRecibo(r) {
+    if (!r || !r.datos) return null;
+    if (r.datos.recibo) return r.datos.recibo;
+    const m = await _elimReciboAuditado(r.socio_id || r.id);
+    if (!m) return null;
+    r.datos.recibo = m;
+    try {
+        await dbSoc.from('socios_eliminados').update({ datos: r.datos }).eq('id', r.id);
+    } catch (e) { console.warn('[eliminados] no se pudo guardar el recibo en el respaldo:', e && e.message); }
+    return m;
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // LOS ANTICIPOS DEL SOCIO, VENGAN DE DONDE VENGAN
 //
 // Al marcar COBRADO, los anticipos se MUEVEN de `anticipos` a
@@ -1013,22 +1133,46 @@ function _elimCalculo(r) {
     // foto del mes completo: se usa antes que ése.
     const alcanceRespaldo = (calc && calc.alcance != null && isFinite(Number(calc.alcance)))
         ? Number(calc.alcance) : null;
-    const fuenteAlcance = vivo.ok ? 'recalculado'
+
+    // EL RECIBO MANDA SOBRE TODO LO DEMÁS.
+    //
+    // Es la hoja que el socio firmó. Un recálculo puede quedarse sin la
+    // recaudación del mes, y la foto del cierre trae el mes completo
+    // cuando el socio se fue a mitad de período. El recibo no: dice lo
+    // que efectivamente se le pagó.
+    const rec = _elimReciboMontos(d.recibo) || null;
+
+    const fuenteAlcance = rec ? 'recibo'
+                        : (vivo.ok ? 'recalculado'
                         : (alcanceRespaldo != null ? 'respaldo'
-                        : (alcanceGuardado != null ? 'cierre' : null));
-    const alcance = vivo.ok ? vivo.alcance
-                  : (alcanceRespaldo != null ? alcanceRespaldo : alcanceGuardado);
-    const valorPunto = vivo.ok
-        ? vivo.valorPunto
+                        : (alcanceGuardado != null ? 'cierre' : null)));
+    const alcance = rec ? rec.alcance
+                  : (vivo.ok ? vivo.alcance
+                  : (alcanceRespaldo != null ? alcanceRespaldo : alcanceGuardado));
+    const valorPunto = rec ? rec.valorPunto
+        : (vivo.ok ? vivo.valorPunto
         : ((calc && calc.valorPunto != null && isFinite(Number(calc.valorPunto)) && fuenteAlcance === 'respaldo')
             ? Number(calc.valorPunto)
-            : ((alcance != null && puntos > 0) ? Math.round(alcance / puntos) : null));
+            : ((alcance != null && puntos > 0) ? Math.round(alcance / puntos) : null)));
 
     // La cuenta, la de `cierresMes_calcularSocio`:
     //     SALDO REAL = alcance + saldo anterior - anticipos
     //     TOTAL A COBRAR / REMANENTE = repartirSaldo(saldo real)
     let cuenta = null;
-    if (alcance != null) {
+    if (rec) {
+        // Con el recibo delante no se rehace la cuenta: se copia. Volver a
+        // calcularla sobre los mismos números solo abre la puerta a que la
+        // hoja diga un peso distinto del que el socio firmó.
+        cuenta = {
+            alcance: rec.alcance, saldoAnt: rec.saldoAnt, antTot: rec.anticipos,
+            antCierre: (c && c.anticipos_total != null) ? Number(c.anticipos_total) : null,
+            antN: ant.lista.length,
+            saldoReal: rec.saldoReal != null ? rec.saldoReal
+                     : (rec.alcance + rec.saldoAnt - rec.anticipos),
+            aPagar: rec.aPagar, remanente: rec.remanente,
+            todoALaMano: (typeof _esGastoComision === 'function') && _esGastoComision(r.area || f.area)
+        };
+    } else if (alcance != null) {
         const saldoAnt = c ? (Number(c.saldo_anterior) || 0) : 0;
         // Mandan los registros, no la foto del cierre.
         //
@@ -1063,7 +1207,7 @@ function _elimCalculo(r) {
              puntos: puntos, subePuntos: subePuntos,
              per: per, periodoStr: periodoStr,
              vivo: vivo, alcance: alcance, valorPunto: valorPunto,
-             fuenteAlcance: fuenteAlcance, cuenta: cuenta };
+             fuenteAlcance: fuenteAlcance, recibo: rec, cuenta: cuenta };
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1086,9 +1230,14 @@ function _elimCalculo(r) {
 // esos días. Por eso el monto del término va en MOVIMIENTOS, informativo,
 // fuera de la aritmética — exactamente como en el recibo real.
 // ══════════════════════════════════════════════════════════════════════
-function elim_imprimir(id) {
+async function elim_imprimir(id) {
     const r = (_elimLista || []).find(x => x.id === id);
     if (!r) return;
+    // Antes de calcular nada: si el respaldo no trae el recibo que se le
+    // entregó al socio, se busca en la auditoría y se guarda. Es la fuente
+    // que manda, y sin esto una baja a mitad de período saldría con el mes
+    // completo.
+    try { await _elimAsegurarRecibo(r); } catch (e) {}
     const esc = _elimEsc;
     const K = _elimCalculo(r);
     const d = K.d, f = K.f, t = K.t, calc = K.calc, sal = K.sal, c = K.cierre;
@@ -1198,7 +1347,25 @@ function elim_imprimir(id) {
                 + '</div>';
         }
 
-        if (vivo.ok && c && c.alcance != null && Math.abs(Number(c.alcance) - alcance) > 1) {
+        if (K.fuenteAlcance === 'recibo') {
+            const rc = K.recibo;
+            avisoCierre += '<div class="alerta"><b>Cifras del recibo entregado al socio.</b> '
+                + 'Folio ' + esc(rc.folio || '—')
+                + (rc.fechaEmision ? ', emitido el ' + esc(rc.fechaEmision) : '')
+                + (rc.periodo ? ', período ' + esc(rc.periodo) : '')
+                + '. Es la hoja que el socio firmó, así que esta salida dice exactamente lo mismo.'
+                + '</div>';
+            // Si el cierre guardado dice otra cosa, se deja constancia: es
+            // la señal de que el socio se fue a mitad de período y la foto
+            // del cierre quedó con el mes entero.
+            if (c && c.alcance != null && Math.abs(Number(c.alcance) - alcance) > 1) {
+                avisoCierre += '<div class="alerta">El cierre guardado dice un alcance de '
+                    + _elimPlata(Number(c.alcance)) + ' ('
+                    + _elimPlata(Number(c.alcance) - alcance) + ' más). Es el del mes completo, '
+                    + 'tomado antes de marcar la salida. No se usa.'
+                    + '</div>';
+            }
+        } else if (vivo.ok && c && c.alcance != null && Math.abs(Number(c.alcance) - alcance) > 1) {
             const guardado = Number(c.alcance);
             avisoCierre += '<div class="alerta"><b>El cierre guardado quedó viejo.</b> '
                 + 'Dice un alcance de ' + _elimPlata(guardado) + ', que es el del mes completo. '
@@ -1685,6 +1852,10 @@ async function elim_informeGeneral() {
     }
 
     const esc = _elimEsc;
+    // Igual que el comprobante individual: primero se asegura el recibo de
+    // cada uno. Sin esto, una baja a mitad de período aparecería en el
+    // informe cobrando el mes entero.
+    for (const r of vis) { try { await _elimAsegurarRecibo(r); } catch (e) {} }
     const K = vis.map(_elimCalculo);
 
     // Los de término de contrato primero, por fecha de término; después el

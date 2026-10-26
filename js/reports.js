@@ -560,12 +560,33 @@ async function imprimirReciboSocio() {
         @media screen { body { background:#ddd; } .page { background:white; box-shadow:0 2px 12px rgba(0,0,0,0.2); } }
         </style></head><body><div class='page'>`;
 
-    // Snapshot completo para auditoría y reimpresión
+    // Snapshot completo para auditoría y reimpresión.
+    //
+    // Los montos van TAMBIÉN en números, no solo formateados. El
+    // comprobante de salida de un socio eliminado se apoya en este
+    // registro —es la hoja que el socio firmó, la única fuente que no es
+    // ni un recálculo ni una foto del cierre— y necesita poder hacer
+    // cuentas con ella, no solo mostrarla.
+    const _numRec = s => {
+        const n = parseInt(String(s == null ? '' : s).replace(/[^0-9-]/g, ''), 10);
+        return isNaN(n) ? 0 : n;
+    };
     const reciboSnapshot = {
         folio, socioId: id, nombre: nombreSocio, area, contrato,
         anioIngreso, puntos, subePuntosLabel, fipLabel: fipLabel || null,
         periodo: periodoStr, valorPuntoFmt,
         saldoAnt, alcance, totalPedido, saldoReal, aPagar, remanente,
+        periodoISO: { inicio, fin },
+        montos: {
+            saldoAnt:   _numRec(saldoAnt),
+            alcance:    _numRec(alcance),
+            anticipos:  _numRec(totalPedido),
+            saldoReal:  _numRec(saldoReal),
+            aPagar:     _numRec(aPagar),
+            remanente:  _numRec(remanente),
+            valorPunto: Math.round(valorPuntoNoche) || 0
+        },
+        congeladoDesde: fechaInicioTermino || null,
         fechaEmision: fechaHoyVis, movHtml
     };
 
@@ -603,6 +624,10 @@ async function imprimirReciboSocio() {
             usuario: _audUsuario,
             detalle: `${nombreSocio} | Período: ${periodoStr} | A Pagar: ${aPagar} | Puntos: ${puntos}`,
             idAfectado: folio,
+            // La hoja ENTERA, no solo el resumen. Es lo que deja que el
+            // comprobante de salida de un socio ya eliminado diga
+            // exactamente lo mismo que el recibo que se le entregó.
+            despues: reciboSnapshot,
             datos: { socioId: id, periodo: periodoStr, aPagar, puntos, area, contrato }
         });
     }
