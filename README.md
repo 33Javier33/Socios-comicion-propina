@@ -232,6 +232,23 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-26 — El recibo se busca donde de verdad está (SW v196)
+
+La v195 hacía que el comprobante de salida usara el recibo de la auditoría… y no encontraba ninguno. **Buscaba solo en Supabase.**
+
+El detalle completo de un recibo (alcance, saldos, anticipos) nunca se guardó ahí: `imprimirReciboSocio()` mandaba a Supabase únicamente el **resumen** —nombre, período, a pagar, puntos— y el JSON entero iba a la **auditoría de Google**, dentro de `detalle`. O sea que de todos los recibos ya impresos, que son justamente los que hacen falta, no encontraba ni uno. El comprobante de Ignacio Marín seguía saliendo con los $327.928 del cierre.
+
+Nueva acción **`getRecibosSocio`**, que mira en los dos lados:
+
+| dónde | qué trae |
+|---|---|
+| Supabase `auditoria.snapshot_despues` | los recibos impresos desde la v195 |
+| Auditoría de Google, campo `detalle` | **todo el histórico**, con el JSON completo |
+
+La hoja de Google se cachea por sesión: el informe general pregunta por cada socio y esa hoja es grande.
+
+Con esto el comprobante de Ignacio vuelve a decir lo que dice su recibo: alcance **$107.015**, total a cobrar **$107.000**, remanente **$563**.
+
 #### 2026-10-26 — El comprobante de salida usa el recibo que el socio firmó (SW v195)
 
 **El problema de fondo.** Hasta acá el comprobante de salida *deducía* lo que el socio debía percibir: recalculaba, o leía la foto del cierre. Las dos cosas fallan cuando el socio se va **a mitad de período** — que es justo cuando más importa. Con Ignacio Marín: recibo $107.015, comprobante $327.928, el mes entero.

@@ -848,44 +848,29 @@ function _elimReciboMontos(s) {
     };
 }
 
-// Busca en la auditoría el ÚLTIMO recibo impreso del socio.
+// Busca el ÚLTIMO recibo impreso del socio.
+//
+// Pregunta por `getRecibosSocio`, que mira en los DOS lados: Supabase —los
+// recibos nuevos guardan la hoja entera en `snapshot_despues`— y la
+// auditoría de Google, donde el JSON completo vive en `detalle`.
+//
+// Mirar solo Supabase no servía para nada: hasta ahora a Supabase se le
+// mandaba únicamente el resumen (nombre, período, a pagar), y la hoja
+// completa iba solo a Google. O sea que de TODOS los recibos ya impresos
+// —los únicos que importan acá— no encontraba ninguno.
 async function _elimReciboAuditado(socioId) {
     const sid = String(socioId || '');
-    if (!sid || typeof dbSoc === 'undefined') return null;
-    const sacar = rows => {
-        for (const x of (rows || [])) {
-            const m = _elimReciboMontos(x.snapshot_despues);
-            if (m) return m;
-        }
-        return null;
-    };
+    if (!sid || typeof URL_SOCIOS === 'undefined') return null;
     try {
-        // Por el socio dentro del jsonb. Si la base no admite el filtro, se
-        // cae a traer los últimos recibos y filtrar acá.
-        const { data, error } = await dbSoc.from('auditoria')
-            .select('folio, created_at, snapshot_despues, datos_extra')
-            .eq('accion', 'Imprimir Recibo')
-            .eq('datos_extra->>socioId', sid)
-            .order('created_at', { ascending: false })
-            .limit(10);
-        if (!error) {
-            const m = sacar(data);
-            if (m) return m;
+        const resp = await fetch(URL_SOCIOS + '?action=getRecibosSocio&socioId=' + encodeURIComponent(sid));
+        const res = await resp.json();
+        if (!res || res.status !== 'success' || !Array.isArray(res.data)) return null;
+        for (const x of res.data) {
+            const m = _elimReciboMontos(x.snapshot);
+            if (m) { if (!m.folio && x.folio) m.folio = x.folio; return m; }
         }
-    } catch (e) { /* se intenta el camino de abajo */ }
-    try {
-        const { data } = await dbSoc.from('auditoria')
-            .select('folio, created_at, snapshot_despues, datos_extra')
-            .eq('accion', 'Imprimir Recibo')
-            .order('created_at', { ascending: false })
-            .limit(400);
-        const mios = (data || []).filter(x => {
-            const s = x.snapshot_despues || {};
-            const dx = x.datos_extra || {};
-            return String(s.socioId || dx.socioId || '') === sid;
-        });
-        return sacar(mios);
-    } catch (e) { return null; }
+    } catch (e) { console.warn('[eliminados] no se pudo leer el recibo:', e && e.message); }
+    return null;
 }
 
 // Deja el recibo dentro del respaldo del socio. Si el respaldo no lo

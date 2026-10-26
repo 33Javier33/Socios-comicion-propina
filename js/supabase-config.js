@@ -420,6 +420,10 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
     // ── Caché de sesión para días PT desde GAS ──
     // Evita llamar GAS en cada getDiasPartTime; se llena la primera vez y persiste en memoria.
     let _diasPtGasCache = null;
+    // La hoja de auditoría de Google, cacheada por sesión. Guarda el JSON
+    // completo de cada recibo impreso en `detalle`, que es de donde salen
+    // las cifras del comprobante de salida de los socios ya dados de baja.
+    let _audGasCache = null;
     let _materialesGasCache = null;
 
     // Período actual para la columna NOT NULL `periodo` de dias_pt.
@@ -2192,6 +2196,57 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
                         return _mockOk({ status: 'success', total, ultimaFecha, periodoAnterior });
                     } catch(e) { return _mockOk({ status: 'success', total: 0, ultimaFecha: null, periodoAnterior: null }); }
                 }
+                // ── getRecibosSocio → los recibos impresos de un socio ──────
+                //
+                // Se piden a LOS DOS lados a propósito. El detalle completo de
+                // un recibo (alcance, saldos, anticipos) vivía solo en la
+                // auditoría de Google: a Supabase se mandaba nada más que el
+                // resumen. Buscar solo en Supabase no encontraba nada de los
+                // recibos ya impresos, que son justamente los que necesita el
+                // comprobante de salida de un socio dado de baja hace meses.
+                if (action === 'getRecibosSocio') {
+                    let sid = '';
+                    try { sid = new URLSearchParams(s.split('?')[1] || '').get('socioId') || ''; } catch (e) {}
+                    sid = String(sid);
+                    if (!sid) return _mockOk({ status: 'success', data: [] });
+                    const recibos = [];
+                    // 1. Supabase: los recibos nuevos traen la hoja entera.
+                    try {
+                        const { data } = await dbSoc.from('auditoria')
+                            .select('folio, created_at, snapshot_despues, datos_extra')
+                            .eq('accion', 'Imprimir Recibo')
+                            .order('created_at', { ascending: false }).limit(500);
+                        (data || []).forEach(r => {
+                            // `snap`, no `s`: en este ámbito `s` es la URL.
+                            const snap = r.snapshot_despues || null;
+                            const dx = r.datos_extra || {};
+                            if (String((snap && snap.socioId) || dx.socioId || '') !== sid) return;
+                            recibos.push({ fecha: r.created_at, folio: r.folio || dx.id_afectado || '',
+                                           snapshot: snap, extra: dx, fuente: 'supabase' });
+                        });
+                    } catch (e) { console.warn('[SB-RECIBO] supabase:', e.message); }
+                    // 2. GAS: el histórico, con el JSON completo en `detalle`.
+                    //    Se cachea por sesión: el informe general pregunta por
+                    //    cada socio y la hoja de auditoría es grande.
+                    try {
+                        if (!_audGasCache) {
+                            const res = await _origFetch(URL_SOCIOS + '?action=getAuditoria');
+                            const json = await res.json();
+                            _audGasCache = (json && json.data) || [];
+                        }
+                        _audGasCache.forEach(r => {
+                            if (String(r.accion || '') !== 'Imprimir Recibo') return;
+                            let snap = null;
+                            try { snap = JSON.parse(r.detalle); } catch (e) { return; }
+                            if (!snap || String(snap.socioId || '') !== sid) return;
+                            recibos.push({ fecha: r.fecha, folio: snap.folio || r.idAfectado || '',
+                                           snapshot: snap, fuente: 'sheets' });
+                        });
+                    } catch (e) { console.warn('[SB-RECIBO] gas:', e.message); }
+                    recibos.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+                    return _mockOk({ status: 'success', data: recibos });
+                }
+
                 if (action === 'getAuditoria') {
                     // Supabase responde de inmediato con registros recientes.
                     // Registros anteriores al CUTOFF se cargan desde GAS en background
