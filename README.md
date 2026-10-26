@@ -232,6 +232,24 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-10-26 — El informe de salida no descontaba los anticipos (SW v193)
+
+**Lo que pasaba.** El comprobante y el informe de socios eliminados calculaban el TOTAL A COBRAR **sin restar los adelantos**, así que el socio figuraba recibiendo de más justo lo que ya se había llevado.
+
+**La causa.** Al marcar **COBRADO**, los anticipos no se borran: se **mueven** de la tabla `anticipos` a `anticipos_historial`. Un socio que alcanzó a cobrar antes de irse queda con la tabla viva vacía y todo en el historial. La hoja sumaba solo la tabla viva → $0 en anticipos.
+
+Y cuando no encontraba nada ahí, caía al `anticipos_total` del cierre guardado. Ese dato tampoco sirve: el cierre es una foto tomada **antes** de marcar el término de contrato, igual que pasa con el alcance. Esta misma hoja ya desconfía de la foto para el alcance y lo recalcula; no tenía sentido creerle para los anticipos.
+
+**El arreglo.** Los anticipos salen ahora de las **dos** tablas, y mandan los registros sobre la foto:
+
+- Se juntan `anticipos` y `anticipos_historial`, **sin duplicar**: al archivar, cada fila del historial guarda en `uuid_ref` el id del anticipo original.
+- Se **recortan al período del socio**. El historial guarda todos los períodos; sin ese recorte se le descontarían adelantos de meses que ya cobró y cerró.
+- El `anticipos_total` del cierre se usa **solo** cuando el respaldo no trae ningún registro — respaldos viejos, de antes de que se guardara el historial.
+- Si el cierre dice una cifra distinta de la registrada, la hoja **lo avisa** con la diferencia en vez de callarla.
+- En MOVIMIENTOS, los adelantos que vienen del historial se marcan como **«Adelanto (archivado)»**, para que no quede duda de por qué aparece algo que no está en la tabla viva.
+
+Siete escenarios automáticos contra el cálculo real (`_elimCalculo`, el que alimentan el comprobante individual y el informe general). Contra el código anterior fallan seis.
+
 #### 2026-10-25 — La fecha se queda donde la dejaron (SW v192)
 
 Al guardar un registro, el formulario se limpiaba y la fecha volvía a **hoy**. Quien estaba cargando varios movimientos de otro día tenía que ir al calendario en cada uno.

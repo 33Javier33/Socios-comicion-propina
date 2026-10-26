@@ -756,6 +756,59 @@ function _elimSalida(d) {
     };
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// LOS ANTICIPOS DEL SOCIO, VENGAN DE DONDE VENGAN
+//
+// Al marcar COBRADO, los anticipos se MUEVEN de `anticipos` a
+// `anticipos_historial` y se borran de la tabla viva. Un socio que
+// alcanzó a cobrar antes de irse queda con `anticipos` vacía y todo en
+// el historial.
+//
+// Esta hoja sumaba solo la tabla viva, así que en ese caso daba $0 de
+// anticipos y el TOTAL A COBRAR salía sin descontarlos — el socio
+// figuraba recibiendo de más justo lo que ya se había llevado en
+// adelantos.
+//
+// Se juntan las dos tablas y se quitan los repetidos: al archivar, cada
+// fila del historial guarda en `uuid_ref` el id del anticipo original,
+// así que si el respaldo trae las dos copias se cuenta una sola vez.
+//
+// Se filtra por el período del socio porque el historial guarda TODOS
+// los períodos: sin ese recorte se le descontarían adelantos de meses
+// que ya cobró y cerró.
+// ══════════════════════════════════════════════════════════════════════
+function _elimAnticiposDe(t, per) {
+    const vivos = Array.isArray(t && t.anticipos) ? t.anticipos : [];
+    const hist  = Array.isArray(t && t.anticipos_historial) ? t.anticipos_historial : [];
+
+    const dentro = a => {
+        if (!per) return true;
+        const f = String(a.fecha || '').substring(0, 10);
+        return !!f && f >= per.inicio && f <= per.fin;
+    };
+
+    const vistos = new Set();
+    const lista  = [];
+    const agregar = (a, archivado) => {
+        if (!dentro(a)) return;
+        const clave = String(a.uuid_ref || a.id
+                          || (String(a.fecha || '') + '|' + String(a.monto || '')));
+        if (vistos.has(clave)) return;
+        vistos.add(clave);
+        lista.push({
+            fecha: String(a.fecha || '').substring(0, 10),
+            monto: Number(a.monto) || 0,
+            responsable: a.responsable || '',
+            archivado: !!archivado
+        });
+    };
+    vivos.forEach(a => agregar(a, false));
+    hist.forEach(a => agregar(a, true));
+
+    lista.sort((x, y) => String(x.fecha).localeCompare(String(y.fecha)));
+    return { lista: lista, total: lista.reduce((s, a) => s + a.monto, 0) };
+}
+
 // Recalcula el alcance con el MISMO motor que el recibo del cierre, en
 // vez de creerle al `alcance` que quedó guardado.
 //
@@ -883,6 +936,13 @@ function _elimCalculo(r) {
     const per = _elimPeriodoDe(perRef);
     const periodoStr = per ? (_elimDdMmAaaa(per.inicio) + ' AL ' + _elimDdMmAaaa(per.fin)) : '\u2014';
 
+    // Los anticipos del per\u00edodo, de la tabla viva Y del historial. Se
+    // resuelven ac\u00e1, con el per\u00edodo ya deducido, y se dejan en `sal` para
+    // que la lista de movimientos y la aritm\u00e9tica miren lo mismo.
+    const ant = _elimAnticiposDe(t, per);
+    sal.anticipos = ant.lista;
+    sal.totalAnt  = ant.total;
+
     // EL ALCANCE: se recalcula, no se cree lo guardado.
     //
     // El cierre guardado en `cierres_mes` es una foto del momento en que
@@ -912,10 +972,21 @@ function _elimCalculo(r) {
     let cuenta = null;
     if (alcance != null) {
         const saldoAnt = c ? (Number(c.saldo_anterior) || 0) : 0;
-        // Los anticipos se archivan cuando el socio cobra, así que la tabla
-        // del respaldo puede venir vacía aunque sí hubo. El cierre guarda el
-        // total que efectivamente se descontó: ese manda.
-        const antTot = (c && c.anticipos_total != null) ? Number(c.anticipos_total) : sal.totalAnt;
+        // Mandan los registros, no la foto del cierre.
+        //
+        // Antes era al revés, y por eso el total salía mal: el cierre es una
+        // foto tomada ANTES de marcar el término —igual que pasa con el
+        // alcance—, así que su `anticipos_total` puede ser de cero aunque el
+        // socio sí tuviera adelantos, o quedarse corto si se registraron
+        // después. Para el alcance esta misma hoja ya desconfía de la foto y
+        // recalcula; no tenía sentido creerle para los anticipos.
+        //
+        // La foto solo se usa cuando el respaldo no trae NINGÚN registro que
+        // mirar (respaldos viejos, de antes de que se guardara el historial).
+        const antTot = ant.lista.length
+            ? ant.total
+            : ((c && c.anticipos_total != null) ? Number(c.anticipos_total) : 0);
+        const antCierre = (c && c.anticipos_total != null) ? Number(c.anticipos_total) : null;
         const saldoReal = alcance + saldoAnt - antTot;
         const esGC = (typeof _esGastoComision === 'function') && _esGastoComision(r.area || f.area);
         const rep = (typeof repartirSaldo === 'function')
@@ -923,6 +994,7 @@ function _elimCalculo(r) {
             : { aPagar: Math.floor(Math.max(0, saldoReal) / 1000) * 1000,
                 remanente: saldoReal - Math.floor(Math.max(0, saldoReal) / 1000) * 1000 };
         cuenta = { alcance: alcance, saldoAnt: saldoAnt, antTot: antTot,
+                   antCierre: antCierre, antN: ant.lista.length,
                    saldoReal: saldoReal, aPagar: rep.aPagar, remanente: rep.remanente,
                    todoALaMano: !!esGC };
     }
@@ -981,7 +1053,11 @@ function elim_imprimir(id) {
     const movs = [];
     sal.anticipos.forEach(a => movs.push({
         orden: String(a.fecha || ''), num: true, tipo: 'Anticipo',
-        cuando: _elimDdMm(a.fecha), det: 'Adelanto',
+        cuando: _elimDdMm(a.fecha),
+        // «archivado» = vino de `anticipos_historial`, o sea que el socio ya
+        // había cobrado ese período. Se dice, para que quien lee la hoja no
+        // dude de por qué aparece un adelanto que no está en la tabla viva.
+        det: a.archivado ? 'Adelanto (archivado)' : 'Adelanto',
         monto: Number(a.monto || 0), color: '#2980b9'
     }));
 
@@ -1049,9 +1125,23 @@ function elim_imprimir(id) {
         // Si el cierre guardado dice otra cosa, se muestra la diferencia.
         // Casi siempre es esto: se cerró el mes ANTES de marcar el término,
         // así que la foto quedó con el socio trabajando el mes entero.
+        // Los anticipos del cierre no cuadran con los registrados. Se usa el
+        // detalle —es el que está listado arriba, línea por línea— y se dice
+        // la diferencia en vez de callarla.
+        if (cuenta.antN && cuenta.antCierre != null && Math.abs(cuenta.antCierre - cuenta.antTot) > 1) {
+            avisoCierre += '<div class="alerta"><b>Los anticipos del cierre no cuadran.</b> '
+                + 'El cierre guardado descontó ' + _elimPlata(cuenta.antCierre) + ', y los '
+                + cuenta.antN + ' adelanto' + (cuenta.antN === 1 ? '' : 's') + ' registrados del período '
+                + 'suman ' + _elimPlata(cuenta.antTot) + ' ('
+                + _elimPlata(Math.abs(cuenta.antCierre - cuenta.antTot)) + ' de diferencia). '
+                + 'Esta hoja usa los registrados, que son los que están detallados arriba. '
+                + 'Revísalo contra el recibo del socio antes de pagar.'
+                + '</div>';
+        }
+
         if (vivo.ok && c && c.alcance != null && Math.abs(Number(c.alcance) - alcance) > 1) {
             const guardado = Number(c.alcance);
-            avisoCierre = '<div class="alerta"><b>El cierre guardado quedó viejo.</b> '
+            avisoCierre += '<div class="alerta"><b>El cierre guardado quedó viejo.</b> '
                 + 'Dice un alcance de ' + _elimPlata(guardado) + ', que es el del mes completo. '
                 + 'Con el congelamiento aplicado'
                 + (sal.fechaTermino ? ' desde el ' + esc(_elimDdMmAaaa(sal.fechaTermino)) : '')
@@ -1063,7 +1153,7 @@ function elim_imprimir(id) {
         } else if (!vivo.ok && c) {
             // No se pudo recalcular: hay que decir que el número es el de la
             // foto y que puede no tener el congelamiento aplicado.
-            avisoCierre = '<div class="alerta"><b>Cifras tomadas del cierre guardado.</b> '
+            avisoCierre += '<div class="alerta"><b>Cifras tomadas del cierre guardado.</b> '
                 + (vivo.motivo === 'otro-periodo'
                     ? 'El socio pertenece al período ' + esc(periodoStr) + ', y la recaudación cargada '
                       + 'es la del ' + esc(_elimDdMmAaaa(vivo.activo.inicio)) + ' al '
