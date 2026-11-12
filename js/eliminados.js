@@ -1285,38 +1285,16 @@ function _elimCalculo(r) {
 // fuera de la aritmética — exactamente como en el recibo real.
 // ══════════════════════════════════════════════════════════════════════
 // ── Formato de impresión ──────────────────────────────────────────────
-// Se recuerda en este dispositivo: una térmica de rollo y una impresora de
-// oficina no se usan a la vez. La primera vez se pregunta; después sale solo.
-const ELIM_FMT_KEY = 'elim_formato_impresion';
-
-function _elimFormatoGuardado() {
-    try { const v = localStorage.getItem(ELIM_FMT_KEY); return (v === 'a4' || v === 'termica') ? v : null; }
-    catch (e) { return null; }
-}
-
-function _elimPedirFormato() {
+// Se pregunta CADA vez que se imprime. Así no queda un formato fijado por
+// error: el que imprime elige en el momento. (La impresora la elige el
+// cuadro de impresión del navegador, en cada impresión.)
+function _elimFormatoImpresion() {
     const ok = window.confirm(
-        '🖨 ¿Qué impresora usas para el comprobante?\n\n'
+        '🖨 ¿En qué formato imprimes?\n\n'
         + 'ACEPTAR  →  Térmica de 80 mm (rollo)\n'
         + 'CANCELAR →  Hoja normal A4'
     );
-    const f = ok ? 'termica' : 'a4';
-    try { localStorage.setItem(ELIM_FMT_KEY, f); } catch (e) {}
-    return f;
-}
-
-// Lo usa el botón de la pantalla: pregunta siempre, para cambiarlo.
-function elim_cambiarFormato() {
-    const actual = _elimFormatoGuardado();
-    const f = _elimPedirFormato();
-    if (typeof showToast === 'function') {
-        showToast('Impresión: ' + (f === 'a4' ? 'hoja A4' : 'térmica 80 mm')
-            + (actual === f ? ' (sin cambios)' : ''), 'success');
-    }
-}
-
-function _elimFormatoImpresion() {
-    return _elimFormatoGuardado() || _elimPedirFormato();
+    return ok ? 'termica' : 'a4';
 }
 
 async function elim_imprimir(id) {

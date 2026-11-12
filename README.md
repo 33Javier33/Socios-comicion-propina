@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-11-12 — El formato de impresión se pregunta en cada impresión (SW v202)
+
+Antes el formato se recordaba por dispositivo y no volvía a preguntar. Ahora **cada vez que se imprime** el comprobante pregunta el formato: Aceptar = térmica 80 mm, Cancelar = hoja A4. La impresora la sigue eligiendo el cuadro de impresión del navegador, en cada impresión. Se quitó el botón 🖨 Formato, que ya no hacía falta.
+
+
 #### 2026-11-12 — El comprobante de salida usa el saldo anterior y los anticipos reales (SW v201)
 
 Con el caso de Maicol Gutiérrez salían tres errores:
