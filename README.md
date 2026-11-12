@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-11-12 — «Ver el detalle» muestra el informe A4 y la térmica no corta datos (SW v203)
+
+- **Ver el detalle** muestra el mismo informe A4 que se imprime, dentro de la pantalla, con botones para volver y para imprimir. Antes mostraba los registros en bruto.
+- **Térmica:** el informe se cortaba por la derecha (montos y aportes). Ahora ocupa 70 mm, que es el ancho imprimible de un rollo de 80 mm, con tablas de ancho fijo. Medido en el navegador: todo queda dentro del rollo.
+
+
 #### 2026-11-12 — El formato de impresión se pregunta en cada impresión (SW v202)
 
 Antes el formato se recordaba por dispositivo y no volvía a preguntar. Ahora **cada vez que se imprime** el comprobante pregunta el formato: Aceptar = térmica 80 mm, Cancelar = hoja A4. La impresora la sigue eligiendo el cuadro de impresión del navegador, en cada impresión. Se quitó el botón 🖨 Formato, que ya no hacía falta.

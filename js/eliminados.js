@@ -270,7 +270,7 @@ function elim_ver(id) {
     }
 
     html += '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">'
-         + '<button onclick="elim_verRegistros(\'' + r.id + '\')" class="btn-action" style="flex:1;background:#1d4ed8;">🧾 Ver el detalle</button>'
+         + '<button onclick="elim_imprimir(\'' + r.id + '\',\'ver\')" class="btn-action" style="flex:1;background:#1d4ed8;">🧾 Ver el detalle</button>'
         + '<button onclick="elim_imprimir(\'' + r.id + '\')" class="btn-action" style="flex:1;background:#475569;">🖨 Comprobante</button>'
          + '<button onclick="elim_exportar(\'' + r.id + '\')" class="btn-action" style="flex:1;background:#16a34a;">⬇ Descargar todo</button>'
          + '</div>';
@@ -1284,6 +1284,24 @@ function _elimCalculo(r) {
 // esos días. Por eso el monto del término va en MOVIMIENTOS, informativo,
 // fuera de la aritmética — exactamente como en el recibo real.
 // ══════════════════════════════════════════════════════════════════════
+// Muestra el informe A4 dentro de la pantalla de eliminados, en un marco
+// aislado para que su CSS no toque el resto de la app.
+function _elimMostrarInforme(r, html) {
+    const cont = document.getElementById('elimDetalleBody');
+    if (!cont) return;
+    const nombre = _elimEsc(((r.nombre || '') + ' ' + (r.apellido || '')).trim() || r.socio_id);
+    cont.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">'
+        + '<button onclick="elim_ver(\'' + r.id + '\')" class="btn-card" style="font-size:0.78em;padding:4px 10px;">‹ Volver</button>'
+        + '<button onclick="elim_imprimir(\'' + r.id + '\')" class="btn-card" style="font-size:0.78em;padding:4px 10px;background:#475569;color:white;">🖨 Imprimir</button>'
+        + '<div style="flex:1;min-width:0;font-weight:800;font-size:0.9em;">' + nombre + ' · informe de salida</div>'
+        + '</div>'
+        + '<div id="elimInformeVista"></div>';
+    const fr = document.createElement('iframe');
+    fr.style.cssText = 'width:100%;height:70vh;border:1px solid #cbd5e1;border-radius:8px;background:#fff;';
+    fr.srcdoc = html;
+    document.getElementById('elimInformeVista').appendChild(fr);
+}
+
 // ── Formato de impresión ──────────────────────────────────────────────
 // Se pregunta CADA vez que se imprime. Así no queda un formato fijado por
 // error: el que imprime elige en el momento. (La impresora la elige el
@@ -1297,7 +1315,7 @@ function _elimFormatoImpresion() {
     return ok ? 'termica' : 'a4';
 }
 
-async function elim_imprimir(id) {
+async function elim_imprimir(id, modo) {
     const r = (_elimLista || []).find(x => x.id === id);
     if (!r) return;
     // Antes de calcular nada: si el respaldo no trae el recibo que se le
@@ -1641,7 +1659,9 @@ async function elim_imprimir(id) {
     // Hoja carta aparte, para archivar. La boleta es lo que el socio
     // firma y se lleva; el informe es el respaldo de la comisión: de
     // dónde salió cada peso, día por día.
-    const formato = _elimFormatoImpresion();
+    // 'ver' muestra el mismo informe A4 dentro de la pantalla, sin imprimir
+    // ni preguntar formato.
+    const formato = modo === 'ver' ? 'a4' : _elimFormatoImpresion();
     const informeHtml = _elimInformeHTML({
         formato: formato,
         r: r, f: f, calc: calc, sal: sal, esc: esc,
@@ -1653,6 +1673,8 @@ async function elim_imprimir(id) {
         folio: folio, fechaHoyVis: fechaHoyVis
     });
     const nombreInforme = 'Informe salida ' + nombre + ' ' + fechaHoyVis.replace(/\//g, '-');
+
+    if (modo === 'ver') { _elimMostrarInforme(r, informeHtml); return; }
 
     if (typeof printHTML === 'function') {
         if (formato === 'a4') {
@@ -1702,7 +1724,7 @@ function _elimCssTermica() {
     return ''
     + '*{margin:0;padding:0;box-sizing:border-box;}'
     + 'body{font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;color:#000;background:#fff;'
-    +   'width:74mm;margin:0 auto;padding:3mm 2mm;line-height:1.3;}'
+    +   'width:70mm;margin:0 auto;padding:2mm 1mm;line-height:1.3;}'
     + 'h1{font-size:11pt;font-weight:900;letter-spacing:.5px;text-align:center;}'
     + '.sub{text-align:center;font-size:7pt;color:#333;margin-bottom:1.5mm;}'
     + '.folio-wrap{text-align:center;margin-bottom:1mm;}'
@@ -1716,8 +1738,8 @@ function _elimCssTermica() {
     + '.rn-per{font-size:7pt;color:#222;margin-top:.5mm;}'
     + 'h2{font-size:8pt;font-weight:900;text-transform:uppercase;border-bottom:1px solid #000;'
     +   'padding-bottom:.5px;margin:3mm 0 1.5mm;page-break-after:avoid;}'
-    + 'table{width:100%;border-collapse:collapse;}'
-    + 'td,th{padding:1px 2px;font-size:7.5pt;vertical-align:top;}'
+    + 'table{width:100%;border-collapse:collapse;table-layout:fixed;}'
+    + 'td,th{padding:1px 2px;font-size:7.5pt;vertical-align:top;overflow-wrap:anywhere;}'
     + 'th{text-align:left;font-size:6.5pt;text-transform:uppercase;border-bottom:1px solid #000;}'
     + 'td.e{width:58%;color:#222;}td.v{font-weight:700;}'
     + 'td.n,th.n{text-align:right;white-space:nowrap;}'
@@ -1742,7 +1764,7 @@ function _elimCssTermica() {
     + '.fl{border-top:1px solid #000;padding-top:1px;font-size:7pt;font-weight:700;text-transform:uppercase;}'
     + '.fs{font-size:6.5pt;color:#333;}'
     + '.pie{font-size:6.5pt;color:#444;text-align:center;margin-top:3mm;border-top:1px dashed #aaa;padding-top:1mm;}'
-    + '@media print{@page{size:80mm auto;margin:0;}body{width:80mm;padding:2mm 3mm;}}';
+    + '@media print{@page{size:80mm auto;margin:0;}body{width:70mm;padding:2mm 1mm;}}';
 }
 
 function _elimCssA4() {
