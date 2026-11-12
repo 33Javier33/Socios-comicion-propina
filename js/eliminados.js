@@ -1832,14 +1832,36 @@ function _elimInformeHTML(x) {
             'no-asignado': ['No le toca (Part-Time)', 'gris'],
             'sin-recaudacion': ['Sin recaudación', 'gris']
         };
-        const filas = x.vivo.dias.map(dd => {
-            const et = ETQ[dd.estado] || ['—', 'gris'];
-            const aporte = dd.cuenta ? _elimPlata(Math.round(dd.valor * x.puntos)) : '—';
+        // Los días trabajados van uno por uno. Los días congelados que vienen
+        // seguidos se resumen en UNA sola línea («24/10 al 10/11 · 18 días»):
+        // no aportan nada, y repetirlos día por día tapa lo que sí cuenta.
+        const filasDia = d => {
+            const et = ETQ[d.estado] || ['—', 'gris'];
+            const aporte = d.cuenta ? _elimPlata(Math.round(d.valor * x.puntos)) : '—';
             return '<tr class="' + et[1] + '">'
-                + '<td>' + esc(_elimDdMmAaaa(dd.fecha)) + '</td>'
-                + '<td>' + esc(et[0]) + (dd.motivo && !dd.cuenta ? ' · ' + esc(dd.motivo) : '') + '</td>'
+                + '<td>' + esc(_elimDdMmAaaa(d.fecha)) + '</td>'
+                + '<td>' + esc(et[0]) + (d.motivo && !d.cuenta ? ' · ' + esc(d.motivo) : '') + '</td>'
                 + '<td class="n">' + aporte + '</td></tr>';
-        }).join('');
+        };
+        const filasCongelado = run => {
+            const motivo = run[0].motivo ? ' · ' + esc(run[0].motivo) : '';
+            return '<tr class="no">'
+                + '<td>' + esc(_elimRango(run.map(d => d.fecha))) + '</td>'
+                + '<td>' + esc(ETQ.ausente[0]) + motivo + ' <b>(' + run.length + ' día' + (run.length === 1 ? '' : 's') + ')</b></td>'
+                + '<td class="n">—</td></tr>';
+        };
+        const filas = (() => {
+            const out = [];
+            let run = [];
+            const cerrar = () => { if (run.length) { out.push(filasCongelado(run)); run = []; } };
+            x.vivo.dias.forEach(d => {
+                if (d.estado === 'ausente') { run.push(d); return; }
+                cerrar();
+                out.push(filasDia(d));
+            });
+            cerrar();
+            return out.join('');
+        })();
         const nTrab = x.vivo.dias.filter(dd => dd.cuenta).length;
         const nCong = x.vivo.dias.filter(dd => dd.estado === 'ausente').length;
         diasHtml =

@@ -232,6 +232,11 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-11-12 — El anexo resume los días congelados en una línea (SW v204)
+
+En el anexo día a día, los días trabajados siguen uno por uno. Los días congelados que vienen seguidos se resumen en una sola línea, por ejemplo «24/10 al 10/11 · Congelado · Término de Contrato (18 días)». Así el anexo muestra solo lo que cuenta y ocupa menos papel.
+
+
 #### 2026-11-12 — «Ver el detalle» muestra el informe A4 y la térmica no corta datos (SW v203)
 
 - **Ver el detalle** muestra el mismo informe A4 que se imprime, dentro de la pantalla, con botones para volver y para imprimir. Antes mostraba los registros en bruto.
