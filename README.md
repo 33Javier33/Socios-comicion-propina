@@ -232,6 +232,20 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-11-12 — El comprobante de salida tomaba un recibo de otro período (SW v197)
+
+**Lo que pasaba.** El comprobante de Maicol Gutiérrez (término 24/10/2026) mostraba **$177.146** de alcance y **$62.000** a cobrar. Esas cifras venían de un recibo de **15/05 → 14/06/2026**, no del período liquidado (15/10 → 14/11).
+
+**La causa.** La búsqueda del recibo tomaba el último que el socio tuviera en la auditoría **sin mirar el período**, y ese recibo tenía prioridad sobre el recálculo.
+
+**El arreglo.**
+- Un recibo solo se usa si es **del mismo período** que el socio liquida. Los recibos viejos, que guardaron solo el texto «15/05/2026 AL 14/06/2026», se leen igual.
+- Si el respaldo tenía guardado un recibo de otro período, se reemplaza por el correcto o se quita.
+- Con esto el alcance sale del recálculo: **9 días trabajados (15 → 23/10) × 4 puntos = $31.996**. Los días congelados no suman.
+
+Pruebas: con el código anterior reproducen exactamente $177.146 y $44.287 de la foto; con el nuevo, $31.996 y $7.999.
+
+
 #### 2026-10-26 — El recibo se busca donde de verdad está (SW v196)
 
 La v195 hacía que el comprobante de salida usara el recibo de la auditoría… y no encontraba ninguno. **Buscaba solo en Supabase.**

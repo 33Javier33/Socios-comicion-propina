@@ -814,6 +814,23 @@ function _elimNumero(v) {
 
 // Normaliza el snapshot del recibo a puros números, venga con `montos`
 // (recibos nuevos) o solo con los textos formateados (los de antes).
+// «15/09/2026 AL 14/10/2026» → { inicio, fin } en ISO. Los recibos viejos
+// solo guardaron el texto; sin esto no se puede saber a qué período pertenecen.
+function _elimPeriodoDeTexto(txt) {
+    const m = /(\d{2})\/(\d{2})\/(\d{4})\s+AL\s+(\d{2})\/(\d{2})\/(\d{4})/i.exec(String(txt || ''));
+    if (!m) return null;
+    return { inicio: m[3] + '-' + m[2] + '-' + m[1], fin: m[6] + '-' + m[5] + '-' + m[4] };
+}
+
+// ¿El recibo es de ESTE período? Es lo que decide si sirve. Sin esta
+// comprobación se tomaba el último recibo del socio sin mirar las fechas: el
+// de Maicol Gutiérrez era de 15/05→14/06 y se imprimió como si fuera de
+// 15/10→14/11.
+function _elimMismoPeriodo(recibo, per) {
+    const p = recibo && recibo.periodoISO;
+    return !!(p && per && p.inicio === per.inicio && p.fin === per.fin);
+}
+
 function _elimReciboMontos(s) {
     if (!s || typeof s !== 'object') return null;
     const m = s.montos || {};
@@ -835,7 +852,7 @@ function _elimReciboMontos(s) {
         folio: s.folio || null,
         fechaEmision: s.fechaEmision || null,
         periodo: s.periodo || null,
-        periodoISO: s.periodoISO || null,
+        periodoISO: s.periodoISO || _elimPeriodoDeTexto(s.periodo),
         congeladoDesde: s.congeladoDesde || null,
         puntos: _elimNumero(s.puntos),
         alcance: alcance,
@@ -858,16 +875,18 @@ function _elimReciboMontos(s) {
 // mandaba únicamente el resumen (nombre, período, a pagar), y la hoja
 // completa iba solo a Google. O sea que de TODOS los recibos ya impresos
 // —los únicos que importan acá— no encontraba ninguno.
-async function _elimReciboAuditado(socioId) {
+async function _elimReciboAuditado(socioId, per) {
     const sid = String(socioId || '');
     if (!sid || typeof URL_SOCIOS === 'undefined') return null;
     try {
         const resp = await fetch(URL_SOCIOS + '?action=getRecibosSocio&socioId=' + encodeURIComponent(sid));
         const res = await resp.json();
         if (!res || res.status !== 'success' || !Array.isArray(res.data)) return null;
+        // Solo cuenta el recibo de ESTE período. Los de otros períodos no dicen
+        // nada de lo que el socio percibió en el que se liquida.
         for (const x of res.data) {
             const m = _elimReciboMontos(x.snapshot);
-            if (m) { if (!m.folio && x.folio) m.folio = x.folio; return m; }
+            if (m && _elimMismoPeriodo(m, per)) { if (!m.folio && x.folio) m.folio = x.folio; return m; }
         }
     } catch (e) { console.warn('[eliminados] no se pudo leer el recibo:', e && e.message); }
     return null;
@@ -878,14 +897,24 @@ async function _elimReciboAuditado(socioId) {
 // auditoría y se guarda ahí para que la próxima vez esté sin buscar.
 async function _elimAsegurarRecibo(r) {
     if (!r || !r.datos) return null;
-    if (r.datos.recibo) return r.datos.recibo;
-    const m = await _elimReciboAuditado(r.socio_id || r.id);
-    if (!m) return null;
-    r.datos.recibo = m;
+    const per = _elimCalculo(r).per;
+    const guardado = _elimReciboMontos(r.datos.recibo);
+    if (guardado && _elimMismoPeriodo(guardado, per)) return guardado;
+    // Lo guardado no sirve (no existe, o es de otro período): se busca el del
+    // período del socio. Si no hay ninguno, se quita el ajeno para que no
+    // vuelva a colarse.
+    if (!guardado && !r.datos.recibo) {
+        const m0 = await _elimReciboAuditado(r.socio_id || r.id, per);
+        if (!m0) return null;
+        r.datos.recibo = m0;
+    } else {
+        const m1 = await _elimReciboAuditado(r.socio_id || r.id, per);
+        r.datos.recibo = m1 || null;
+    }
     try {
         await dbSoc.from('socios_eliminados').update({ datos: r.datos }).eq('id', r.id);
     } catch (e) { console.warn('[eliminados] no se pudo guardar el recibo en el respaldo:', e && e.message); }
-    return m;
+    return _elimReciboMontos(r.datos.recibo);
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1125,7 +1154,10 @@ function _elimCalculo(r) {
     // recaudación del mes, y la foto del cierre trae el mes completo
     // cuando el socio se fue a mitad de período. El recibo no: dice lo
     // que efectivamente se le pagó.
-    const rec = _elimReciboMontos(d.recibo) || null;
+    // Solo sirve si es del MISMO período: un recibo de otro mes no describe
+    // lo que el socio percibió en éste.
+    const reciboPer = _elimReciboMontos(d.recibo);
+    const rec = (reciboPer && _elimMismoPeriodo(reciboPer, per)) ? reciboPer : null;
 
     const fuenteAlcance = rec ? 'recibo'
                         : (vivo.ok ? 'recalculado'
