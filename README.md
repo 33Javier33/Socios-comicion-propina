@@ -232,6 +232,13 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-11-12 — El total a cobrar de un socio eliminado es el alcance del período (SW v198)
+
+Un socio que trabajó días del período no puede salir con total a cobrar **$0**. Si sus anticipos superan el alcance, el total a cobrar ahora es el **alcance del período**, y el exceso de anticipos aparece en un recuadro aparte, sin descontarse en silencio de ese total. Ejemplo: Maicol Gutiérrez, alcance $31.996, anticipos $115.000 → total a cobrar **$31.996**, exceso **$82.170** visible.
+
+Pendiente de decisión: cómo se recupera ese exceso (descuento de otro pago, cobro directo, o dejarlo registrado).
+
+
 #### 2026-11-12 — El comprobante de salida tomaba un recibo de otro período (SW v197)
 
 **Lo que pasaba.** El comprobante de Maicol Gutiérrez (término 24/10/2026) mostraba **$177.146** de alcance y **$62.000** a cobrar. Esas cifras venían de un recibo de **15/05 → 14/06/2026**, no del período liquidado (15/10 → 14/11).

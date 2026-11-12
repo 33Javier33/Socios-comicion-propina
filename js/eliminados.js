@@ -1218,6 +1218,14 @@ function _elimCalculo(r) {
                    todoALaMano: !!esGC };
     }
 
+    if (cuenta && cuenta.alcance > 0 && cuenta.saldoReal <= 0) {
+        cuenta.excedente = -cuenta.saldoReal;      // anticipos por sobre el alcance
+        cuenta.aPagar   = Math.round(cuenta.alcance);
+        cuenta.remanente = 0;
+    } else if (cuenta) {
+        cuenta.excedente = 0;
+    }
+
     return { r: r, d: d, f: f, t: t, calc: calc, sal: sal, cierre: c,
              nombre: nombre, area: area, contrato: contrato,
              fIng: fIng, fIni: fIni, anioIng: anioIng, fipLabel: fipLabel,
@@ -1345,7 +1353,12 @@ async function elim_imprimir(id) {
             + '<div class="divider"></div>'
             + '<div class="total-cobrar"><div class="total-label">TOTAL A COBRAR</div>'
             +   '<div class="total-monto">' + _elimPlata(cuenta.aPagar) + '</div></div>'
-            + fila('REMANENTE', _elimPlata(cuenta.remanente));
+            + fila('REMANENTE', _elimPlata(cuenta.remanente))
+            + (cuenta.excedente > 0
+                ? '<div class="alerta"><b>Anticipos por sobre el alcance: ' + _elimPlata(cuenta.excedente) + '.</b> '
+                  + 'El total a cobrar es el alcance del período (' + _elimPlata(cuenta.alcance) + '). '
+                  + 'Ese exceso no se descuenta de este total: decidir cómo se recupera.</div>'
+                : '');
 
         // Si el cierre guardado dice otra cosa, se muestra la diferencia.
         // Casi siempre es esto: se cerró el mes ANTES de marcar el término,
