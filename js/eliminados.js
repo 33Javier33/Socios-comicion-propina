@@ -1255,6 +1255,41 @@ function _elimCalculo(r) {
 // esos días. Por eso el monto del término va en MOVIMIENTOS, informativo,
 // fuera de la aritmética — exactamente como en el recibo real.
 // ══════════════════════════════════════════════════════════════════════
+// ── Formato de impresión ──────────────────────────────────────────────
+// Se recuerda en este dispositivo: una térmica de rollo y una impresora de
+// oficina no se usan a la vez. La primera vez se pregunta; después sale solo.
+const ELIM_FMT_KEY = 'elim_formato_impresion';
+
+function _elimFormatoGuardado() {
+    try { const v = localStorage.getItem(ELIM_FMT_KEY); return (v === 'a4' || v === 'termica') ? v : null; }
+    catch (e) { return null; }
+}
+
+function _elimPedirFormato() {
+    const ok = window.confirm(
+        '🖨 ¿Qué impresora usas para el comprobante?\n\n'
+        + 'ACEPTAR  →  Térmica de 80 mm (rollo)\n'
+        + 'CANCELAR →  Hoja normal A4'
+    );
+    const f = ok ? 'termica' : 'a4';
+    try { localStorage.setItem(ELIM_FMT_KEY, f); } catch (e) {}
+    return f;
+}
+
+// Lo usa el botón de la pantalla: pregunta siempre, para cambiarlo.
+function elim_cambiarFormato() {
+    const actual = _elimFormatoGuardado();
+    const f = _elimPedirFormato();
+    if (typeof showToast === 'function') {
+        showToast('Impresión: ' + (f === 'a4' ? 'hoja A4' : 'térmica 80 mm')
+            + (actual === f ? ' (sin cambios)' : ''), 'success');
+    }
+}
+
+function _elimFormatoImpresion() {
+    return _elimFormatoGuardado() || _elimPedirFormato();
+}
+
 async function elim_imprimir(id) {
     const r = (_elimLista || []).find(x => x.id === id);
     if (!r) return;
@@ -1595,7 +1630,9 @@ async function elim_imprimir(id) {
     // Hoja carta aparte, para archivar. La boleta es lo que el socio
     // firma y se lleva; el informe es el respaldo de la comisión: de
     // dónde salió cada peso, día por día.
+    const formato = _elimFormatoImpresion();
     const informeHtml = _elimInformeHTML({
+        formato: formato,
         r: r, f: f, calc: calc, sal: sal, esc: esc,
         nombre: nombre, area: area, contrato: contrato, puntos: puntos,
         fIng: fIng, fipLabel: fipLabel, anioIng: anioIng, subePuntos: subePuntos,
@@ -1607,15 +1644,22 @@ async function elim_imprimir(id) {
     const nombreInforme = 'Informe salida ' + nombre + ' ' + fechaHoyVis.replace(/\//g, '-');
 
     if (typeof printHTML === 'function') {
-        // Primero el informe y, al rato, la boleta: son dos papeles
-        // distintos (carta y 80mm) y suelen ir a impresoras distintas,
-        // así que no pueden salir en el mismo trabajo de impresión.
-        if (typeof showToast === 'function') showToast('🖨 Imprimiendo el informe detallado…', 'info');
-        printHTML(informeHtml, nombreInforme);
-        setTimeout(() => {
-            if (typeof showToast === 'function') showToast('🖨 Ahora la boleta de recibo…', 'info');
-            printHTML(boletaHtml, fileName);
-        }, 1500);
+        if (formato === 'a4') {
+            // En hoja normal sale el informe completo y nada más. La boleta
+            // está hecha para 80 mm: en una A4 quedaría chica arriba a la
+            // izquierda. Si se necesita, se imprime con la térmica.
+            if (typeof showToast === 'function') showToast('🖨 Imprimiendo el informe en hoja A4…', 'info');
+            printHTML(informeHtml, nombreInforme);
+        } else {
+            // Primero el informe y, al rato, la boleta: son dos papeles
+            // distintos (informe y boleta de 80 mm). Van en trabajos separados.
+            if (typeof showToast === 'function') showToast('🖨 Imprimiendo el informe detallado…', 'info');
+            printHTML(informeHtml, nombreInforme);
+            setTimeout(() => {
+                if (typeof showToast === 'function') showToast('🖨 Ahora la boleta de recibo…', 'info');
+                printHTML(boletaHtml, fileName);
+            }, 1500);
+        }
     } else {
         const win = window.open('', '_blank', 'width=900,height=1000');
         if (!win) {
@@ -1643,6 +1687,104 @@ async function elim_imprimir(id) {
 // Por eso trae el día a día de la recaudación, con cada día marcado como
 // trabajado o congelado, y la cuenta armada paso a paso.
 // ══════════════════════════════════════════════════════════════════════
+function _elimCssTermica() {
+    return ''
+    + '*{margin:0;padding:0;box-sizing:border-box;}'
+    + 'body{font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;color:#000;background:#fff;'
+    +   'width:74mm;margin:0 auto;padding:3mm 2mm;line-height:1.3;}'
+    + 'h1{font-size:11pt;font-weight:900;letter-spacing:.5px;text-align:center;}'
+    + '.sub{text-align:center;font-size:7pt;color:#333;margin-bottom:1.5mm;}'
+    + '.folio-wrap{text-align:center;margin-bottom:1mm;}'
+    + '.folio{font-family:monospace;font-size:6.5pt;border:1px dashed #888;padding:0 3px;}'
+    + '.lugar{text-align:center;font-size:7pt;color:#555;margin-bottom:2mm;}'
+    + '.resumen{border:2px solid #000;text-align:center;padding:2mm 1.5mm;margin-bottom:2mm;}'
+    + '.rn-nombre{font-size:10pt;font-weight:900;}'
+    + '.rn-rut{font-size:7pt;color:#222;}'
+    + '.rn-lbl{font-size:8pt;font-weight:900;margin-top:1.5mm;letter-spacing:.5px;}'
+    + '.rn-monto{font-size:17pt;font-weight:900;line-height:1.1;}'
+    + '.rn-per{font-size:7pt;color:#222;margin-top:.5mm;}'
+    + 'h2{font-size:8pt;font-weight:900;text-transform:uppercase;border-bottom:1px solid #000;'
+    +   'padding-bottom:.5px;margin:3mm 0 1.5mm;page-break-after:avoid;}'
+    + 'table{width:100%;border-collapse:collapse;}'
+    + 'td,th{padding:1px 2px;font-size:7.5pt;vertical-align:top;}'
+    + 'th{text-align:left;font-size:6.5pt;text-transform:uppercase;border-bottom:1px solid #000;}'
+    + 'td.e{width:58%;color:#222;}td.v{font-weight:700;}'
+    + 'td.n,th.n{text-align:right;white-space:nowrap;}'
+    + 'td.c{text-align:center;}'
+    + 'tr{page-break-inside:avoid;}'
+    + 'table.dias td{font-size:7pt;padding:1px 2px;border-bottom:1px dotted #bbb;}'
+    + 'table.dias tr.no td{color:#b91c1c;}'
+    + 'table.dias tr.gris td{color:#777;}'
+    + 'table.dias tfoot td{border-top:1px solid #000;font-size:7.5pt;}'
+    + 'table.cuenta td{border-bottom:1px dotted #bbb;}'
+    + 'table.cuenta tr.sub td{border-top:1px solid #000;font-weight:700;}'
+    + 'table.cuenta tr.tot td{border-top:1.5px solid #000;border-bottom:1.5px solid #000;'
+    +   'font-size:9pt;font-weight:900;}'
+    + '.salida{border:1.5px solid #000;padding:1.5mm 2mm;margin:1.5mm 0;}'
+    + '.salida-t{font-size:8pt;font-weight:900;text-transform:uppercase;}'
+    + '.salida-d{font-size:7pt;margin-top:.5mm;}'
+    + '.alerta{border:1px solid #000;background:#eee;padding:1.5mm 2mm;margin:1.5mm 0;font-size:7pt;}'
+    + '.nota{font-size:6.5pt;color:#333;margin:1mm 0;}'
+    + '.origen{font-size:6.5pt;border-left:2px solid #000;padding:1mm 2mm;margin-top:1mm;}'
+    + '.firmas{display:flex;justify-content:space-between;margin-top:6mm;page-break-inside:avoid;}'
+    + '.fb{text-align:center;width:46%;}'
+    + '.fl{border-top:1px solid #000;padding-top:1px;font-size:7pt;font-weight:700;text-transform:uppercase;}'
+    + '.fs{font-size:6.5pt;color:#333;}'
+    + '.pie{font-size:6.5pt;color:#444;text-align:center;margin-top:3mm;border-top:1px dashed #aaa;padding-top:1mm;}'
+    + '@media print{@page{size:80mm auto;margin:0;}body{width:80mm;padding:2mm 3mm;}}';
+}
+
+function _elimCssA4() {
+    return ''
+    + '*{margin:0;padding:0;box-sizing:border-box;}'
+    + 'body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#000;background:#fff;'
+    +   'width:180mm;margin:0 auto;padding:10mm 0;line-height:1.35;}'
+    + 'h1{font-size:17pt;font-weight:900;letter-spacing:1px;text-align:center;}'
+    + '.sub{text-align:center;font-size:9pt;color:#333;margin-bottom:2mm;}'
+    + '.folio-wrap{text-align:center;margin-bottom:1.5mm;}'
+    + '.folio{font-family:monospace;font-size:8.5pt;color:#444;background:#f4f6f7;border:1px dashed #aaa;padding:2px 8px;}'
+    + '.lugar{text-align:right;font-size:9pt;color:#555;margin-bottom:3mm;}'
+    + '.resumen{border:2px solid #000;text-align:center;padding:4mm 3mm;margin-bottom:3mm;}'
+    + '.rn-nombre{font-size:14pt;font-weight:900;}'
+    + '.rn-rut{font-size:9pt;color:#222;}'
+    + '.rn-lbl{font-size:10pt;font-weight:900;margin-top:2mm;letter-spacing:.8px;}'
+    + '.rn-monto{font-size:26pt;font-weight:900;line-height:1.1;}'
+    + '.rn-per{font-size:9pt;color:#222;margin-top:1mm;}'
+    + 'h2{font-size:10.5pt;font-weight:900;text-transform:uppercase;letter-spacing:.6px;'
+    +   'border-bottom:1.5px solid #000;padding-bottom:1px;margin:5mm 0 2mm;page-break-after:avoid;}'
+    + 'table{width:100%;border-collapse:collapse;}'
+    + 'td,th{padding:2px 5px;font-size:9.5pt;vertical-align:top;}'
+    + 'th{text-align:left;font-size:8.5pt;text-transform:uppercase;border-bottom:1.5px solid #000;}'
+    + 'td.e{width:55%;color:#333;}td.v{font-weight:700;}'
+    + 'td.n,th.n{text-align:right;white-space:nowrap;}'
+    + 'td.c{text-align:center;}'
+    + 'tr{page-break-inside:avoid;}'
+    + 'table.dias td{font-size:8.5pt;padding:1.5px 5px;border-bottom:1px dotted #bbb;}'
+    + 'table.dias tr.no td{color:#b91c1c;}'
+    + 'table.dias tr.gris td{color:#777;}'
+    + 'table.dias tfoot td{border-top:1.5px solid #000;font-size:9.5pt;}'
+    + 'table.cuenta td{border-bottom:1px dotted #bbb;}'
+    + 'table.cuenta tr.sub td{border-top:1px solid #000;font-weight:700;}'
+    + 'table.cuenta tr.tot td{border-top:2px solid #000;border-bottom:2px solid #000;font-size:12pt;font-weight:900;}'
+    + '.salida{border:2px solid #000;padding:3mm 4mm;margin:2mm 0;}'
+    + '.salida-t{font-size:11pt;font-weight:900;text-transform:uppercase;}'
+    + '.salida-d{font-size:9.5pt;margin-top:1mm;}'
+    + '.alerta{border:1.5px solid #000;background:#eee;padding:2.5mm 3mm;margin:2.5mm 0;font-size:9pt;}'
+    + '.nota{font-size:8.5pt;color:#333;margin:1mm 0;}'
+    + '.origen{font-size:8.5pt;border-left:3px solid #000;padding:1.5mm 3mm;margin-top:2mm;}'
+    + '.firmas{display:flex;justify-content:space-around;margin-top:12mm;page-break-inside:avoid;}'
+    + '.fb{text-align:center;width:42%;}'
+    + '.fl{border-top:1.5px solid #000;padding-top:3px;font-size:9.5pt;font-weight:700;text-transform:uppercase;}'
+    + '.fs{font-size:8.5pt;color:#333;}'
+    + '.pie{font-size:8pt;color:#444;text-align:center;margin-top:6mm;border-top:1px dashed #aaa;padding-top:2mm;}'
+    + '@media print{@page{size:A4;margin:12mm;}body{width:auto;padding:0;}}';
+}
+
+// El CSS del informe según la impresora: térmica de 80 mm o hoja A4.
+function _elimCssImpresion(formato) {
+    return formato === 'a4' ? _elimCssA4() : _elimCssTermica();
+}
+
 function _elimInformeHTML(x) {
     const esc = x.esc;
     const fila = (e, v) => '<tr><td class="e">' + esc(e) + '</td><td class="v">' + v + '</td></tr>';
@@ -1756,49 +1898,7 @@ function _elimInformeHTML(x) {
     // el ancho es el del papel y no hay márgenes de hoja ni saltos de página
     // forzados, que era lo que dejaba los huecos en blanco.
     return '<html><head><meta charset="UTF-8"><title>Informe de salida — ' + esc(x.nombre) + '</title><style>'
-        + '*{margin:0;padding:0;box-sizing:border-box;}'
-        + 'body{font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;color:#000;background:#fff;'
-        +   'width:74mm;margin:0 auto;padding:3mm 2mm;line-height:1.3;}'
-        + 'h1{font-size:11pt;font-weight:900;letter-spacing:.5px;text-align:center;}'
-        + '.sub{text-align:center;font-size:7pt;color:#333;margin-bottom:1.5mm;}'
-        + '.folio-wrap{text-align:center;margin-bottom:1mm;}'
-        + '.folio{font-family:monospace;font-size:6.5pt;border:1px dashed #888;padding:0 3px;}'
-        + '.lugar{text-align:center;font-size:7pt;color:#555;margin-bottom:2mm;}'
-        + '.resumen{border:2px solid #000;text-align:center;padding:2mm 1.5mm;margin-bottom:2mm;}'
-        + '.rn-nombre{font-size:10pt;font-weight:900;}'
-        + '.rn-rut{font-size:7pt;color:#222;}'
-        + '.rn-lbl{font-size:8pt;font-weight:900;margin-top:1.5mm;letter-spacing:.5px;}'
-        + '.rn-monto{font-size:17pt;font-weight:900;line-height:1.1;}'
-        + '.rn-per{font-size:7pt;color:#222;margin-top:.5mm;}'
-        + 'h2{font-size:8pt;font-weight:900;text-transform:uppercase;border-bottom:1px solid #000;'
-        +   'padding-bottom:.5px;margin:3mm 0 1.5mm;page-break-after:avoid;}'
-        + 'table{width:100%;border-collapse:collapse;}'
-        + 'td,th{padding:1px 2px;font-size:7.5pt;vertical-align:top;}'
-        + 'th{text-align:left;font-size:6.5pt;text-transform:uppercase;border-bottom:1px solid #000;}'
-        + 'td.e{width:58%;color:#222;}td.v{font-weight:700;}'
-        + 'td.n,th.n{text-align:right;white-space:nowrap;}'
-        + 'td.c{text-align:center;}'
-        + 'tr{page-break-inside:avoid;}'
-        + 'table.dias td{font-size:7pt;padding:1px 2px;border-bottom:1px dotted #bbb;}'
-        + 'table.dias tr.no td{color:#b91c1c;}'
-        + 'table.dias tr.gris td{color:#777;}'
-        + 'table.dias tfoot td{border-top:1px solid #000;font-size:7.5pt;}'
-        + 'table.cuenta td{border-bottom:1px dotted #bbb;}'
-        + 'table.cuenta tr.sub td{border-top:1px solid #000;font-weight:700;}'
-        + 'table.cuenta tr.tot td{border-top:1.5px solid #000;border-bottom:1.5px solid #000;'
-        +   'font-size:9pt;font-weight:900;}'
-        + '.salida{border:1.5px solid #000;padding:1.5mm 2mm;margin:1.5mm 0;}'
-        + '.salida-t{font-size:8pt;font-weight:900;text-transform:uppercase;}'
-        + '.salida-d{font-size:7pt;margin-top:.5mm;}'
-        + '.alerta{border:1px solid #000;background:#eee;padding:1.5mm 2mm;margin:1.5mm 0;font-size:7pt;}'
-        + '.nota{font-size:6.5pt;color:#333;margin:1mm 0;}'
-        + '.origen{font-size:6.5pt;border-left:2px solid #000;padding:1mm 2mm;margin-top:1mm;}'
-        + '.firmas{display:flex;justify-content:space-between;margin-top:6mm;page-break-inside:avoid;}'
-        + '.fb{text-align:center;width:46%;}'
-        + '.fl{border-top:1px solid #000;padding-top:1px;font-size:7pt;font-weight:700;text-transform:uppercase;}'
-        + '.fs{font-size:6.5pt;color:#333;}'
-        + '.pie{font-size:6.5pt;color:#444;text-align:center;margin-top:3mm;border-top:1px dashed #aaa;padding-top:1mm;}'
-        + '@media print{@page{size:80mm auto;margin:0;}body{width:80mm;padding:2mm 3mm;}}'
+        + _elimCssImpresion(x.formato)
         + '</style></head><body>'
 
         + '<h1>INFORME DE SALIDA</h1>'

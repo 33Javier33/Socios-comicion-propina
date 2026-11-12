@@ -232,6 +232,14 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-11-12 — El informe de salida sale en térmica de 80 mm o en hoja A4 (SW v200)
+
+- El formato se **recuerda en cada dispositivo**. La primera vez pregunta: Aceptar = térmica 80 mm, Cancelar = hoja A4. Después imprime directo con ese formato.
+- Botón **🖨 Formato** en Socios Eliminados, para cambiarlo cuando haga falta.
+- **A4**: se imprime el informe completo, en hoja normal con márgenes de hoja.
+- **Térmica**: como antes, informe y boleta de 80 mm en trabajos separados. En A4 no se imprime la boleta, porque está hecha para 80 mm y quedaría chica en una hoja normal.
+
+
 #### 2026-11-12 — El informe de salida se imprime en la térmica de 80 mm (SW v199)
 
 El informe estaba armado como hoja A4 y la impresora térmica lo reducía al ancho del rollo: quedaban huecos en blanco arriba y en medio, y no se leía bien.
