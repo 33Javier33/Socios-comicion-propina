@@ -232,6 +232,19 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-11-12 — El comprobante de salida usa el saldo anterior y los anticipos reales (SW v201)
+
+Con el caso de Maicol Gutiérrez salían tres errores:
+
+- **Saldo anterior $0.** El comprobante lo buscaba en el cierre guardado, que no lo trae. La app usa `saldos_socio`, y ahora el comprobante también.
+- **Anticipos $137.000 para un socio sin anticipos.** Cuando no había registros, caía a la foto del cierre. Ahora, si el respaldo trae las tablas de anticipos, manda lo que hay en ellas (cero). La foto del cierre queda solo para respaldos anteriores a esas tablas.
+- **Saldo real y total a cobrar.** Saldo real = alcance + saldo anterior − anticipos. Con saldo positivo, el total a cobrar es ese saldo completo, sin redondear al millar. Maicol: 31.996 + 951 = **$32.947**.
+
+El dinero que no percibió por término de contrato (días congelados × puntos, $89.140) aparece como nota informativa. No se suma ni se resta del total.
+
+Los recibos firmados no cambian: si el comprobante usa el recibo del mismo período, el total es el de ese recibo.
+
+
 #### 2026-11-12 — El informe de salida sale en térmica de 80 mm o en hoja A4 (SW v200)
 
 - El formato se **recuerda en cada dispositivo**. La primera vez pregunta: Aceptar = térmica 80 mm, Cancelar = hoja A4. Después imprime directo con ese formato.

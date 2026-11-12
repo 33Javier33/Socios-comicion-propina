@@ -1190,7 +1190,12 @@ function _elimCalculo(r) {
             todoALaMano: (typeof _esGastoComision === 'function') && _esGastoComision(r.area || f.area)
         };
     } else if (alcance != null) {
-        const saldoAnt = c ? (Number(c.saldo_anterior) || 0) : 0;
+        // El saldo que venía es el de `saldos_socio`: el mismo dato que usa la
+        // app. El cierre guardado a veces no lo trae y salía en $0.
+        const saldoTabla = (Array.isArray(t.saldos_socio) && t.saldos_socio[0])
+            ? Number(t.saldos_socio[0].monto) : null;
+        const saldoAnt = (saldoTabla != null && isFinite(saldoTabla)) ? saldoTabla
+                       : (c ? (Number(c.saldo_anterior) || 0) : 0);
         // Mandan los registros, no la foto del cierre.
         //
         // Antes era al revés, y por eso el total salía mal: el cierre es una
@@ -1202,7 +1207,11 @@ function _elimCalculo(r) {
         //
         // La foto solo se usa cuando el respaldo no trae NINGÚN registro que
         // mirar (respaldos viejos, de antes de que se guardara el historial).
-        const antTot = ant.lista.length
+        // Si el respaldo trae las tablas de anticipos, lo que manda es lo que
+        // hay en ellas, aunque sea cero. La foto del cierre solo sirve cuando
+        // el respaldo no tiene esas tablas (respaldos viejos).
+        const tieneTablasAnt = Array.isArray(t.anticipos) || Array.isArray(t.anticipos_historial);
+        const antTot = tieneTablasAnt
             ? ant.total
             : ((c && c.anticipos_total != null) ? Number(c.anticipos_total) : 0);
         const antCierre = (c && c.anticipos_total != null) ? Number(c.anticipos_total) : null;
@@ -1218,12 +1227,32 @@ function _elimCalculo(r) {
                    todoALaMano: !!esGC };
     }
 
-    if (cuenta && cuenta.alcance > 0 && cuenta.saldoReal <= 0) {
-        cuenta.excedente = -cuenta.saldoReal;      // anticipos por sobre el alcance
-        cuenta.aPagar   = Math.round(cuenta.alcance);
-        cuenta.remanente = 0;
-    } else if (cuenta) {
-        cuenta.excedente = 0;
+    if (cuenta) {
+        if (rec) {
+            // Con el recibo firmado el total es el de ese recibo: no se rehace.
+            cuenta.excedente = 0;
+        } else if (cuenta.saldoReal > 0) {
+            // Alcance + saldo anterior − anticipos, completo. Sin redondeo al
+            // millar: es lo que el socio debe recibir.
+            cuenta.aPagar = Math.round(cuenta.saldoReal);
+            cuenta.remanente = 0;
+            cuenta.excedente = 0;
+        } else if (cuenta.alcance > 0) {
+            // Los anticipos cubren o superan lo trabajado: el total es el
+            // alcance, y el exceso se muestra aparte.
+            cuenta.excedente = -cuenta.saldoReal;
+            cuenta.aPagar = Math.round(cuenta.alcance);
+            cuenta.remanente = 0;
+        } else {
+            cuenta.excedente = 0;
+        }
+        // Dinero que el socio no percibió por término de contrato: los días
+        // congelados con recaudación, valor punto × puntos. Se informa; no se
+        // suma ni se resta de la cuenta.
+        const congelados = (vivo && vivo.ok && Array.isArray(vivo.dias)) ? vivo.dias : [];
+        cuenta.noPercibido = Math.round(congelados
+            .filter(dd => dd.estado === 'ausente' && dd.valor)
+            .reduce((s, dd) => s + dd.valor, 0) * (Number(puntos) || 0));
     }
 
     return { r: r, d: d, f: f, t: t, calc: calc, sal: sal, cierre: c,
@@ -1389,6 +1418,10 @@ async function elim_imprimir(id) {
             + '<div class="total-cobrar"><div class="total-label">TOTAL A COBRAR</div>'
             +   '<div class="total-monto">' + _elimPlata(cuenta.aPagar) + '</div></div>'
             + fila('REMANENTE', _elimPlata(cuenta.remanente))
+            + (cuenta.noPercibido > 0
+                ? '<div class="nota"><b>Dinero que no percibió por término de contrato: '
+                  + _elimPlata(cuenta.noPercibido) + '</b> (días congelados × puntos). No se suma ni se resta del total.</div>'
+                : '')
             + (cuenta.excedente > 0
                 ? '<div class="alerta"><b>Anticipos por sobre el alcance: ' + _elimPlata(cuenta.excedente) + '.</b> '
                   + 'El total a cobrar es el alcance del período (' + _elimPlata(cuenta.alcance) + '). '
@@ -1837,8 +1870,10 @@ function _elimInformeHTML(x) {
             +   '<td class="n"><b>' + _elimPlata(c.alcance) + '</b></td></tr>'
             + '<tr><td class="e">Saldo que venía del período anterior</td>'
             +   '<td class="n">' + _elimPlata(c.saldoAnt) + '</td></tr>'
-            + '<tr><td class="e">Anticipos que ya recibió</td>'
-            +   '<td class="n">' + _elimPlata(-Math.abs(c.antTot)) + '</td></tr>'
+            + (c.antTot > 0
+                ? '<tr><td class="e">Anticipos que ya recibió</td>'
+                  + '<td class="n">' + _elimPlata(-Math.abs(c.antTot)) + '</td></tr>'
+                : '')
             + '<tr class="sub"><td class="e"><b>Saldo real</b></td>'
             +   '<td class="n"><b>' + _elimPlata(c.saldoReal) + '</b></td></tr>'
             + '<tr class="tot"><td class="e">TOTAL A COBRAR</td>'
