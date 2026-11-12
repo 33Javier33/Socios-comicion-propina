@@ -232,6 +232,16 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-11-12 — El informe de salida se imprime en la térmica de 80 mm (SW v199)
+
+El informe estaba armado como hoja A4 y la impresora térmica lo reducía al ancho del rollo: quedaban huecos en blanco arriba y en medio, y no se leía bien.
+
+- Papel de **80 mm** (márgenes y saltos de página propios de hoja A4 eliminados).
+- Arriba, lo primero que se lee: **nombre, RUT y TOTAL A COBRAR** en grande.
+- Orden: identificación → motivo → cómo se calculó → movimientos → firmas. El **día a día** queda al final como anexo, porque es lo más largo.
+- El día a día pasa a tres columnas (día, estado, aporte) para que quepa.
+
+
 #### 2026-11-12 — El total a cobrar de un socio eliminado es el alcance del período (SW v198)
 
 Un socio que trabajó días del período no puede salir con total a cobrar **$0**. Si sus anticipos superan el alcance, el total a cobrar ahora es el **alcance del período**, y el exceso de anticipos aparece en un recuadro aparte, sin descontarse en silencio de ese total. Ejemplo: Maicol Gutiérrez, alcance $31.996, anticipos $115.000 → total a cobrar **$31.996**, exceso **$82.170** visible.

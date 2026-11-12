@@ -1662,20 +1662,19 @@ function _elimInformeHTML(x) {
             const aporte = dd.cuenta ? _elimPlata(Math.round(dd.valor * x.puntos)) : '—';
             return '<tr class="' + et[1] + '">'
                 + '<td>' + esc(_elimDdMmAaaa(dd.fecha)) + '</td>'
-                + '<td class="n">' + _elimPlata(Math.round(dd.valor)) + '</td>'
                 + '<td>' + esc(et[0]) + (dd.motivo && !dd.cuenta ? ' · ' + esc(dd.motivo) : '') + '</td>'
                 + '<td class="n">' + aporte + '</td></tr>';
         }).join('');
         const nTrab = x.vivo.dias.filter(dd => dd.cuenta).length;
         const nCong = x.vivo.dias.filter(dd => dd.estado === 'ausente').length;
         diasHtml =
-              '<h2>Día a día del período</h2>'
+              '<h2>Anexo · día a día del período</h2>'
             + '<p class="nota">Son los días de recaudación del período. Los congelados no suman: '
             + 'es ahí donde se aplica el término de contrato.</p>'
-            + '<table class="dias"><thead><tr><th>Día</th><th class="n">Valor punto</th>'
-            +   '<th>Estado</th><th class="n">Aporte (× ' + esc(x.puntos) + ' pts)</th></tr></thead>'
+            + '<table class="dias"><thead><tr><th>Día</th>'
+            +   '<th>Estado</th><th class="n">Aporte (× ' + esc(x.puntos) + ')</th></tr></thead>'
             + '<tbody>' + filas + '</tbody>'
-            + '<tfoot><tr><td colspan="3"><b>' + nTrab + ' día' + (nTrab === 1 ? '' : 's')
+            + '<tfoot><tr><td colspan="2"><b>' + nTrab + ' día' + (nTrab === 1 ? '' : 's')
             +   ' que suman</b>' + (nCong ? ' · ' + nCong + ' congelado' + (nCong === 1 ? '' : 's') : '')
             +   '</td><td class="n"><b>' + _elimPlata(x.cuenta ? x.cuenta.alcance : 0) + '</b></td></tr></tfoot>'
             + '</table>';
@@ -1753,56 +1752,70 @@ function _elimInformeHTML(x) {
           + 'Si la salida fue por ese motivo, déjalo anotado en Anticipos y Ausencias antes de pagar.'
           + '</div></div>';
 
+    // Va a impresora térmica de rollo (80 mm). Por eso no es una hoja A4:
+    // el ancho es el del papel y no hay márgenes de hoja ni saltos de página
+    // forzados, que era lo que dejaba los huecos en blanco.
     return '<html><head><meta charset="UTF-8"><title>Informe de salida — ' + esc(x.nombre) + '</title><style>'
         + '*{margin:0;padding:0;box-sizing:border-box;}'
-        + 'body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#000;background:#fff;'
-        +   'padding:16mm 18mm;line-height:1.45;}'
-        + 'h1{font-size:17pt;font-weight:900;letter-spacing:1px;text-align:center;}'
-        + '.sub{text-align:center;font-size:9.5pt;color:#333;font-weight:600;margin-bottom:2mm;}'
-        + '.folio{text-align:center;font-family:monospace;font-size:8.5pt;color:#444;background:#f4f6f7;'
-        +   'border:1px dashed #aaa;border-radius:3px;padding:2px 8px;display:inline-block;}'
-        + '.folio-wrap{text-align:center;margin-bottom:4mm;}'
-        + '.lugar{text-align:right;font-size:9.5pt;color:#555;margin-bottom:4mm;}'
-        + 'h2{font-size:10.5pt;font-weight:900;text-transform:uppercase;letter-spacing:0.8px;'
-        +   'border-bottom:1.5px solid #000;padding-bottom:2px;margin:6mm 0 2.5mm;}'
+        + 'body{font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;color:#000;background:#fff;'
+        +   'width:74mm;margin:0 auto;padding:3mm 2mm;line-height:1.3;}'
+        + 'h1{font-size:11pt;font-weight:900;letter-spacing:.5px;text-align:center;}'
+        + '.sub{text-align:center;font-size:7pt;color:#333;margin-bottom:1.5mm;}'
+        + '.folio-wrap{text-align:center;margin-bottom:1mm;}'
+        + '.folio{font-family:monospace;font-size:6.5pt;border:1px dashed #888;padding:0 3px;}'
+        + '.lugar{text-align:center;font-size:7pt;color:#555;margin-bottom:2mm;}'
+        + '.resumen{border:2px solid #000;text-align:center;padding:2mm 1.5mm;margin-bottom:2mm;}'
+        + '.rn-nombre{font-size:10pt;font-weight:900;}'
+        + '.rn-rut{font-size:7pt;color:#222;}'
+        + '.rn-lbl{font-size:8pt;font-weight:900;margin-top:1.5mm;letter-spacing:.5px;}'
+        + '.rn-monto{font-size:17pt;font-weight:900;line-height:1.1;}'
+        + '.rn-per{font-size:7pt;color:#222;margin-top:.5mm;}'
+        + 'h2{font-size:8pt;font-weight:900;text-transform:uppercase;border-bottom:1px solid #000;'
+        +   'padding-bottom:.5px;margin:3mm 0 1.5mm;page-break-after:avoid;}'
         + 'table{width:100%;border-collapse:collapse;}'
-        + 'td,th{padding:3px 6px;font-size:9.5pt;vertical-align:top;}'
-        + 'th{background:#eee;text-align:left;font-size:8.5pt;text-transform:uppercase;'
-        +   'letter-spacing:0.5px;border-bottom:1.5px solid #000;}'
-        + 'td.e{color:#444;width:52%;}td.v{font-weight:700;}'
+        + 'td,th{padding:1px 2px;font-size:7.5pt;vertical-align:top;}'
+        + 'th{text-align:left;font-size:6.5pt;text-transform:uppercase;border-bottom:1px solid #000;}'
+        + 'td.e{width:58%;color:#222;}td.v{font-weight:700;}'
         + 'td.n,th.n{text-align:right;white-space:nowrap;}'
-        + 'td.c{text-align:center;color:#777;}'
-        + 'tbody tr:nth-child(even){background:#f7f7f7;}'
-        + 'table.dias td{font-size:8.5pt;padding:2px 6px;border-bottom:1px solid #eee;}'
+        + 'td.c{text-align:center;}'
+        + 'tr{page-break-inside:avoid;}'
+        + 'table.dias td{font-size:7pt;padding:1px 2px;border-bottom:1px dotted #bbb;}'
         + 'table.dias tr.no td{color:#b91c1c;}'
-        + 'table.dias tr.gris td{color:#888;}'
-        + 'table.dias tfoot td{border-top:1.5px solid #000;font-size:9.5pt;background:#fff;}'
-        + 'table.cuenta td{border-bottom:1px solid #eee;}'
-        + 'table.cuenta tr.sub td{border-top:1.5px solid #000;border-bottom:1.5px solid #000;background:#fafafa;}'
-        + 'table.cuenta tr.tot td{border-top:2px solid #000;border-bottom:2px solid #000;'
-        +   'font-size:13pt;font-weight:900;background:#f0f0f0;}'
-        + '.salida{border:2px solid #000;padding:3mm 4mm;margin:3mm 0;}'
-        + '.salida-t{font-size:12pt;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;}'
-        + '.salida-d{font-size:9.5pt;color:#333;margin-top:1.5mm;}'
-        + '.alerta{border:2px solid #000;background:#eee;padding:3mm 4mm;margin:3mm 0;font-size:9pt;}'
-        + '.nota{font-size:8.5pt;color:#555;margin:1.5mm 0 2.5mm;}'
-        + '.origen{font-size:8.5pt;color:#333;background:#f4f6f7;border-left:3px solid #000;'
-        +   'padding:2mm 3mm;margin-top:2mm;}'
-        + '.firmas{display:flex;justify-content:space-around;margin-top:16mm;page-break-inside:avoid;}'
-        + '.fb{text-align:center;width:42%;}'
-        + '.fl{border-top:1.5px solid #000;padding-top:4px;font-size:9.5pt;font-weight:700;text-transform:uppercase;}'
-        + '.fs{font-size:8.5pt;color:#555;}'
-        + '.pie{font-size:8pt;color:#666;text-align:center;margin-top:8mm;border-top:1px dashed #ccc;padding-top:2mm;}'
-        + '@media print{@page{size:A4;margin:0;}body{padding:14mm 16mm;}'
-        +   'h2{page-break-after:avoid;}table{page-break-inside:auto;}tr{page-break-inside:avoid;}}'
+        + 'table.dias tr.gris td{color:#777;}'
+        + 'table.dias tfoot td{border-top:1px solid #000;font-size:7.5pt;}'
+        + 'table.cuenta td{border-bottom:1px dotted #bbb;}'
+        + 'table.cuenta tr.sub td{border-top:1px solid #000;font-weight:700;}'
+        + 'table.cuenta tr.tot td{border-top:1.5px solid #000;border-bottom:1.5px solid #000;'
+        +   'font-size:9pt;font-weight:900;}'
+        + '.salida{border:1.5px solid #000;padding:1.5mm 2mm;margin:1.5mm 0;}'
+        + '.salida-t{font-size:8pt;font-weight:900;text-transform:uppercase;}'
+        + '.salida-d{font-size:7pt;margin-top:.5mm;}'
+        + '.alerta{border:1px solid #000;background:#eee;padding:1.5mm 2mm;margin:1.5mm 0;font-size:7pt;}'
+        + '.nota{font-size:6.5pt;color:#333;margin:1mm 0;}'
+        + '.origen{font-size:6.5pt;border-left:2px solid #000;padding:1mm 2mm;margin-top:1mm;}'
+        + '.firmas{display:flex;justify-content:space-between;margin-top:6mm;page-break-inside:avoid;}'
+        + '.fb{text-align:center;width:46%;}'
+        + '.fl{border-top:1px solid #000;padding-top:1px;font-size:7pt;font-weight:700;text-transform:uppercase;}'
+        + '.fs{font-size:6.5pt;color:#333;}'
+        + '.pie{font-size:6.5pt;color:#444;text-align:center;margin-top:3mm;border-top:1px dashed #aaa;padding-top:1mm;}'
+        + '@media print{@page{size:80mm auto;margin:0;}body{width:80mm;padding:2mm 3mm;}}'
         + '</style></head><body>'
 
-        + '<h1>INFORME DE SALIDA DE SOCIO</h1>'
-        + '<div class="sub">Fondo Solidario de Propina · Casino de Puerto Varas · Ley 17312 del 29/07/70</div>'
+        + '<h1>INFORME DE SALIDA</h1>'
+        + '<div class="sub">Fondo Solidario de Propina<br>Casino de Puerto Varas · Ley 17312</div>'
         + '<div class="folio-wrap"><span class="folio">FOLIO ' + esc(x.folio) + '</span></div>'
         + '<div class="lugar">' + esc(lugarFecha) + '</div>'
 
-        + '<h2>Identificación del socio</h2><table><tbody>'
+        // Lo primero que hay que leer en el papel: a quién y cuánto.
+        + '<div class="resumen">'
+        +   '<div class="rn-nombre">' + esc(x.nombre) + '</div>'
+        +   '<div class="rn-rut">RUT ' + esc(x.r.rut || x.f.rut || '—') + ' · ' + esc(x.area || '—') + '</div>'
+        +   '<div class="rn-lbl">TOTAL A COBRAR</div>'
+        +   '<div class="rn-monto">' + (x.cuenta ? _elimPlata(x.cuenta.aPagar) : '—') + '</div>'
+        +   '<div class="rn-per">Período ' + esc(x.periodoStr) + '</div>'
+        + '</div>'
+
+        + '<h2>Identificación</h2><table><tbody>'
         + fila('Nombre', esc(x.nombre))
         + fila('RUT', esc(x.r.rut || x.f.rut || '—'))
         + fila('ID de socio', esc(x.r.socio_id || '—'))
@@ -1819,33 +1832,35 @@ function _elimInformeHTML(x) {
         + salidaHtml
         + '<table><tbody>'
         + fila('Período liquidado', esc(x.periodoStr))
-        + fila('Registrado en el sistema como',
-               esc(x.r.modo === 'desactivado' ? 'Dado de baja (desactivado)'
+        + fila('Registrado como',
+               esc(x.r.modo === 'desactivado' ? 'Dado de baja'
                  : x.r.modo === 'recuperado' ? 'Registro recuperado' : 'Eliminado'))
         + fila('Respaldo tomado el', esc(_elimFecha(x.r.eliminado_en)))
         + (x.r.eliminado_por ? fila('Por', esc(x.r.eliminado_por)) : '')
         + '</tbody></table>'
 
-        + x.avisoCobertura.replace(/class="alerta"/g, 'class="alerta"')
+        + x.avisoCobertura
 
-        + '<h2>Cómo se calculó lo que debe recibir</h2>'
+        + '<h2>Cómo se calculó</h2>'
         + cuentaHtml
-        + '<div class="origen"><b>Origen de las cifras:</b> ' + origen + '</div>'
+        + '<div class="origen"><b>Origen:</b> ' + origen + '</div>'
         + x.avisoCierre
-
-        + diasHtml
 
         + '<h2>Movimientos del período</h2>'
         + '<table><thead><tr><th>#</th><th>Tipo</th><th>Cuándo</th><th>Detalle</th>'
         +   '<th class="n">Monto</th></tr></thead><tbody>' + movHtml + '</tbody></table>'
 
         + '<div class="firmas">'
-        +   '<div class="fb"><div style="height:14mm"></div><div class="fl">' + esc(x.nombre) + '</div>'
+        +   '<div class="fb"><div style="height:9mm"></div><div class="fl">' + esc(x.nombre) + '</div>'
         +     '<div class="fs">Socio saliente</div></div>'
-        +   '<div class="fb"><div style="height:14mm"></div><div class="fl">' + esc(_elimQuien()) + '</div>'
+        +   '<div class="fb"><div style="height:9mm"></div><div class="fl">' + esc(_elimQuien()) + '</div>'
         +     '<div class="fs">Comisión de Propina</div></div>'
         + '</div>'
-        + '<div class="pie">Folio ' + esc(x.folio) + ' · Informe generado el ' + esc(x.fechaHoyVis)
+
+        // El día a día es el anexo: largo, y va después de la firma.
+        + diasHtml
+
+        + '<div class="pie">Folio ' + esc(x.folio) + ' · Emitido el ' + esc(x.fechaHoyVis)
         +   ' · Sistema Fondo Solidario</div>'
         + '</body></html>';
 }
