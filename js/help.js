@@ -586,34 +586,34 @@ const BASE_CONOCIMIENTO = [
     // ═══════════════════════════════════════════════════════
     // EGRESOS (solicitudes de anticipo desde la app del socio)
     // ═══════════════════════════════════════════════════════
-    { id:'eg1', cat:'egresos', titulo:'¿Qué es un "Egreso pendiente" y de dónde viene?', tags:['egreso','egresos','pendiente','solicitud','anticipo','socio','propi.solicitada','solicitar'],
-      resp:'Es una <strong>solicitud de anticipo</strong> que el socio envía desde su app <strong>propi.solicitada</strong> (botón "Solicitar Egreso"). Aparece como aviso en <strong>Anticipos y Ausencias</strong> para que tú la proceses o la rechaces.',
+    { id:'eg1', cat:'egresos', titulo:'¿Qué es un "Anticipo registrado por socio" y de dónde viene?', tags:['egreso','egresos','pendiente','solicitud','anticipo','socio','propi.solicitada','registro','registrar'],
+      resp:'Es un <strong>anticipo de propina</strong> que el socio registra desde su app <strong>propi.solicitada</strong> (botón "Registro de Anticipo"), indicando el monto y el encargado que se lo entregó. <strong>En la app del socio el monto se descuenta del balance de inmediato.</strong> Acá aparece como aviso en <strong>Anticipos y Ausencias</strong> para que lo confirmes o lo rechaces.',
       vista:`<div class="ayuda-vista">
-        <div class="ayuda-vista-titulo">💸 Aviso de egresos pendientes</div>
+        <div class="ayuda-vista-titulo">💸 Aviso de anticipos registrados por socios</div>
         <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:10px;padding:10px;">
-          <div style="color:white;font-weight:800;font-size:0.85em;margin-bottom:8px;">💸 Egresos pendientes <span style="background:rgba(255,255,255,0.25);border-radius:8px;padding:1px 6px;">1</span></div>
+          <div style="color:white;font-weight:800;font-size:0.85em;margin-bottom:8px;">💸 Anticipos registrados por socios <span style="background:rgba(255,255,255,0.25);border-radius:8px;padding:1px 6px;">1</span></div>
           <div style="background:white;border-radius:8px;padding:8px;">
             <div style="font-weight:800;font-size:0.82em;color:#075985;">Juan Pérez</div>
-            <div style="font-size:0.72em;color:#0369a1;">Solicita $50.000 · gasto imprevisto</div>
+            <div style="font-size:0.72em;color:#0369a1;">Registró $50.000 · gasto imprevisto</div>
             <div style="display:flex;gap:6px;margin-top:7px;">
-              <div style="flex:1;background:#0284c7;color:white;border-radius:6px;padding:6px;text-align:center;font-size:0.72em;font-weight:800;">✅ Procesar</div>
+              <div style="flex:1;background:#0284c7;color:white;border-radius:6px;padding:6px;text-align:center;font-size:0.72em;font-weight:800;">✅ Confirmar</div>
               <div style="flex:1;background:white;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:6px;text-align:center;font-size:0.72em;font-weight:800;">✖️ Rechazar</div>
             </div>
           </div>
         </div>
       </div>`,
-      pasos:['El socio pide el egreso desde su app indicando monto y (opcional) un motivo','El aviso aparece arriba en Anticipos y Ausencias, y el socio queda marcado con el badge 💸 EGRESO en la lista','Desde ahí decides: Procesar (registrar el anticipo) o Rechazar (con motivo)','El aviso se actualiza en tiempo real: si el socio pide otro, aparece al instante'],
-      nota:'Mientras no lo proceses ni rechaces, el socio ve en su app una tarjeta "Egreso solicitado · pendiente".' },
+      pasos:['El socio registra el anticipo desde su app, con monto y encargado','En su app el balance baja de inmediato, sin esperar','El aviso aparece arriba en Anticipos y Ausencias, y el socio queda marcado con 💸 ANTICIPO APP en la lista','Desde ahí decides: Confirmar (registrar el anticipo) o Rechazar (con motivo)'],
+      nota:'Mientras no lo confirmes ni rechaces, el socio ve en su app la tarjeta "Anticipo registrado · por confirmar" y el monto ya descontado.' },
 
-    { id:'eg2', cat:'egresos', titulo:'¿Cómo proceso un egreso solicitado?', tags:['procesar','egreso','aceptar','anticipo','registrar','aprobar'],
-      resp:'Al tocar <strong>✅ Procesar</strong>, se abre el socio con el <strong>monto ya pre-cargado</strong> en el formulario de anticipo. Solo confirmas y registras el anticipo como siempre.',
-      pasos:['Toca ✅ Procesar en el aviso del egreso','Se selecciona el socio y el monto solicitado aparece cargado en "Monto"','Revisa la fecha y el responsable, y pulsa "Registrar Anticipo" (con su desglose de billetes)','Al registrarlo, la solicitud pasa a PROCESADO y el socio recibe el aviso "✅ Egreso procesado"'],
-      nota:'Si registras un anticipo normal sin pasar por el botón Procesar, la solicitud NO se cierra sola: usa el aviso para vincularla.' },
+    { id:'eg2', cat:'egresos', titulo:'¿Cómo confirmo un anticipo registrado por un socio?', tags:['procesar','confirmar','egreso','aceptar','anticipo','registrar','aprobar'],
+      resp:'Al tocar <strong>✅ Confirmar</strong>, se abre el socio con el <strong>monto ya pre-cargado</strong> en el formulario de anticipo. Registras el anticipo como siempre y el registro del socio queda confirmado.',
+      pasos:['Toca ✅ Confirmar en el aviso','Se selecciona el socio y el monto aparece cargado en "Monto"','Revisa la fecha y el responsable, y pulsa "Registrar Anticipo" (con su desglose de billetes)','El registro pasa a PROCESADO y el socio recibe "✅ Anticipo confirmado"'],
+      nota:'Si registras el anticipo abriendo al socio a mano, sin pasar por el aviso, la app lo vincula igual: si el monto coincide lo confirma sola; si no coincide, te pregunta. Así el monto nunca se descuenta dos veces en la app del socio.' },
 
-    { id:'eg3', cat:'egresos', titulo:'¿Cómo rechazo un egreso e informo el motivo al socio?', tags:['rechazar','egreso','motivo','negar','denegar','nota','notificar'],
-      resp:'Al tocar <strong>✖️ Rechazar</strong>, el sistema te pide escribir el <strong>motivo</strong>. Ese motivo se le envía automáticamente al socio como <strong>mensaje del administrador</strong> en su app.',
-      pasos:['Toca ✖️ Rechazar en el aviso del egreso','Escribe el motivo del rechazo (es obligatorio; el socio lo verá)','La solicitud queda como RECHAZADO y desaparece de los pendientes','El socio recibe en su app (Mensajes → Admin) el aviso: "❌ Egreso rechazado" + tu motivo'],
-      nota:'El motivo queda guardado en la solicitud y también le llega al socio como notificación. Sé claro y breve.' },
+    { id:'eg3', cat:'egresos', titulo:'¿Cómo rechazo un anticipo registrado por un socio?', tags:['rechazar','egreso','anticipo','motivo','negar','denegar','nota','notificar'],
+      resp:'Al tocar <strong>✖️ Rechazar</strong>, el sistema te pide el <strong>motivo</strong>. Se le envía al socio como <strong>mensaje del administrador</strong>, y <strong>el monto vuelve a su balance</strong> en la app.',
+      pasos:['Toca ✖️ Rechazar en el aviso','Escribe el motivo del rechazo (es obligatorio; el socio lo verá)','El registro queda como RECHAZADO y desaparece de los pendientes','En la app del socio el monto vuelve al balance y le llega "❌ Anticipo rechazado" con tu motivo'],
+      nota:'El motivo queda guardado en el registro y también le llega al socio como notificación. Sé claro y breve.' },
 
     // ═══════════════════════════════════════════════════════
     // MENSAJES A SOCIOS (privado)

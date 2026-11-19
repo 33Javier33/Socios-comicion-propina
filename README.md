@@ -232,6 +232,18 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-11-19 — «Egresos pendientes» pasan a ser «Anticipos registrados por socios» (SW v205)
+
+En propi.solicitada, «Solicitar Egreso» pasó a ser **Registro de Anticipo**, y el monto se descuenta del balance del socio **al instante**, sin esperar a que se registre acá. Eso obliga a que el registro del socio quede PROCESADO siempre que se registre el anticipo real, o la app del socio lo descontaría dos veces.
+
+- **Cierre automático.** Antes, el registro solo se cerraba si el encargado entraba desde el aviso. Ahora `egresos_alRegistrarAnticipo()` recibe el monto registrado y, si el socio tiene registros pendientes, cierra el de igual monto sin preguntar. Si ningún monto coincide, pregunta si corresponde. Si el encargado dice que no, queda pendiente porque es otro anticipo.
+- Si el monto confirmado no es el que registró el socio, el mensaje se lo dice: su balance ahora usa el monto confirmado.
+- **Rechazo:** el aviso y el mensaje al socio explican que el monto vuelve a su balance.
+- Textos: «💸 Anticipos registrados por socios», «Registró $X», botón «✅ Confirmar», distintivo «💸 ANTICIPO APP» en la lista y «ANTICIPO» en la campana. Ayuda actualizada.
+
+Probado con una base simulada: vinculado, mismo monto sin aviso, monto distinto aceptado y rechazado, socio sin pendientes, y dos pendientes con uno que coincide. Contra la versión anterior, la prueba falla en todos los casos sin aviso.
+
+
 #### 2026-11-12 — El anexo resume los días congelados en una línea (SW v204)
 
 En el anexo día a día, los días trabajados siguen uno por uno. Los días congelados que vienen seguidos se resumen en una sola línea, por ejemplo «24/10 al 10/11 · Congelado · Término de Contrato (18 días)». Así el anexo muestra solo lo que cuenta y ocupa menos papel.

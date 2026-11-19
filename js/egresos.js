@@ -1,11 +1,12 @@
 // ============================================================
-// EGRESOS PENDIENTES
-// Solicitudes de egreso que los socios envían desde la app
-// propi.solicitada. Se muestran como aviso en la sección
-// "Anticipos y Ausencias" (tab gestion). Al pinchar un aviso se
-// abre el socio con el monto pre-cargado para registrar el
-// anticipo de propina. Al registrarlo, la solicitud pasa a
-// PROCESADO.
+// ANTICIPOS REGISTRADOS POR LOS SOCIOS (antes "egresos")
+// El socio registra desde propi.solicitada el anticipo que le
+// entregó el encargado ("Registro de Anticipo"). En SU app el
+// monto se descuenta del balance de inmediato. Acá aparece como
+// aviso en "Anticipos y Ausencias" para confirmarlo: al pinchar
+// se abre el socio con el monto pre-cargado, y al registrar el
+// anticipo la solicitud pasa a PROCESADO. Si se rechaza, el
+// monto vuelve al balance del socio.
 // Fuente: tabla `solicitudes_egreso` (proyecto socios, dbSoc).
 // ============================================================
 
@@ -85,14 +86,14 @@ function egresos_render() {
                 <div style="width:30px;height:30px;border-radius:8px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;">💸</div>
                 <div style="flex:1;min-width:0;">
                     <div style="font-weight:800;font-size:0.85em;color:#075985;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_escEgr(e.socio_nombre || 'Socio')}</div>
-                    <div style="font-size:0.72em;color:#0369a1;">Solicita ${fmt(e.monto)}${e.nota ? ' · ' + _escEgr(e.nota) : ''}</div>
+                    <div style="font-size:0.72em;color:#0369a1;">Registró ${fmt(e.monto)}${e.nota ? ' · ' + _escEgr(e.nota) : ''}</div>
                     ${e.encargado ? `<div style="font-size:0.7em;color:#7c3aed;font-weight:700;margin-top:1px;">👤 Entregado por: ${_escEgr(e.encargado)}</div>` : ''}
                     ${_egrDesglose(e.billetes, e.monto)}
                     <div style="font-size:0.7em;color:#0284c7;margin-top:2px;">📅 ${_hora(e.created_at) || 'Sin fecha'}</div>
                 </div>
             </div>
             <div style="display:flex;gap:6px;margin-top:8px;">
-                <button onclick="egresos_irASocio('${e.id}')" style="flex:1;padding:7px;border:none;border-radius:7px;background:#0284c7;color:white;font-size:0.76em;font-weight:800;cursor:pointer;">✅ Procesar</button>
+                <button onclick="egresos_irASocio('${e.id}')" style="flex:1;padding:7px;border:none;border-radius:7px;background:#0284c7;color:white;font-size:0.76em;font-weight:800;cursor:pointer;">✅ Confirmar</button>
                 <button onclick="egresos_rechazar('${e.id}')" style="flex:1;padding:7px;border:1px solid #fca5a5;border-radius:7px;background:white;color:#dc2626;font-size:0.76em;font-weight:800;cursor:pointer;">✖️ Rechazar</button>
             </div>
         </div>`).join('');
@@ -100,10 +101,10 @@ function egresos_render() {
     box.innerHTML = `
         <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:12px;padding:12px 14px;margin-bottom:16px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
-                <div style="color:white;font-weight:800;font-size:0.95em;">💸 Egresos pendientes
+                <div style="color:white;font-weight:800;font-size:0.95em;">💸 Anticipos registrados por socios
                     <span style="background:rgba(255,255,255,0.25);border-radius:10px;padding:1px 8px;font-size:0.82em;">${egresosPendientes.length}</span>
                 </div>
-                <div style="color:#e0f2fe;font-size:0.72em;">Toca uno para procesarlo como anticipo</div>
+                <div style="color:#e0f2fe;font-size:0.72em;">Ya descontados en la app del socio · confírmalos registrando el anticipo</div>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;">${filas}</div>
         </div>`;
@@ -138,7 +139,7 @@ async function egresos_rechazar(solicitudId) {
     const e = egresosPendientes.find(x => x.id === solicitudId);
     if (!e) return;
     const fmt = v => '$' + (Number(v) || 0).toLocaleString('es-CL');
-    const raw = prompt(`Rechazar el egreso de ${e.socio_nombre || 'socio'} (${fmt(e.monto)}).\n\nEscribe el motivo del rechazo (el socio lo verá como nota):`, '');
+    const raw = prompt(`Rechazar el anticipo que registró ${e.socio_nombre || 'el socio'} (${fmt(e.monto)}).\n\nAl rechazarlo, el monto vuelve al balance del socio en su app.\n\nEscribe el motivo del rechazo (el socio lo verá como nota):`, '');
     if (raw === null) return;                 // canceló
     const motivo = raw.trim();
     if (!motivo) { if (typeof showToast === 'function') showToast('Debes indicar un motivo', 'warning'); return; }
@@ -156,13 +157,13 @@ async function egresos_rechazar(solicitudId) {
         const mid = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('MA-' + Date.now());
         await dbSoc.from('mensajes_admin').insert({
             id: mid, socio_id: String(e.socio_id), remitente: 'ADMIN', autor: 'Administración',
-            mensaje: `❌ Egreso rechazado\nSolicitaste ${fmt(e.monto)}.\nMotivo: ${motivo}`
+            mensaje: `❌ Anticipo rechazado\nRegistraste ${fmt(e.monto)}; el monto volvió a tu balance.\nMotivo: ${motivo}`
         });
 
-        if (typeof showToast === 'function') showToast('Egreso rechazado — se notificó al socio', 'success');
+        if (typeof showToast === 'function') showToast('Anticipo rechazado — se notificó al socio', 'success');
     } catch (err) {
         console.warn('[egresos] rechazar:', err);
-        if (typeof showToast === 'function') showToast('Error al rechazar el egreso', 'error');
+        if (typeof showToast === 'function') showToast('Error al rechazar el anticipo', 'error');
     }
     // Si estaba vinculado en el panel, limpiar
     if (_egresoVinculado && _egresoVinculado.id === solicitudId) egresos_cancelarVinculo();
@@ -178,8 +179,8 @@ function egresos_pintarAvisoPanel(e) {
         <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-size:1.1em;">💸</span>
             <div style="flex:1;min-width:0;">
-                <div style="font-weight:800;font-size:0.82em;color:#075985;">Procesando solicitud de egreso</div>
-                <div style="font-size:0.75em;color:#0369a1;">El socio solicitó ${fmt(e.monto)}${e.nota ? ' · ' + _escEgr(e.nota) : ''}. Registra el anticipo para completarla.</div>
+                <div style="font-weight:800;font-size:0.82em;color:#075985;">Confirmando anticipo registrado por el socio</div>
+                <div style="font-size:0.75em;color:#0369a1;">El socio registró ${fmt(e.monto)}${e.nota ? ' · ' + _escEgr(e.nota) : ''} (ya descontado en su app). Registra el anticipo para confirmarlo.</div>
             </div>
             <button type="button" onclick="egresos_cancelarVinculo()" title="Cancelar" style="background:none;border:none;color:#0284c7;cursor:pointer;font-size:1em;">✕</button>
         </div>`;
@@ -193,23 +194,65 @@ function egresos_cancelarVinculo() {
 }
 
 // Llamado desde confirmarDesgloseAnticipo() tras registrar un anticipo.
-// Si había una solicitud vinculada a ese socio, se marca PROCESADO.
-async function egresos_alRegistrarAnticipo(socioId, responsable) {
-    if (!_egresoVinculado || String(_egresoVinculado.socioId) !== String(socioId)) return;
-    const solId = _egresoVinculado.id;
-    const montoSol = Number(_egresoVinculado.monto) || 0;
-    _egresoVinculado = null;
-    const aviso = document.getElementById('egresoVinculadoAviso');
-    if (aviso) { aviso.style.display = 'none'; aviso.innerHTML = ''; }
+//
+// El socio ya ve descontado en su app el anticipo que registró. Cuando acá se
+// registra el anticipo real, la solicitud TIENE que pasar a PROCESADO: si
+// quedara PENDIENTE, la app del socio descontaría el monto dos veces (la
+// solicitud y el anticipo).
+//
+// Antes solo se cerraba si el encargado había entrado desde el aviso. Ahora,
+// sin una vinculada, se miran los registros pendientes del socio: el de igual
+// monto se cierra solo; si ningún monto coincide, se pregunta.
+async function egresos_alRegistrarAnticipo(socioId, responsable, montoReg) {
+    const sid = String(socioId);
+    const fmt = v => '$' + (Number(v) || 0).toLocaleString('es-CL');
+    const m = Number(montoReg) || 0;
+    let sol = null;
+
+    if (_egresoVinculado && String(_egresoVinculado.socioId) === sid) {
+        sol = { id: _egresoVinculado.id, monto: Number(_egresoVinculado.monto) || 0 };
+    } else {
+        let pend = [];
+        try {
+            const { data } = await dbSoc.from('solicitudes_egreso')
+                .select('id, monto, created_at')
+                .eq('socio_id', sid).eq('estado', 'PENDIENTE')
+                .order('created_at', { ascending: true });
+            pend = data || [];
+        } catch (e) { pend = []; }
+        if (pend.length) {
+            const igual = pend.find(x => (Number(x.monto) || 0) === m);
+            if (igual) {
+                sol = { id: igual.id, monto: Number(igual.monto) || 0 };
+            } else {
+                const p0 = pend[0];
+                const ok = confirm(
+                    'Este socio tiene ' + (pend.length === 1 ? 'un anticipo registrado' : pend.length + ' anticipos registrados')
+                    + ' desde su app, por confirmar: ' + pend.map(x => fmt(x.monto)).join(', ') + '.\n\n'
+                    + '¿El anticipo de ' + fmt(m) + ' que acabas de registrar corresponde al de ' + fmt(p0.monto) + '?\n\n'
+                    + 'ACEPTAR  →  se confirma ese registro y en la app del socio\n'
+                    + '            deja de descontarse aparte.\n'
+                    + 'CANCELAR →  queda pendiente (es otro anticipo distinto).'
+                );
+                if (ok) sol = { id: p0.id, monto: Number(p0.monto) || 0 };
+            }
+        }
+    }
+
+    egresos_cancelarVinculo();
+    if (!sol) { egresos_cargarPendientes(); return; }
     try {
         await dbSoc.from('solicitudes_egreso')
             .update({ estado: 'PROCESADO', procesado_por: responsable || '', procesado_at: new Date().toISOString() })
-            .eq('id', solId);
-        // Notificar al socio que su egreso fue procesado
+            .eq('id', sol.id);
+        // Avisar al socio. Si el monto confirmado no es el que registró, se lo
+        // dice: su balance ahora usa el monto confirmado.
+        const montoFinal = m || sol.monto;
         const mid = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('MA-' + Date.now());
         await dbSoc.from('mensajes_admin').insert({
-            id: mid, socio_id: String(socioId), remitente: 'ADMIN', autor: 'Administración',
-            mensaje: `✅ Egreso procesado\nSe registró tu anticipo por $${montoSol.toLocaleString('es-CL')}.`
+            id: mid, socio_id: sid, remitente: 'ADMIN', autor: 'Administración',
+            mensaje: `✅ Anticipo confirmado\nLa administración registró tu anticipo por ${fmt(montoFinal)}.`
+                + (m && m !== sol.monto ? `\n(Lo habías registrado por ${fmt(sol.monto)}; tu balance ahora usa el monto confirmado.)` : '')
         });
     } catch (e) { console.warn('[egresos] no se pudo marcar procesado:', e); }
     egresos_cargarPendientes();

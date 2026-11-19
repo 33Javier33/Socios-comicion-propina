@@ -186,14 +186,14 @@ function msgAdminBell_items() {
             });
         });
 
-    // 2) Egresos pendientes (solicitudes desde propi.solicitada)
+    // 2) Anticipos registrados por socios desde propi.solicitada (por confirmar)
     (typeof egresosPendientes !== 'undefined' ? egresosPendientes : []).forEach(e => {
         out.push({
             tipo: 'egreso', id: String(e.id), socioId: String(e.socio_id),
             icono: '💸',
             nombre: e.socio_nombre || 'Socio',
             fotoUrl: '',
-            texto: 'Solicita ' + _bellMoney(e.monto) + (e.nota ? ' · ' + e.nota : ''),
+            texto: 'Registró anticipo ' + _bellMoney(e.monto) + (e.nota ? ' · ' + e.nota : ''),
             ts: (e.created_at ? new Date(e.created_at).getTime() : 0) || 0
         });
     });
@@ -281,7 +281,7 @@ function msgAdminBell_pintarMenu(items) {
             catch (e2) { const p = n => String(n).padStart(2, '0'); return p(d.getDate()) + '-' + p(d.getMonth() + 1) + '-' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
         }
     };
-    const _etiqueta = { msg: 'MENSAJE', egreso: 'EGRESO', pt: 'DÍA PT', rec: 'RECAUDACIÓN', conexion: 'ACTIVIDAD' };
+    const _etiqueta = { msg: 'MENSAJE', egreso: 'ANTICIPO', pt: 'DÍA PT', rec: 'RECAUDACIÓN', conexion: 'ACTIVIDAD' };
     const _colorEt = { msg: '#0284c7', egreso: '#0ea5e9', pt: '#d97706', rec: '#059669', conexion: '#10b981' };
     menu.innerHTML = '<div style="padding:8px 10px 6px;font-weight:800;font-size:0.82em;color:var(--text-color,#1e293b);border-bottom:1px solid var(--border,#eef2f6);margin-bottom:4px;">🔔 Notificaciones (' + items.length + ')</div>'
         + items.map(it => {

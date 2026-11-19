@@ -983,7 +983,7 @@ function renderizarListaBusqueda() {
             const txtAus = (campoMonto === 'montoAus' && mov) ? fmtM(mov.montoAus) : '📅 AUS';
             const badgeAnt = mov && mov.anticipos ? `<span style="background:#fff3cd;color:#856404;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:4px;white-space:nowrap;">${txtAnt}</span>` : '';
             const badgeAus = mov && mov.ausencias ? `<span style="background:#fde8e8;color:#9b1c1c;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;white-space:nowrap;">${txtAus}</span>` : '';
-            const badgeEgr = (typeof egresosPorSocio !== 'undefined' && egresosPorSocio[s.id]) ? '<span style="background:#e0f2fe;color:#075985;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">💸 EGRESO</span>' : '';
+            const badgeEgr = (typeof egresosPorSocio !== 'undefined' && egresosPorSocio[s.id]) ? '<span style="background:#e0f2fe;color:#075985;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">💸 ANTICIPO APP</span>' : '';
             // Cambistas van dentro de Mesas, pero se marcan para poder distinguirlos.
             const badgeCamb = (s.area || '').toLowerCase().includes('cambista')
                 ? '<span style="background:#f3e8ff;color:#6b21a8;font-size:0.65em;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">💱 CAMB</span>' : '';
