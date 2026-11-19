@@ -198,14 +198,14 @@ function msgAdminBell_items() {
         });
     });
 
-    // 3) Días Part-Time por confirmar
+    // 3) Días Part-Time marcados por socios (ya sumados, por revisar)
     (typeof ptDiasPendientes !== 'undefined' ? ptDiasPendientes : []).forEach(d => {
         out.push({
             tipo: 'pt', id: String(d.id), socioId: String(d.socio_id),
             icono: '🕒',
             nombre: d.socio_nombre || 'Socio Part-Time',
             fotoUrl: '',
-            texto: 'Día ' + _bellFecha(d.fecha) + ' por confirmar · ~ ' + _bellMoney(d.valor_estimado),
+            texto: 'Día ' + _bellFecha(d.fecha) + ' marcado (ya sumado) · por revisar · ~ ' + _bellMoney(d.valor_estimado),
             ts: (d.created_at ? new Date(d.created_at).getTime() : 0) || 0
         });
     });

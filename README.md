@@ -232,6 +232,19 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-11-19 — Días Part-Time: la comisión revisa y corrige, ya no confirma (SW v206)
+
+En propi.solicitada, el día que marca el socio Part-Time **entra directo a la planilla** (`dias_pt`) y suma de inmediato en su balance y en el pago de acá. La comisión ya no tiene que confirmar cada día: solo **corrige** las marcas equivocadas.
+
+- El aviso pasa a **«🕒 Días Part-Time marcados · por revisar»** («Ya están sumados · ✓ si está bien, ✖ para quitar un error»).
+- **✓ Revisado:** marca el registro como revisado. El día ya estaba en la planilla; se vuelve a asegurar sin duplicarlo, por si la escritura desde la app falló.
+- **✖ Quitar:** nuevo `_ptdQuitarDeDiasPt()`, **saca el día de la planilla** (antes «Rechazar» lo dejaba sumado), marca RECHAZADO con el motivo y avisa al socio «❌ Día quitado — ya no suma en tu balance». Queda en la auditoría como `QUITAR_DIA_PT`.
+- Cuando llega una marca, además del aviso se recargan socios y días (`actualizarSociosSilencioso`), para que el alcance de acá cuente el día sin recargar la app.
+- Campana y notificación: «Día Part-Time marcado (ya sumado · por revisar)».
+
+Probado con una base simulada: «Revisado» no duplica el día y «Quitar» lo saca de la planilla sin tocar los demás. Contra la versión anterior, la prueba falla al quitar.
+
+
 #### 2026-11-19 — «Egresos pendientes» pasan a ser «Anticipos registrados por socios» (SW v205)
 
 En propi.solicitada, «Solicitar Egreso» pasó a ser **Registro de Anticipo**, y el monto se descuenta del balance del socio **al instante**, sin esperar a que se registre acá. Eso obliga a que el registro del socio quede PROCESADO siempre que se registre el anticipo real, o la app del socio lo descontaría dos veces.
