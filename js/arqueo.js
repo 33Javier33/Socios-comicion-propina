@@ -1472,7 +1472,7 @@ function aq_openStatsModal(tabActiva) {
     fechas.forEach(f=>Object.entries(grupos[f].tipos).forEach(([t,v])=>{tiposGlobal[t]=(tiposGlobal[t]||0)+v;}));
     const tiposOrdenados=Object.entries(tiposGlobal).sort((a,b)=>b[1]-a[1]);
     const maxTipo=tiposOrdenados[0]?.[1]||1;
-    const COLORES={SalaDeJuegos:'#2563eb',Mesas:'#2563eb',EfectivoMDA:'#16a34a',TarjetaMDA:'#7c3aed',Boveda:'#d97706'};
+    const COLORES={SalaDeJuegos:'#2563eb',Mesas:'#2563eb',EfectivoMDA:'#16a34a',TarjetaMDA:'#7c3aed',Boveda:'#d97706',TotalGeneral:'#0f766e'};
     const getColor=t=>COLORES[t]||'#64748b';
     const ultimos14=fechas.slice(-14);
     const maxLinea=Math.max(...ultimos14.map(f=>grupos[f].total),1);

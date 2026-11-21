@@ -232,6 +232,12 @@ El sistema usa una capa de caché en `localStorage` con timestamps para evitar l
 
 ## Historial de Cambios
 
+#### 2026-11-21 — Recaudación "Total General" + el divisor ya no se borra al escribir (SW v207)
+- Nueva categoría **Total General (todas las áreas)** para las noches en que solo se conoce el total y no el monto de cada área. Se puede elegir al editar una recaudación y filtrar con el chip "📋 Total General".
+- Regla en la capa de datos (`_recConflictoGeneral` en `supabase-config.js`): una noche se carga **por área o con un Total General, nunca ambas**; si se intenta mezclar se muestra el aviso y no se guarda (así la recaudación no se cuenta dos veces). La misma regla está en diario.propi y propi.solicitada.
+- Informe mensual: el Total General suma en el total del día (no en las columnas de área) y esas noches llevan la marca "(TG)" con una nota al pie. Arqueo: color propio para la categoría.
+- **Bug corregido:** al escribir el divisor en la lista de recaudaciones, la recarga automática de cada 5 s redibujaba la lista y borraba lo escrito. Ahora la lista no se redibuja mientras hay un campo en edición ni cuando los datos no cambiaron; al salir del campo se guarda el divisor y se aplica cualquier cambio pendiente.
+
 #### 2026-11-19 — Días Part-Time: la comisión revisa y corrige, ya no confirma (SW v206)
 
 En propi.solicitada, el día que marca el socio Part-Time **entra directo a la planilla** (`dias_pt`) y suma de inmediato en su balance y en el pago de acá. La comisión ya no tiene que confirmar cada día: solo **corrige** las marcas equivocadas.

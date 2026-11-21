@@ -228,6 +228,7 @@ async function informeMontosDiarios() {
         }
 
         let filasHtml = "";
+        let hayTotalGeneral = false;     // alguna noche cargada sin desglose por área
         let sumSJ = 0, sumMDAE = 0, sumMDAT = 0, sumBov = 0, sumTotal = 0;
         let acumulado = 0;
 
@@ -242,8 +243,13 @@ async function informeMontosDiarios() {
             const mdae = registros.filter(r => (r.tipo === 'EfectivoMDA' || r.tipo === 'MDA (EFECTIVO)')).reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
             const mdat = registros.filter(r => (r.tipo === 'TarjetaMDA' || r.tipo === 'MDA (TARJETA)')).reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
             const bov  = registros.filter(r => r.tipo === 'Boveda').reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
+            // Noche cargada solo con el total (sin desglose por área): no cae en
+            // ninguna columna de área, pero SÍ en el total del día. Sin esto, esa
+            // noche quedaba fuera del total del informe.
+            const gen  = registros.filter(r => r.tipo === 'TotalGeneral').reduce((a,b) => a + (parseFloat(b.monto)||0), 0);
 
-            const totalDia = sj + mdae + mdat + bov;
+            const totalDia = sj + mdae + mdat + bov + gen;
+            if (gen > 0) hayTotalGeneral = true;
             acumulado += totalDia;
 
             sumSJ += sj; sumMDAE += mdae; sumMDAT += mdat; sumBov += bov; sumTotal += totalDia;
@@ -264,7 +270,7 @@ async function informeMontosDiarios() {
                     <td style="border:1px solid #000; text-align:right;">${fmt(mdae)}</td>
                     <td style="border:1px solid #000; text-align:right;">${fmt(mdat)}</td>
                     <td style="border:1px solid #000; text-align:right;">${fmt(bov)}</td>
-                    <td style="border:1px solid #000; text-align:right; font-weight:bold;">${totalDia > 0 ? fmt(totalDia) : '0'}</td>
+                    <td style="border:1px solid #000; text-align:right; font-weight:bold;">${totalDia > 0 ? fmt(totalDia) : '0'}${gen > 0 ? ' <small title="Noche cargada con Total General, sin desglose por área">(TG)</small>' : ''}</td>
                     <td style="border:1px solid #000; text-align:right;">${acumulado > 0 ? fmt(acumulado) : '0'}</td>
                     <td style="border:1px solid #000; text-align:right; background:#e2f0d9;">${puntoNoche > 0 ? fmt(puntoNoche) : '0'}</td>
                     <td style="border:1px solid #000; text-align:center; background:#f2f2f2;">${numDia}</td>
@@ -355,6 +361,7 @@ async function informeMontosDiarios() {
                         <td colspan="3" style="text-align:center; font-size:14px;">${fmt(sumMDAE + sumMDAT)}</td>
                         <td colspan="5"></td>
                     </tr>
+                    ${hayTotalGeneral ? `<tr><td colspan="11" style="text-align:left;font-weight:normal;font-size:10px;background:#fff;">(TG) Noche cargada con <b>Total General</b>: se sabe el total de la noche pero no el de cada área, así que suma en el total del día y no en las columnas de área.</td></tr>` : ''}
                 </tfoot>
             </table>
             ${remHtml}

@@ -102,6 +102,35 @@ async function cargarRecaudaciones(silent = false) {
     } catch (error) { console.error(error); if(!silent) showToast("Error al obtener datos", "error"); }
 }
 
+let _recUltimaFirma = '';
+let _recRedibujoPendiente = false;
+
+// ¿Hay alguien escribiendo dentro de la lista de días (p. ej. el divisor)?
+function _recEditandoEnLista() {
+    const c = document.getElementById('contenedorFechas');
+    const a = document.activeElement;
+    return !!(c && a && c.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName));
+}
+
+// Redibuja cuando se suelta el campo. Se espera un instante para que primero
+// corra el onchange del campo (el que guarda el divisor).
+function _recRedibujarAlSalir() {
+    if (_recRedibujoPendiente) return;
+    const c = document.getElementById('contenedorFechas');
+    if (!c) return;
+    _recRedibujoPendiente = true;
+    const alSalir = () => {
+        setTimeout(() => {
+            if (_recEditandoEnLista()) return;          // pasó a otro campo: sigue esperando
+            c.removeEventListener('focusout', alSalir);
+            _recRedibujoPendiente = false;
+            _recUltimaFirma = '';
+            procesarDatosRecaudacion(recDatosRaw, false);
+        }, 300);
+    };
+    c.addEventListener('focusout', alSalir);
+}
+
 function procesarDatosRecaudacion(datos, silent) {
     recDatosRaw = datos;
     // Primera vez: dar por "vistas" las recaudaciones ya existentes, así la campana
@@ -157,6 +186,19 @@ function procesarDatosRecaudacion(datos, silent) {
 
     if(silent) return;
 
+    // NO REDIBUJAR MIENTRAS SE ESCRIBE.
+    //
+    // Cada 5 segundos se recargan las recaudaciones, y esa recarga reconstruía
+    // todas las tarjetas de días: el campo del divisor se borraba en medio de
+    // lo que se estaba escribiendo y perdía el foco. Si hay un campo de la
+    // lista en uso, el redibujo espera a que se suelte. Y si los datos son los
+    // mismos de la última vez, no se redibuja nada.
+    if (_recEditandoEnLista()) { _recRedibujarAlSalir(); return; }
+    const _firma = JSON.stringify(datos);
+    const _cont = document.getElementById('contenedorFechas');
+    if (_firma === _recUltimaFirma && _cont && _cont.children.length) return;
+    _recUltimaFirma = _firma;
+
     (document.getElementById('recGranTotal')||{}).innerText = formatearMoneda(granTotal);
 
     const ultimaFechaReal = fechasOrdenadas[0];
@@ -189,7 +231,7 @@ function procesarDatosRecaudacion(datos, silent) {
             const puntoNoche = divisor ? dia.totalDia / divisor : null;
             let tiposHtml = '';
 
-            const ordenCategorias = ['SalaDeJuegos', 'EfectivoMDA', 'TarjetaMDA', 'Boveda'];
+            const ordenCategorias = ['TotalGeneral', 'SalaDeJuegos', 'EfectivoMDA', 'TarjetaMDA', 'Boveda'];
             const categoriasPresentes = Object.keys(dia.tipos).sort((a,b) => {
                 return (ordenCategorias.indexOf(a) === -1 ? 99 : ordenCategorias.indexOf(a)) - (ordenCategorias.indexOf(b) === -1 ? 99 : ordenCategorias.indexOf(b));
             });
@@ -435,11 +477,15 @@ async function rec_guardarCambio() {
     document.getElementById('modalRecEditar').style.display = 'none';
     toggleLoader(true, modo === 'editar' ? 'Actualizando...' : 'Guardando...');
     try {
+        // Se mira la respuesta: antes decía «agregado» aunque la base lo
+        // rechazara (por ejemplo, al mezclar áreas con un Total General).
         if (modo === 'editar' && idx !== '') {
-            await rec_postRec({ action: 'update', sheetIndex: idx, tipo, fecha, monto });
+            const r = await rec_postRec({ action: 'update', sheetIndex: idx, tipo, fecha, monto });
+            if (r && r.status === 'error') { showToast(r.message || 'No se pudo actualizar', 'error'); document.getElementById('modalRecEditar').style.display = 'block'; return; }
             showToast('Registro actualizado', 'success');
         } else {
-            await rec_postRec({ action: 'add', tipo, fecha, monto });
+            const r = await rec_postRec({ action: 'add', tipo, fecha, monto });
+            if (r && r.status === 'error') { showToast(r.message || 'No se pudo guardar', 'error'); document.getElementById('modalRecEditar').style.display = 'block'; return; }
             showToast('Registro agregado', 'success');
         }
         try { localStorage.removeItem(CACHE_KEY_REC); } catch(e) {}
@@ -879,7 +925,7 @@ function rec_abrirDetalle(d) {
     const modal = document.getElementById('modalRecDetalle');
     const f = d.fecha ? d.fecha.split('-') : [];
     const fechaVis = f.length === 3 ? `${f[2]}/${f[1]}/${f[0]}` : (d.fecha || '-');
-    const TIPOS_LABEL = { SalaDeJuegos: '🎰 Sala de Juegos', EfectivoMDA: '💵 Efectivo MDA', TarjetaMDA: '💳 Tarjeta MDA', Boveda: '🏦 Bóveda' };
+    const TIPOS_LABEL = { TotalGeneral: '📋 Total General (todas las áreas)', SalaDeJuegos: '🎰 Sala de Juegos', EfectivoMDA: '💵 Efectivo MDA', TarjetaMDA: '💳 Tarjeta MDA', Boveda: '🏦 Bóveda' };
     const tipoLabel = TIPOS_LABEL[d.tipo] || d.tipo;
     const estadoHtml = d.esArqueado
         ? `<span style="background:#dcfce7;color:#15803d;border-radius:20px;padding:3px 12px;font-size:0.85em;font-weight:700;border:1px solid #bbf7d0;">✅ Ingresado a caja</span>`

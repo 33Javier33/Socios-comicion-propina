@@ -13,6 +13,29 @@ const _SB_KEY_SOC = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const dbRec = supabase.createClient(_SB_URL_REC, _SB_KEY_REC);
 const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
 
+// ── Una noche se carga POR ÁREA o con un TOTAL GENERAL, nunca las dos ──────────
+// «TotalGeneral» es para cuando no se conoce el monto de cada área, solo el total
+// de la noche. Si una misma fecha tuviera las dos cosas, la misma plata se
+// sumaría dos veces en el valor del punto, el arqueo y los informes. Devuelve el
+// motivo del bloqueo, o null si se puede guardar. Si no se puede leer la base,
+// no bloquea: es preferible guardar a perder el registro.
+// Las mismas reglas están en diario.propi y propi.solicitada.
+async function _recConflictoGeneral(fecha, tipo, excluirId) {
+    try {
+        const { data, error } = await dbRec.from('recaudaciones').select('id, tipo').eq('fecha', fecha);
+        if (error || !data) return null;
+        const tipos = data.filter(r => String(r.id) !== String(excluirId || '')).map(r => r.tipo);
+        const esGen = tipo === 'TotalGeneral';
+        if (esGen && tipos.includes('TotalGeneral'))
+            return 'Esa noche ya tiene un Total General. Si el monto está mal, edítalo en vez de agregar otro.';
+        if (esGen && tipos.length)
+            return 'Esa noche ya tiene montos por área. No se puede agregar un Total General: la recaudación se contaría dos veces.';
+        if (!esGen && tipos.includes('TotalGeneral'))
+            return 'Esa noche está cargada con un Total General. No se pueden agregar montos por área: la recaudación se contaría dos veces. Si quieres cargarla por área, primero borra el Total General.';
+        return null;
+    } catch (e) { return null; }
+}
+
 // ============================================================
 // PRESENCIA EN RECAUDACIÓN (tiempo real ENTRE apps)
 // Canal compartido 'rec-presencia' en el proyecto REC. Muestra quién está
@@ -22,7 +45,7 @@ const dbSoc = supabase.createClient(_SB_URL_SOC, _SB_KEY_SOC);
 (function () {
     const DB = dbRec;                // cliente del proyecto de recaudaciones
     const APP = 'Comisión';          // etiqueta de esta app
-    const TIPO_LABEL = { TarjetaMDA: 'Tarjeta MDA', EfectivoMDA: 'Efectivo MDA', SalaDeJuegos: 'Sala de Juegos', Boveda: 'Bóveda' };
+    const TIPO_LABEL = { TarjetaMDA: 'Tarjeta MDA', EfectivoMDA: 'Efectivo MDA', SalaDeJuegos: 'Sala de Juegos', Boveda: 'Bóveda', TotalGeneral: 'Total General (todas las áreas)' };
     const KEY = 'rp_' + Math.random().toString(36).slice(2) + Date.now();
     let ch = null, mio = null, toastT = null, listo = false, hbT = null, otrosDb = [];
     let miSocioId = '';   // para no verse a sí mismo si el mismo usuario tiene otra app abierta
@@ -2686,6 +2709,8 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         // ── ADD recaudacion ──────────────────────────────────────────
         if (action === 'add') {
             try {
+                const _conf = await _recConflictoGeneral(body.fecha, body.tipo || 'Sin Tipo');
+                if (_conf) return err(_conf);
                 const { error } = await dbRec.from('recaudaciones').insert({
                     id: crypto.randomUUID(),
                     fecha: body.fecha,
@@ -2738,6 +2763,10 @@ const _notificarCambio = () => _recBroadcast.send({ type: 'broadcast', event: 'c
         if (action === 'update') {
             try {
                 const id = body.sheetIndex;
+                // Al editar también: cambiar el tipo o la fecha puede mezclar
+                // área y total general en una misma noche.
+                const _conf = await _recConflictoGeneral(body.fecha, body.tipo || 'Sin Tipo', id);
+                if (_conf) return err(_conf);
                 const { error } = await dbRec.from('recaudaciones').update({
                     fecha: body.fecha,
                     tipo: body.tipo || 'Sin Tipo',
